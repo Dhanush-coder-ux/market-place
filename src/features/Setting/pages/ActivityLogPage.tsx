@@ -38,7 +38,10 @@ const IconCart = () => (
   </svg>
 );
 
+// ---------------------------------------------------------------------------
 // Helpers
+// ---------------------------------------------------------------------------
+
 function initials(n: string = "System") {
   return n.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
 }
@@ -49,12 +52,72 @@ function avatarColor(n: string = "System") {
   return c[s % c.length];
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const isUuidLike = (s: unknown): boolean => typeof s === "string" && UUID_RE.test(s.trim());
+
+/**
+ * The API sometimes serializes `changes[].before` / `.after` as Python
+ * repr strings rather than JSON, e.g.:
+ *   "None"
+ *   "{'transport_charge': 0.0, 'other_charge': 0.0}"
+ *   "[{'method': <PurchasePaymentMethods.CASH: 'CASH'>, 'amount': 4000.0}]"
+ * This parses those into real JS values wherever possible, falling back
+ * to the original string when it can't be safely parsed.
+ */
+function pyLiteralParse(raw: unknown): unknown {
+  if (typeof raw !== "string") return raw;
+  const trimmed = raw.trim();
+
+  if (trimmed === "" || trimmed === "None" || trimmed === "null") return null;
+  if (trimmed === "True" || trimmed === "true") return true;
+  if (trimmed === "False" || trimmed === "false") return false;
+
+  // Not an object/array literal — treat as a plain scalar string/number.
+  if (!(trimmed.startsWith("{") || trimmed.startsWith("["))) {
+    if (trimmed !== "" && !isNaN(Number(trimmed))) return Number(trimmed);
+    return raw;
+  }
+
+  let s = trimmed;
+  // Collapse Python enum reprs like <PurchasePaymentMethods.CASH: 'CASH'> -> "CASH"
+  s = s.replace(/<[^:<>]+:\s*'([^']*)'>/g, '"$1"');
+  s = s.replace(/<[^:<>]+:\s*"([^"]*)">/g, '"$1"');
+  // Python literals -> JSON literals
+  s = s.replace(/\bNone\b/g, "null").replace(/\bTrue\b/g, "true").replace(/\bFalse\b/g, "false");
+
+  // Try as-is first (covers cases already valid JSON despite outer quoting).
+  try {
+    return JSON.parse(s);
+  } catch (_) {
+    /* fall through */
+  }
+
+  // Fallback: naive single -> double quote swap. Not bulletproof for
+  // strings containing nested quotes, but handles the common case.
+  try {
+    return JSON.parse(s.replace(/'/g, '"'));
+  } catch (_) {
+    return raw;
+  }
+}
+
+/** Legacy log rows only ever record a single `{ field: "id", after: "UPDATED" }`
+ *  style entry with no real field-level diff. Treat that as "no changes". */
+function isNoiseChangeSet(changes?: { field: string; before: unknown; after: unknown }[]) {
+  if (!changes || changes.length !== 1) return false;
+  const c = changes[0];
+  return c.field === "id";
+}
+
 interface LogEntry {
   id: string;
+  ui_id?: string | number;
   user_name?: string;
+  service?: string;
   action: string;
   entity_type?: string;
   entity_id?: string;
+  entity_name?: string;
   created_at?: string;
   description?: string;
   changes?: { field: string; before: unknown; after: unknown }[];
@@ -66,7 +129,22 @@ interface LogEntry {
     reason?: string;
     customer?: string;
     payment?: string;
+    ui_id?: string | number;
   };
+  category?: string;
+}
+
+/** Resolves the record's human-facing identifier.
+ *  Priority: ui_id -> entity_name -> entity_id/id (flagged as technical). */
+function getDisplayName(e: LogEntry): { value: string; technical: boolean } {
+  if (e.ui_id && !isUuidLike(String(e.ui_id))) {
+    return { value: String(e.ui_id), technical: false };
+  }
+  if (e.entity_name && String(e.entity_name).trim() && !isUuidLike(e.entity_name)) {
+    return { value: e.entity_name.trim(), technical: false };
+  }
+  const raw = e.entity_id || e.id;
+  return { value: raw, technical: true };
 }
 
 const StructuredValueViewer = ({ data, level = 0 }: { data: any; level?: number }) => {
@@ -124,7 +202,7 @@ const ChangeValueRenderer = ({ val, isDeleted }: { val: unknown, isDeleted?: boo
       </div>
     );
   }
-  
+
   // Primitives - apply formatting
   if (val === null || val === undefined || val === "null" || val === "None" || val === "") {
     return <span className="opacity-60 italic font-medium">—</span>;
@@ -136,7 +214,7 @@ const ChangeValueRenderer = ({ val, isDeleted }: { val: unknown, isDeleted?: boo
   if (typeof val === "number") {
     return <span className="font-bold">{val.toLocaleString()}</span>;
   }
-  
+
   return <>{String(val)}</>;
 };
 
@@ -160,7 +238,6 @@ export const ActivityLogPage = () => {
           if (action === "updated") action = "update";
           if (action === "deleted") action = "delete";
           if (action === "returned") action = "return";
-          if (action.includes("sales")) action = "sales";
 
           let parsedChanges = log.changes;
           if (typeof parsedChanges === "string") {
@@ -168,7 +245,22 @@ export const ActivityLogPage = () => {
             catch (_) { parsedChanges = []; }
           }
 
-          return { ...log, id: log.id || `fallback-${i}`, action, changes: parsedChanges || [] };
+          // Derive a filter-friendly category. Actions are only ever
+          // create/update/delete/return — "sales" is a view-level bucket
+          // for order/sales creations, not something the API sends.
+          const et = (log.entity_type || "").toUpperCase();
+          const svc = (log.service || "").toLowerCase();
+          const looksLikeSales = et.includes("SALES") || et === "ORDER" || svc === "order" || svc === "sales-order";
+          let category = action;
+          if (action === "create" && looksLikeSales) category = "sales";
+
+          return {
+            ...log,
+            id: log.id || `fallback-${i}`,
+            action,
+            changes: parsedChanges || [],
+            category,
+          };
         });
         setLogs(normalizedData);
       }
@@ -193,15 +285,16 @@ export const ActivityLogPage = () => {
 
   const filteredLogs = useMemo(() => {
     let items = logs.filter((log) => {
-      if (filterAction !== "all" && log.action !== filterAction) return false;
+      if (filterAction !== "all" && (log.category || log.action) !== filterAction) return false;
       if (searchTerm) {
         const q = searchTerm.toLowerCase();
+        const disp = getDisplayName(log);
         const hay = (
           (log.user_name || "System") + " " +
           (log.description || "") + " " +
           (log.entity_type || "") + " " +
-          (log.entity_id || "") + " " +
-          (log.changes || []).map((c: { field: string; before: unknown; after: unknown }) => c.field + " " + (c.before || "") + " " + c.after).join(" ")
+          disp.value + " " +
+          (log.changes || []).map((c) => c.field + " " + String(c.before ?? "") + " " + String(c.after ?? "")).join(" ")
         ).toLowerCase();
         if (!hay.includes(q)) return false;
       }
@@ -224,9 +317,10 @@ export const ActivityLogPage = () => {
     const users = new Set<string>();
 
     logs.forEach(l => {
-      if (l.action === "sales") salesCount++;
-      if (l.action === "update") updatesCount++;
-      if (l.action === "create") createCount++;
+      const cat = l.category || l.action;
+      if (cat === "sales") salesCount++;
+      if (cat === "update") updatesCount++;
+      if (cat === "create") createCount++;
       if (l.user_name && l.user_name !== "System") users.add(l.user_name);
     });
 
@@ -240,13 +334,15 @@ export const ActivityLogPage = () => {
   }, [logs]);
 
   const formatChangeValue = (val: unknown) => {
-    if (typeof val === 'object' && val !== null) return "Complex Object";
-    return String(val ?? "—");
-  };
-
-  const getRecordTitle = (e: LogEntry) => {
-    if (e.entity_type === "PRODUCT") return e.description?.split(" ")[1] || e.entity_id;
-    return e.description || e.entity_id || e.entity_type;
+    const parsed = pyLiteralParse(val);
+    if (parsed === null || parsed === undefined) return "—";
+    if (typeof parsed === "object") {
+      const count = Array.isArray(parsed) ? parsed.length : Object.keys(parsed).length;
+      const noun = Array.isArray(parsed) ? "item" : "field";
+      return `${count} ${noun}${count !== 1 ? "s" : ""}`;
+    }
+    if (typeof parsed === "boolean") return parsed ? "Yes" : "No";
+    return String(parsed);
   };
 
   return (
@@ -289,7 +385,7 @@ export const ActivityLogPage = () => {
           <div className={`chip ${filterAction === "create" ? "active" : ""}`} onClick={() => setFilterAction("create")}><span className="cdot" style={{ background: "var(--create-dot)" }}></span>Create</div>
           <div className={`chip ${filterAction === "update" ? "active" : ""}`} onClick={() => setFilterAction("update")}><span className="cdot" style={{ background: "var(--update-dot)" }}></span>Update</div>
           <div className={`chip ${filterAction === "sales" ? "active" : ""}`} onClick={() => setFilterAction("sales")}><span className="cdot" style={{ background: "var(--sales-dot)" }}></span>Sales</div>
-          <div className={`chip ${filterAction === "return" ? "active" : ""}`} onClick={() => setFilterAction("return")}><span className="cdot" style={{ background: "var(--return-dot)" }}></span>Sales return</div>
+          <div className={`chip ${filterAction === "return" ? "active" : ""}`} onClick={() => setFilterAction("return")}><span className="cdot" style={{ background: "var(--return-dot)" }}></span>Return</div>
           <div className={`chip ${filterAction === "delete" ? "active" : ""}`} onClick={() => setFilterAction("delete")}><span className="cdot" style={{ background: "var(--delete-dot)" }}></span>Delete</div>
           <div className="spacer"></div>
           <div className="count">{filteredLogs.length} event{filteredLogs.length !== 1 ? "s" : ""}</div>
@@ -318,10 +414,14 @@ export const ActivityLogPage = () => {
                 const role = user === "System" ? "Automated" : "User";
                 const dateStr = e.created_at ? format(new Date(e.created_at), "dd MMM yyyy") : "—";
                 const timeStr = e.created_at ? format(new Date(e.created_at), "hh:mm a") : "—";
-                const record = getRecordTitle(e);
-                const entity = e.entity_type || e.action.toUpperCase();
+                const disp = getDisplayName(e);
+                const entity = (e.entity_type || e.action.toUpperCase()).toString().toUpperCase();
 
-                const txnMeta = e.action === "sales" || e.action === "return";
+                const hasLineItems = Array.isArray(e.lines) && e.lines.length > 0;
+                const noiseChanges = isNoiseChangeSet(e.changes);
+                const hasRealChanges = !!e.changes && e.changes.length > 0 && !noiseChanges;
+
+                const txnMeta = (e.action === "sales" || e.action === "return") && hasLineItems;
                 const amtClass = e.action === "return" ? "return" : "sales";
 
                 return (
@@ -329,7 +429,9 @@ export const ActivityLogPage = () => {
                     <div className="row" onClick={() => toggleOpen(e.id)}>
                       <div className="c-date">
                         <div className="d">{dateStr}</div>
-                        <div className="t">#{e.entity_id?.substring(0, 8) || e.id.substring(0, 8)}</div>
+                        <div className="t font-mono" title={e.entity_id || e.id}>
+                          #{e.entity_id ? e.entity_id.substring(0, 8) : e.id.substring(0, 8)}
+                        </div>
                       </div>
 
                       <div className="c-user">
@@ -351,7 +453,13 @@ export const ActivityLogPage = () => {
                           <>
                             <div className="det-top">
                               <span className="entity-tag">{entity}</span>
-                              <span className="det-rec">{record}</span>
+                              {disp.technical ? (
+                                <span className="det-rec text-slate-400 italic font-mono text-[11px]" title={disp.value}>
+                                  {disp.value.substring(0, 8)}…
+                                </span>
+                              ) : (
+                                <span className="det-rec">{disp.value}</span>
+                              )}
                             </div>
                             <div className="det-plain">Record removed{e.description ? ` — ${e.description}` : ""}</div>
                           </>
@@ -359,24 +467,18 @@ export const ActivityLogPage = () => {
                           <>
                             <div className="det-top">
                               <span className="entity-tag">{entity}</span>
-                              <span className="det-rec">{record}</span>
+                              <span className="det-rec">{disp.value}</span>
                               <span className={`txn-amt ${amtClass}`}>{e.amount || "—"}</span>
                             </div>
                             <div className="det-chips">
-                              {e.lines && e.lines.length > 0 ? (
-                                <>
-                                  <span className="pchip">
-                                    <span className="f">Items</span>
-                                    <span className="v" style={{ background: "var(--panel)", color: "var(--body)", fontWeight: 500 }}>
-                                      {e.lines[0].name} · {e.lines[0].qty}
-                                    </span>
-                                  </span>
-                                  {e.lines.length - 1 > 0 && (
-                                    <span className="pchip more">+{e.lines.length - 1} more</span>
-                                  )}
-                                </>
-                              ) : (
-                                <span className="det-plain">{e.description}</span>
+                              <span className="pchip">
+                                <span className="f">Items</span>
+                                <span className="v" style={{ background: "var(--panel)", color: "var(--body)", fontWeight: 500 }}>
+                                  {e.lines![0].name} · {e.lines![0].qty}
+                                </span>
+                              </span>
+                              {e.lines!.length - 1 > 0 && (
+                                <span className="pchip more">+{e.lines!.length - 1} more</span>
                               )}
                             </div>
                           </>
@@ -384,19 +486,25 @@ export const ActivityLogPage = () => {
                           <>
                             <div className="det-top">
                               <span className="entity-tag">{entity}</span>
-                              <span className="det-rec">{record}</span>
+                              {disp.technical ? (
+                                <span className="det-rec text-slate-400 italic font-mono text-[11px]" title={disp.value}>
+                                  {disp.value.substring(0, 8)}…
+                                </span>
+                              ) : (
+                                <span className="det-rec">{disp.value}</span>
+                              )}
                             </div>
                             <div className="det-chips">
-                              {e.changes && e.changes.slice(0, 2).map((c, idx) => (
+                              {hasRealChanges && e.changes!.slice(0, 2).map((c, idx) => (
                                 <span key={idx} className="pchip">
-                                  <span className="f">{c.field}</span>
+                                  <span className="f">{c.field.replace(/_/g, " ")}</span>
                                   <span className="v">{formatChangeValue(c.after)}</span>
                                 </span>
                               ))}
-                              {e.changes && e.changes.length > 2 && (
-                                <span className="pchip more">+{e.changes.length - 2} more</span>
+                              {hasRealChanges && e.changes!.length > 2 && (
+                                <span className="pchip more">+{e.changes!.length - 2} more</span>
                               )}
-                              {(!e.changes || e.changes.length === 0) && (
+                              {!hasRealChanges && (
                                 <span className="det-plain">{e.description || "Updated"}</span>
                               )}
                             </div>
@@ -450,31 +558,21 @@ export const ActivityLogPage = () => {
                                   {e.action === "delete" ? (
                                     <div className="drow">
                                       <span className="dfield">Record</span>
-                                      <span className="dwas">{record}</span>
+                                      <span className="dwas">{disp.value}</span>
                                       <span className="darr"><ArrIcon /></span>
                                       <span className="dnow" style={{ background: "var(--was-bg)", color: "var(--was-tx)" }}>Deleted</span>
                                     </div>
-                                  ) : e.changes && e.changes.length > 0 ? (
-                                    e.changes.map((c, idx) => {
-                                      const tryParse = (val: unknown) => {
-                                        if (typeof val === 'string' && ((val.startsWith('{') && val.endsWith('}')) || (val.startsWith('[') && val.endsWith(']')))) {
-                                          try { return JSON.parse(val); } catch (e) {
-                                            try { return JSON.parse(val.replace(/'/g, '"').replace(/\bTrue\b/g, 'true').replace(/\bFalse\b/g, 'false').replace(/\bNone\b/g, 'null')); } 
-                                            catch (err) { return val; }
-                                          }
-                                        }
-                                        return val;
-                                      };
-                                      
-                                      const parsedBefore = tryParse(c.before);
-                                      const parsedAfter = tryParse(c.after);
+                                  ) : hasRealChanges ? (
+                                    e.changes!.map((c, idx) => {
+                                      const parsedBefore = pyLiteralParse(c.before);
+                                      const parsedAfter = pyLiteralParse(c.after);
                                       const isObjBefore = typeof parsedBefore === 'object' && parsedBefore !== null;
                                       const isObjAfter = typeof parsedAfter === 'object' && parsedAfter !== null;
 
                                       return (
                                         <div key={idx} className="drow">
-                                          <span className="dfield">{c.field}</span>
-                                          {parsedBefore === undefined || parsedBefore === null || parsedBefore === "" || parsedBefore === "null" || parsedBefore === "None" ? (
+                                          <span className="dfield">{c.field.replace(/_/g, " ")}</span>
+                                          {parsedBefore === undefined || parsedBefore === null || parsedBefore === "" ? (
                                             <span className="dnew">— not set —</span>
                                           ) : (
                                             <span className={`dwas ${isObjBefore ? 'd-obj' : ''}`}>
@@ -489,7 +587,9 @@ export const ActivityLogPage = () => {
                                       );
                                     })
                                   ) : (
-                                    <div className="empty" style={{ padding: "20px" }}>No field-level changes recorded.</div>
+                                    <div className="empty" style={{ padding: "20px" }}>
+                                      {e.description || "No field-level changes recorded."}
+                                    </div>
                                   )}
                                 </div>
                               </div>
@@ -500,9 +600,19 @@ export const ActivityLogPage = () => {
                               <div className="dpanel-h"><IconInfo /> Event details</div>
                               <div className="metabox">
                                 <div className="mrow">
-                                  <span className="mk">Record ID</span>
-                                  <span className="mv">{e.entity_id || e.id}</span>
+                                  <span className="mk">Reference</span>
+                                  <span className="mv" style={{ fontFamily: disp.technical ? "var(--font-mono, monospace)" : "var(--font-body)" }}>
+                                    {disp.value}
+                                  </span>
                                 </div>
+                                {!disp.technical && (e.entity_id || e.id) && (
+                                  <div className="mrow">
+                                    <span className="mk">Record ID</span>
+                                    <span className="mv text-slate-400" style={{ fontFamily: "monospace", fontSize: 11 }}>
+                                      {e.entity_id || e.id}
+                                    </span>
+                                  </div>
+                                )}
                                 <div className="mrow">
                                   <span className="mk">Performed by</span>
                                   <span className="mv" style={{ fontFamily: "var(--font-body)" }}>{user} · {role}</span>

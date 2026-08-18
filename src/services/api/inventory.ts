@@ -137,39 +137,50 @@ export const inventoryApi = {
 
   /**
    * Search inventories for autocomplete / SearchSelect components.
-   * Returns a normalized list with {id, name, stocks, buy_price, sell_price, barcode, unit}.
+   * API response shape: { detail: { msg, status_code, success }, data: [ ...items ] }
+   * Returns a normalized list with {id, name, stocks, sell_price, buy_price, barcode, unit}.
    */
   searchInventories: async (query: string, isActive?: boolean): Promise<any[]> => {
     try {
-      const params: Record<string, string> = { q: query, limit: '10', offset: '1' };
+      const params: Record<string, string> = { limit: '20', offset: '1' };
+      if (query) params.q = query;
       if (isActive !== undefined) params.active = isActive ? 'true' : 'false';
+
       const response = await apiClient.get(`${INV}/by/shop/${SHOP_ID}`, params);
-      const raw = response?.data;
-      const items: any[] = Array.isArray(raw)
-        ? raw
-        : (raw?.inventories ?? raw?.data ?? raw?.datas ?? []);
+
+      // Response: { detail: {...}, data: [...] }  OR raw array
+      const items: any[] = Array.isArray(response)
+        ? response
+        : Array.isArray(response?.data)
+          ? response.data
+          : (response?.datas ?? response?.inventories ?? []);
 
       return items.map((i: any) => {
-        const d = i.datas || {};
-        const typeInfos = i.type_infos || d.type_infos || {};
+        const priceInfos  = i.pricing_infos  || i.price_infos  || {};
+        const stockInfos  = i.stock_infos    || {};
+        const typeInfos   = i.type_infos     || {};
+
         return {
           ...i,
-          name: i.name || d.name || 'Unknown Product',
-          stocks: i.stocks ?? d.stocks ?? 0,
-          buy_price: i.buy_price ?? d.buy_price ?? 0,
-          sell_price: i.sell_price ?? d.sell_price ?? 0,
-          barcode: i.barcode ?? d.barcode ?? '',
-          unit: i.unit || d.unit || 'pc',
-          gst: i.gst || d.gst || '0%',
-          has_variant: typeInfos.has_variant ?? i.has_variant ?? false,
-          has_batch: typeInfos.has_batch ?? i.has_batch ?? false,
-          has_serialno: typeInfos.has_serialno ?? i.has_serialno ?? false,
+          id:         i.id   || i._id,
+          name:       i.name || 'Unknown Product',
+          sell_price: i.sell_price  ?? priceInfos.sell_price  ?? priceInfos.online_sell_price ?? 0,
+          buy_price:  i.buy_price   ?? priceInfos.buy_price   ?? 0,
+          stocks:     i.stocks      ?? stockInfos.available_stocks ?? stockInfos.physical_stocks ?? 0,
+          barcode:    i.barcode     ?? '',
+          unit:       i.unit || i.unit_infos?.name || 'pc',
+          gst:        i.gst  || priceInfos.gst || '0%',
+          has_variant:  typeInfos.has_variant  ?? false,
+          has_batch:    typeInfos.has_batch    ?? false,
+          has_serialno: typeInfos.has_serialno ?? false,
         };
       });
-    } catch {
+    } catch (err) {
+      console.error('[searchInventories] error:', err);
       return [];
     }
   },
+
 
   // ── Stock Reservations ────────────────────────────────────────────────────
   // Used by StockAdjMov cart workflow to lock inventory during adjustments.

@@ -792,25 +792,28 @@ export default function StockMovementPage() {
       {!isCleanMode && (
         <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-none">
           <StatCard
-            label="Total Stock In"
-            value={`+${analyticsStats?.overview?.stock_adjustment?.total_stockmovadj_increments ?? totalIn}`}
-            icon={TrendingUp}
-            iconBg="bg-[var(--mv-sales-bg)]"
-            iconColor="text-[var(--ps-completed-tx)]"
-          />
-          <StatCard
-            label="Total Stock Out"
-            value={`-${analyticsStats?.overview?.stock_adjustment?.total_stockmovadj_decrements ?? totalOut}`}
-            icon={TrendingDown}
-            iconBg="bg-[var(--mv-sales-bg)]"
-            iconColor="text-[var(--ps-cancel-tx)]"
-          />
-          <StatCard
-            label="Total Adjustments"
+            label="All Movements"
             value={(analyticsStats?.overview?.stock_adjustment?.total_stockmovadj ?? filtered.length).toString()}
             icon={Activity}
             iconBg="bg-[var(--mv-sales-bg)]"
             iconColor="text-[var(--mv-sales-tx)]"
+            subValue="Every stock movement"
+          />
+          <StatCard
+            label="Stock In"
+            value={`+${analyticsStats?.overview?.stock_adjustment?.total_stockmovadj_increments ?? totalIn}`}
+            icon={TrendingUp}
+            iconBg="bg-[var(--mv-sales-bg)]"
+            iconColor="text-[var(--ps-completed-tx)]"
+            subValue="Purchase, Opening Stock, Sales Return, Positive Adjustment"
+          />
+          <StatCard
+            label="Stock Out"
+            value={`-${analyticsStats?.overview?.stock_adjustment?.total_stockmovadj_decrements ?? totalOut}`}
+            icon={TrendingDown}
+            iconBg="bg-[var(--mv-sales-bg)]"
+            iconColor="text-[var(--ps-cancel-tx)]"
+            subValue="Sales, Purchase Return, Damage or Negative Adjustment"
           />
         </div>
       )}
@@ -1070,9 +1073,32 @@ export default function StockMovementPage() {
                       </td>
                       {selectedKeys.map(key => {
                         const value = m[key as keyof Movement];
-                        const displayValue = value === undefined || value === null ? "—" :
+                        const displayValue = value === undefined || value === null || String(value).trim() === "" ? "—" :
                           typeof value === 'object' ? (Array.isArray(value) ? value.join(", ") : JSON.stringify(value)) :
                             String(value);
+
+                        if (key === "notes" && displayValue !== "—") {
+                          const isLong = displayValue.length > 25;
+                          return (
+                            <td key={key} className="px-4 py-3 align-middle border-r border-slate-100 last:border-r-0">
+                              <div className="flex items-center gap-1.5 w-full">
+                                <p className="text-[12px] font-bold text-slate-600 tracking-tight truncate max-w-[140px]">
+                                  {displayValue}
+                                </p>
+                                {isLong && (
+                                  <div className="relative group/tooltip flex items-center shrink-0 cursor-help text-slate-400 hover:text-blue-500">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                                    <div className="absolute right-0 bottom-full mb-1.5 translate-x-1/2 z-50 w-max max-w-[220px] whitespace-normal bg-slate-800 text-white text-[11px] font-medium leading-relaxed px-3 py-2 rounded-lg shadow-xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 pointer-events-none">
+                                      {displayValue}
+                                      <div className="absolute top-full left-1/2 -translate-x-1/2 border-x-4 border-x-transparent border-t-4 border-t-slate-800"></div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          );
+                        }
+
                         return (
                           <td key={key} className="px-4 py-3 align-middle border-r border-slate-100 last:border-r-0 truncate">
                             <p className="text-[12px] font-bold text-slate-600 tracking-tight">

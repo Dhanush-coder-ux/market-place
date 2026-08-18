@@ -2,7 +2,7 @@ import { useRef, useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Search, Users, Bookmark, Filter,
-  UserCheck, AlertCircle, CreditCard,
+  AlertCircle, CreditCard,
   Loader2, Eye, Pencil, MoreVertical, Trash2, Plus, FileUp
 } from "lucide-react";
 import ExcelImportModal from "@/components/common/ExcelImportModal";
@@ -251,36 +251,24 @@ const CustomerList = () => {
       {/* ── KPI Row ── */}
       <div className="flex gap-3 pb-1 overflow-x-auto scrollbar-none">
         <StatCard
-          label="Total Customers"
-          value={analyticsStats?.total_customers ?? filteredCustomers.length}
+          label="All Customers"
+          value={analyticsStats?.total_customers ?? customers.length}
           icon={<Users size={18} />}
           iconBg="bg-blue-50"
           iconColor="text-blue-600"
-          subValue="All"
+          subValue="All registered customers"
+          onClick={() => setFilterOutstanding("All")}
+          className={filterOutstanding === "All" ? "ring-2 ring-blue-400 border-transparent shadow-sm" : ""}
         />
         <StatCard
-          label="Outstanding Balance"
-          value={fmt(analyticsStats?.total_outstandings ?? 0)}
+          label="Outstanding Due"
+          value={String(analyticsStats?.outstanding_customers_count ?? customers.filter((c: any) => (c.outstanding_infos?.amount ?? c.outstanding ?? 0) > 0).length)}
           icon={<AlertCircle size={18} />}
           iconBg="bg-rose-50"
           iconColor="text-rose-500"
-          subValue="Pending"
-        />
-        <StatCard
-          label="Total Cleared"
-          value={fmt(analyticsStats?.total_cleared_amounts ?? 0)}
-          icon={<UserCheck size={18} />}
-          iconBg="bg-emerald-50"
-          iconColor="text-emerald-600"
-          subValue="Paid"
-        />
-        <StatCard
-          label="Total Credit Limits"
-          value={fmt(analyticsStats?.total_credit_limits ?? 0)}
-          icon={<CreditCard size={18} />}
-          iconBg="bg-violet-50"
-          iconColor="text-violet-600"
-          subValue="Allocated"
+          subValue="Customers with unpaid balances"
+          onClick={() => setFilterOutstanding("Outstanding")}
+          className={filterOutstanding === "Outstanding" ? "ring-2 ring-rose-400 border-transparent shadow-sm" : ""}
         />
       </div>
 

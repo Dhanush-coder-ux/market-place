@@ -280,11 +280,6 @@ const Supplier = () => {
       .catch(() => {});
   }, [getData]);
 
-  const fmt = (n: number | undefined | null) => {
-    if (n === undefined || n === null || isNaN(n)) return "₹0.00";
-    return `₹${n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
-
   useEffect(() => {
     const params: Record<string, string> = { limit: "50", offset: "1" };
     if (debouncedSearch) params.q = debouncedSearch;
@@ -461,7 +456,7 @@ const Supplier = () => {
         <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-none">
           <StatCard
             icon={Building2}
-            label="Total Suppliers"
+            label="All Suppliers"
             value={(analyticsStats?.overview?.supplier?.total_suppliers ?? suppliers.length).toString()}
             iconBg="bg-blue-50 text-blue-600"
             onClick={() => setFilters(prev => ({ ...prev, status: "All" }))}
@@ -469,19 +464,11 @@ const Supplier = () => {
           />
           <StatCard
             icon={Phone}
-            label="Total Outstanding"
+            label="Outstanding Due"
             value={String(analyticsStats?.overview?.supplier?.total_outstanding_suppliers ?? analyticsStats?.overview?.supplier?.outstanding_count ?? suppliers.filter((s: any) => getSupplierOutstanding(s) > 0).length)}
             iconBg="bg-rose-50 text-rose-600"
             onClick={() => setFilters(prev => ({ ...prev, status: prev.status === "Outstanding" ? "All" : "Outstanding" }))}
             className={filters.status === "Outstanding" ? "ring-2 ring-rose-400 border-transparent shadow-sm" : ""}
-          />
-          <StatCard
-            icon={Phone}
-            label="Total Cleared"
-            value={fmt(analyticsStats?.overview?.supplier?.total_cleared_amounts ?? 0)}
-            iconBg="bg-emerald-50 text-emerald-600"
-            onClick={() => setFilters(prev => ({ ...prev, status: prev.status === "Cleared" ? "All" : "Cleared" }))}
-            className={filters.status === "Cleared" ? "ring-2 ring-emerald-400 border-transparent shadow-sm" : ""}
           />
         </div>
       )}

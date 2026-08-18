@@ -14,7 +14,6 @@ import {
   ExternalLink,
   Copy,
   Check,
-  IndianRupee,
   Eye,
   Pencil,
   MoreVertical,
@@ -1115,26 +1114,19 @@ const InventoryPage = () => {
         <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-none mt-2">
           <StatCard
             icon={Package}
-            label="Total Products"
+            label="Available Stock"
             value={(analyticsStats?.overview?.inventory?.total_active_products ?? Math.max(Number(overallStats?.total_product_count || 0), stats.total)).toString()}
-            subValue="items"
+            subValue="All stocked products"
             iconBg="bg-blue-50"
             iconColor="text-blue-600"
-          />
-          <StatCard
-            icon={IndianRupee}
-            label="Total Stock Value"
-            value={(analyticsStats?.overview?.inventory?.total_stocks ?? overallStats?.total_stock_value ?? 0).toLocaleString()}
-            prefix="₹"
-            subValue="inventory value"
-            iconBg="bg-emerald-50"
-            iconColor="text-emerald-600"
+            onClick={() => setStockStatus(prev => prev === "available" ? "" : "available")}
+            className={stockStatus === "available" ? "ring-2 ring-blue-400 border-transparent shadow-sm" : ""}
           />
           <StatCard
             icon={AlertTriangle}
             label="Low Stock"
             value={(analyticsStats?.overview?.inventory?.total_low_stocks ?? overallStats?.low_stocks_count ?? stats.lowStock).toString()}
-            subValue="priority"
+            subValue="Low stock only"
             iconBg="bg-amber-50"
             iconColor="text-amber-500"
             onClick={() => setStockStatus(prev => prev === "low" ? "" : "low")}
@@ -1144,7 +1136,7 @@ const InventoryPage = () => {
             icon={AlertCircle}
             label="Out of Stock"
             value={(analyticsStats?.overview?.inventory?.total_no_stocks ?? overallStats?.no_stocks_count ?? inventory.filter((p: InventoryItem) => calculateProductStock(p) === 0).length).toString()}
-            subValue="items empty"
+            subValue="Zero stock only"
             iconBg="bg-red-50"
             iconColor="text-red-500"
             onClick={() => setStockStatus(prev => prev === "out_of_stock" ? "" : "out_of_stock")}

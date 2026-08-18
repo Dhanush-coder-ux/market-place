@@ -18,7 +18,7 @@ const parseError = async (res: Response): Promise<string> => {
 
 async function request(options: RequestOptions): Promise<any> {
   const { method, endpoint, body, params } = options;
-  
+
   let url = endpoint.startsWith("http") ? endpoint : `${BASE_URL}${endpoint}`;
   if (params && Object.keys(params).length > 0) {
     url += (url.includes("?") ? "&" : "?") + new URLSearchParams(params).toString();
@@ -29,7 +29,7 @@ async function request(options: RequestOptions): Promise<any> {
     let shopId = localStorage.getItem("shop_id");
     let userId = localStorage.getItem("user_id");
     const sessionId = localStorage.getItem("session_id");
-    
+
     if (token && (!shopId || !userId)) {
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
@@ -45,9 +45,9 @@ async function request(options: RequestOptions): Promise<any> {
         // ignore
       }
     }
-    
-    const headers: Record<string, string> = { 
-      "Content-Type": "application/json" 
+
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json"
     };
     if (token) headers["Authorization"] = `Bearer ${token}`;
     if (shopId) {
@@ -59,7 +59,7 @@ async function request(options: RequestOptions): Promise<any> {
     if (sessionId) {
       headers["x-session-id"] = sessionId;
     }
-    
+
     return headers;
   };
 
@@ -85,14 +85,14 @@ async function request(options: RequestOptions): Promise<any> {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ refresh_token: refreshToken, version: tokenVersion })
         });
-        
+
         if (refreshRes.ok) {
           const refreshData = await refreshRes.json();
           localStorage.setItem("auth_token", refreshData.access_token);
           if (refreshData.refresh_token) {
             localStorage.setItem("refresh_token", refreshData.refresh_token);
           }
-          
+
           // Retry the original request
           res = await fetch(url, {
             method,
@@ -110,7 +110,7 @@ async function request(options: RequestOptions): Promise<any> {
     const msg = await parseError(res);
     throw new Error(msg);
   }
-  
+
   return await res.json();
 }
 
@@ -126,7 +126,7 @@ async function requestFormData(endpoint: string, formData: FormData): Promise<an
     let shopId = localStorage.getItem("shop_id");
     let userId = localStorage.getItem("user_id");
     const sessionId = localStorage.getItem("session_id");
-    
+
     if (token && (!shopId || !userId)) {
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
@@ -142,7 +142,7 @@ async function requestFormData(endpoint: string, formData: FormData): Promise<an
         // ignore
       }
     }
-    
+
     const headers: Record<string, string> = {};
     if (token) headers["Authorization"] = `Bearer ${token}`;
     if (shopId) {
@@ -154,7 +154,7 @@ async function requestFormData(endpoint: string, formData: FormData): Promise<an
     if (sessionId) {
       headers["x-session-id"] = sessionId;
     }
-    
+
     return headers;
   };
 
@@ -179,14 +179,14 @@ async function requestFormData(endpoint: string, formData: FormData): Promise<an
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ refresh_token: refreshToken, version: tokenVersion })
         });
-        
+
         if (refreshRes.ok) {
           const refreshData = await refreshRes.json();
           localStorage.setItem("auth_token", refreshData.access_token);
           if (refreshData.refresh_token) {
             localStorage.setItem("refresh_token", refreshData.refresh_token);
           }
-          
+
           res = await fetch(url, {
             method: "POST",
             headers: getHeaders(),

@@ -8,13 +8,14 @@ import {
   BadgeCheck,
   Save,
   Bookmark,
+  Info,
+  AlertCircle
 } from "lucide-react";
 import { useHeader } from "@/context/HeaderContext";
 import { useToast } from "@/context/ToastContext";
 import { useApi } from "@/context/ApiContext";
 import { usePurchaseSettings } from "@/context/PurchaseContext";
 import { ENDPOINTS } from "@/services/endpoints";
-import Input from "@/components/ui/Input";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
@@ -63,6 +64,103 @@ const currencyOptions = [
   { label: "USD — US Dollar ($)", value: "USD" },
   { label: "EUR — Euro (€)", value: "EUR" },
 ];
+
+// ─── Shared Styles (from ProductForm) ───────────────────────────────────────
+
+const STYLES = `
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+  .pf-root { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
+  .pf-input:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.12); }
+  .pf-input { transition: border-color 0.15s, box-shadow 0.15s; }
+  .pf-section-enter { animation: secIn 0.22s ease forwards; }
+  @keyframes secIn { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform: translateY(0); } }
+  .pf-fade-in { animation: fadeIn 0.2s ease forwards; }
+  @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+
+  .pf-card { transition: box-shadow 0.18s ease; }
+  .pf-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.07); }
+
+  .pf-bottom-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    background: white;
+    border-top: 1px solid #e2e8f0;
+    padding: 10px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
+  }
+`;
+
+// ─── UI Components (from ProductForm) ───────────────────────────────────────
+
+interface LabelProps { text: string; required?: boolean; hint?: string; tooltip?: string; }
+const Label: React.FC<LabelProps> = ({ text, required, hint, tooltip }) => (
+  <div className="flex items-center gap-1.5 mb-1.5">
+    <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
+      {text}{required && <span className="text-red-400 ml-0.5">*</span>}
+      {hint && <span className="ml-1.5 normal-case font-normal text-slate-400 lowercase">({hint})</span>}
+    </label>
+    {tooltip && (
+      <div className="group relative flex items-center">
+        <Info size={11} className="text-slate-400 cursor-help hover:text-indigo-500 transition-colors" />
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-52 p-2.5 bg-slate-800 text-white text-[10px] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl normal-case font-medium tracking-normal leading-relaxed">
+          {tooltip}
+          <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-800" />
+        </div>
+      </div>
+    )}
+  </div>
+);
+
+interface InputFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  label?: string;
+  required?: boolean;
+  hint?: string;
+  leftEl?: React.ReactNode;
+  rightEl?: React.ReactNode;
+  error?: string;
+  tooltip?: string;
+}
+const InputField: React.FC<InputFieldProps> = ({ label, required, hint, leftEl, rightEl, error, tooltip, className = "", ...rest }) => (
+  <div className={`transition-opacity duration-200 ${rest.disabled ? "opacity-50" : ""}`}>
+    {label && <Label text={label} required={required} hint={hint} tooltip={tooltip} />}
+    <div className="relative">
+      {leftEl && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">{leftEl}</span>}
+      <input
+        {...rest}
+        className={`pf-input w-full px-3 py-2.5 text-sm border border-slate-200 rounded-lg bg-white text-slate-800 placeholder-slate-300 ${leftEl ? "pl-8" : ""} ${rightEl ? "pr-14" : ""} ${error ? "border-red-300 bg-red-50/30" : ""} ${rest.disabled ? "bg-slate-50 cursor-not-allowed" : ""} ${className}`}
+      />
+      {rightEl && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-semibold">{rightEl}</span>}
+    </div>
+    {error && <p className="mt-1 text-[11px] text-red-500 flex items-center gap-1"><AlertCircle size={10} />{error}</p>}
+  </div>
+);
+
+const SectionCard: React.FC<{ icon: React.ReactNode; iconBg: string; title: string; subtitle?: string; children: React.ReactNode; extra?: React.ReactNode }> = ({ icon, iconBg, title, subtitle, children, extra }) => (
+  <div className="pf-card bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+      <div className="flex items-center gap-3">
+        <div className={`w-9 h-9 rounded-xl ${iconBg} flex items-center justify-center shrink-0`}>
+          {icon}
+        </div>
+        <div>
+          <h2 className="text-sm font-bold text-slate-800">{title}</h2>
+          {subtitle && <p className="text-[11px] text-slate-400 mt-0.5">{subtitle}</p>}
+        </div>
+      </div>
+      {extra}
+    </div>
+    <div className="p-6">
+      {children}
+    </div>
+  </div>
+);
 
 // ─── ProfileForm ────────────────────────────────────────────────────────────
 
@@ -130,27 +228,28 @@ const ProfileForm: React.FC = () => {
     }
   }, [id, searchParams]);
 
-  // Header Actions
+  // Bottom Action Bar (ProductForm style)
   useEffect(() => {
     setBottomActions(
-      <div className="flex items-center gap-3 md:animate-in md:fade-in md:slide-in-from-right-4 md:duration-300">
+      <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300">
         {!id && (
           <button
             type="button"
             onClick={handleSaveDraft}
-            className="px-4 h-8 rounded-lg border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 md:hover:bg-blue-100 md:transition-all flex items-center gap-2 whitespace-nowrap overflow-hidden"
+            disabled={submitting}
+            className="px-4 h-9 rounded-lg border border-slate-200 text-slate-600 font-semibold text-xs bg-white hover:bg-slate-50 transition-all flex items-center gap-2"
           >
             <Bookmark size={14} className="shrink-0" />
-            <span className="truncate">Save Draft</span>
+            Save draft
           </button>
         )}
         <GradientButton
-          icon={<Save size={16} />}
+          icon={<Save size={15} />}
           onClick={() => handleSubmit()}
           disabled={submitting}
-          className="rounded-lg shadow-md text-xs px-8 h-8 flex items-center"
+          className="rounded-lg shadow-md text-xs px-6 h-9 flex items-center"
         >
-          {submitting ? "..." : id ? "Save Changes" : "Create Shop"}
+          {submitting ? "Saving..." : id ? "Save Changes" : "Create Shop"}
         </GradientButton>
       </div>
     );
@@ -159,7 +258,8 @@ const ProfileForm: React.FC = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const finalValue = name.includes("gst") ? value.toUpperCase() : value;
+    setFormData((prev) => ({ ...prev, [name]: finalValue }));
   };
 
   const handleSaveDraft = () => {
@@ -229,7 +329,6 @@ const ProfileForm: React.FC = () => {
             JSON.stringify(drafts.filter((d: any) => d.id !== draftId))
           );
         }
-        // After creating → go to shop-select; after editing → stay on profile
         setGstType(formData.gst_registered ? "registered" : "non-registered");
         navigate(id ? "/profile" : "/shop-select");
       }
@@ -243,210 +342,202 @@ const ProfileForm: React.FC = () => {
   if (loading && id) return <div className="py-20 text-center"><Loader /></div>;
 
   return (
-    <div className="w-full max-w-7xl mx-auto p-4 md:p-8 md:animate-in md:fade-in md:duration-500">
+    <div className="pf-root bg-slate-50 min-h-screen pb-32">
+      <style>{STYLES}</style>
+      
+      {/* Main Container */}
+      <div className="w-full mx-auto px-4 py-8 md:animate-in md:fade-in md:duration-500">
 
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-        {/* Left Column */}
-        <div className="md:col-span-8 space-y-6">
-          {/* Shop Identity */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50/50 rounded-full -mr-16 -mt-16" />
-            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-              <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
-                <Store size={18} />
-              </div>
-              <div>
-                <h3 className="text-xs font-black text-slate-800">Shop Identity</h3>
-                <p className="text-[11px] font-medium text-slate-400">Brand and visual presence</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="md:col-span-2">
-                <Input
-                  label="Shop Name *"
+        {/* Using a grid to accommodate the sections nicely */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          
+          <div className="lg:col-span-8 space-y-6">
+            
+            {/* SECTION 1: Shop Identity */}
+            <SectionCard
+              icon={<Store size={17} className="text-blue-600" />}
+              iconBg="bg-blue-50"
+              title="Shop Identity"
+              subtitle="Brand and visual presence"
+            >
+              <div className="space-y-5">
+                <InputField
+                  label="Shop Name"
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
                   placeholder="e.g. Sunrise Mart"
-                  className="h-11 font-bold text-slate-700"
                   required
+                  className="font-semibold text-base"
                 />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <SearchSelect
-                  label="Categories *"
-                  value={formData.category}
-                  onChange={(val) => setFormData(prev => ({ ...prev, category: val as string[] }))}
-                  options={categoryOptions}
-                  labelKey="label"
-                  valueKey="value"
-                  multiple
-                  placeholder="Search and select categories..."
-                />
-              </div>
-            </div>
-          </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="space-y-2">
+                    <Label text="Categories" required />
+                    <SearchSelect
+                      value={formData.category}
+                      onChange={(val) => setFormData(prev => ({ ...prev, category: val as string[] }))}
+                      options={categoryOptions}
+                      labelKey="label"
+                      valueKey="value"
+                      multiple
+                      placeholder="Select categories..."
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label text="Currency" />
+                    <ReusableSelect
+                      value={formData.currency}
+                      onValueChange={(val) => setFormData((p) => ({ ...p, currency: val }))}
+                      options={currencyOptions}
+                      placeholder="Select Currency"
+                    />
+                  </div>
+                </div>
 
-          {/* Contact & Location */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-6">
-            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-              <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
-                <MapPin size={18} />
-              </div>
-              <div>
-                <h3 className="text-xs font-black text-slate-800">Contact & Location</h3>
-                <p className="text-[11px] font-medium text-slate-400">Where customers can find you</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <Input
-                label="PIN Code"
-                name="pincode"
-                value={formData.pincode}
-                onChange={handleChange}
-                placeholder="600001"
-                leftIcon={<Hash size={16} className="text-slate-400" />}
-              />
-              <Input
-                label="Landmark"
-                name="landmark"
-                value={formData.landmark}
-                onChange={handleChange}
-                placeholder="e.g. Near City Mall"
-                leftIcon={<MapPin size={16} className="text-slate-400" />}
-              />
-              <Input
-                label="Latitude"
-                name="latitude"
-                value={formData.latitude}
-                onChange={handleChange}
-                placeholder="e.g. 9.9252"
-                leftIcon={<MapPin size={16} className="text-slate-400" />}
-              />
-              <Input
-                label="Longitude"
-                name="longitude"
-                value={formData.longitude}
-                onChange={handleChange}
-                placeholder="e.g. 78.1198"
-                leftIcon={<MapPin size={16} className="text-slate-400" />}
-              />
-              <div className="md:col-span-2 space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 ml-1">Full Address</label>
-                <textarea
-                  name="full_address"
-                  value={formData.full_address}
-                  onChange={handleChange}
-                  rows={3}
-                  className="w-full bg-slate-50 border border-slate-100 rounded-lg px-4 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-100 md:transition-all placeholder:text-slate-300 resize-none outline-none"
-                  placeholder="Full street address including area"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column */}
-        <div className="md:col-span-4 space-y-6">
-          {/* Business Details */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-5 relative overflow-hidden">
-            <div className="absolute bottom-0 right-0 w-24 h-24 bg-blue-50 rounded-full -mr-8 -mb-8 blur-2xl" />
-            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-              <div className="w-9 h-9 rounded-lg bg-slate-50 flex items-center justify-center text-blue-600">
-                <BadgeCheck size={18} />
-              </div>
-              <div>
-                <h3 className="text-xs font-black text-slate-800">Business Details</h3>
-                <p className="text-[11px] font-medium text-slate-400">Legal & financial info</p>
-              </div>
-            </div>
-            <div className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 ml-1">Business Type</label>
-                <ReusableSelect
-                  value={formData.business_type}
-                  onValueChange={(val) => setFormData((p) => ({ ...p, business_type: val }))}
-                  options={businessTypeOptions}
-                  placeholder="Select Type"
-                />
-              </div>
-              <div className="space-y-3">
-                <label className="flex items-center gap-2 cursor-pointer mt-2">
-                  <input 
-                    type="checkbox" 
-                    checked={formData.gst_registered}
-                    onChange={(e) => setFormData(p => ({ ...p, gst_registered: e.target.checked }))}
-                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300"
-                  />
-                  <span className="text-[11px] font-bold text-slate-700">Registered for GST?</span>
-                </label>
-                {formData.gst_registered && (
-                  <Input
-                    label="GST Number"
-                    name="gst_number"
-                    value={formData.gst_number}
+                <div className="space-y-1.5">
+                  <Label text="Description" />
+                  <textarea
+                    name="description"
+                    value={formData.description}
                     onChange={handleChange}
-                    placeholder="22AAAAA0000A1Z5"
-                    leftIcon={<FileText size={16} className="text-slate-400" />}
+                    rows={4}
+                    className="pf-input w-full bg-white border border-slate-200 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 focus:ring-0 transition-all placeholder:text-slate-300 resize-none"
+                    placeholder="Tell customers what makes your shop special..."
                   />
-                )}
+                </div>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 ml-1">Currency</label>
-                <ReusableSelect
-                  value={formData.currency}
-                  onValueChange={(val) => setFormData((p) => ({ ...p, currency: val }))}
-                  options={currencyOptions}
-                  placeholder="Select Currency"
-                />
+            </SectionCard>
+
+            {/* SECTION 2: Contact & Location */}
+            <SectionCard
+              icon={<MapPin size={17} className="text-emerald-600" />}
+              iconBg="bg-emerald-50"
+              title="Contact & Location"
+              subtitle="Where customers can find you"
+            >
+              <div className="space-y-5">
+                <div className="space-y-1.5">
+                  <Label text="Full Address" />
+                  <textarea
+                    name="full_address"
+                    value={formData.full_address}
+                    onChange={handleChange}
+                    rows={3}
+                    className="pf-input w-full bg-white border border-slate-200 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 focus:ring-0 transition-all placeholder:text-slate-300 resize-none"
+                    placeholder="Full street address including area"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <InputField
+                    label="PIN Code"
+                    name="pincode"
+                    value={formData.pincode}
+                    onChange={handleChange}
+                    placeholder="600001"
+                    leftEl={<Hash size={14} />}
+                  />
+                  <InputField
+                    label="Landmark"
+                    name="landmark"
+                    value={formData.landmark}
+                    onChange={handleChange}
+                    placeholder="e.g. Near City Mall"
+                    leftEl={<MapPin size={14} />}
+                  />
+                  <InputField
+                    label="Latitude"
+                    name="latitude"
+                    value={formData.latitude}
+                    onChange={handleChange}
+                    placeholder="e.g. 9.9252"
+                  />
+                  <InputField
+                    label="Longitude"
+                    name="longitude"
+                    value={formData.longitude}
+                    onChange={handleChange}
+                    placeholder="e.g. 78.1198"
+                  />
+                </div>
               </div>
-            </div>
+            </SectionCard>
+
           </div>
 
-          {/* Description */}
-          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-4">
-            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-              <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400">
-                <FileText size={16} />
-              </div>
-              <h3 className="text-xs font-black text-slate-800">Description</h3>
-            </div>
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              rows={5}
-              className="w-full bg-slate-50 border border-slate-100 rounded-lg px-4 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-100 md:transition-all placeholder:text-slate-300 resize-none outline-none"
-              placeholder="Tell customers what makes your shop special..."
-            />
-          </div>
+          {/* Right Column */}
+          <div className="lg:col-span-4 space-y-6">
+            
+            {/* SECTION 3: Legal & Tax Information */}
+            <SectionCard
+              icon={<BadgeCheck size={17} className="text-purple-600" />}
+              iconBg="bg-purple-50"
+              title="Legal & Tax"
+              subtitle="Business registration and compliance"
+            >
+              <div className="space-y-5">
+                <div className="space-y-1.5">
+                  <Label text="Business Type" />
+                  <ReusableSelect
+                    value={formData.business_type}
+                    onValueChange={(val) => setFormData((p) => ({ ...p, business_type: val }))}
+                    options={businessTypeOptions}
+                    placeholder="Select Type"
+                  />
+                </div>
 
-          {/* What's next — only on create */}
-          {!id && (
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-4 space-y-3">
-              <p className="text-xs font-black text-blue-800">What happens next?</p>
-              <ul className="space-y-2 text-[11px] font-semibold text-blue-700">
-                <li className="flex items-start gap-2">
-                  <span className="w-4 h-4 rounded-full bg-blue-200 text-blue-700 flex items-center justify-center text-[9px] font-black shrink-0 mt-0.5">1</span>
-                  Your shop is created and saved
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="w-4 h-4 rounded-full bg-blue-200 text-blue-700 flex items-center justify-center text-[9px] font-black shrink-0 mt-0.5">2</span>
-                  You'll be redirected to the shop selector
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="w-4 h-4 rounded-full bg-blue-200 text-blue-700 flex items-center justify-center text-[9px] font-black shrink-0 mt-0.5">3</span>
-                  Select your new shop to enter the dashboard
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="w-4 h-4 rounded-full bg-blue-200 text-blue-700 flex items-center justify-center text-[9px] font-black shrink-0 mt-0.5">4</span>
-                  Use <strong>Setup Wizard</strong> in the sidebar to launch your digital store
-                </li>
-              </ul>
-            </div>
-          )}
+                <div className="space-y-3 p-4 bg-slate-50 border border-slate-100 rounded-lg">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={formData.gst_registered}
+                      onChange={(e) => setFormData(p => ({ ...p, gst_registered: e.target.checked }))}
+                      className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 border-slate-300"
+                    />
+                    <span className="text-sm font-semibold text-slate-700">GST Registered</span>
+                  </label>
+                  {formData.gst_registered && (
+                    <div className="pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                      <InputField
+                        label="GST Number"
+                        name="gst_number"
+                        value={formData.gst_number}
+                        onChange={handleChange}
+                        placeholder="22AAAAA0000A1Z5"
+                        leftEl={<FileText size={14} />}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </SectionCard>
+
+            {/* What happens next — only on create */}
+            {!id && (
+              <div className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-5 shadow-sm">
+                <h3 className="text-sm font-bold text-indigo-900 mb-4 flex items-center gap-2">
+                  What happens next?
+                </h3>
+                <div className="flex flex-col gap-3">
+                  {[
+                    "Your shop is created and saved securely.",
+                    "You'll be redirected to the shop selector.",
+                    "Select your new shop to enter its dashboard.",
+                    "Use the Setup Wizard to launch your store."
+                  ].map((text, idx) => (
+                    <div key={idx} className="flex items-start gap-2.5">
+                      <div className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[9px] font-bold shrink-0 mt-0.5">
+                        {idx + 1}
+                      </div>
+                      <p className="text-xs font-medium text-indigo-800 leading-relaxed">{text}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+          </div>
         </div>
       </div>
     </div>
@@ -454,3 +545,4 @@ const ProfileForm: React.FC = () => {
 };
 
 export default ProfileForm;
+

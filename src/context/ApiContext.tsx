@@ -153,10 +153,10 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
   const setKey = useCallback((key: string, val: boolean) => {
     const current = loadingMapRef.current[key] || false;
     if (current === val) return;
-    
+
     if (val) loadingMapRef.current[key] = true;
     else delete loadingMapRef.current[key];
-    
+
     notify();
   }, [notify]);
 
@@ -178,7 +178,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
       cleanBaseUrl = cleanBaseUrl.slice(0, -4);
     }
     let url = `${cleanBaseUrl}${endpoint.startsWith("/api") ? endpoint : `/api${endpoint}`}`;
-    
+
     if (params && Object.keys(params).length > 0) {
       url += `?${new URLSearchParams(params).toString()}`
     }
@@ -206,7 +206,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
           let shopId = localStorage.getItem("shop_id");
           let userId = localStorage.getItem("user_id");
           const sessionId = localStorage.getItem("session_id");
-          
+
           if (token && (!shopId || !userId)) {
             try {
               const payload = JSON.parse(atob(token.split('.')[1]));
@@ -222,9 +222,9 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
               // ignore
             }
           }
-          
-          const headers: Record<string, string> = { 
-            "Content-Type": "application/json" 
+
+          const headers: Record<string, string> = {
+            "Content-Type": "application/json"
           };
           if (token) headers["Authorization"] = `Bearer ${token}`;
           if (shopId) {
@@ -236,7 +236,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
           if (sessionId) {
             headers["x-session-id"] = sessionId;
           }
-          
+
           return headers;
         };
 
@@ -309,15 +309,15 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <ApiContext.Provider
-      value={{ 
-        loading, 
-        isLoading, 
-        error, 
-        getData, 
-        postData, 
-        putData, 
-        deleteData, 
-        patchData, 
+      value={{
+        loading,
+        isLoading,
+        error,
+        getData,
+        postData,
+        putData,
+        deleteData,
+        patchData,
         clearError,
         _subscribe: subscribe // Internal use for the hook
       }}

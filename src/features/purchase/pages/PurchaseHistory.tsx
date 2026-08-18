@@ -338,14 +338,7 @@ const STYLES = `
 /* ================= SHARED HELPERS ================= */
 const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 
-const PurchaseTypeBadge = ({ type }: { type: PurchaseType }) => {
-  let variant: any = "tx-opening";
-  if (type === "Purchase" || type === "PO Purchase") variant = "tx-purchase";
-  if (type === "Production") variant = "tx-adjustment";
-  if (type === "Purchase Return" || type === "Return" as any) variant = "tx-purchase-return";
 
-  return <AntBadge variant={variant} type="pill" dot>{type}</AntBadge>;
-};
 
 const PaymentStatusBadge = ({ status, outstanding, grandTotal }: { status?: string; outstanding?: number; grandTotal?: number }) => {
   let displayStatus = (status || "UNPAID").toUpperCase();
@@ -405,7 +398,6 @@ const GridCard = ({ po, selected, onClick }: { po: DirectPurchaseData; selected?
               <span className="text-[10px] font-medium text-zinc-500">System ID: {po.systemId}</span>
             )}
           </div>
-          <PurchaseTypeBadge type={po.purchaseType} />
           <PurchaseStatusBadge status={po.status} />
           <PaymentStatusBadge status={po.payment_status} outstanding={po.outstanding} grandTotal={po.grand_total || po.total_cost} />
                           {po.purchaseType === "Purchase Return" && (
@@ -655,7 +647,6 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
                       <div className="flex flex-col gap-0.5">
                         <span className="font-mono text-[11px] font-semibold text-slate-800">{po.poNumber || "—"}</span>
                         <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-                          <PurchaseTypeBadge type={po.purchaseType} />
                           {po.storage_location && (
                             <span className="text-[9px] font-bold text-zinc-500 bg-zinc-50 border border-zinc-200 px-1.5 py-0.5 rounded-xl uppercase tracking-wider shrink-0">
                               {po.storage_location}
@@ -719,7 +710,12 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
 
                   {/* Payment Status */}
                   <td className="p-2.5 px-3 text-center">
-                    <PaymentStatusBadge status={po.payment_status} outstanding={po.outstanding} grandTotal={po.grand_total || po.total_cost} />
+                    <div className="flex flex-col items-center gap-1">
+                      <PaymentStatusBadge status={po.payment_status} outstanding={po.outstanding} grandTotal={po.grand_total || po.total_cost} />
+                      {po.outstanding !== undefined && (po.grand_total || po.total_cost) !== undefined && (po.grand_total || po.total_cost) > 0 && po.outstanding > 0 && (po.grand_total || po.total_cost) > po.outstanding && (
+                        <span className="text-[10px] font-bold text-amber-600">{fmt(po.outstanding)}</span>
+                      )}
+                    </div>
                   </td>
 
                   {/* Actions */}
@@ -1061,30 +1057,28 @@ const PurchaseHistory = () => {
         {!isCleanMode && (
           <div className="flex gap-3 pb-1 overflow-x-auto scrollbar-none">
             <StatCard
-              label="Total Purchase"
-              value={(analyticsStats?.overview?.purchase?.total_purchase_amounts || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              prefix="₹"
+              label="All Purchases"
+              value={String(analyticsStats?.overview?.purchase?.total_purchase || items.length)}
               icon={<ReceiptText size={18} />}
               iconBg="bg-blue-50"
               iconColor="text-blue-600"
-              subValue={`${analyticsStats?.overview?.purchase?.total_purchase || 0} Purchases`}
+              subValue="All purchases"
             />
             <StatCard
-              label="Pending Payment"
-              value={(analyticsStats?.overview?.purchase?.total_outstanding_amounts || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              prefix="₹"
+              label="Outstanding Payments"
+              value={String(items.filter((p: any) => (p.outstanding || 0) > 0).length)}
               icon={<Calendar size={18} />}
               iconBg="bg-amber-50"
               iconColor="text-amber-500"
-              subValue="Pending to clear"
+              subValue="Purchases with outstanding > 0"
             />
             <StatCard
-              label="Total Items Bought"
-              value={(analyticsStats?.overview?.purchase?.total_purchase_stocks || 0).toString()}
-              icon={<Package size={18} />}
+              label="Purchase Returns"
+              value={String(items.filter((p: any) => p.returns && p.returns.length > 0).length)}
+              icon={<RotateCw size={18} />}
               iconBg="bg-rose-50"
               iconColor="text-rose-550"
-              subValue="Stocks added"
+              subValue="Purchases with linked returns tag"
             />
           </div>
         )}

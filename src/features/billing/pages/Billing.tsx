@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { GripVertical } from "lucide-react";
 
 import BillingTable from "../components/BillingTable";
 import BillingHeader from "../components/BillingHeader";
@@ -55,7 +56,7 @@ const Billing = () => {
   const [payments, setPayments] = useState<{ mode: "cash" | "upi" | "credit"; amount: number }[]>([
     { mode: "cash", amount: 0 },
   ]);
-  
+
   const totalAmount = useMemo(() => items.reduce((s, i) => s + (i.tprice || 0), 0), [items]);
   const gstAmount = useMemo(() => {
     if (!includeGst) return 0;
@@ -102,7 +103,7 @@ const Billing = () => {
   useEffect(() => {
     return () => {
       if (sessionId && !sessionDoneRef.current) {
-        apiClient.post(`${ENDPOINTS.ORDER_CART}/cancel`, { session_id: sessionId }).catch(() => {});
+        apiClient.post(`${ENDPOINTS.ORDER_CART}/cancel`, { session_id: sessionId }).catch(() => { });
       }
     };
   }, [sessionId]);
@@ -111,7 +112,7 @@ const Billing = () => {
   useEffect(() => {
     const handleUnload = () => {
       if (sessionId && !sessionDoneRef.current) {
-        apiClient.post(`${ENDPOINTS.ORDER_CART}/cancel`, { session_id: sessionId }).catch(() => {});
+        apiClient.post(`${ENDPOINTS.ORDER_CART}/cancel`, { session_id: sessionId }).catch(() => { });
       }
     };
     window.addEventListener("beforeunload", handleUnload);
@@ -321,11 +322,38 @@ const Billing = () => {
     }
   }, []);
 
+  // ── Resizable Sidebar Logic
+  const [sidebarWidth, setSidebarWidth] = useState(400);
+  const isDraggingRef = useRef(false);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDraggingRef.current) return;
+      const newWidth = window.innerWidth - e.clientX;
+      if (newWidth > 300 && newWidth < 800) {
+        setSidebarWidth(newWidth);
+      }
+    };
+    const handleMouseUp = () => {
+      if (isDraggingRef.current) {
+        isDraggingRef.current = false;
+        document.body.style.cursor = '';
+      }
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
+
   const hasItemsForBlocker = items.some(i => i.name && i.qty > 0);
 
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-slate-50/80 overflow-hidden h-screen">
-      <div className="flex-1 flex min-h-0 bg-slate-50/80 overflow-hidden">
+      <div className="flex-1 flex min-h-0 bg-slate-50/80 overflow-hidden relative">
         <NavigationBlocker shouldBlock={hasItemsForBlocker} />
 
         {/* ── Left Panel (Global Search + Table list card) ──────────────── */}
@@ -356,8 +384,25 @@ const Billing = () => {
           </div>
         </div>
 
+        {/* ── Drag Handle ── */}
+        <div
+          className="hidden lg:flex items-center justify-center w-2 -ml-[1px] bg-transparent cursor-col-resize shrink-0 relative z-20 group"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            isDraggingRef.current = true;
+            document.body.style.cursor = 'col-resize';
+          }}
+        >
+          <div className="w-1.5 h-10 bg-slate-200 rounded-full flex items-center justify-center group-hover:bg-blue-400 group-active:bg-blue-500 transition-colors shadow-sm">
+            <GripVertical size={12} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" strokeWidth={3} />
+          </div>
+        </div>
+
         {/* ── Right Sidebar (full height) ────────────────────────── */}
-        <aside className="hidden lg:flex w-[360px] xl:w-[400px] shrink-0 flex-col border-l border-slate-200 bg-white">
+        <aside
+          className="hidden lg:flex shrink-0 flex-col border-l border-slate-200 bg-white"
+          style={{ width: `${sidebarWidth}px` }}
+        >
           <BillingHeader
             items={items}
             customerData={customerData}
@@ -399,8 +444,8 @@ const Billing = () => {
       {/* ── Small Fixed Branded Bottombar ── */}
       <div className="shrink-0 h-7 bg-white border-t border-slate-200/80 flex items-center justify-center text-[10px] text-slate-400 select-none">
         <span>Powered by </span>
-        <button 
-          onClick={() => navigate("/")} 
+        <button
+          onClick={() => navigate("/")}
           className="ml-1 font-bold text-blue-600 hover:text-blue-700 hover:underline cursor-pointer"
         >
           marketplace

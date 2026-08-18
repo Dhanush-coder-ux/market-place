@@ -42,7 +42,6 @@ const columnLabels: Record<string, string> = {
   status: "Status",
   category: "Category",
   unit: "Unit",
-  brand: "Brand",
   supplier: "Supplier",
   serial_number: "Serials",
   reorder_point: "Reorder Point",
@@ -53,7 +52,6 @@ const columnOrder = [
   "category",
   "supplier",
   "unit",
-  "brand",
   "buy_price",
   "sell_price",
   "stocks",
@@ -432,31 +430,27 @@ const ProductRow = React.memo(
                     </div>
                   </button>
                 )}
-                <div className="flex items-center gap-2 text-[11px] text-slate-400 font-medium leading-none mt-0.5">
-                  {(() => {
-                    const barcode = p.barcode || datas.barcode || "";
-                    if (!barcode) return null;
-                    return (
-                      <span className="flex items-center gap-1">
-                        <span className="font-mono tabular-nums" title={barcode}>
-                          Barcode: {barcode}
+                  <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                    {(() => {
+                      const barcode = p.barcode || datas.barcode || "";
+                      if (!barcode) return null;
+                      return (
+                        <span className="text-[10px] font-mono text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded-md border border-slate-100" title={barcode}>
+                          {barcode}
                         </span>
+                      );
+                    })()}
+                    {Boolean(p.brand || datas.brand || (p as any).brand) && (
+                      <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-md border border-blue-100">
+                        {p.brand || datas.brand || (p as any).brand}
                       </span>
-                    );
-                  })()}
-                  {Boolean(p.brand || datas.brand || (p as any).brand) && (
-                    <>
-                      {Boolean(p.barcode || datas.barcode) && <span className="text-slate-200">·</span>}
-                      <span>{p.brand || datas.brand || (p as any).brand}</span>
-                    </>
-                  )}
-                  {(p.gst || datas.gst || (p as any).gst) && (
-                    <>
-                      <span className="text-slate-200">·</span>
-                      <span>GST {p.gst || datas.gst || (p as any).gst}</span>
-                    </>
-                  )}
-                </div>
+                    )}
+                    {(p.gst || datas.gst || (p as any).gst) && (
+                      <span className="text-[10px] font-semibold text-[var(--lb-gst-tx)] bg-[var(--lb-gst-bg)] px-1.5 py-0.5 rounded-md border border-[var(--lb-gst-bd)] uppercase">
+                        GST {p.gst || datas.gst || (p as any).gst}
+                      </span>
+                    )}
+                  </div>
               </div>
             </div>
           </td>

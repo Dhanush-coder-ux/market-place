@@ -1143,6 +1143,7 @@ const PurchaseDetail = () => {
                           <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Date</th>
                           <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Items</th>
                           <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Reason</th>
+                          <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">GST Amount</th>
                           <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Return Value</th>
                           <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Adjusted</th>
                           <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Cash Refund</th>
@@ -1156,6 +1157,7 @@ const PurchaseDetail = () => {
                             : "—";
                           const payInfo = ret.payment_infos || {};
                           const returnValue = Number(payInfo.return_value ?? ret.total_refund_amount ?? ret.return_value ?? 0);
+                          const gstAmount = Number(ret.total_gst_amount ?? 0);
                           const adjusted = Number(payInfo.adjusted_against_outstanding ?? ret.adjusted_amount ?? 0);
                           const cashRefund = Number(payInfo.cash_refund ?? ret.cash_refund ?? ret.total_refund_amount ?? 0);
                           const reason = payInfo.reason || ret.reason || "—";
@@ -1195,6 +1197,9 @@ const PurchaseDetail = () => {
                               </td>
                               <td className="px-5 py-4">
                                 <span className="text-xs text-slate-600 font-medium">{reason}</span>
+                              </td>
+                              <td className="px-5 py-4 text-right">
+                                <span className="text-xs font-black text-indigo-700 tabular-nums">{fmt(gstAmount)}</span>
                               </td>
                               <td className="px-5 py-4 text-right">
                                 <span className="text-xs font-black text-rose-700 tabular-nums">{fmt(returnValue)}</span>

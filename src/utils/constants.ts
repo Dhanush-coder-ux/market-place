@@ -105,7 +105,7 @@ export const sidebarLinks: SidebarLink[] = [
           { name: "Production Entry", path: "/production-entry/add", icon: PlusSquare },
         ],
       },
-      { name: "Purchase History", path: "/purchase-history", icon: History, addPath: "/purchase/add" },
+      { name: "Purchase List", path: "/purchase-history", icon: History, addPath: "/purchase/add" },
       { name: "Purchase Detail", path: "/purchase/detail", icon: FileText },
     ],
   },
@@ -114,7 +114,7 @@ export const sidebarLinks: SidebarLink[] = [
     name: "Inventory",
     icon: Database,
     subLinks: [
-      { name: "Stock Levels", path: "/inventory", icon: Package, addPath: "/product/add" },
+      { name: "Stock List", path: "/inventory", icon: Package, addPath: "/product/add" },
       { name: "Stock Movements", path: "/stock-movement", icon: History, addPath: "/stock-adjustment" },
       { name: "Stock Adjustments", path: "/stock-adjustment", icon: ClipboardList },
       { name: "Saved Drafts", path: "/stock-adjustment/drafts", icon: Bookmark },

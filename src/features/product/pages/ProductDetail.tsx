@@ -323,7 +323,7 @@ const ProductDetail = () => {
           subText={`SKU: ${skuValue}${uiId && uiId !== skuValue ? ` • ${uiId}` : ''} • Barcode: ${barcode}`}
           badges={[
             { text: categoryName, variant: "primary" },
-            { text: isActive ? "Active" : "Inactive", variant: isActive ? "success" : "danger", showPulse: true },
+            ...(!isActive && (product as any).have_tracking === false ? [] : [{ text: isActive ? "Active" : "Inactive", variant: isActive ? "success" : "danger", showPulse: true }]),
           ]}
           infoItems={[
             { icon: Tag, text: `Unit: ${unitName}` },
@@ -563,12 +563,14 @@ const ProductDetail = () => {
                       { label: "PRODUCT ID", value: uiId || product.id || "—" },
                       { label: "TYPE", value: datas.customer_type || "Product" },
                       { label: "GST", value: gstValue },
-                      { label: "STATUS", value: isActive ? "Active" : "Inactive", isStatus: true },
+                      (!isActive && (product as any).have_tracking === false) ? null : { label: "STATUS", value: isActive ? "Active" : "Inactive", isStatus: true },
                       { label: "ONLINE", value: (product as any).visible_online ? "Visible" : "Hidden", isOnline: true },
                       { label: "VARIANTS", value: hasVariants ? `${combinations.length} combo${combinations.length !== 1 ? 's' : ''}` : "None" },
                       { label: "BATCHES", value: hasBatches ? `${batches.length} batch${batches.length !== 1 ? 'es' : ''}` : "None" },
                       { label: "SERIALS", value: (product as any).type_infos?.has_serialno ? "Tracked" : "Not tracked" },
-                    ].map(row => (
+                    ].filter(Boolean).map(row => {
+                      if (!row) return null;
+                      return (
                       <div key={row.label} className="flex items-center justify-between py-2.5">
                         <span className="text-[10px] font-bold text-slate-400  ">{row.label}</span>
                         {(row as any).isStatus ? (
@@ -583,7 +585,8 @@ const ProductDetail = () => {
                           <span className="text-[11px] font-bold text-slate-700">{row.value}</span>
                         )}
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </SectionCard>
 
@@ -815,7 +818,7 @@ const ProductDetail = () => {
               const d = p.datas ?? {};
               const pd = d.purchaseDetails ?? {};
               const payment = d.payment ?? {};
-              const pType = p.type === 'DIRECT' ? 'Purchase' : (p.type?.includes('PO') ? 'PO Purchase' : 'Purchase');
+              const pType = p.type === 'PURCHASE_UPDATE' ? 'Purchase Update' : (p.type === 'DIRECT' ? 'Purchase' : (p.type?.includes('PO') ? 'PO Purchase' : 'Purchase'));
 
               const dateStr = isNewFormat ? p.purchase_date : (pd.date || p.created_at);
               const supplierName = isNewFormat ? p.supplier?.supplier_name : d.supplier_name;

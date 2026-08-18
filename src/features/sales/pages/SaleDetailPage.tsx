@@ -2,9 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import {
   ArrowLeft, Package, User,
-  RotateCcw, Calendar, CreditCard, CheckCircle2, Clock,
-  XCircle, AlertCircle, Banknote, Smartphone,
-  TrendingUp,
+  RotateCcw, Calendar, Clock,
+  AlertCircle, Smartphone,
   Database,
   Search,
   Layers
@@ -72,19 +71,7 @@ const generateItems = (sale: OrderResponse, productMap: Record<string, string> =
   });
 };
 
-const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
-  const cfg: Record<string, { bg: string; color: string; icon: React.ReactNode }> = {
-    Completed: { bg: "bg-emerald-50 border-emerald-100", color: "text-emerald-700", icon: <CheckCircle2 size={14} /> },
-    Pending: { bg: "bg-amber-50 border-amber-100", color: "text-amber-700", icon: <Clock size={14} /> },
-    Cancelled: { bg: "bg-red-50 border-red-100", color: "text-red-700", icon: <XCircle size={14} /> },
-  };
-  const c = cfg[status] || cfg["Pending"];
-  return (
-    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border font-bold text-[10px] uppercase tracking-wider ${c.bg} ${c.color}`}>
-      {c.icon}{status}
-    </span>
-  );
-};
+
 
 /* ════════════════════════════════
    MAIN COMPONENT
@@ -267,94 +254,105 @@ const SaleDetailPage: React.FC = () => {
 
           {/* TAB 0 — Overview */}
           {activeTab === 0 && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-              {/* Left Column */}
-              <div className="lg:col-span-7 xl:col-span-8 space-y-4">
-                <SectionCard title="Customer Information">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-8">
-                    <DetailItem icon={User} label="Customer Name" value={customerName} />
-                    {customerMobile && <DetailItem icon={Smartphone} label="Customer Mobile" value={customerMobile} />}
-                    <DetailItem icon={Database} label="Customer ID" value={sale.customer_id} />
-                    <DetailItem icon={Calendar} label="Order Date" value={dateStr} />
-                    <DetailItem icon={Clock} label="Order Time" value={timeStr || "—"} />
-                    <DetailItem icon={Search} label="Origin" value={sale.origin} />
-                  </div>
-                </SectionCard>
-
-                <SectionCard title="Financial Summary">
-                  <div className="space-y-1">
-                    <InfoRow label="Subtotal" value={fmt(subtotal)} />
-                    <div className="mt-4 pt-4 border-t-2 border-slate-100 border-dashed flex justify-between items-center">
-                      <span className="text-sm font-black text-slate-800 uppercase tracking-wider">Grand Total</span>
-                      <span className="text-xl font-black text-blue-600 tabular-nums">{fmt(sale.total_sellprice)}</span>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                {/* Left Column */}
+                <div className="lg:col-span-8 space-y-4">
+                  <SectionCard title="Customer Information">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-8">
+                      <DetailItem icon={User} label="Customer Name" value={customerName} />
+                      <DetailItem icon={Database} label="Order ID" value={String(sale.ui_id || "")} />
+                      {customerMobile && <DetailItem icon={Smartphone} label="Customer Mobile" value={customerMobile} />}
+                      <DetailItem icon={Calendar} label="Order Date" value={dateStr} />
+                      <DetailItem icon={Clock} label="Order Time" value={timeStr || "—"} />
+                      <DetailItem icon={Search} label="Origin" value={sale.origin} />
                     </div>
-                  </div>
-                </SectionCard>
-              </div>
+                  </SectionCard>
 
-              {/* Right Column */}
-              <div className="lg:col-span-5 xl:col-span-4 space-y-4">
-                <SectionCard title="Status Overview">
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-[11px] font-medium text-slate-400 uppercase tracking-tight">Status</span>
-                      <StatusBadge status={sale.status} />
+                  <SectionCard title="Financial Summary">
+                    <div className="space-y-1">
+                      <InfoRow label="Subtotal" value={fmt(subtotal)} />
+                      {(() => {
+                        const gstAmount = (sale as any)?.calculation_infos?.gst_amount;
+                        if (gstAmount !== undefined && gstAmount > 0) {
+                          return <InfoRow label="GST" value={<span className="text-indigo-600 font-semibold">+{fmt(gstAmount)}</span>} />;
+                        }
+                        return null;
+                      })()}
+                      <div className="mt-4 pt-4 border-t-2 border-slate-800 flex justify-between">
+                        <span className="font-black">Grand Total</span>
+                        <span className="text-xl font-black text-slate-900">{fmt(sale.total_sellprice)}</span>
+                      </div>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-[11px] font-medium text-slate-400 uppercase tracking-tight">Origin</span>
-                      <span className="text-xs font-bold text-slate-700">{sale.origin}</span>
-                    </div>
-                    {refunded > 0 && <InfoRow label="Refunded Items" value={<span className="text-red-600 bg-red-50 px-2 py-0.5 rounded-md text-[10px] font-black">{refunded}</span>} />}
-                    {exchanged > 0 && <InfoRow label="Exchanged Items" value={<span className="text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md text-[10px] font-black">{exchanged}</span>} />}
-                  </div>
-                </SectionCard>
+                  </SectionCard>
+                </div>
 
-                <SectionCard title="Payment Status">
-                  {outstanding > 0 ? (
-                    totalPaid === 0 ? (
-                      <div className="flex flex-col items-center justify-center p-6 bg-rose-50/50 border border-rose-100 rounded-xl">
-                        <div className="w-14 h-14 rounded-full bg-rose-500 text-white flex items-center justify-center mb-4 shadow-sm shadow-rose-200 ring-2 ring-white">
-                          <Clock size={28} />
-                        </div>
-                        <span className="text-xl font-black tracking-tight text-rose-700">Unpaid</span>
-                        <p className="text-xs font-bold text-rose-600 mt-2">Outstanding: {fmt(outstanding)}</p>
+                {/* Right Column */}
+                <div className="lg:col-span-4 space-y-4">
+                  <SectionCard title="Sale Info">
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[11px] font-medium text-slate-400 uppercase tracking-tight">Order No</span>
+                        <span className="text-xs font-bold text-slate-700">{sale.ui_id}</span>
                       </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center p-6 bg-amber-50/50 border border-amber-100 rounded-xl">
-                        <div className="w-14 h-14 rounded-full bg-amber-500 text-white flex items-center justify-center mb-4 shadow-sm shadow-amber-200 ring-2 ring-white">
-                          <TrendingUp size={28} />
-                        </div>
-                        <span className="text-xl font-black tracking-tight text-amber-700">Partially Paid</span>
-                        <div className="text-center mt-3 space-y-1">
-                          <p className="text-[11px] font-semibold text-slate-500">Paid: {fmt(totalPaid)}</p>
-                          <p className="text-xs font-bold text-amber-600">Outstanding: {fmt(outstanding)}</p>
-                        </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[11px] font-medium text-slate-400 uppercase tracking-tight">Total Items</span>
+                        <span className="text-xs font-bold text-slate-700">{items.length}</span>
                       </div>
-                    )
-                  ) : (
-                    <div className="flex flex-col items-center justify-center p-6 bg-emerald-50/50 border border-emerald-100 rounded-xl">
-                      <div className="w-14 h-14 rounded-full bg-emerald-500 text-white flex items-center justify-center mb-4 shadow-sm shadow-emerald-200 ring-2 ring-white">
-                        <CheckCircle2 size={28} />
+                      <div className="flex justify-between items-center">
+                        <span className="text-[11px] font-medium text-slate-400 uppercase tracking-tight">Origin</span>
+                        <span className="text-xs font-bold text-slate-700">{sale.origin}</span>
                       </div>
-                      <span className="text-xl font-black tracking-tight text-emerald-700">Paid</span>
-                      <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-widest">Completed</p>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[11px] font-medium text-slate-400 uppercase tracking-tight">Payment</span>
+                        <span className="text-xs font-bold text-slate-700">{paymentsDetail.map(p => p.label).join(', ') || "—"}</span>
+                      </div>
+                      {(refunded > 0 || exchanged > 0) && (
+                        <div className="pt-2.5 border-t border-slate-100/50 space-y-2">
+                          {refunded > 0 && (
+                            <div className="flex justify-between items-center">
+                              <span className="text-[11px] font-medium text-slate-400 uppercase tracking-tight">Refunded Items</span>
+                              <span className="text-[10px] font-black text-red-600 bg-red-50 px-2 py-0.5 rounded-md">{refunded}</span>
+                            </div>
+                          )}
+                          {exchanged > 0 && (
+                            <div className="flex justify-between items-center">
+                              <span className="text-[11px] font-medium text-slate-400 uppercase tracking-tight">Exchanged Items</span>
+                              <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">{exchanged}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </SectionCard>
+                  </SectionCard>
 
-                <SectionCard title="Payment Breakdown">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {paymentsDetail.map((p, idx) => (
-                      <div key={idx} className="bg-slate-50 rounded-lg p-4 border border-slate-100 flex flex-col gap-2">
-                        <div className="flex items-center gap-2">
-                          {p.label.includes("UPI") || p.label.includes("PhonePe") ? <Smartphone size={16} className="text-indigo-500" /> : p.label.includes("Card") ? <CreditCard size={16} className="text-purple-500" /> : <Banknote size={16} className="text-emerald-500" />}
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{p.label}</p>
-                        </div>
-                        <p className="text-lg font-black text-slate-800 tabular-nums">{fmt(p.amount)}</p>
+                  <SectionCard title="Payment Summary">
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center pb-2 border-b border-slate-100/50">
+                        <span className="text-[11px] font-medium text-slate-400 uppercase tracking-tight">Status</span>
+                        {outstanding > 0 ? (
+                          totalPaid === 0 ? (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[var(--pay-pending-bg)] text-[var(--pay-pending-tx)] border border-[var(--pay-pending-bd)]">Pending</span>
+                          ) : (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[var(--pay-partial-bg)] text-[var(--pay-partial-tx)] border border-[var(--pay-partial-bd)]">Partially Paid</span>
+                          )
+                        ) : (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[var(--pay-paid-bg)] text-[var(--pay-paid-tx)] border border-[var(--pay-paid-bd)]">Paid</span>
+                        )}
                       </div>
-                    ))}
-                  </div>
-                </SectionCard>
+                      <div className="flex justify-between items-center text-sm font-semibold text-slate-600 pt-1">
+                        <span>Paid Amount</span>
+                        <span className="tabular-nums text-slate-800">{fmt(totalPaid)}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm font-bold pt-2 border-t border-slate-100">
+                        <span className="text-slate-600">Outstanding</span>
+                        <span className={`tabular-nums ${outstanding > 0 ? "text-amber-600" : "text-emerald-600"}`}>
+                          {fmt(outstanding)}
+                        </span>
+                      </div>
+                    </div>
+                  </SectionCard>
+                </div>
               </div>
             </div>
           )}
@@ -604,7 +602,10 @@ const SaleDetailPage: React.FC = () => {
                   <SectionCard key={ret.id || rIdx} title={`Return Request #${ret.id?.slice(0, 8).toUpperCase()}`} className="p-0 overflow-hidden border-rose-100">
                     <div className="p-4 bg-rose-50/50 border-b border-rose-100 flex justify-between items-center text-xs">
                       <span className="font-bold text-rose-700">Refund Status: {ret.status}</span>
-                      <span className="font-bold text-slate-650">Total Refund: {fmt(ret.total_refund_amount)} (Qty: {ret.total_refund_qty})</span>
+                      <div className="flex gap-4">
+                        <span className="font-bold text-slate-650">GST Amount: {fmt(ret.total_gst_amount)}</span>
+                        <span className="font-bold text-slate-650">Total Refund: {fmt(ret.total_refund_amount)} (Qty: {ret.total_refund_qty})</span>
+                      </div>
                     </div>
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse">

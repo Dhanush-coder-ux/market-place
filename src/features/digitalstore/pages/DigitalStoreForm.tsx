@@ -1,16 +1,18 @@
 import { useEffect, useState } from "react";
 import { StoreFormData } from "@/features/digitalstore/type";
-import { Check, ChevronLeft, ChevronRight, Store, Truck, Package, CheckCircle2 } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Store, Clock, MapPin, Package, CheckCircle2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useBusinessApi } from "@/context/BusinessApiContext";
 import { employeeApi } from "@/services/api/employee";
 import { SHOP_ID } from "@/services/endpoints";
+import { useHeader } from "@/context/HeaderContext";
 
 // Import steps (we will create these)
 import Step1BasicDetails from "../components/wizard/Step1BasicDetails";
-import Step2DeliveryHours from "../components/wizard/Step2DeliveryHours";
-import Step3Products from "../components/wizard/Step3Products";
-import Step4Confirmation from "../components/wizard/Step4Confirmation";
+import Step2OperatingHours from "../components/wizard/Step2OperatingHours";
+import Step3DeliveryOptions from "../components/wizard/Step3DeliveryOptions";
+import Step4Products from "../components/wizard/Step3Products";
+import Step5Confirmation from "../components/wizard/Step4Confirmation";
 
 const INITIAL_STATE: StoreFormData = {
   name: "",
@@ -49,9 +51,10 @@ const INITIAL_STATE: StoreFormData = {
 
 const STEPS = [
   { id: 1, title: "Basic Details", icon: Store, subtitle: "Name & Images" },
-  { id: 2, title: "Operations", icon: Truck, subtitle: "Delivery & Hours" },
-  { id: 3, title: "Products", icon: Package, subtitle: "Catalog & Pricing" },
-  { id: 4, title: "Review", icon: CheckCircle2, subtitle: "Confirm & Launch" },
+  { id: 2, title: "Operations", icon: Clock, subtitle: "Operating Hours" },
+  { id: 3, title: "Delivery", icon: MapPin, subtitle: "Delivery Options" },
+  { id: 4, title: "Products", icon: Package, subtitle: "Catalog & Pricing" },
+  { id: 5, title: "Review", icon: CheckCircle2, subtitle: "Confirm & Launch" },
 ];
 
 export default function StoreSetupWizard({ existingData }: { existingData?: Partial<StoreFormData> }) {
@@ -61,6 +64,7 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const navigate = useNavigate();
   const { shop } = useBusinessApi();
+  const { setBottomActions } = useHeader();
 
   useEffect(() => {
     if (existingData) {
@@ -213,15 +217,48 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
     }
   };
 
+  useEffect(() => {
+    setBottomActions(
+      <div className="flex justify-between items-center w-full px-2 md:px-6">
+        <button
+          type="button"
+          onClick={handlePrev}
+          disabled={currentStep === 1 || isLoading}
+          className={`flex items-center justify-center gap-1.5 px-6 py-2.5 rounded-xl font-bold text-sm transition-all shadow-sm ${currentStep === 1 ? 'opacity-0 pointer-events-none' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+        >
+          <ChevronLeft size={16} strokeWidth={2.5} />
+          Back
+        </button>
+
+        {currentStep < STEPS.length ? (
+          <button
+            type="button"
+            onClick={handleNext}
+            className="flex items-center justify-center gap-1.5 px-8 py-2.5 rounded-xl font-bold text-sm transition-all shadow-sm bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            Continue
+            <ChevronRight size={16} strokeWidth={2.5} />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={isLoading}
+            className={`flex items-center justify-center gap-1.5 px-8 py-2.5 rounded-xl font-bold text-sm transition-all shadow-sm ${isLoading ? "bg-slate-400 cursor-not-allowed text-white" : "bg-emerald-600 hover:bg-emerald-700 text-white"}`}
+          >
+            {isLoading ? "Creating Store..." : "Launch Store"}
+            {!isLoading && <Check size={16} strokeWidth={2.5} />}
+          </button>
+        )}
+      </div>
+    );
+    
+    return () => setBottomActions(null);
+  }, [currentStep, isLoading, form]);
+
   return (
     <div className="w-full min-h-screen bg-slate-50/50 p-2 md:p-6 lg:p-8 font-sans">
-      <div className="max-w-4xl mx-auto w-full space-y-6">
-
-        {/* Onboarding Header */}
-        <div className="text-center py-4">
-          <h2 className="text-2xl font-black text-slate-800 tracking-tight">Setup Your Digital Store</h2>
-          <p className="text-xs text-slate-400 mt-1">Complete these steps to launch your online storefront.</p>
-        </div>
+      <div className="w-full mx-auto space-y-6">
 
         {/* Stepper */}
         <div className="flex justify-between items-center mb-8 relative">
@@ -248,46 +285,13 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
         <div className="pt-6" />
 
         {/* Form Card */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 relative overflow-hidden min-h-[400px] flex flex-col">
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 relative overflow-hidden min-h-[400px] flex flex-col mb-24">
           <div className="flex-1">
             {currentStep === 1 && <Step1BasicDetails form={form} setForm={setForm} errors={errors} setErrors={setErrors} />}
-            {currentStep === 2 && <Step2DeliveryHours form={form} setForm={setForm} />}
-            {currentStep === 3 && <Step3Products form={form} setForm={setForm} />}
-            {currentStep === 4 && <Step4Confirmation form={form} />}
-          </div>
-
-          {/* ACTION BUTTONS */}
-          <div className="mt-8 pt-5 border-t border-slate-100 flex justify-between items-center">
-            <button
-              type="button"
-              onClick={handlePrev}
-              disabled={currentStep === 1 || isLoading}
-              className={`flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-sm ${currentStep === 1 ? 'opacity-0 pointer-events-none' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}
-            >
-              <ChevronLeft size={16} strokeWidth={2.5} />
-              Back
-            </button>
-
-            {currentStep < STEPS.length ? (
-              <button
-                type="button"
-                onClick={handleNext}
-                className="flex items-center justify-center gap-1.5 px-6 py-2.5 rounded-xl font-bold text-sm transition-all shadow-sm bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                Continue
-                <ChevronRight size={16} strokeWidth={2.5} />
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={isLoading}
-                className={`flex items-center justify-center gap-1.5 px-6 py-2.5 rounded-xl font-bold text-sm transition-all shadow-sm ${isLoading ? "bg-slate-400 cursor-not-allowed text-white" : "bg-emerald-600 hover:bg-emerald-700 text-white"}`}
-              >
-                {isLoading ? "Creating Store..." : "Launch Store"}
-                {!isLoading && <Check size={16} strokeWidth={2.5} />}
-              </button>
-            )}
+            {currentStep === 2 && <Step2OperatingHours form={form} setForm={setForm} />}
+            {currentStep === 3 && <Step3DeliveryOptions form={form} setForm={setForm} />}
+            {currentStep === 4 && <Step4Products form={form} setForm={setForm} />}
+            {currentStep === 5 && <Step5Confirmation form={form} />}
           </div>
         </div>
       </div>

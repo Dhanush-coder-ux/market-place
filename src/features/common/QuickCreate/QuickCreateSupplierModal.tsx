@@ -67,7 +67,8 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    const finalValue = name.includes("gst") ? value.toUpperCase() : value;
+    setForm((prev) => ({ ...prev, [name]: finalValue }));
   };
 
   const steps: QuickCreateStep[] = [

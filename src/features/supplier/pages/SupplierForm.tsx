@@ -183,7 +183,8 @@ const SupplierForm = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const finalValue = name.includes("gst") ? value.toUpperCase() : value;
+    setFormData((prev) => ({ ...prev, [name]: finalValue }));
   };
 
   const handleSaveDraft = () => {

@@ -45,7 +45,7 @@ const Login = () => {
       {/* Glassmorphism Card */}
       <div className="relative z-10 w-full max-w-md p-8 mx-4 transition-all duration-500 hover:shadow-[0_0_40px_rgba(59,130,246,0.1)]">
         <div className="absolute inset-0 bg-white/70 backdrop-blur-xl rounded-3xl border border-white shadow-xl shadow-blue-900/5" />
-        
+
         <div className="relative flex flex-col items-center justify-center space-y-10 py-6">
           {/* Logo / Icon Area */}
           <div className="flex flex-col items-center gap-4">
@@ -70,7 +70,7 @@ const Login = () => {
               className="group relative flex items-center justify-center w-full gap-3 px-6 py-4 rounded-xl font-bold text-white bg-blue-600 border border-blue-500 overflow-hidden transition-all duration-300 hover:bg-blue-700 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none shadow-md shadow-blue-600/20"
             >
               <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-blue-600 to-blue-700 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              
+
               {loading ? (
                 <div className="relative z-10 w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
@@ -78,7 +78,7 @@ const Login = () => {
               )}
               <span className="relative z-10">{loading ? "Connecting..." : "Sign in to continue"}</span>
             </button>
-            
+
             <p className="text-xs text-center text-slate-400 font-medium">
               By continuing, you agree to our Terms of Service and Privacy Policy.
             </p>

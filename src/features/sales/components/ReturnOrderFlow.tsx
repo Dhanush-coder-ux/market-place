@@ -68,8 +68,8 @@ const generateItems = (sale: SaleRecord, productMap: Record<string, string> = {}
       batch_id: item.batch_id, serialno_id: item.serialno_id,
       serial_numbers: Array.isArray((item as any).serialno_infos) && (item as any).serialno_infos.length > 0 ? (item as any).serialno_infos : (item.serial_numbers || []),
       stocks_before: (item as any).stocks_before,
-      unit: item.unit || (item as any).entered_unit || "Units",
-      entered_unit: (item as any).entered_unit || item.unit || "Units",
+      unit: item.unit !== undefined ? item.unit : ((item as any).entered_unit !== undefined ? (item as any).entered_unit : ""),
+      entered_unit: (item as any).entered_unit !== undefined ? (item as any).entered_unit : (item.unit !== undefined ? item.unit : ""),
       entered_qty: Number((item as any).entered_qty ?? item.quantity),
       unit_infos: (item as any).unit_infos || null
     } as any;
@@ -224,8 +224,8 @@ const SerialReturnPicker: React.FC<{ allSerials: any[]; selected: any[]; require
               onClick={() => toggle(sn)}
               disabled={isDisabled}
               className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-mono font-semibold border transition-all duration-100 cursor-pointer ${isSel ? 'bg-violet-600 text-white border-violet-600' :
-                  isDisabled ? 'bg-white text-slate-300 border-slate-100 cursor-not-allowed' :
-                    'bg-white text-violet-600 border-violet-200 hover:border-violet-300'
+                isDisabled ? 'bg-white text-slate-300 border-slate-100 cursor-not-allowed' :
+                  'bg-white text-violet-600 border-violet-200 hover:border-violet-300'
                 }`}
             >
               {isSel && <Check size={8} />}{nameStr}
@@ -281,7 +281,7 @@ const ItemSelector: React.FC<{ items: SaleItem[]; returnItems: Record<string, nu
             <div
               key={item.id}
               className={`flex flex-col border p-2.5 px-3 rounded-lg transition-all duration-100 ${isDisabled ? 'bg-slate-50 opacity-60 cursor-not-allowed' :
-                  checked ? 'bg-blue-50/50 border-blue-200' : 'bg-white border-slate-100 hover:bg-slate-50/80 cursor-pointer'
+                checked ? 'bg-blue-50/50 border-blue-200' : 'bg-white border-slate-100 hover:bg-slate-50/80 cursor-pointer'
                 }`}
               onClick={() => !isDisabled && onToggle(item.id)}
             >
@@ -534,14 +534,21 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
       }
       return s + i.unitPrice * i.returnQty * factor;
     }, 0);
-    const exchangeValue = state.mode === "exchange" ? selectedItems.reduce((s, i) => { if (!i.exchangeItemId) return s; const ep = i.exchangeItemId as any; return s + ((ep?.sell_price ?? 0) * (ep?.quantity ?? i.returnQty)); }, 0) : 0;
-    return { returnValue, exchangeValue, diff: exchangeValue - returnValue };
+    const exchangeValue = state.mode === "exchange" ? selectedItems.reduce((s, i) => { if (!i.exchangeItemId) return s; const ep = i.exchangeItemId as any; return s + ((ep?.sell_price ?? 0) * i.returnQty); }, 0) : 0;
+
+    // Round to 2 decimals to prevent floating point mismatch (e.g. 828.359999)
+    const roundedReturn = Math.round(returnValue * 100) / 100;
+    const roundedExchange = Math.round(exchangeValue * 100) / 100;
+
+    return {
+      returnValue: roundedReturn,
+      exchangeValue: roundedExchange,
+      diff: Math.round((roundedExchange - roundedReturn) * 100) / 100
+    };
   }, [selectedItems, state.mode]);
 
   const validate = useCallback((): boolean => {
     const errs: ReturnErrors = {};
-    if (selectedItems.length === 0) errs.items = "Select at least one item.";
-    if (selectedItems.some(i => !state.itemReasons[i.id])) errs.items = "Please select a return reason for all selected items.";
 
     const requiresSettlement = state.mode === "refund" || totals.diff !== 0;
     if (requiresSettlement) {
@@ -648,11 +655,11 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
             reason: state.itemReasons[item.id] || "Customer Request",
             serialno_infos: item.selectedSerials?.length
               ? item.selectedSerials.map(s => {
-                  if (typeof s === 'object' && s !== null) {
-                    return { id: s.id || item.serialno_id || "", name: s.name || s.serial_number || "" };
-                  }
-                  return { id: item.serialno_id || "", name: String(s) };
-                })
+                if (typeof s === 'object' && s !== null) {
+                  return { id: s.id || item.serialno_id || "", name: s.name || s.serial_number || "" };
+                }
+                return { id: item.serialno_id || "", name: String(s) };
+              })
               : []
           });
 
@@ -666,14 +673,14 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
               variant_id: replacement.variant_id || null,
               batch_id: replacement.batch_id || null,
               quantity: replacement.quantity || item.returnQty,
-              unit: replacement.unit || "Units",
+              unit: replacement.unit !== undefined ? replacement.unit : "",
               serialno_infos: replacement.serial_numbers?.length
                 ? replacement.serial_numbers.map((s: any) => {
-                    if (typeof s === 'object' && s !== null) {
-                      return { id: s.id || "", name: s.name || s.serial_number || "" };
-                    }
-                    return { id: "", name: String(s) };
-                  })
+                  if (typeof s === 'object' && s !== null) {
+                    return { id: s.id || "", name: s.name || s.serial_number || "" };
+                  }
+                  return { id: "", name: String(s) };
+                })
                 : []
             });
           }
@@ -709,7 +716,9 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
       if (selectedItems.length === 0) return false;
       const serialsOk = selectedItems.every(i => !i.serial_numbers?.length || (i.selectedSerials?.length ?? 0) === i.returnQty);
       if (!serialsOk) return false;
-      if (selectedItems.some(i => !state.itemReasons[i.id])) return false;
+      const reasonsOk = selectedItems.every(i => !!state.itemReasons[i.id]);
+      if (!reasonsOk) return false;
+      // only require replacement items for exchange mode
       return state.mode === "refund" || selectedItems.every(i => !!i.exchangeItemId);
     }
     if (state.step === 3) {
@@ -720,7 +729,7 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
       return true;
     }
     return true;
-  }, [state.step, state.mode, selectedItems, state.itemReasons, totals.diff, state.payments]);
+  }, [state.step, state.mode, selectedItems, totals.diff, state.payments]);
 
   return { state, saleItems, selectedItems, totals, reset, setMode, setReason, setNotes, updatePayment, addPayment, removePayment, toggleItem, selectAll, updateQty, setExchangeProduct, setSerialReturns, goNext, goBack, confirm, canProceed, customerOutstanding };
 };
@@ -778,8 +787,10 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
   const [activeReplaceId, setActiveReplaceId] = useState<string | null>(null);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [pendingProduct, setPendingProduct] = useState<InventoryItem | null>(null);
-  const [exchProducts, setExchProducts] = useState<any[]>([]);
+  const [allExchProducts, setAllExchProducts] = useState<any[]>([]);  // full catalog
+  const [exchProducts, setExchProducts] = useState<any[]>([]);         // filtered view
   const [loadingExch, setLoadingExch] = useState(false);
+
 
   // Body scroll lock (only for modal)
   useEffect(() => {
@@ -893,14 +904,43 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
   };
   const handleProductSelectSuccess = (variant: ProductVariant, quantity: number, serials?: string[]) => {
     if (!activeReplaceId || !pendingProduct) return;
-    m.setExchangeProduct(activeReplaceId, { id: pendingProduct.id, name: variant.id === "default" ? pendingProduct.product_name : `${pendingProduct.product_name} - ${variant.name}`, sell_price: variant.price, variant_id: variant.id === "default" ? null : variant.id, batch_id: variant.batchId || pendingProduct.batchId, serialno_id: variant.serialnoId || pendingProduct.serialnoId, serial_numbers: serials || [], quantity });
+    m.setExchangeProduct(activeReplaceId, { id: pendingProduct.id, name: variant.id === "default" ? pendingProduct.product_name : `${pendingProduct.product_name} - ${variant.name}`, sell_price: variant.price, variant_id: variant.id === "default" ? null : variant.id, batch_id: variant.batchId || pendingProduct.batchId, serialno_id: variant.serialnoId || pendingProduct.serialnoId, serial_numbers: serials || [], quantity, unit: (pendingProduct as any).unit || (pendingProduct as any).unit_infos?.name || "" });
     setIsProductModalOpen(false); setPendingProduct(null);
   };
 
+  // ── Exchange catalog: load ALL products once when entering Step 2 exchange ──
   useEffect(() => {
-    const t = setTimeout(async () => { setLoadingExch(true); const res = await inventoryApi.searchInventories(exchSearch); setExchProducts(res); setLoadingExch(false); }, 300);
-    return () => clearTimeout(t);
-  }, [exchSearch]);
+    if (state.step === 2 && state.mode === "exchange") {
+      setExchSearch("");
+      setLoadingExch(true);
+      inventoryApi.searchInventories("").then(res => {
+        console.log('[Exchange Catalog] loaded:', res.length, 'products');
+        setAllExchProducts(res);
+        setExchProducts(res);
+        setLoadingExch(false);
+      }).catch(() => {
+        setLoadingExch(false);
+      });
+    }
+  }, [state.step, state.mode]);
+
+  // ── Client-side filter as user types ──────────────────────────────────────
+  useEffect(() => {
+    if (!exchSearch.trim()) {
+      setExchProducts(allExchProducts);
+      return;
+    }
+    const q = exchSearch.toLowerCase();
+    setExchProducts(
+      allExchProducts.filter(p =>
+        (p.name || '').toLowerCase().includes(q) ||
+        (p.barcode || '').toLowerCase().includes(q) ||
+        (p.sku || '').toLowerCase().includes(q)
+      )
+    );
+  }, [exchSearch, allExchProducts]);
+
+
 
   useEffect(() => {
     if (selectedItems.length > 0 && (!activeReplaceId || !selectedItems.some(i => i.id === activeReplaceId))) setActiveReplaceId(selectedItems[0].id);
@@ -1010,11 +1050,11 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                                   const inStock = (ep.stocks || 0) > 0;
                                   return (
                                     <div
-                                      key={ep.id}
+                                      key={ep.id ?? ep._id ?? ep.name}
                                       onClick={() => inStock && handleExchangeClick(ep)}
                                       className={`flex items-center gap-3 p-3 px-4 border rounded-lg transition-all duration-200 cursor-pointer ${sel ? "bg-blue-50 border-blue-500 shadow-md scale-[0.99]" :
-                                          !inStock ? "opacity-50 grayscale cursor-not-allowed border-slate-100" :
-                                            "bg-white border-slate-100 hover:border-blue-400 hover:shadow-lg"
+                                        !inStock ? "opacity-50 grayscale cursor-not-allowed border-slate-100" :
+                                          "bg-white border-slate-100 hover:border-blue-400 hover:shadow-lg"
                                         }`}
                                     >
                                       <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-50 transition-colors">
@@ -1023,7 +1063,7 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                                       <div className="flex-1 min-w-0">
                                         <p className="text-[13px] font-bold text-slate-800 truncate">{ep.name}</p>
                                         <div className="flex items-center gap-2.5 mt-0.5">
-                                          <span className="font-mono text-[10px] text-slate-400 font-medium">{ep.barcode || ep.id.slice(-6)}</span>
+                                          <span className="font-mono text-[10px] text-slate-400 font-medium">{ep.barcode || (ep.id ?? ep._id ?? '').slice(-6)}</span>
                                           <span className={`text-[10px] font-black uppercase tracking-tight ${inStock ? 'text-emerald-600' : 'text-red-500'}`}>{inStock ? `${ep.stocks} IN STOCK` : 'OUT OF STOCK'}</span>
                                         </div>
                                       </div>
@@ -1039,8 +1079,21 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                           </>
                         );
                       })()}
+                      {/* Progress hint: show which items still need a replacement */}
+                      {selectedItems.some(si => !state.exchangeMap[si.id]) && (
+                        <div className="mt-3 flex items-center gap-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg">
+                          <AlertCircle size={13} className="text-amber-500 flex-shrink-0" />
+                          <p className="text-[11px] font-semibold text-amber-800">
+                            Select a replacement for:{" "}
+                            <span className="font-black">
+                              {selectedItems.filter(si => !state.exchangeMap[si.id]).map(si => si.name).join(", ")}
+                            </span>
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )}
+
                 </>
               )}
               {state.step === 3 && (

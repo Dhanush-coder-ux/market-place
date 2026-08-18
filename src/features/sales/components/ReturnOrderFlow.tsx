@@ -536,14 +536,10 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
     }, 0);
     const exchangeValue = state.mode === "exchange" ? selectedItems.reduce((s, i) => { if (!i.exchangeItemId) return s; const ep = i.exchangeItemId as any; return s + ((ep?.sell_price ?? 0) * i.returnQty); }, 0) : 0;
 
-    // Round to 2 decimals to prevent floating point mismatch (e.g. 828.359999)
-    const roundedReturn = Math.round(returnValue * 100) / 100;
-    const roundedExchange = Math.round(exchangeValue * 100) / 100;
-
     return {
-      returnValue: roundedReturn,
-      exchangeValue: roundedExchange,
-      diff: Math.round((roundedExchange - roundedReturn) * 100) / 100
+      returnValue: returnValue,
+      exchangeValue: exchangeValue,
+      diff: exchangeValue - returnValue
     };
   }, [selectedItems, state.mode]);
 
@@ -633,12 +629,43 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
       }
 
       if (state.mode === "refund") {
-        await orderApi.processReturn({
-          order_id: sale?.id || "",
-          shop_id: SHOP_ID,
-          payment_infos: paymentsDict,
-          items: itemsPayload
-        });
+        let remainingPayments = { ...paymentsDict };
+        for (const itemPayload of itemsPayload) {
+          const origItem = selectedItems.find(i => i.id === itemPayload.order_item_id);
+          if (!origItem) continue;
+
+          let factor = 1.0;
+          if (origItem.entered_unit !== origItem.unit_infos?.name && origItem.unit_infos?.sub_units) {
+            const su = origItem.unit_infos.sub_units.find((suObj: any) => suObj.name === origItem.entered_unit);
+            if (su && su.factor) factor = su.factor;
+          }
+          const itemAmount = origItem.unitPrice * origItem.returnQty * factor;
+          
+          const itemPaymentsDict: Record<string, number> = {};
+          let amountNeeded = itemAmount;
+          
+          for (const key of Object.keys(remainingPayments)) {
+            if (amountNeeded <= 0.001) break;
+            if (remainingPayments[key] > 0) {
+              const toAllocate = Math.min(remainingPayments[key], amountNeeded);
+              itemPaymentsDict[key] = toAllocate;
+              remainingPayments[key] -= toAllocate;
+              amountNeeded -= toAllocate;
+            }
+          }
+          
+          if (amountNeeded > 0.001) {
+            const fallbackKey = sale?.payment_method ? mapPaymentMode(sale.payment_method) : "CASH";
+            itemPaymentsDict[fallbackKey] = (itemPaymentsDict[fallbackKey] || 0) + amountNeeded;
+          }
+
+          await orderApi.processReturn({
+            order_id: sale?.id || "",
+            shop_id: SHOP_ID,
+            payment_infos: itemPaymentsDict,
+            items: [itemPayload]
+          });
+        }
         showToast("Refund(s) processed successfully", "success");
       } else {
         const replacementItemsMap = new Map<string, any>();
@@ -952,7 +979,7 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
   const canReturn = sale.status === "Completed" && sale.origin !== "Sales Return";
 
   const content = (
-    <div className={isInline ? "bg-white rounded-lg w-full flex flex-col relative overflow-hidden" : "bg-white rounded-lg w-full max-h-[85vh] flex flex-col shadow-[0_24px_80px_rgba(0,0,0,0.25)] pointer-events-auto relative overflow-hidden"} onClick={e => e.stopPropagation()}>
+    <div className={isInline ? "bg-white rounded-lg w-full flex flex-col relative overflow-hidden" : "bg-white rounded-lg w-full flex flex-col shadow-[0_24px_80px_rgba(0,0,0,0.25)] pointer-events-auto relative overflow-hidden"} onClick={e => e.stopPropagation()}>
       {!isInline && (
         <button onClick={onClose} className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center border-none cursor-pointer text-slate-500 hover:bg-slate-200 transition-all hover:rotate-90">
           <X size={16} />
@@ -971,7 +998,7 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
         </div>
       ) : (
         <>
-          <div ref={scrollRef} className="flex-1 overflow-y-auto p-[20px_24px] scrollbar-thin scrollbar-thumb-slate-200 hover:scrollbar-thumb-slate-300">
+          <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto p-[20px_24px] scrollbar-thin scrollbar-thumb-slate-200 hover:scrollbar-thumb-slate-300">
             <div key={state.step} className="flex flex-col gap-5 animate-in fade-in slide-in-from-right-3 duration-300">
               {state.step === 1 && (
                 <>
@@ -1280,7 +1307,7 @@ export const ReturnModal: React.FC<ReturnFlowProps> = (props) => {
   }, []);
 
   return createPortal(
-    <div className="fixed inset-0 z-[1000] overflow-y-auto overflow-x-hidden scrollbar-none flex flex-col items-center justify-center">
+    <div className="fixed inset-0 z-[1000] overflow-y-auto overflow-x-hidden scrollbar-none">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300"
@@ -1288,8 +1315,8 @@ export const ReturnModal: React.FC<ReturnFlowProps> = (props) => {
       />
 
       {/* Centering Wrapper */}
-      <div className="relative w-full h-full flex items-center justify-center p-4 sm:p-6 pointer-events-none">
-        <div className="relative w-full max-w-[540px] animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 ease-out pointer-events-auto">
+      <div className="relative min-h-screen w-full flex items-center justify-center p-4 sm:p-6 py-10 pointer-events-none">
+        <div className="relative w-full max-w-[750px] max-h-[90vh] flex flex-col animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 ease-out pointer-events-auto">
           <ReturnFlow {...props} isInline={false} />
         </div>
       </div>

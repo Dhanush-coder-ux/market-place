@@ -51,8 +51,15 @@ const SupplierForm = () => {
   const [searchParams] = useSearchParams();
   const { getData, loading } = useApi();
   const { supplier, supplierCustomFields } = useBusinessApi();
-  const { setBottomActions } = useHeader();
+  const { setBottomActions, setBreadcrumbOverride } = useHeader();
   const { showToast } = useToast();
+
+  useEffect(() => {
+    return () => {
+      if (setBreadcrumbOverride) setBreadcrumbOverride(null);
+    };
+  }, [setBreadcrumbOverride]);
+
   const [submitting, setSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
   const [loadingData, setLoadingData] = useState(!!id);
@@ -152,6 +159,10 @@ const SupplierForm = () => {
             gst_number: sup.gst_no || "",
             notes: additional.internal_notes || d.internal_notes || ""
           });
+
+          if (sup.ui_id && setBreadcrumbOverride) {
+            setBreadcrumbOverride(sup.ui_id);
+          }
         }
       };
 

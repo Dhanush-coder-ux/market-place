@@ -30,8 +30,15 @@ const CustomerFormPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { customer } = useBusinessApi();
-  const { setActions, setBottomActions } = useHeader();
+  const { setActions, setBottomActions, setBreadcrumbOverride } = useHeader();
   const { showToast } = useToast();
+
+  useEffect(() => {
+    return () => {
+      if (setBreadcrumbOverride) setBreadcrumbOverride(null);
+    };
+  }, [setBreadcrumbOverride]);
+
   const [submitting, setSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
   const [loadingData, setLoadingData] = useState(!!id);
@@ -142,8 +149,13 @@ const CustomerFormPage = () => {
             can_have_credit: cust.can_have_credit ?? (Number(creditInfos.limit || cust.credit_limit || 0) > 0),
             gst_number: datas.gst_number || "",
           });
+          
+          if (cust.ui_id && setBreadcrumbOverride) {
+            setBreadcrumbOverride(cust.ui_id);
+          }
         }
       };
+
 
       const fetchCustomFieldValues = async () => {
         const vals = await customerCustomFieldsApi.getValuesByCustomer(SHOP_ID, id);

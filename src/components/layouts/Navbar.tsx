@@ -247,48 +247,50 @@ export const Navbar = () => {
               My Shops
             </DropdownMenuLabel>
 
-            {shopsLoading ? (
-              <div className="flex items-center justify-center py-4">
-                <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
-              </div>
-            ) : shops.length === 0 ? (
-              <div className="px-3 py-3 text-xs text-slate-400 font-medium text-center">
-                No shops found
-              </div>
-            ) : (
-              shops.map((shop) => (
-                <DropdownMenuItem
-                  key={shop.id}
-                  onClick={() => handleSelectShop(shop)}
-                  className={`flex items-center justify-between cursor-pointer rounded-lg px-2.5 py-2 my-0.5 md:transition-colors ${
-                    selectedShopId === shop.id
-                      ? "bg-blue-50 text-blue-700"
-                      : "md:hover:bg-slate-50 text-slate-700"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold border ${
-                        selectedShopId === shop.id
-                          ? "bg-white border-blue-200 text-blue-600"
-                          : "bg-slate-100 border-slate-200 text-slate-500"
-                      }`}
-                    >
-                      {shop.name.charAt(0).toUpperCase()}
+            <div className="max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200 hover:scrollbar-thumb-slate-300 pr-1">
+              {shopsLoading ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+                </div>
+              ) : shops.length === 0 ? (
+                <div className="px-3 py-3 text-xs text-slate-400 font-medium text-center">
+                  No shops found
+                </div>
+              ) : (
+                shops.map((shop) => (
+                  <DropdownMenuItem
+                    key={shop.id}
+                    onClick={() => handleSelectShop(shop)}
+                    className={`flex items-center justify-between cursor-pointer rounded-lg px-2.5 py-2 my-0.5 md:transition-colors ${
+                      selectedShopId === shop.id
+                        ? "bg-blue-50 text-blue-700"
+                        : "md:hover:bg-slate-50 text-slate-700"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold border shrink-0 ${
+                          selectedShopId === shop.id
+                            ? "bg-white border-blue-200 text-blue-600"
+                            : "bg-slate-100 border-slate-200 text-slate-500"
+                        }`}
+                      >
+                        {shop.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-semibold text-sm truncate">{shop.name}</span>
+                        {shop.categories && shop.categories.length > 0 && (
+                          <span className="text-[10px] text-slate-400 capitalize truncate">
+                            {shop.categories[0]}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex flex-col">
-                      <span className="font-semibold text-sm">{shop.name}</span>
-                      {shop.categories && shop.categories.length > 0 && (
-                        <span className="text-[10px] text-slate-400 capitalize">
-                          {shop.categories[0]}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  {selectedShopId === shop.id && <Check className="w-4 h-4 text-blue-600" />}
-                </DropdownMenuItem>
-              ))
-            )}
+                    {selectedShopId === shop.id && <Check className="w-4 h-4 text-blue-600 shrink-0 ml-2" />}
+                  </DropdownMenuItem>
+                ))
+              )}
+            </div>
 
             <DropdownMenuSeparator className="bg-slate-100 my-1.5" />
 

@@ -476,7 +476,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   };
 
   /* ─── Bottom actions (global header bar) ─── */
-  const { setBottomActions } = useHeader();
+  const { setBottomActions, setBreadcrumbOverride } = useHeader();
+
+  useEffect(() => {
+    return () => {
+      if (setBreadcrumbOverride) setBreadcrumbOverride(null);
+    };
+  }, [setBreadcrumbOverride]);
 
   // Validation computed values
   const missingFields: string[] = [];
@@ -567,6 +573,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
             };
             console.log("=== SETTING FORM ===", nextForm);
             setForm(nextForm);
+            if (prod.ui_id && setBreadcrumbOverride) setBreadcrumbOverride(prod.ui_id);
 
             // Ensure the product's category and unit are in the dropdown lists.
             // They might not be if the shop has >100 of them (pagination) or if

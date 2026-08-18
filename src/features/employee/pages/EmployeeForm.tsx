@@ -39,8 +39,15 @@ const EmployeeForm = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { employee } = useBusinessApi();
-  const { setActions, setBottomActions } = useHeader();
+  const { setActions, setBottomActions, setBreadcrumbOverride } = useHeader();
   const { showToast } = useToast();
+
+  useEffect(() => {
+    return () => {
+      if (setBreadcrumbOverride) setBreadcrumbOverride(null);
+    };
+  }, [setBreadcrumbOverride]);
+
   const [submitting, setSubmitting] = useState(false);
   const [loadingData, setLoadingData] = useState(!!id);
   
@@ -121,6 +128,10 @@ const EmployeeForm = () => {
             zip_code: addr.zip_code || "",
             salary_range: String(datas.salary_range || additional.salary_range || ""),
           });
+
+          if (empData.ui_id && setBreadcrumbOverride) {
+            setBreadcrumbOverride(empData.ui_id);
+          }
         }
       }).finally(() => setLoadingData(false));
     } else {

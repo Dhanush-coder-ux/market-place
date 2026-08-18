@@ -77,8 +77,15 @@ const PurchaseForm = () => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { purchase, inventory } = useBusinessApi();
-  const { setBottomActions } = useHeader();
+  const { setBottomActions, setBreadcrumbOverride } = useHeader();
   const { showToast } = useToast();
+
+  useEffect(() => {
+    return () => {
+      if (setBreadcrumbOverride) setBreadcrumbOverride(null);
+    };
+  }, [setBreadcrumbOverride]);
+
   const [submitting, setSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -217,6 +224,8 @@ const PurchaseForm = () => {
 
           // Read the version from the backend response
           setPurchaseVersion(data.version || "v1");
+          if (data.ui_id && setBreadcrumbOverride) setBreadcrumbOverride(data.ui_id);
+
 
           // Populate additional charges
           setCharges({

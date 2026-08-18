@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight, Home } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useHeader } from "@/context/HeaderContext";
 
 const Breadcrumb = () => {
   const location = useLocation();
@@ -58,8 +59,11 @@ const Breadcrumb = () => {
     return segmentLabels[segment.toLowerCase()] || segment.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
   };
 
+  const { breadcrumbOverride } = useHeader();
+
   // Get the final (current page) label — use full-path override if available
   const getLastLabel = () => {
+    if (breadcrumbOverride) return breadcrumbOverride;
     const fullPath = "/" + paths.join("/");
     if (fullPathLabels[fullPath]) return fullPathLabels[fullPath];
     return formatSegment(paths[paths.length - 1] || "");

@@ -45,7 +45,7 @@ export const RightSidebarFilter: React.FC<RightSidebarFilterProps> = ({
 
       {/* Sidebar with slide-in-from-right animation */}
       <div
-        className="fixed top-0 right-0 h-full z-[101] bg-white shadow-2xl w-full max-w-[360px] sm:max-w-[400px] flex flex-col animate-[slideLeft_0.25s_ease-out] border-l border-slate-100"
+        className="fixed top-0 right-0 h-[100dvh] max-h-screen z-[101] bg-white shadow-2xl w-full max-w-[360px] sm:max-w-[400px] flex flex-col animate-[slideLeft_0.25s_ease-out] border-l border-slate-100"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0 bg-slate-50/50">
@@ -65,7 +65,7 @@ export const RightSidebarFilter: React.FC<RightSidebarFilterProps> = ({
         </div>
 
         {/* Filters Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-5 bg-white">
+        <div className="flex-1 overflow-y-auto min-h-0 p-5 space-y-5 bg-white custom-scrollbar">
           {children}
         </div>
 

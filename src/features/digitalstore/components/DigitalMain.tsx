@@ -1,23 +1,12 @@
 import { useState, useEffect } from "react";
 import {
-  Megaphone,
-  Package,
-  Edit3,
-  Share2,
-  ExternalLink,
-  MapPin,
-  BadgeCheck,
-  Settings2,
-  AlertCircle,
-  ChevronRight,
-  Wifi,
-  WifiOff,
-  Calendar,
-  Hash,
-  Tag,
-  QrCode,
-  Users,
+  Megaphone, Package, Settings2, AlertCircle,
+  MapPin, WifiOff,
+  Edit3, QrCode, Users, X, Download,
+  Tag, Hash, Globe, Mail, Phone, Truck, Clock,
+  BadgeCheck, Building2,
 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { shopApi } from "@/services/api/shop";
 import { inventoryApi } from "@/services/api/inventory";
 import { SHOP_ID } from "@/services/endpoints";
@@ -25,10 +14,41 @@ import ProductDashboard from "../pages/StoreProductManagement";
 import Promotions from "../pages/Promotions";
 import { StoreSettingsLayout } from "./StoreSettingsLayout";
 import { useNavigate } from "react-router-dom";
+
 type TabType = "Announcements" | "Products" | "Settings";
+
+// ─── Full API response types ───────────────────────────────────────────────────
+interface OperatingHour {
+  id: number;
+  shop_id: string;
+  open_at: string;
+  close_at: string;
+  day: string;
+}
+
+interface DeliveryOption {
+  id: number;
+  shop_id: string;
+  type: string;
+  speed: string;
+  free_shipping_amount: number;
+  delivery_by: string;
+}
+
+interface ShopAnnouncement {
+  id: number;
+  shop_id: string;
+  type: string;
+  message: string;
+  status: string;
+  created_at: string;
+}
 
 interface ShopData {
   id: string;
+  ui_id: number;
+  sequence_id: number;
+  user_id: string;
   name: string;
   description: string | null;
   tagline: string | null;
@@ -41,73 +61,203 @@ interface ShopData {
     currency: string;
     gst_infos: { registered: boolean; number?: string | null };
   };
-  address: { full_address: string };
-  created_at: string;
-  sequence_id: number;
+  address: {
+    full_address: string;
+    landmark?: string;
+    zip_code?: string;
+    latitude?: number;
+    longitude?: number;
+  };
+  additional_infos: {
+    emails: string[] | null;
+    website: string | null;
+    mobile_numbers: string[] | null;
+  };
+  operating_hours: OperatingHour[];
+  delivery_options: DeliveryOption[];
+  announcements: ShopAnnouncement[];
+  created_at?: string;
 }
 
-// ─── Skeleton ─────────────────────────────────────────────────────────────────
+// ─── Helpers ───────────────────────────────────────────────────────────────────
+
+/** Deduplicate operating hours — keep first entry per day */
+function getUniqueHours(hours: OperatingHour[]): OperatingHour[] {
+  const seen = new Set<string>();
+  return hours.filter((h) => {
+    if (seen.has(h.day)) return false;
+    seen.add(h.day);
+    return true;
+  });
+}
+
+function fmt24to12(time: string): string {
+  // time like "09:00:00+00:00"
+  const [h, m] = time.split(":").map(Number);
+  const suffix = h >= 12 ? "PM" : "AM";
+  const hour   = h % 12 || 12;
+  return `${hour}:${String(m).padStart(2, "0")} ${suffix}`;
+}
+
+const DAY_ORDER = ["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY","SUNDAY"];
+const DAY_SHORT: Record<string, string> = {
+  MONDAY:"Mon", TUESDAY:"Tue", WEDNESDAY:"Wed",
+  THURSDAY:"Thu", FRIDAY:"Fri", SATURDAY:"Sat", SUNDAY:"Sun",
+};
+
+// ─── Skeleton ──────────────────────────────────────────────────────────────────
 const Skeleton = ({ className }: { className?: string }) => (
-  <div className={`animate-pulse bg-slate-200 rounded-lg ${className ?? ""}`} />
+  <div className={`animate-pulse bg-slate-200 rounded ${className ?? ""}`} />
 );
 
 const HeaderSkeleton = () => (
-  <div className="bg-white border-b border-slate-100">
-    <div className="h-40 bg-gradient-to-r from-slate-200 to-slate-100 animate-pulse" />
-    <div className="px-6 pb-6">
-      <div className="flex items-end gap-5 -mt-12 mb-5">
-        <Skeleton className="w-24 h-24 rounded-2xl shrink-0" />
-        <div className="flex-1 pt-14 space-y-2">
-          <Skeleton className="h-6 w-48" />
-          <Skeleton className="h-4 w-72" />
-        </div>
+  <div className="bg-white border-b border-slate-200">
+    <div className="h-32 bg-slate-100 animate-pulse" />
+    <div className="px-6 py-4 flex items-center gap-4">
+      <Skeleton className="w-16 h-16 rounded-xl shrink-0 -mt-10" />
+      <div className="flex-1 space-y-2 pt-2">
+        <Skeleton className="h-4 w-40" />
+        <Skeleton className="h-3 w-64" />
       </div>
-      <div className="grid grid-cols-4 gap-3 mt-4">
-        {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
-      </div>
+      <Skeleton className="h-8 w-24 rounded-lg" />
+    </div>
+    <div className="px-6 flex gap-6 border-t border-slate-100">
+      {[1, 2, 3].map((i) => <Skeleton key={i} className="h-10 w-28 my-2" />)}
     </div>
   </div>
 );
 
+// ─── QR Popup ──────────────────────────────────────────────────────────────────
+function QRModal({ shop, onClose }: { shop: ShopData; onClose: () => void }) {
+  const storeUrl = shop.additional_infos?.website
+    || `${window.location.origin}/store/${shop.id}`;
 
-// ─── Tab config ───────────────────────────────────────────────────────────────
-const TAB_CONFIG: { tab: TabType; icon: React.ElementType; desc: string }[] = [
-  { tab: "Announcements", icon: Megaphone, desc: "Announcements & Banners" },
-  { tab: "Products", icon: Package, desc: "Manage items" },
-  { tab: "Settings", icon: Settings2, desc: "Store configuration" },
+  const handleDownload = () => {
+    const svg = document.getElementById("store-qr-svg") as unknown as SVGSVGElement;
+    if (!svg) return;
+    const blob = new Blob([new XMLSerializer().serializeToString(svg)], { type: "image/svg+xml" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href = url;
+    a.download = `${shop.name.replace(/\s+/g, "-").toLowerCase()}-qr.svg`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    navigator.clipboard?.writeText(storeUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ animation: "qr-fadeIn 0.15s ease" }}>
+      <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-[340px] overflow-hidden" style={{ animation: "qr-slideUp 0.2s ease" }}>
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <QrCode size={16} className="text-blue-600" />
+            <span className="text-sm font-semibold text-slate-800">Store QR Code</span>
+          </div>
+          <button onClick={onClose} className="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors cursor-pointer">
+            <X size={14} />
+          </button>
+        </div>
+
+        {/* QR body */}
+        <div className="px-5 py-6 flex flex-col items-center gap-4">
+          {/* Logo + QR */}
+          <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
+            <QRCodeSVG
+              id="store-qr-svg"
+              value={storeUrl}
+              size={196}
+              level="M"
+              includeMargin={false}
+              imageSettings={
+                shop.logo_url
+                  ? { src: shop.logo_url, height: 36, width: 36, excavate: true }
+                  : undefined
+              }
+            />
+          </div>
+
+          {/* Store info */}
+          <div className="text-center w-full">
+            <p className="text-sm font-semibold text-slate-800">{shop.name}</p>
+            {shop.address?.full_address && (
+              <p className="text-[11px] text-slate-400 mt-0.5">{shop.address.full_address}</p>
+            )}
+            <p className="text-[10px] text-slate-300 mt-1 font-mono break-all">{storeUrl}</p>
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-2 w-full">
+            <button
+              onClick={handleCopy}
+              className={`flex-1 h-9 border rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+                copied
+                  ? "bg-emerald-50 border-emerald-200 text-emerald-600"
+                  : "border-slate-200 text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              {copied ? "Copied!" : "Copy Link"}
+            </button>
+            <button
+              onClick={handleDownload}
+              className="flex-1 h-9 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+            >
+              <Download size={13} /> Download
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes qr-fadeIn  { from { opacity:0 } to { opacity:1 } }
+        @keyframes qr-slideUp { from { opacity:0; transform:translateY(12px) } to { opacity:1; transform:translateY(0) } }
+      `}</style>
+    </div>
+  );
+}
+
+// ─── Tab config ────────────────────────────────────────────────────────────────
+const TAB_CONFIG: { tab: TabType; icon: React.ElementType }[] = [
+  { tab: "Announcements", icon: Megaphone },
+  { tab: "Products",      icon: Package   },
+  { tab: "Settings",      icon: Settings2 },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════════
 const DigitalMain = () => {
-  const navigate = useNavigate();
+  const navigate  = useNavigate();
   const [activeTab, setActiveTab] = useState<TabType>("Announcements");
-  const [shop, setShop] = useState<ShopData | null>(null);
-  const [fallbackProductImage, setFallbackProductImage] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [shop, setShop]           = useState<ShopData | null>(null);
+  const [fallbackImg, setFallbackImg] = useState<string | null>(null);
+  const [loading, setLoading]     = useState(true);
+  const [error, setError]         = useState<string | null>(null);
+  const [showQR, setShowQR]       = useState(false);
 
   useEffect(() => {
-    if (!SHOP_ID || SHOP_ID === "string") {
-      navigate("/setup-digital-store");
-      return;
-    }
-    const fetch = async () => {
+    if (!SHOP_ID || SHOP_ID === "string") { navigate("/setup-digital-store"); return; }
+    const load = async () => {
       setLoading(true);
       try {
         const [shopRes, productsRes] = await Promise.all([
           shopApi.getShopById(SHOP_ID),
-          inventoryApi.getInventoriesByShop(SHOP_ID, { limit: "50" })
+          inventoryApi.getInventoriesByShop(SHOP_ID, { limit: "50" }),
         ]);
         const data = shopRes?.data ?? shopRes;
         if (data) {
           setShop(data);
-          const products = productsRes?.data ?? productsRes ?? [];
-          const prodWithImg = products.find((p: any) => p.image_url || p.image || p.datas?.image_url || p.datas?.image);
-          if (prodWithImg) {
-            setFallbackProductImage(prodWithImg.image_url || prodWithImg.image || prodWithImg.datas?.image_url || prodWithImg.datas?.image);
-          }
+          const prods = productsRes?.data ?? productsRes ?? [];
+          const withImg = prods.find((p: any) => p.image_url || p.image || p.datas?.image_url || p.datas?.image);
+          if (withImg) setFallbackImg(withImg.image_url || withImg.image || withImg.datas?.image_url || withImg.datas?.image);
         } else {
           setError("Shop not found");
         }
@@ -118,239 +268,286 @@ const DigitalMain = () => {
         setLoading(false);
       }
     };
-    fetch();
+    load();
   }, [navigate]);
 
-
-
-  if (loading) return (
-    <div className="min-h-screen bg-slate-50/60">
-      <HeaderSkeleton />
-      <div className="px-4 pt-5 grid grid-cols-1 xl:grid-cols-3 gap-4">
-        <div className="xl:col-span-2 space-y-4">
-          <Skeleton className="h-10 rounded-2xl" />
-          <Skeleton className="h-96 rounded-2xl" />
-        </div>
-        <div className="space-y-4">
-          <Skeleton className="h-56 rounded-2xl" />
-          <Skeleton className="h-48 rounded-2xl" />
-        </div>
-      </div>
-    </div>
-  );
-
+  if (loading) return <div className="min-h-screen bg-slate-50"><HeaderSkeleton /><div className="px-6 pt-6 space-y-4"><Skeleton className="h-64 rounded-xl" /></div></div>;
   if (error || !shop) return (
-    <div className="min-h-screen bg-slate-50/60 flex items-center justify-center p-6">
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8 max-w-sm w-full text-center">
-        <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
-          <AlertCircle size={24} className="text-red-400" />
-        </div>
-        <h3 className="font-bold text-slate-800 mb-1">Failed to load store</h3>
-        <p className="text-sm text-slate-400 mb-4">{error}</p>
-        <button
-          onClick={() => window.location.reload()}
-          className="px-5 py-2 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition-colors"
-        >
-          Retry
-        </button>
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+      <div className="bg-white rounded-xl border border-slate-200 p-8 max-w-sm w-full text-center">
+        <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4"><AlertCircle size={20} className="text-red-500" /></div>
+        <h3 className="font-semibold text-slate-800 mb-1">Failed to load store</h3>
+        <p className="text-sm text-slate-500 mb-5">{error}</p>
+        <button onClick={() => window.location.reload()} className="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors">Retry</button>
       </div>
     </div>
   );
 
-  const initials = shop.name?.charAt(0)?.toUpperCase() ?? "S";
+  const initials   = shop.name?.charAt(0)?.toUpperCase() ?? "S";
+  const uniqueHours = getUniqueHours(shop.operating_hours ?? []).sort(
+    (a, b) => DAY_ORDER.indexOf(a.day) - DAY_ORDER.indexOf(b.day)
+  );
+  const deliveryTypes = [...new Set((shop.delivery_options ?? []).map(d => d.type))];
 
   return (
-    <div className="min-h-screen bg-slate-50/60 pb-16" style={{ fontFamily: "Inter, sans-serif" }}>
+    <div className="min-h-screen bg-slate-50 pb-16" style={{ fontFamily: "Inter, sans-serif" }}>
 
-      {/* ─── HEADER ─────────────────────────────────────────────── */}
-      <div className="bg-white border-b border-slate-100 shadow-sm">
+      {showQR && <QRModal shop={shop} onClose={() => setShowQR(false)} />}
+
+      {/* ─── HEADER ──────────────────────────────────────────────── */}
+      <div className="bg-white border-b border-slate-200">
+
         {/* Banner */}
-        <div className="relative h-40 overflow-hidden">
+        <div className="relative h-36 overflow-hidden">
           {shop.banner_url ? (
-            <img src={shop.banner_url} alt="Banner" className="w-full h-full object-cover" />
+            <img src={shop.banner_url} alt="Store banner" className="w-full h-full object-cover" />
           ) : (
-            <div
-              className="w-full h-full"
-              style={{
-                background: "linear-gradient(135deg, #dbeafe 0%, #eff6ff 40%, #bfdbfe 100%)",
-              }}
-            >
-              <div
-                className="absolute inset-0"
-                style={{
-                  backgroundImage: "radial-gradient(circle, #93c5fd55 1.5px, transparent 1.5px)",
-                  backgroundSize: "22px 22px",
-                }}
-              />
-              <div className="absolute -top-12 -right-12 w-56 h-56 rounded-full bg-blue-300/20 blur-2xl" />
-              <div className="absolute -bottom-8 -left-8 w-44 h-44 rounded-full bg-blue-400/15 blur-xl" />
+            <div className="w-full h-full" style={{ background: "linear-gradient(135deg,#dbeafe 0%,#eff6ff 50%,#e0f2fe 100%)" }}>
+              <div className="absolute inset-0 opacity-40" style={{ backgroundImage: "radial-gradient(circle,#93c5fd 1px,transparent 1px)", backgroundSize: "24px 24px" }} />
             </div>
           )}
 
-          {/* Action Buttons */}
-          <div className="absolute right-4 top-4 flex gap-2 z-10">
-            <button className="flex items-center gap-1.5 bg-white/90 backdrop-blur-sm text-slate-600 text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-white shadow-sm border border-white/80 transition-all">
-              <Share2 size={11} strokeWidth={2.5} /> Share
-            </button>
+          {/* Overlay buttons */}
+          <div className="absolute top-3 right-3 flex gap-2 z-10">
             <button
-              onClick={() => {
-                setActiveTab("Settings");
-                document.getElementById("digital-store-tabs")?.scrollIntoView({ behavior: "smooth" });
-              }}
-              className="flex items-center gap-1.5 bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-blue-700 shadow-md transition-all"
+              onClick={() => { setActiveTab("Settings"); document.getElementById("digital-store-tabs")?.scrollIntoView({ behavior: "smooth" }); }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 shadow-sm transition-all"
             >
-              <Edit3 size={11} strokeWidth={2.5} /> Edit Store
-            </button>
-            <button className="flex items-center gap-1.5 bg-white/90 backdrop-blur-sm text-slate-600 text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-white shadow-sm border border-white/80 transition-all">
-              <ExternalLink size={11} strokeWidth={2.5} /> Preview
+              <Edit3 size={11} /> Edit Store
             </button>
           </div>
         </div>
 
-        {/* Profile Row */}
-        <div className="px-5 md:px-7 pb-5">
-          <div className="flex flex-col sm:flex-row sm:items-end gap-4 -mt-11 mb-4 relative z-10">
-            {/* Avatar */}
-            <div className="relative shrink-0">
-              <div className="w-22 h-22 w-[88px] h-[88px] rounded-2xl border-4 border-white shadow-lg overflow-hidden bg-blue-50 flex items-center justify-center">
+        {/* ── Profile Row ── */}
+        {/*
+          Layout:
+          ┌───────────────────────────────────────────────────────┐
+          │ [Logo overlapping banner]                             │
+          │                                                       │
+          │ Shop Name  #Store1  ● Online       [QR]  [Followers] │
+          │ "Good Clothings"                                      │
+          │ super store                                           │
+          │ 📍 22, pandian street…                                │
+          │ 🏷 Restaurant & Cafe  OTHERS  INR                     │
+          └───────────────────────────────────────────────────────┘
+        */}
+        <div className="px-6 pb-4">
+
+          {/* Logo — pulled up to overlap banner */}
+          <div className="relative z-10 -mt-10 mb-3">
+            <div className="relative inline-block">
+              <div className="w-20 h-20 rounded-xl border-4 border-white shadow-md overflow-hidden bg-blue-50 flex items-center justify-center">
                 {shop.logo_url ? (
                   <img src={shop.logo_url} alt={shop.name} className="w-full h-full object-cover" />
-                ) : fallbackProductImage ? (
-                  <img src={fallbackProductImage} alt={shop.name} className="w-full h-full object-cover" />
+                ) : fallbackImg ? (
+                  <img src={fallbackImg} alt={shop.name} className="w-full h-full object-cover" />
                 ) : (
-                  <span className="text-3xl font-extrabold text-blue-600">{initials}</span>
+                  <span className="text-3xl font-bold text-blue-600">{initials}</span>
                 )}
               </div>
-              {/* Visibility badge */}
-              <div className={`absolute -bottom-2 -right-2 flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full border-2 border-white shadow-sm ${shop.visible_online ? "bg-emerald-500 text-white" : "bg-slate-400 text-white"}`}>
-                {shop.visible_online
-                  ? <><span className="w-1.5 h-1.5 rounded-full bg-white inline-block" style={{ animation: "pulse 2s infinite" }} />ONLINE</>
-                  : <><WifiOff size={8} />OFFLINE</>
-                }
-              </div>
+              {/* Online dot on logo */}
+              <span className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${shop.visible_online ? "bg-emerald-500" : "bg-slate-400"}`} />
             </div>
+          </div>
 
-            {/* Info */}
-            <div className="flex-1 pt-2 sm:pt-10">
-              <div className="flex flex-wrap items-center gap-2 mb-1">
-                <h1 className="text-xl font-extrabold text-slate-800 tracking-tight leading-none">{shop.name}</h1>
-                <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-100">
-                  <BadgeCheck size={10} /> Verified
+          {/* Info row: name/details (left) + QR/Followers (right) */}
+          <div className="flex items-start justify-between gap-4">
+
+            {/* ── Left: all shop info stacked ── */}
+            <div className="flex-1 min-w-0 space-y-1.5">
+
+              {/* Row 1: Name + badges */}
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-[18px] font-semibold text-slate-900 leading-tight">{shop.name}</h1>
+                {shop.sequence_id && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                    <Hash size={9} /> Store #{shop.sequence_id}
+                  </span>
+                )}
+                <span className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded border ${
+                  shop.visible_online
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                    : "bg-slate-100 text-slate-500 border-slate-200"
+                }`}>
+                  {shop.visible_online
+                    ? <><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />Online</>
+                    : <><WifiOff size={9} />Offline</>
+                  }
                 </span>
-                {shop.categories?.[0] && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200">
-                    <Tag size={9} className="inline mr-0.5" />{shop.categories[0]}
+                {shop.business_infos?.gst_infos?.registered && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                    <BadgeCheck size={10} /> GST Registered
                   </span>
                 )}
               </div>
-              {shop.tagline && <p className="text-sm text-slate-500 font-medium">{shop.tagline}</p>}
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-[11px] text-slate-400">
-                <span className="flex items-center gap-1"><Hash size={10} />Store #{shop.sequence_id}</span>
-                <span className="flex items-center gap-1"><MapPin size={10} />{shop.address?.full_address || "Address not set"}</span>
-                <span className="flex items-center gap-1"><Calendar size={10} />Since {shop.created_at}</span>
+
+              {/* Row 2: Tagline */}
+              {shop.tagline && (
+                <p className="text-[13px] text-slate-500 italic">"{shop.tagline}"</p>
+              )}
+
+              {/* Row 3: Description */}
+              {shop.description && (
+                <p className="text-[12px] text-slate-500 leading-relaxed max-w-xl">{shop.description}</p>
+              )}
+
+              {/* Row 4: Address + Contact */}
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-slate-400">
+                {shop.address?.full_address && (
+                  <span className="flex items-center gap-1">
+                    <MapPin size={11} className="shrink-0 text-slate-400" />
+                    {shop.address.full_address}
+                    {shop.address.zip_code && shop.address.zip_code !== "000000" && (
+                      <span className="text-slate-300 ml-1">· {shop.address.zip_code}</span>
+                    )}
+                  </span>
+                )}
+                {shop.additional_infos?.website && (
+                  <a href={shop.additional_infos.website} target="_blank" rel="noreferrer"
+                    className="flex items-center gap-1 hover:text-blue-500 transition-colors">
+                    <Globe size={11} /> {shop.additional_infos.website}
+                  </a>
+                )}
+                {shop.additional_infos?.emails?.[0] && (
+                  <span className="flex items-center gap-1">
+                    <Mail size={11} /> {shop.additional_infos.emails[0]}
+                  </span>
+                )}
+                {shop.additional_infos?.mobile_numbers?.[0] && (
+                  <span className="flex items-center gap-1">
+                    <Phone size={11} /> {shop.additional_infos.mobile_numbers[0]}
+                  </span>
+                )}
+              </div>
+
+              {/* Row 5: Categories + Business type + Currency */}
+              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                {shop.categories?.map((cat) => (
+                  <span key={cat} className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded">
+                    <Tag size={9} /> {cat}
+                  </span>
+                ))}
+                {shop.business_infos?.type && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded">
+                    <Building2 size={9} /> {shop.business_infos.type}
+                  </span>
+                )}
+                {shop.business_infos?.currency && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded">
+                    {shop.business_infos.currency}
+                  </span>
+                )}
               </div>
             </div>
 
-            {/* Status pill */}
-            <div className="flex items-center gap-2 pb-1">
-              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold ${shop.visible_online ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-slate-50 text-slate-500 border-slate-200"}`}>
-                {shop.visible_online ? <Wifi size={12} /> : <WifiOff size={12} />}
-                {shop.visible_online ? "Visible Online" : "Not Visible"}
-              </div>
-            </div>
-          </div>
-
-          {/* Description */}
-          {shop.description && (
-            <p className="text-sm text-slate-500 leading-relaxed mb-4 max-w-2xl">{shop.description}</p>
-          )}
-
-          {/* QR Code & Followers */}
-          <div className="flex flex-wrap items-center gap-4 pt-2 pb-2">
-            <div className="flex items-center gap-3 bg-white px-4 py-2.5 rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:border-blue-300 transition-all">
-              <div className="p-1.5 bg-blue-50 rounded-lg border border-blue-100">
-                <QrCode size={20} className="text-blue-600" />
-              </div>
-              <div>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Store QR</p>
-                <p className="text-sm font-extrabold text-slate-800 leading-none">View & Share</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 bg-white px-4 py-2.5 rounded-xl border border-slate-200 shadow-sm">
-              <div className="p-1.5 bg-indigo-50 rounded-lg border border-indigo-100">
-                <Users size={20} className="text-indigo-600" />
-              </div>
-              <div>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Followers</p>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-sm font-extrabold text-slate-800 leading-none">1.2K</span>
-                  <span className="text-[10px] font-bold text-emerald-500 bg-emerald-50 px-1.5 py-0.5 rounded-md">+12 new</span>
+            {/* ── Right: QR + Followers ── */}
+            <div className="flex items-center gap-2 shrink-0 self-start mt-1">
+              <button
+                onClick={() => setShowQR(true)}
+                title="View Store QR Code"
+                className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all cursor-pointer group"
+              >
+                <QrCode size={15} className="text-blue-500 group-hover:text-blue-600" />
+                <span className="text-sm font-medium text-slate-700 group-hover:text-blue-600">QR Code</span>
+              </button>
+              <div className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-lg">
+                <Users size={15} className="text-slate-400" />
+                <div>
+                  <p className="text-[10px] text-slate-400 leading-none mb-0.5">Followers</p>
+                  <p className="text-sm font-semibold text-slate-800 leading-none">1.2K</p>
                 </div>
               </div>
             </div>
           </div>
 
+          {/* ── Quick info strips: Hours + Delivery ── */}
+          <div className="flex flex-wrap gap-3 mt-1 pt-3 border-t border-slate-100">
+
+            {/* Hours strip */}
+            {uniqueHours.length > 0 && (
+              <div className="flex items-start gap-2">
+                <Clock size={13} className="text-slate-400 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1">Hours</p>
+                  <div className="flex flex-wrap gap-1">
+                    {uniqueHours.map((h) => (
+                      <span key={h.day} className="text-[11px] text-slate-600 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded">
+                        <span className="font-semibold">{DAY_SHORT[h.day]}</span>{" "}
+                        {fmt24to12(h.open_at)}–{fmt24to12(h.close_at)}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Delivery strip */}
+            {deliveryTypes.length > 0 && (
+              <div className="flex items-start gap-2">
+                <Truck size={13} className="text-slate-400 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1">Delivery</p>
+                  <div className="flex flex-wrap gap-1">
+                    {(shop.delivery_options ?? []).filter((d, i, arr) => arr.findIndex(x => x.type === d.type) === i).map((d) => (
+                      <span key={d.id} className="text-[11px] text-slate-600 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded">
+                        <span className="font-semibold">{d.type === "INSTANT" ? "Instant" : d.type === "NATIONWIDE" ? "Nationwide" : d.type}</span>
+                        {" · "}{d.speed}
+                        {d.free_shipping_amount > 0 && <> · Free above ₹{d.free_shipping_amount}</>}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Announcement count strip */}
+            {shop.announcements?.length > 0 && (
+              <div className="flex items-center gap-2 ml-auto">
+                <Megaphone size={12} className="text-blue-400" />
+                <span className="text-[11px] text-slate-500">
+                  <span className="font-semibold text-blue-600">{shop.announcements.length}</span> active announcement{shop.announcements.length !== 1 ? "s" : ""}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ─── TAB BAR ──────────────────────────────────────────── */}
+        <div id="digital-store-tabs" className="px-6 flex items-center gap-0 border-t border-slate-100">
+          {TAB_CONFIG.map(({ tab, icon: Icon }) => {
+            const isActive = activeTab === tab;
+            return (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`relative flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap ${isActive ? "text-blue-600" : "text-slate-500 hover:text-slate-800"}`}
+              >
+                <Icon size={14} strokeWidth={2} />
+                {tab}
+                {/* badge for announcements */}
+                {tab === "Announcements" && (shop.announcements?.length ?? 0) > 0 && (
+                  <span className="ml-0.5 text-[10px] font-bold bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full">
+                    {shop.announcements.length}
+                  </span>
+                )}
+                {isActive && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full" />}
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* ─── MAIN CONTENT ──────────────────────────────────────── */}
-      <div className="px-4 md:px-6 pt-5">
-        <div className="flex flex-col gap-5">
-
-
-
-          {/* BOTTOM — Tabs & Content */}
-          <div className="w-full space-y-4">
-            {/* Tab Bar — sticky when scrolled to top */}
-            <div id="digital-store-tabs" className="sticky top-0 z-30 bg-white/95 backdrop-blur-md rounded-2xl border border-slate-100" style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}>
-              <div className="flex items-center gap-1 p-2 overflow-x-auto scrollbar-hide">
-                {TAB_CONFIG.map(({ tab, icon: Icon, desc }) => {
-                  const isActive = activeTab === tab;
-                  return (
-                    <button
-                      key={tab}
-                      onClick={() => setActiveTab(tab)}
-                      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-all duration-150 border ${isActive
-                        ? "bg-blue-50 text-blue-700 border-blue-100 shadow-sm"
-                        : "bg-transparent border-transparent text-slate-500 hover:text-blue-600 hover:bg-blue-50/50"
-                        }`}
-                    >
-                      <Icon size={13} strokeWidth={2.5} className={isActive ? "text-blue-600" : "text-slate-400"} />
-                      {tab}
-                      {!isActive && (
-                        <span className="text-[9px] text-slate-300 hidden md:inline">{desc}</span>
-                      )}
-                    </button>
-                  );
-                })}
-                <div className="flex-1" />
-                <span className="text-[10px] text-slate-300 pr-2 hidden lg:flex items-center gap-1 shrink-0">
-                  <ChevronRight size={10} /> section
-                </span>
-              </div>
-            </div>
-
-            {/* Tab Content Card */}
-            <div
-              key={activeTab}
-              className="relative z-0 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden"
-              style={{ animation: "slideUp 0.18s ease" }}
-            >
-              <div className="min-h-[360px]">
-                {activeTab === "Announcements" && <Promotions />}
-                {activeTab === "Products" && <ProductDashboard />}
-                {activeTab === "Settings" && <StoreSettingsLayout shop={shop} />}
-              </div>
-            </div>
-          </div>
-
+      <div className="px-6 pt-5">
+        <div key={activeTab} style={{ animation: "fadeIn 0.15s ease" }}>
+          {activeTab === "Announcements" && <Promotions />}
+          {activeTab === "Products"      && <ProductDashboard />}
+          {activeTab === "Settings"      && <StoreSettingsLayout shop={shop} />}
         </div>
       </div>
 
       <style>{`
-        @keyframes slideUp { from { opacity:0; transform:translateY(6px) } to { opacity:1; transform:translateY(0) } }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(4px) } to { opacity:1; transform:translateY(0) } }
       `}</style>
     </div>
   );

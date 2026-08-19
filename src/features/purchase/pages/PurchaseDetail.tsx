@@ -485,11 +485,10 @@ const PurchaseDetail = () => {
             }}
             disabled={(po?.returns?.length || 0) > 0 || ((po as any)?.purchase_returns?.length || 0) > 0}
             title={((po?.returns?.length || 0) > 0 || ((po as any)?.purchase_returns?.length || 0) > 0) ? "Cannot edit because items have been returned" : "Edit Purchase"}
-            className={`px-6 h-8 rounded-lg border font-bold text-xs transition-all flex items-center shadow-sm ${
-              ((po?.returns?.length || 0) > 0 || ((po as any)?.purchase_returns?.length || 0) > 0)
-                ? "border-slate-300 bg-slate-100 text-slate-400 cursor-not-allowed" 
+            className={`px-6 h-8 rounded-lg border font-bold text-xs transition-all flex items-center shadow-sm ${((po?.returns?.length || 0) > 0 || ((po as any)?.purchase_returns?.length || 0) > 0)
+                ? "border-slate-300 bg-slate-100 text-slate-400 cursor-not-allowed"
                 : "border-blue-600 bg-blue-600 text-white hover:bg-blue-700"
-            }`}
+              }`}
           >
             Edit Purchase
           </button>

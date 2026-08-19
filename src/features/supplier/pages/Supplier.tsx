@@ -47,9 +47,6 @@ const SupplierRow = ({ sup, isSelected, onSelect, onEdit, onView, onDelete, sele
       </td>
       <td className="px-6 py-4 whitespace-nowrap">
         <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-sm font-black shadow-sm transition-colors ${isSelected ? "bg-blue-500 text-white shadow-blue-100" : "bg-gradient-to-br from-blue-600 to-blue-400 text-white shadow-blue-100"}`}>
-            {(String(sup.name || 'S')).charAt(0).toUpperCase()}
-          </div>
           <div>
             <p className="text-sm font-semibold text-slate-700 tracking-tight">{String(sup.name)}</p>
           </div>
@@ -91,10 +88,6 @@ const SupplierRow = ({ sup, isSelected, onSelect, onEdit, onView, onDelete, sele
           <button onClick={() => onEdit(sup.id)} className="text-amber-400 hover:text-amber-500 transition-colors p-1" title="Edit Supplier">
             <Pencil size={15} />
           </button>
-          <button onClick={() => onDelete(sup)} className="text-slate-400 hover:text-red-655 transition-colors p-1" title="Delete Supplier">
-            <Trash2 size={15} />
-          </button>
-          
           <div className="relative">
             <button ref={menuTriggerRef} onClick={(e) => { e.stopPropagation(); setIsMenuOpen(!isMenuOpen); }} className="text-slate-800 hover:text-slate-900 transition-colors p-1" title="More actions">
               <MoreVertical size={15} />
@@ -107,6 +100,9 @@ const SupplierRow = ({ sup, isSelected, onSelect, onEdit, onView, onDelete, sele
             >
               <ActionMenuItem icon={<Plus size={13} />} onClick={() => { setIsMenuOpen(false); navigate(`/purchase/add`, { state: { supplier: sup } }); }}>
                 Add Purchase
+              </ActionMenuItem>
+              <ActionMenuItem icon={<Trash2 size={13} />} onClick={() => { setIsMenuOpen(false); onDelete(sup); }}>
+                Delete Supplier
               </ActionMenuItem>
             </ActionMenu>
           </div>
@@ -606,22 +602,22 @@ const Supplier = () => {
       )}
 
       {/* Table Section */}
-      <div className="bg-white border border-slate-100 rounded-lg shadow-sm min-w-0 overflow-hidden flex flex-col flex-1 min-h-0 mt-2">
+      <div className="bg-white rounded-lg shadow-sm border border-slate-100 min-w-0 overflow-hidden flex flex-col flex-1 min-h-0 mt-2">
         <div className="overflow-x-auto overflow-y-auto flex-1 pf-scroll">
-          <table className="w-full text-left border-separate border-spacing-0">
-            <thead className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-sm shadow-sm">
-              <tr className="text-slate-800 text-[10px] font-bold  tracking-[0.15em] border-b border-slate-100">
-                <th className="px-6 py-5 whitespace-nowrap">ID</th>
-                <th className="px-6 py-5 whitespace-nowrap min-w-[200px]">Supplier Details</th>
+          <table className="w-full text-left border-collapse relative">
+            <thead className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0]">
+              <tr>
+                <th className="px-6 py-4 text-[10px] font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">ID</th>
+                <th className="px-6 py-4 text-[10px] font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap min-w-[200px]">Supplier Details</th>
                 {selectedKeys.map(key => (
-                  <th key={key} className="px-6 py-5 whitespace-nowrap">
+                  <th key={key} className="px-6 py-4 text-[10px] font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">
                     {COLUMN_LABELS[key] ?? key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
                   </th>
                 ))}
-                <th className="px-6 py-5 text-right whitespace-nowrap w-24 sticky right-0 bg-slate-50 border-l border-slate-200 z-30 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)]">Actions</th>
+                <th className="px-6 py-4 text-right text-[10px] font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap w-24 sticky right-0 bg-white shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)]">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-55 bg-white">
+            <tbody className="divide-y divide-slate-200 bg-white">
               {filteredSuppliers.length === 0 ? (
                 <tr>
                   <td colSpan={selectedKeys.length + 3} className="py-20 text-center text-slate-400 font-medium italic">No suppliers matching your filters.</td>

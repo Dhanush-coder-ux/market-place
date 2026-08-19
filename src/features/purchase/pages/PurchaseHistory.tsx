@@ -612,16 +612,16 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
               <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-left">Supplier</th>
               <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-left">Date</th>
               <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-left hidden md:table-cell">Products</th>
-              <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-right">Qty</th>
               <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-right">Amount</th>
               <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-center">Status</th>
               <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-center">Payment Status</th>
+              <th className="px-3 py-2.5 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-right">Outstanding</th>
               <th className="px-3 py-2.5 w-24 text-right text-[10px] font-bold tracking-wider text-slate-800 uppercase sticky right-0 bg-slate-50 border-l border-slate-200 z-30 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)]">Actions</th>
             </tr>
           </thead>
           <tbody>
             {data.map((po, index) => {
-              const totalQty = po.products.reduce((s, i) => s + i.quantity, 0);
+
               const isSelected = selectedIds.has(po.id);
               return (
                 <tr
@@ -691,13 +691,6 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
                     </span>
                   </td>
 
-                  {/* Quantity */}
-                  <td className="p-2.5 px-3 text-right">
-                    <span className="text-[11px] font-semibold text-slate-600 tabular-nums">
-                      {totalQty}
-                    </span>
-                  </td>
-
                   {/* Amount */}
                   <td className="p-2.5 px-3 text-right">
                     <AmountWithReturnHover total={po.total_cost} returns={po.returns || []} refundAmount={po.refund_amount} />
@@ -712,10 +705,16 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
                   <td className="p-2.5 px-3 text-center">
                     <div className="flex flex-col items-center gap-1">
                       <PaymentStatusBadge status={po.payment_status} outstanding={po.outstanding} grandTotal={po.grand_total || po.total_cost} />
-                      {po.outstanding !== undefined && (po.grand_total || po.total_cost) !== undefined && (po.grand_total || po.total_cost) > 0 && po.outstanding > 0 && (po.grand_total || po.total_cost) > po.outstanding && (
-                        <span className="text-[10px] font-bold text-amber-600">{fmt(po.outstanding)}</span>
-                      )}
                     </div>
+                  </td>
+
+                  {/* Outstanding */}
+                  <td className="p-2.5 px-3 text-right">
+                    {po.outstanding && po.outstanding > 0 ? (
+                      <span className="text-[11px] font-semibold text-amber-600 tabular-nums">{fmt(po.outstanding)}</span>
+                    ) : (
+                      <span className="text-[11px] font-semibold text-slate-400">—</span>
+                    )}
                   </td>
 
                   {/* Actions */}

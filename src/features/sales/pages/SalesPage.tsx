@@ -548,24 +548,24 @@ const SalesListPage: React.FC = () => {
       </RightSidebarFilter>
 
       {/* ── Table Card ── */}
-      <div className="bg-white border border-slate-100 rounded-lg shadow-sm min-w-0 overflow-hidden flex flex-col flex-1 min-h-0 mt-2">
+      <div className="bg-white rounded-lg shadow-sm border border-slate-100 min-w-0 overflow-hidden flex flex-col flex-1 min-h-0 mt-2">
         <div className="overflow-auto flex-1 scrollbar-thin scrollbar-thumb-slate-100 ">
-          <table className="w-full border-collapse table-fixed">
-            <thead className="sticky top-0 z-10 bg-slate-50 border-b border-slate-100">
+          <table className="w-full border-collapse table-fixed relative">
+            <thead className="sticky top-0 z-10 bg-white shadow-[0_1px_0_0_#e2e8f0]">
               <tr>
-                <th className="w-[110px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-left">Order ID</th>
-                <th className="w-[140px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-left">Customer</th>
-                <th className="w-[180px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-left">Items</th>
-                <th className="w-[90px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-left">Origin</th>
-                <th className="w-[100px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-left">Payment</th>
-                <th className="w-[96px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-left">Date</th>
-                <th className="w-[50px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-center">Qty</th>
-                <th className="w-[90px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-right">Amount</th>
-                <th className="w-[90px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-left">Status</th>
-                <th className="w-[90px] p-2.5 px-3 text-[10px] font-bold tracking-wider text-slate-800 uppercase text-right">Actions</th>
+                <th className="w-[110px] px-4 py-3 text-[10px] font-semibold tracking-wider text-slate-500 uppercase text-left">Order ID</th>
+                <th className="w-[140px] px-4 py-3 text-[10px] font-semibold tracking-wider text-slate-500 uppercase text-left">Customer</th>
+                <th className="w-[180px] px-4 py-3 text-[10px] font-semibold tracking-wider text-slate-500 uppercase text-left">Items</th>
+                <th className="w-[90px] px-4 py-3 text-[10px] font-semibold tracking-wider text-slate-500 uppercase text-left">Origin</th>
+                <th className="w-[100px] px-4 py-3 text-[10px] font-semibold tracking-wider text-slate-500 uppercase text-left">Payment</th>
+                <th className="w-[96px] px-4 py-3 text-[10px] font-semibold tracking-wider text-slate-500 uppercase text-left">Date</th>
+                <th className="w-[50px] px-4 py-3 text-[10px] font-semibold tracking-wider text-slate-500 uppercase text-center">Qty</th>
+                <th className="w-[90px] px-4 py-3 text-[10px] font-semibold tracking-wider text-slate-500 uppercase text-right">Amount</th>
+                <th className="w-[90px] px-4 py-3 text-[10px] font-semibold tracking-wider text-slate-500 uppercase text-left">Status</th>
+                <th className="w-[90px] px-4 py-3 text-[10px] font-semibold tracking-wider text-slate-500 uppercase text-right">Actions</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-slate-200 bg-white">
               {filtered.length === 0 ? (
                 <tr>
                   <td colSpan={10} className="p-12 text-center">
@@ -604,7 +604,7 @@ const SalesListPage: React.FC = () => {
                     className={`group transition-colors cursor-pointer ${isSelected ? "bg-blue-50 border-l-2 border-l-blue-500" : "hover:bg-slate-50/60"}`}
                     onClick={() => setSelectedSale(prev => prev?.id === sale.id ? null : sale)}
                   >
-                    <td className="p-2.5 px-3 border-b border-slate-50">
+                    <td className="px-4 py-4 border-b border-slate-50">
                       <div>
                         <span className="font-mono text-[11px] font-semibold text-slate-800 block">#{sale.ui_id}</span>
                         <div className="flex gap-1 mt-1 flex-wrap">
@@ -615,7 +615,7 @@ const SalesListPage: React.FC = () => {
                         </div>
                       </div>
                     </td>
-                    <td className="p-2.5 px-3 border-b border-slate-50">
+                    <td className="px-4 py-4 border-b border-slate-50">
                       <span className="truncate text-xs font-medium text-slate-800 block" title={sale.customer?.customer_name || (sale.customer_id ? (customerMap[sale.customer_id] || sale.customer_id) : "Walk in Customer")}>
                         {sale.customer?.customer_name || (sale.customer_id ? (customerMap[sale.customer_id] || sale.customer_id) : "Walk in Customer")}
                       </span>
@@ -623,13 +623,13 @@ const SalesListPage: React.FC = () => {
                         <span className="text-[10px] text-slate-500 block mt-0.5 truncate">{sale.customer.customer_mobile_number}</span>
                       )}
                     </td>
-                    <td className="p-2.5 px-3 border-b border-slate-50">
+                    <td className="px-4 py-4 border-b border-slate-50">
                       <span className="truncate text-xs font-semibold text-slate-700 block" title={itemsList.map((i: any) => i.name || i.product_name).join(", ")}>
                         {itemsDisplay}
                       </span>
                     </td>
-                    <td className="p-2.5 px-3 border-b border-slate-50"><Badge cls={oCfg.cls} dot={oCfg.dot} label={sale.origin} /></td>
-                    <td className="p-2.5 px-3 border-b border-slate-50">
+                    <td className="px-4 py-4 border-b border-slate-50"><Badge cls={oCfg.cls} dot={oCfg.dot} label={sale.origin} /></td>
+                    <td className="px-4 py-4 border-b border-slate-50">
                       <div className="flex flex-wrap gap-1">
                         {sale.payments && Object.keys(sale.payments).length > 0 ? (
                           Object.keys(sale.payments).map(k => {
@@ -643,11 +643,11 @@ const SalesListPage: React.FC = () => {
                         )}
                       </div>
                     </td>
-                    <td className="p-2.5 px-3 border-b border-slate-50"><span className="font-mono text-[11px] text-slate-500">{dateStr}</span></td>
-                    <td className="p-2.5 px-3 border-b border-slate-50 text-center"><span className="text-[11px] font-semibold text-slate-600">{Number((sale.total_quantity || 0).toFixed(2))}</span></td>
-                    <td className="p-2.5 px-3 border-b border-slate-50 text-right"><span className="font-mono text-xs font-bold text-slate-900">{fmt(sale.total_sellprice)}</span></td>
-                    <td className="p-2.5 px-3 border-b border-slate-50">{(() => { const cfg = STATUS_CFG[sale.status as SaleStatus] || STATUS_CFG["Pending"]; return <Badge cls={cfg.cls} dot={cfg.dot} label={sale.status} />; })()}</td>
-                    <td className="p-2.5 px-3 border-b border-slate-50 text-right whitespace-nowrap">
+                    <td className="px-4 py-4 border-b border-slate-50"><span className="font-mono text-[11px] text-slate-500">{dateStr}</span></td>
+                    <td className="px-4 py-4 border-b border-slate-50 text-center"><span className="text-[11px] font-semibold text-slate-600">{Number((sale.total_quantity || 0).toFixed(2))}</span></td>
+                    <td className="px-4 py-4 border-b border-slate-50 text-right"><span className="font-mono text-xs font-bold text-slate-900">{fmt(sale.total_sellprice)}</span></td>
+                    <td className="px-4 py-4 border-b border-slate-50">{(() => { const cfg = STATUS_CFG[sale.status as SaleStatus] || STATUS_CFG["Pending"]; return <Badge cls={cfg.cls} dot={cfg.dot} label={sale.status} />; })()}</td>
+                    <td className="px-4 py-4 border-b border-slate-50 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-2">
                         {sale.status === "Completed" && sale.origin !== "Offline Return" && sale.origin !== "Sales Return" && (
                           <button

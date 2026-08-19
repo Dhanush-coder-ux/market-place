@@ -285,8 +285,8 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
         <div className="pt-6" />
 
         {/* Form Card */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 relative overflow-hidden min-h-[400px] flex flex-col mb-24">
-          <div className="flex-1">
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 relative overflow-hidden h-[calc(100vh-280px)] min-h-[400px] flex flex-col mb-24">
+          <div className="flex-1 h-full overflow-hidden">
             {currentStep === 1 && <Step1BasicDetails form={form} setForm={setForm} errors={errors} setErrors={setErrors} />}
             {currentStep === 2 && <Step2OperatingHours form={form} setForm={setForm} />}
             {currentStep === 3 && <Step3DeliveryOptions form={form} setForm={setForm} />}

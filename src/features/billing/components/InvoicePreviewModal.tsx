@@ -35,13 +35,11 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
   payments, includeGst, totalAmount, gstAmount, finalAmount,
   isSubmitting, onConfirm,
 }) => {
-  const [status, setStatus] = useState<BillStatus>("COMPLETED");
   const invoiceRef = useRef<HTMLDivElement>(null);
   const filledItems = items.filter(i => !!i.name);
   const today = new Date();
   const dateStr = today.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
   const timeStr = today.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
-  const invoiceNo = `ORD-${Date.now().toString(36).toUpperCase().slice(-6)}`;
 
   const primaryPayment = payments[0] || { mode: "cash" };
   const modeInfo = payMeta[primaryPayment.mode] || payMeta.cash;
@@ -132,15 +130,17 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
                     </div>
                   </div>
                   <p className="text-[10px] text-slate-400 mt-2 leading-relaxed">
-                    GSTIN: {shopData?.gst_number || shopData?.gst || "N/A"}<br />
-                    {shopData?.address_infos?.address_line_1 || "Address N/A"}
+                    {(shopData?.gst_infos?.number || shopData?.gst_number || shopData?.gst) && 
+                    (shopData?.gst_infos?.number || shopData?.gst_number || shopData?.gst) !== "N/A" && (
+                      <>GSTIN: {shopData?.gst_infos?.number || shopData?.gst_number || shopData?.gst}<br /></>
+                    )}
+                    {shopData?.address?.full_address || shopData?.address_infos?.address_line_1 || shopData?.address || "Address N/A"}
                   </p>
                 </div>
 
                 {/* Invoice Meta */}
                 <div className="text-right">
                   <p className="text-[9px] font-medium text-blue-500 mb-0.5 print:text-blue-600">Order Receipt</p>
-                  <p className="text-[13px] font-semibold text-slate-800">{invoiceNo}</p>
                   <div className="mt-2 space-y-0.5">
                     <p className="text-[10px] text-slate-400">{dateStr} · {timeStr}</p>
                     <div className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-500 bg-slate-50 border border-slate-100 rounded px-1.5 py-0.5 mt-1 print:bg-white print:border-slate-200">
@@ -158,30 +158,7 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
                 <p className="text-[13px] font-medium text-slate-700">{customerName || "Walk-in Customer"}</p>
                 <p className="text-[10px] text-slate-400 font-mono">{phone || "—"}</p>
               </div>
-              {/* Status Selector */}
-              <div className="flex gap-1 no-print">
-                {(["COMPLETED", "PENDING", "CANCELLED"] as BillStatus[]).map(s => (
-                  <button
-                    key={s}
-                    onClick={() => setStatus(s)}
-                    className={`px-2 py-1 rounded text-[9px] font-medium border transition-all ${status === s
-                      ? s === "COMPLETED" ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-                        : s === "PENDING" ? "bg-amber-50 border-amber-200 text-amber-700"
-                          : "bg-red-50 border-red-200 text-red-600"
-                      : "bg-white border-slate-200/60 text-slate-400 hover:border-slate-300"
-                      }`}
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-              {/* Print-only Status */}
-              <div className="hidden print:block">
-                <span className={`text-[10px] font-bold ${status === "COMPLETED" ? "text-emerald-600" : status === "PENDING" ? "text-amber-600" : "text-red-600"
-                  }`}>
-                  • {status}
-                </span>
-              </div>
+              {/* Status Selector removed */}
             </div>
 
             {/* ── Items Table ────────────────────────────── */}
@@ -283,7 +260,7 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
               Cancel
             </button>
             <button
-              onClick={() => onConfirm(status)}
+              onClick={() => onConfirm("COMPLETED")}
               disabled={isSubmitting}
               className={`flex items-center gap-1.5 px-5 py-2 rounded-lg text-[12px] font-medium text-white transition-all duration-200 ${isSubmitting ? "bg-slate-300 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600 shadow-[0_1px_3px_rgba(59,130,246,0.3)]"
                 }`}

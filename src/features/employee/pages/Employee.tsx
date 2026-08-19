@@ -332,12 +332,12 @@ export default function Employee() {
       )}
 
       {/* Table Section */}
-      <div className="bg-white border border-slate-100 rounded-lg shadow-sm min-w-0 overflow-hidden flex flex-col flex-1 min-h-0 mt-2">
+      <div className="bg-white rounded-lg shadow-sm border border-slate-100 min-w-0 overflow-hidden flex flex-col flex-1 min-h-0 mt-2">
         <div className="overflow-x-auto overflow-y-auto flex-1 pf-scroll">
           <table className="w-full text-left border-collapse relative">
-            <thead>
-              <tr className="bg-slate-50/50 text-slate-400 text-[10px] font-bold tracking-[0.15em] border-b border-slate-100">
-                <th className="px-6 py-5 w-10 text-center">
+            <thead className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0]">
+              <tr>
+                <th className="px-4 py-4 w-10 text-center">
                   <input
                     type="checkbox"
                     checked={filteredEmployees.length > 0 && filteredEmployees.every(emp => selectedEmployees.has(String(emp.employee_id || emp.id)))}
@@ -352,16 +352,16 @@ export default function Employee() {
                     className="rounded border-slate-350 text-blue-605 focus:ring-blue-500/20 cursor-pointer"
                   />
                 </th>
-                <th className="px-6 py-5 whitespace-nowrap">ID</th>
-                <th className="px-6 py-5 whitespace-nowrap min-w-[200px]">Employee Name</th>
-                <th className="px-6 py-5 whitespace-nowrap">Status</th>
+                <th className="px-4 py-3 text-[10px] font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">ID</th>
+                <th className="px-4 py-3 text-[10px] font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap min-w-[200px]">Employee Name</th>
+                <th className="px-4 py-3 text-[10px] font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">Status</th>
                 {selectedKeys.map(key => (
-                  <th key={key} className="px-6 py-5 capitalize whitespace-nowrap">{key.replace(/_/g, ' ')}</th>
+                  <th key={key} className="px-4 py-3 text-[10px] font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">{key.replace(/_/g, ' ')}</th>
                 ))}
-                <th className="px-6 py-5 text-right whitespace-nowrap w-24 sticky right-0 bg-slate-50 border-l border-slate-100 z-30">Actions</th>
+                <th className="px-4 py-3 text-right text-[10px] font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap w-24 sticky right-0 bg-white shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)]">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50 bg-white">
+            <tbody className="divide-y divide-slate-200 bg-white">
               {filteredEmployees.length === 0 ? (
                 <tr>
                   <td colSpan={selectedKeys.length + 5} className="py-20 text-center text-slate-400 font-medium italic">No employees matching your filters.</td>
@@ -370,7 +370,7 @@ export default function Employee() {
                 filteredEmployees.map((emp) => {
                   const empId = String(emp.employee_id || emp.id);
                   const isSelected = selectedEmployees.has(empId);
-                  const initials = (emp.name || 'Unknown').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+
                   const displayId = emp.ui_id || (emp.employee_id ? String(emp.employee_id).slice(0, 8) : '') || (emp.id ? String(emp.id).slice(0, 8) : '');
 
                   return (
@@ -391,9 +391,6 @@ export default function Employee() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold shadow-sm transition-colors ${isSelected ? "bg-blue-500 text-white shadow-blue-100" : "bg-gradient-to-br from-blue-600 to-blue-400 text-white shadow-blue-100"}`}>
-                            {initials}
-                          </div>
                           <div>
                             <p className="text-sm font-semibold text-slate-700 tracking-tight">{emp.name || 'Unknown'}</p>
                           </div>

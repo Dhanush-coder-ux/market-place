@@ -37,9 +37,9 @@ const formatDate = (dateStr?: string) => {
 const getStockStatus = (stock: number | string, reorderPoint?: number | string) => {
   const stockNum = Number(stock) || 0;
   const rp = Number(reorderPoint) || 10;
-  if (stockNum <= 0) return { label: '0 In Stock', variant: 'ps-cancelled' };
-  if (stockNum <= rp) return { label: `${stockNum} Low Stock`, variant: 'ps-draft' };
-  return { label: `${stockNum} In Stock`, variant: 'ps-completed' };
+  if (stockNum <= 0) return { label: '0 In Stock', variant: 'stk-out-of-stock' };
+  if (stockNum <= rp) return { label: `${stockNum} Low Stock`, variant: 'stk-low-stock' };
+  return { label: `${stockNum} In Stock`, variant: 'stk-in-stock' };
 };
 
 const getDaysLeft = (expDate?: string) => {
@@ -274,10 +274,10 @@ export const BatchCards = ({ batches }: { batches: any | any[] }) => {
           const reorderPt     = batch.reorder_point_infos?.reorder_point       ?? batch.reorder_point    ?? null;
 
           const stockStatus = availableQty <= 0
-            ? { label: 'Out of Stock', variant: 'ps-cancelled' }
+            ? { label: 'Out of Stock', variant: 'stk-out-of-stock' }
             : reorderPt !== null && availableQty <= reorderPt
-              ? { label: 'Low Stock',    variant: 'ps-draft' }
-              : { label: 'In Stock',     variant: 'ps-completed' };
+              ? { label: 'Low Stock',    variant: 'stk-low-stock' }
+              : { label: 'In Stock',     variant: 'stk-in-stock' };
 
           return (
             <div key={batch.id || idx} className="flex flex-col border border-slate-200 rounded-xl bg-white shadow-sm hover:shadow-md hover:border-blue-200 transition-all p-3.5 relative gap-3">

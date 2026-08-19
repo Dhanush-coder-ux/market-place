@@ -430,27 +430,18 @@ const ProductRow = React.memo(
                     </div>
                   </button>
                 )}
-                  <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                    {(() => {
-                      const barcode = p.barcode || datas.barcode || "";
-                      if (!barcode) return null;
-                      return (
-                        <span className="text-[10px] font-mono text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded-md border border-slate-100" title={barcode}>
-                          {barcode}
-                        </span>
-                      );
-                    })()}
-                    {Boolean(p.brand || datas.brand || (p as any).brand) && (
-                      <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-md border border-blue-100">
-                        {p.brand || datas.brand || (p as any).brand}
-                      </span>
-                    )}
-                    {(p.gst || datas.gst || (p as any).gst) && (
-                      <span className="text-[10px] font-semibold text-[var(--lb-gst-tx)] bg-[var(--lb-gst-bg)] px-1.5 py-0.5 rounded-md border border-[var(--lb-gst-bd)] uppercase">
-                        GST {p.gst || datas.gst || (p as any).gst}
-                      </span>
-                    )}
-                  </div>
+                <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                  {Boolean(p.brand || datas.brand || (p as any).brand) && (
+                    <span className="text-[11px] font-medium text-[#38414F] bg-[#EEF1F5] px-2.5 py-0.5 rounded-full border border-[#CBD3DE]">
+                      {p.brand || datas.brand || (p as any).brand}
+                    </span>
+                  )}
+                  {(p.gst || datas.gst || (p as any).gst) && (
+                    <span className="text-[10px] font-semibold text-[var(--lb-gst-tx)] bg-[var(--lb-gst-bg)] px-1.5 py-0.5 rounded-md border border-[var(--lb-gst-bd)] uppercase">
+                      GST {p.gst || datas.gst || (p as any).gst}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </td>
@@ -522,13 +513,13 @@ const ProductRow = React.memo(
               const sl = (p as any).storage_location_infos || (datas as any).storage_location_infos;
               let displayText = "—";
               if (sl && typeof sl === 'object' && Object.keys(sl).length > 0) {
-                 displayText = sl.name || sl.storage_location || sl.location || "—";
+                displayText = sl.name || sl.storage_location || sl.location || "—";
               }
               return (
                 <td key={key} className="px-3 py-2.5 whitespace-nowrap">
-                   <span className="text-[12px] font-medium text-slate-700">
-                     {displayText}
-                   </span>
+                  <span className="text-[12px] font-medium text-slate-700">
+                    {displayText}
+                  </span>
                 </td>
               );
             }
@@ -1382,16 +1373,16 @@ const ProductInfos = () => {
       </RightSidebarFilter>
 
       {/* Main table card */}
-      <div className="bg-white border border-slate-100 rounded-lg shadow-sm min-w-0 overflow-hidden flex flex-col flex-1 min-h-0 mt-2">
+      <div className="bg-white rounded-lg shadow-sm border border-slate-100 min-w-0 overflow-hidden flex flex-col flex-1 min-h-0 mt-2">
 
         {/* Table */}
         <div className="overflow-x-auto overflow-y-auto flex-1">
           <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
 
             {/* Sticky header */}
-            <thead className="sticky top-0 z-20 bg-white border-b border-slate-100">
+            <thead className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0]">
               <tr>
-                <th className="px-3 py-2.5 w-10 text-center">
+                <th className="px-4 py-3 w-10 text-center">
                   <input
                     type="checkbox"
                     checked={filteredProducts.length > 0 && filteredProducts.every(p => selectedProducts.has(p.id))}
@@ -1406,14 +1397,14 @@ const ProductInfos = () => {
                     className="rounded border-slate-350 text-blue-600 focus:ring-blue-500/20 cursor-pointer"
                   />
                 </th>
-                <th className="px-3 py-2.5 w-10" />
-                <th className="px-3 py-2.5 w-40 text-[10px] font-semibold text-slate-800 uppercase tracking-wide">
+                <th className="px-4 py-3 w-10" />
+                <th className="px-4 py-3 w-40 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
                   Product ID
                 </th>
-                <th className="px-3 py-2.5 min-w-[260px] text-[10px] font-semibold text-slate-800 uppercase tracking-wide">
+                <th className="px-4 py-3 min-w-[260px] text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
                   Product
                 </th>
-                <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-800 uppercase tracking-wide">
+                <th className="px-4 py-3 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
                   SKU
                 </th>
                 {sortedSelectedKeys.map((key) => {
@@ -1424,7 +1415,7 @@ const ProductInfos = () => {
                     return (
                       <th
                         key="cat_sup"
-                        className="px-3 py-2.5 text-[10px] font-semibold text-slate-800 uppercase tracking-wide"
+                        className="px-4 py-3 text-[10px] font-semibold text-slate-500 uppercase tracking-wider"
                       >
                         Category
                       </th>
@@ -1438,19 +1429,19 @@ const ProductInfos = () => {
                   return (
                     <th
                       key={key}
-                      className="px-3 py-2.5 text-[10px] font-semibold text-slate-800 uppercase tracking-wide"
+                      className="px-4 py-3 text-[10px] font-semibold text-slate-500 uppercase tracking-wider"
                     >
                       {getColumnLabel(key)}
                     </th>
                   );
                 })}
-                <th className="px-3 py-2.5 w-24 text-right text-[10px] font-semibold text-slate-800 uppercase tracking-wide sticky right-0 bg-slate-50 border-l border-slate-200 z-30 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)]">
+                <th className="px-4 py-3 w-24 text-right text-[10px] font-semibold text-slate-500 uppercase tracking-wider sticky right-0 bg-white shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)]">
                   Actions
                 </th>
               </tr>
             </thead>
 
-            <tbody className="divide-y-0">
+            <tbody className="divide-y divide-slate-200 bg-white">
               {filteredProducts.length === 0 ? (
                 <tr>
                   <td

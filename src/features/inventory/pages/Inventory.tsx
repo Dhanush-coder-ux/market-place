@@ -188,18 +188,18 @@ const getStockStatus = (stock: number, reorderPoint?: number) => {
   if (s <= 0)
     return {
       label: "Out of stock",
-      variant: "ps-cancelled",
+      variant: "stk-out-of-stock",
       icon: AlertCircle,
     };
   if (s <= rp)
     return {
       label: "Low stock",
-      variant: "ps-draft",
+      variant: "stk-low-stock",
       icon: AlertTriangle,
     };
   return {
     label: "In stock",
-    variant: "ps-completed",
+    variant: "stk-in-stock",
     icon: Package,
   };
 };
@@ -409,7 +409,7 @@ const ProductRow = React.memo(
           }`}
         >
           {/* Checkbox */}
-          <td className="px-3 py-2.5 w-10 text-center" onClick={(e) => e.stopPropagation()}>
+          <td className="px-4 py-4 w-10 text-center" onClick={(e) => e.stopPropagation()}>
             <input
               type="checkbox"
               checked={isSelected}
@@ -419,7 +419,7 @@ const ProductRow = React.memo(
           </td>
 
           {/* Expand toggle */}
-          <td className="px-3 py-2.5 text-center w-10">
+          <td className="px-4 py-4 text-center w-10">
             {isExpandable ? (
               <button
                 onClick={(e) => {
@@ -446,7 +446,7 @@ const ProductRow = React.memo(
           </td>
 
           {/* Product ID */}
-          <td className="px-3 py-2.5 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+          <td className="px-4 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
             {(() => {
               const uiId = (item as any).ui_id || item.id || "";
               if (!uiId) return <span className="text-[12px] font-medium text-slate-400">—</span>;
@@ -463,7 +463,7 @@ const ProductRow = React.memo(
           </td>
 
           {/* Product identity */}
-          <td className="px-3 py-2.5">
+          <td className="px-4 py-4">
             <div className="flex items-center gap-2.5">
               <div className="w-7 h-7 rounded-md bg-slate-100 flex items-center justify-center text-slate-600 text-[11px] font-semibold shrink-0 select-none overflow-hidden">
                 {(() => {
@@ -554,7 +554,7 @@ const ProductRow = React.memo(
           </td>
 
           {/* SKU */}
-          <td className="px-3 py-2.5 whitespace-nowrap">
+          <td className="px-4 py-4 whitespace-nowrap">
             {(() => {
               const actualSku = (item as any).sku || datas.sku || "";
               if (!actualSku) return <span className="text-[12px] font-medium text-slate-400">—</span>;
@@ -570,7 +570,7 @@ const ProductRow = React.memo(
           </td>
 
           {/* Category */}
-          <td className="px-3 py-2.5">
+          <td className="px-4 py-4">
             <div className="flex flex-col gap-0.5">
               <span className="text-[12px] font-medium text-slate-700 leading-none">
                 {(item as any).category_infos?.name || datas.category || item.category || "Uncategorized"}
@@ -593,7 +593,7 @@ const ProductRow = React.memo(
 
 
           {/* Unit */}
-          <td className="px-3 py-2.5">
+          <td className="px-4 py-4">
             <span className="text-[12px] font-medium text-slate-600">
               {(item as any).unit_infos?.name || datas.unit || (item as any).unit || "—"}
             </span>
@@ -602,21 +602,21 @@ const ProductRow = React.memo(
           
 
           {/* Sell price */}
-          <td className="px-3 py-2.5 text-right">
+          <td className="px-4 py-4 text-right">
             <span className="text-[13px] font-semibold text-slate-700 tabular-nums">
               {hasVariants ? "—" : formatCurrency(sellPrice)}
             </span>
           </td>
 
           {/* Stock */}
-          <td className="px-3 py-2.5 text-right">
+          <td className="px-4 py-4 text-right">
             <span className="text-[13px] font-semibold text-blue-600 tabular-nums">
               {stockNumber}
             </span>
           </td>
 
           {/* Status */}
-          <td className="px-3 py-2.5">
+          <td className="px-4 py-4">
             <AntBadge variant={status.variant} type="pill" dot>
               {status.label}
             </AntBadge>
@@ -625,14 +625,14 @@ const ProductRow = React.memo(
           
 
           {/* Reorder point */}
-          <td className="px-3 py-2.5 text-center">
+          <td className="px-4 py-4 text-center">
             <span className="text-[13px] font-semibold text-slate-700 tabular-nums">
               {hasVariants ? "—" : (reorderPoint ?? "—")}
             </span>
           </td>
 
           {/* Storage Location */}
-          <td className="px-3 py-2.5">
+          <td className="px-4 py-4">
             {(() => {
               const sl = (item as any).storage_location_infos || (datas as any).storage_location_infos;
               let displayText = "—";
@@ -650,14 +650,14 @@ const ProductRow = React.memo(
           </td>
 
           {/* Updated */}
-          <td className="px-3 py-2.5 text-right">
+          <td className="px-4 py-4 text-right">
             <span className="text-[11px] text-slate-400 font-medium tabular-nums">
               {formatDate(item.date || (item as any).updated_at)}
             </span>
           </td>
 
           {/* Actions */}
-          <td className="px-3 py-2.5 text-right whitespace-nowrap sticky right-0 bg-white group-hover:bg-slate-50 border-l border-slate-200 z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] transition-colors" onClick={(e) => e.stopPropagation()}>
+          <td className="px-4 py-4 text-right whitespace-nowrap sticky right-0 bg-white group-hover:bg-slate-50 border-l border-slate-200 z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] transition-colors" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-end gap-2 relative">
               <button
                 onClick={() => navigate(`/product/${item.id}`)}
@@ -1331,9 +1331,9 @@ const InventoryPage = () => {
             <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
 
               {/* Sticky header */}
-              <thead className="sticky top-0 z-20 bg-white border-b border-slate-100">
+              <thead className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0]">
                 <tr>
-                  <th className="px-3 py-2.5 w-10 text-center">
+                  <th className="px-4 py-3 w-10 text-center">
                     <input
                       type="checkbox"
                       checked={filteredInventory.length > 0 && filteredInventory.every(item => selectedItems.has(item.id))}
@@ -1348,47 +1348,47 @@ const InventoryPage = () => {
                       className="rounded border-slate-350 text-blue-600 focus:ring-blue-500/20 cursor-pointer"
                     />
                   </th>
-                  <th className="px-3 py-2.5 w-10" />
-                  <th className="px-3 py-2.5 w-40 text-[10px] font-semibold text-slate-800 uppercase tracking-wide">
+                  <th className="px-4 py-3 w-10" />
+                  <th className="px-4 py-3 w-40 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
                     Product ID
                   </th>
-                  <th className="px-3 py-2.5 min-w-[280px] text-[10px] font-semibold text-slate-800 uppercase tracking-wide">
+                  <th className="px-4 py-3 min-w-[280px] text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
                     Product
                   </th>
-                  <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-800 uppercase tracking-wide">
+                  <th className="px-4 py-3 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
                     SKU
                   </th>
-                  <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-800 uppercase tracking-wide">
+                  <th className="px-4 py-3 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
                     Category
                   </th>
-                  <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-800 uppercase tracking-wide">
+                  <th className="px-4 py-3 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
                     Unit
                   </th>
-                  <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-800 uppercase tracking-wide text-right">
+                  <th className="px-4 py-3 text-[10px] font-semibold text-slate-500 uppercase tracking-wider text-right">
                     Sell Price
                   </th>
-                  <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-800 uppercase tracking-wide text-right">
+                  <th className="px-4 py-3 text-[10px] font-semibold text-slate-500 uppercase tracking-wider text-right">
                     Stock
                   </th>
-                  <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-800 uppercase tracking-wide">
+                  <th className="px-4 py-3 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-800 uppercase tracking-wide text-center">
+                  <th className="px-4 py-3 text-[10px] font-semibold text-slate-500 uppercase tracking-wider text-center">
                     Reorder Point
                   </th>
-                  <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-800 uppercase tracking-wide">
+                  <th className="px-4 py-3 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
                     Location
                   </th>
-                  <th className="px-3 py-2.5 text-[10px] font-semibold text-slate-800 uppercase tracking-wide text-right">
+                  <th className="px-4 py-3 text-[10px] font-semibold text-slate-500 uppercase tracking-wider text-right">
                     Last Updated
                   </th>
-                  <th className="px-3 py-2.5 w-24 text-right text-[10px] font-semibold text-slate-800 uppercase tracking-wide sticky right-0 bg-slate-50 border-l border-slate-200 z-30 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)]">
+                  <th className="px-4 py-3 w-24 text-right text-[10px] font-semibold text-slate-500 uppercase tracking-wider sticky right-0 bg-white shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)]">
                     Actions
                   </th>
                 </tr>
               </thead>
 
-              <tbody className="divide-y-0">
+              <tbody className="divide-y divide-slate-200 bg-white">
                 {filteredInventory.map((item: InventoryItem, index) => (
                   <ProductRow
                     key={item.id}

@@ -348,12 +348,12 @@ const CustomerList = () => {
       </RightSidebarFilter>
 
       {/* ── Table Card ── */}
-      <div className="bg-white border border-slate-100 rounded-lg shadow-sm min-w-0 overflow-hidden flex flex-col flex-1 min-h-0 mt-1">
+      <div className="bg-white rounded-lg shadow-sm border border-slate-100 min-w-0 overflow-hidden flex flex-col flex-1 min-h-0 mt-1">
         <div className="overflow-auto flex-1 scrollbar-thin scrollbar-thumb-slate-100">
           <table className="w-full text-left min-w-[700px] border-collapse relative">
-            <thead className="sticky top-0 z-20 bg-slate-50 border-b border-slate-100">
+            <thead className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0]">
               <tr>
-                <th className="py-2.5 px-4 text-[10px] font-black text-slate-400 uppercase tracking-wider w-10 text-center">
+                <th className="py-3 px-4 text-[10px] font-semibold text-slate-500 uppercase tracking-wider w-10 text-center">
                   <input
                     type="checkbox"
                     checked={filteredCustomers.length > 0 && filteredCustomers.every((c: any) => selectedCustomers.has(c.id))}
@@ -368,17 +368,17 @@ const CustomerList = () => {
                     className="rounded border-slate-350 text-blue-600 focus:ring-blue-500/20 cursor-pointer"
                   />
                 </th>
-                <th className="py-2.5 px-4 text-[10px] font-black text-slate-800 uppercase tracking-wider">ID</th>
-                <th className="py-2.5 px-4 text-[10px] font-black text-slate-800 uppercase tracking-wider">Customer</th>
-                <th className="py-2.5 px-4 text-[10px] font-black text-slate-800 uppercase tracking-wider">Contact</th>
-                <th className="py-2.5 px-4 text-[10px] font-black text-slate-800 uppercase tracking-wider text-right">Credit Limit</th>
-                <th className="py-2.5 px-4 text-[10px] font-black text-slate-800 uppercase tracking-wider text-right">Outstanding</th>
-                <th className="py-2.5 px-4 text-[10px] font-black text-slate-800 uppercase tracking-wider text-center">Credit</th>
-                <th className="py-2.5 px-4 text-[10px] font-black text-slate-800 uppercase tracking-wider">Created</th>
-                <th className="py-2.5 px-4 text-[10px] font-black text-slate-800 uppercase tracking-wider text-right w-24 sticky right-0 bg-slate-50 border-l border-slate-200 z-30 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)]">Actions</th>
+                <th className="py-3 px-4 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">ID</th>
+                <th className="py-3 px-4 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Customer</th>
+                <th className="py-3 px-4 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Contact</th>
+                <th className="py-3 px-4 text-[10px] font-semibold text-slate-500 uppercase tracking-wider text-right">Credit Limit</th>
+                <th className="py-3 px-4 text-[10px] font-semibold text-slate-500 uppercase tracking-wider text-right">Outstanding</th>
+                <th className="py-3 px-4 text-[10px] font-semibold text-slate-500 uppercase tracking-wider text-center">Credit</th>
+                <th className="py-3 px-4 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Created</th>
+                <th className="py-3 px-4 text-[10px] font-semibold text-slate-500 uppercase tracking-wider text-right w-24 sticky right-0 bg-white shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)]">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50 bg-white">
+            <tbody className="bg-white">
               {filteredCustomers.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="py-16 text-center text-sm text-slate-400 font-medium">
@@ -390,7 +390,7 @@ const CustomerList = () => {
                   const isLast = idx === filteredCustomers.length - 1;
                   const isSelected = selectedCustomers.has(c.id);
                   const name = c.name || "Unknown";
-                  const initials = name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
+
                   const outstanding = c.outstanding_infos?.amount ?? c.outstanding ?? 0;
                   const customerEmail = c.contact_infos?.email || c.email || "";
                   const customerPhone = c.contact_infos?.mobile_number || c.mobile_number || "";
@@ -403,7 +403,7 @@ const CustomerList = () => {
                       ref={isLast ? lastElementRef : undefined}
                       className={`group transition-all cursor-default ${isSelected ? "bg-blue-50 border-l-2 border-l-blue-500" : "hover:bg-slate-50/60"}`}
                     >
-                      <td className="py-3 px-4 w-10 text-center">
+                      <td className="px-4 py-4 border-b border-slate-200 w-10 text-center">
                         <input
                           type="checkbox"
                           checked={isSelected}
@@ -411,32 +411,29 @@ const CustomerList = () => {
                           className="rounded border-slate-350 text-blue-600 focus:ring-blue-500/20 cursor-pointer"
                         />
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="px-4 py-4 border-b border-slate-200">
                         <span className="text-[11px] font-mono font-semibold text-slate-700">{c.ui_id || c.id?.slice(0, 8)}</span>
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="px-4 py-4 border-b border-slate-200">
                         <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[11px] font-black shrink-0 transition-colors ${isSelected ? "bg-blue-500 text-white" : "bg-blue-100 text-blue-600"}`}>
-                            {initials}
-                          </div>
                           <div className="min-w-0">
                             <p className="text-[13px] font-bold text-slate-800 truncate">{name}</p>
                           </div>
                         </div>
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="px-4 py-4 border-b border-slate-200">
                         <p className="text-[12px] font-semibold text-slate-600 truncate">{customerEmail || "—"}</p>
                         <p className="text-[11px] font-medium text-slate-400">{customerPhone || "—"}</p>
                       </td>
-                      <td className="py-3 px-4 text-right">
+                      <td className="px-4 py-4 border-b border-slate-200 text-right">
                         <span className="text-[13px] font-bold text-slate-700 font-mono">{fmt(customerCreditLimit)}</span>
                       </td>
-                      <td className="py-3 px-4 text-right">
+                      <td className="px-4 py-4 border-b border-slate-200 text-right">
                         <span className={`text-[13px] font-bold font-mono ${outstanding > 0 ? "text-rose-600" : "text-emerald-600"}`}>
                           {fmt(outstanding)}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-center">
+                      <td className="px-4 py-4 border-b border-slate-200 text-center">
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${
                           c.can_have_credit
                             ? "bg-emerald-50 text-emerald-700 border-emerald-100"
@@ -446,10 +443,10 @@ const CustomerList = () => {
                           {c.can_have_credit ? "Yes" : "No"}
                         </span>
                       </td>
-                      <td className="py-3 px-4">
+                      <td className="px-4 py-4 border-b border-slate-200">
                         <span className="text-[11px] font-semibold text-slate-500">{createdDate}</span>
                       </td>
-                      <td className="py-3 px-4 text-right sticky right-0 bg-white group-hover:bg-slate-50 border-l border-slate-200 z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] transition-colors whitespace-nowrap">
+                      <td className="px-4 py-4 border-b border-slate-200 text-right sticky right-0 bg-white group-hover:bg-slate-50 border-l border-slate-200 z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] transition-colors whitespace-nowrap">
                         <div className="flex items-center justify-end gap-2 relative">
                           <button
                             onClick={() => navigate(`/customers/${c.id}`)}

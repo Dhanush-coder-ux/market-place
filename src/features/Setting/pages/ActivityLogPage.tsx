@@ -349,11 +349,6 @@ export const ActivityLogPage = () => {
     <div className="activity-log-wrapper bg-[#FBFBFD] h-full overflow-y-auto w-full">
       <div className="shell">
 
-        <div className="context">
-          <span className="ws"><span className="logo">V</span>Vaathi Mart</span>
-          <span className="sep">/</span><span>Settings</span>
-          <span className="sep">/</span><span style={{ color: "var(--body)" }}>Activity Log</span>
-        </div>
 
         <div className="head">
           <div>

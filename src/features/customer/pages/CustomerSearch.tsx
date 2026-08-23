@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Plus, Bookmark, Search } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { useBusinessApi } from "@/context/BusinessApiContext";
 import { SHOP_ID } from "@/services/endpoints";
 import { useHeader } from "@/context/HeaderContext";
@@ -14,13 +14,7 @@ const CustomerSearch = () => {
   useEffect(() => {
     setActions(
       <div className="flex items-center gap-3">
-        <button
-          onClick={() => navigate("/customers/drafts")}
-          className="h-10 px-4 rounded-lg border border-slate-200 bg-white text-slate-600 font-bold text-sm hover:bg-slate-50 transition-colors flex items-center gap-2"
-        >
-          <Bookmark size={16} />
-          Saved Drafts
-        </button>
+
         <button onClick={() => navigate('/customers/add')} className="h-10 px-5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shadow-sm">
           <Plus size={16} />
           Add Customer

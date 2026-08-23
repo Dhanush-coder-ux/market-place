@@ -5,17 +5,19 @@ import {
   Edit2, Plus, Search,
   AlertCircle, Eye, EyeOff,
   CheckCircle2, XCircle, LayoutGrid, List,
-  Tag, X, Settings2, Sparkles, Loader2,
-  MoreVertical, ChevronDown, Sliders,
+  Tag, X, Settings2, Loader2,
+  MoreVertical, ChevronDown, Sliders, GripVertical, Trash2,
 } from "lucide-react";
-import { inventoryApi, inventoryCustomFieldsApi, type InventoryCustomFieldDefinition } from "../../../services/api/inventory";
+import { inventoryApi, inventoryCustomFieldsApi } from "../../../services/api/inventory";
 import { SHOP_ID } from "../../../services/endpoints";
 import { useToast } from "../../../context/ToastContext";
+import { useBusinessApi } from "@/context/BusinessApiContext";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Product {
   id: string;
   name: string;
+  description: string;
   price: number;
   stock: number;
   category: string;
@@ -424,6 +426,16 @@ function CardMoreMenu({ onEdit, onToggleVisibility, visible, actionLoading }: { 
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 const ProductDashboard = () => {
+  const { shop } = useBusinessApi();
+  const [storeName, setStoreName] = useState("Manage Online Listing");
+
+  useEffect(() => {
+    const currentShopId = localStorage.getItem("shop_id") || SHOP_ID;
+    shop.getShopById(currentShopId).then((res: any) => {
+      if (res && res.name) setStoreName(res.name);
+    }).catch(console.error);
+  }, [shop]);
+
   const [products, setProducts]           = useState<Product[]>([]);
   const [loading, setLoading]             = useState(true);
   const [selectedIds, setSelectedIds]     = useState<string[]>([]);
@@ -434,19 +446,24 @@ const ProductDashboard = () => {
 
   // Custom Field / Edit Modal State
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [customFields, setCustomFields] = useState<InventoryCustomFieldDefinition[]>([]);
   const [customValues, setCustomValues] = useState<Record<string, string>>({});
-  const [fieldLoading, setFieldLoading] = useState(false);
   const [savingProduct, setSavingProduct] = useState(false);
 
-  // Create Field Sub-state
-  const [showCreateField, setShowCreateField] = useState(false);
-  const [newFieldName, setNewFieldName] = useState("");
-  const [newFieldLabel, setNewFieldLabel] = useState("");
-  const [newFieldType, setNewFieldType] = useState("text");
-  const [newFieldRequired, setNewFieldRequired] = useState(false);
-  const [newFieldVisible, setNewFieldVisible] = useState(true);
-  const [creatingField, setCreatingField] = useState(false);
+  // Additional Details State
+  const [additionalSections, setAdditionalSections] = useState<{ id: string; title: string; content: string }[]>([]);
+
+  const addSection = () => {
+    if (additionalSections.length >= 3) return;
+    setAdditionalSections([...additionalSections, { id: Date.now().toString(), title: "", content: "" }]);
+  };
+
+  const updateSection = (id: string, field: 'title' | 'content', value: string) => {
+    setAdditionalSections(prev => prev.map(s => s.id === id ? { ...s, [field]: value } : s));
+  };
+
+  const removeSection = (id: string) => {
+    setAdditionalSections(prev => prev.filter(s => s.id !== id));
+  };
 
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
@@ -497,6 +514,7 @@ const ProductDashboard = () => {
         return {
           id: p.id,
           name: p.name || "Unnamed Product",
+          description: p.description || "",
           price,
           stock: Math.floor(totalStock),
           category: p.category_infos?.name || p.category_id || "Uncategorized",
@@ -538,9 +556,6 @@ const ProductDashboard = () => {
 
   const loadCustomFieldsForProduct = async (product: Product) => {
     try {
-      setFieldLoading(true);
-      const fields = await inventoryCustomFieldsApi.getAllFields(SHOP_ID);
-      setCustomFields(fields);
       const values = await inventoryCustomFieldsApi.getValuesByProduct(SHOP_ID, product.id);
       const valuesMap: Record<string, string> = {};
       values.forEach((v) => { valuesMap[v.field_id] = v.value; });
@@ -548,50 +563,16 @@ const ProductDashboard = () => {
     } catch (err) {
       console.error(err);
       showToast("Error loading custom fields", "error");
-    } finally {
-      setFieldLoading(false);
     }
   };
 
   const handleOpenEdit = (product: Product) => {
     setEditingProduct(product);
-    setShowCreateField(false);
+    setAdditionalSections(product.raw?.additional_sections || []);
     loadCustomFieldsForProduct(product);
   };
 
-  const handleCreateField = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newFieldName.trim() || !newFieldLabel.trim()) {
-      showToast("Please enter field name and label", "warning");
-      return;
-    }
-    try {
-      setCreatingField(true);
-      await inventoryCustomFieldsApi.createField({
-        shop_id: SHOP_ID,
-        field_infos: [{
-          field_name: newFieldName,
-          label_name: newFieldLabel,
-          type: newFieldType,
-          required: newFieldRequired,
-          visible_online: newFieldVisible,
-        }],
-      });
-      showToast("Custom field created successfully!", "success");
-      setNewFieldName("");
-      setNewFieldLabel("");
-      setShowCreateField(false);
-      if (editingProduct) {
-        const fields = await inventoryCustomFieldsApi.getAllFields(SHOP_ID);
-        setCustomFields(fields);
-      }
-    } catch (err) {
-      console.error(err);
-      showToast("Failed to create custom field", "error");
-    } finally {
-      setCreatingField(false);
-    }
-  };
+  
 
   const handleSaveProduct = async () => {
     if (!editingProduct) return;
@@ -612,6 +593,7 @@ const ProductDashboard = () => {
         id: editingProduct.id,
         shop_id: SHOP_ID,
         visible_online: editingProduct.visibleOnApp,
+        description: editingProduct.description,
       });
       showToast("Product updated successfully", "success");
       setEditingProduct(null);
@@ -896,7 +878,7 @@ const ProductDashboard = () => {
               <div className="flex items-center gap-2.5">
                 <Settings2 className="text-blue-500" size={18} />
                 <div>
-                  <h3 className="font-semibold text-slate-800 text-sm">Manage Online Listing</h3>
+                  <h3 className="font-semibold text-slate-800 text-sm">{storeName}</h3>
                   <p className="text-[11px] text-slate-400">Configure visibility and custom attributes</p>
                 </div>
               </div>
@@ -929,169 +911,69 @@ const ProductDashboard = () => {
                 </div>
               </div>
 
-              {/* Visibility */}
+              {/* Product Description */}
               <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">App Visibility</label>
-                <div className="flex items-center justify-between p-3.5 rounded-lg border border-slate-200 bg-white">
-                  <div>
-                    <p className="text-sm font-medium text-slate-700">Show on Online Store</p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">Customers can browse and order this item online.</p>
-                  </div>
-                  <AppVisibilityToggle
-                    visible={editingProduct.visibleOnApp}
-                    onChange={() => setEditingProduct({ ...editingProduct, visibleOnApp: !editingProduct.visibleOnApp })}
-                  />
-                </div>
+                <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Description</label>
+                <textarea
+                  value={editingProduct.description || ""}
+                  onChange={(e) => setEditingProduct({ ...editingProduct, description: e.target.value })}
+                  placeholder="Enter product description..."
+                  className="w-full h-24 resize-none border border-slate-200 rounded-lg p-3 text-[12px] outline-none focus:border-blue-500 bg-white"
+                />
               </div>
 
-              {/* Custom Fields */}
+              {/* Additional Details */}
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Custom Fields</label>
-                  {!showCreateField && (
-                    <button
-                      onClick={() => setShowCreateField(true)}
-                      className="flex items-center gap-1 text-[12px] font-medium text-blue-600 hover:text-blue-700 transition-colors cursor-pointer"
-                    >
-                      <Plus size={12} /> Add Field
-                    </button>
-                  )}
+                <div>
+                  <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    ADDITIONAL DETAILS <span className="text-slate-400 font-normal normal-case ml-1">(optional, up to 3)</span>
+                  </p>
+                  <p className="text-[12px] text-slate-500 mt-1">
+                    Add custom sections like ingredients, storage instructions, allergen info, or anything your customers should know.
+                  </p>
                 </div>
 
-                {/* Create field form */}
-                {showCreateField && (
-                  <form onSubmit={handleCreateField} className="p-4 rounded-lg bg-blue-50/60 border border-blue-100 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[12px] font-semibold text-blue-700 flex items-center gap-1.5">
-                        <Sparkles size={12} /> Create Custom Field
-                      </span>
+                {additionalSections.map((section, index) => (
+                  <div key={section.id} className="border border-[#e5e2db] rounded-xl overflow-hidden bg-[#fdfaf5]">
+                    <div className="px-3 py-2.5 flex items-center justify-between border-b border-[#e5e2db]">
+                      <div className="flex items-center gap-3 flex-1">
+                        <GripVertical size={14} className="text-slate-300 cursor-grab shrink-0" />
+                        <div className="w-5 h-5 bg-slate-900 text-white rounded-full flex items-center justify-center text-[10px] font-bold shrink-0">
+                          {index + 1}
+                        </div>
+                        <input
+                          type="text"
+                          value={section.title}
+                          onChange={(e) => updateSection(section.id, 'title', e.target.value)}
+                          placeholder="Section heading (e.g. Storage instructions)"
+                          className="bg-transparent border-none outline-none text-sm font-semibold text-slate-600 placeholder:text-slate-400 w-full"
+                        />
+                      </div>
                       <button
-                        type="button"
-                        onClick={() => setShowCreateField(false)}
-                        className="text-[11px] text-slate-400 hover:text-slate-600 cursor-pointer"
+                        onClick={() => removeSection(section.id)}
+                        className="text-slate-400 hover:text-red-500 shrink-0 ml-2"
                       >
-                        Cancel
+                        <Trash2 size={14} />
                       </button>
                     </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="text-[10px] font-medium text-slate-500">Field Label</label>
-                        <input
-                          type="text"
-                          value={newFieldLabel}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setNewFieldLabel(val);
-                            setNewFieldName(val.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim().replace(/\s+/g, "_"));
-                          }}
-                          placeholder="Warranty Period"
-                          className="w-full mt-1 h-8 bg-white border border-slate-200 rounded-lg px-2.5 text-[12px] outline-none focus:border-blue-400"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-medium text-slate-500">DB Name</label>
-                        <input
-                          type="text"
-                          value={newFieldName}
-                          disabled
-                          className="w-full mt-1 h-8 bg-slate-50 border border-slate-200 rounded-lg px-2.5 text-[12px] font-mono outline-none"
-                        />
-                      </div>
+                    <div className="p-3 bg-[#fdfaf5]">
+                      <textarea
+                        value={section.content}
+                        onChange={(e) => updateSection(section.id, 'content', e.target.value)}
+                        placeholder="What should customers know? Keep it short and clear."
+                        className="w-full h-20 resize-none border border-slate-300 rounded-lg p-2.5 text-sm outline-none focus:border-blue-500 bg-white"
+                      />
                     </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="text-[10px] font-medium text-slate-500">Data Type</label>
-                        <select
-                          value={newFieldType}
-                          onChange={(e) => setNewFieldType(e.target.value)}
-                          className="w-full mt-1 h-8 bg-white border border-slate-200 rounded-lg px-2.5 text-[12px] outline-none focus:border-blue-400"
-                        >
-                          <option value="text">Text</option>
-                          <option value="number">Number</option>
-                          <option value="date">Date</option>
-                          <option value="boolean">Yes / No</option>
-                        </select>
-                      </div>
-                      <div className="flex flex-col gap-2 pt-4">
-                        <label className="flex items-center gap-1.5 text-[11px] font-medium text-slate-600 cursor-pointer">
-                          <input type="checkbox" checked={newFieldRequired} onChange={(e) => setNewFieldRequired(e.target.checked)} className="rounded" />
-                          Required
-                        </label>
-                        <label className="flex items-center gap-1.5 text-[11px] font-medium text-slate-600 cursor-pointer">
-                          <input type="checkbox" checked={newFieldVisible} onChange={(e) => setNewFieldVisible(e.target.checked)} className="rounded" />
-                          Visible Online
-                        </label>
-                      </div>
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={creatingField}
-                      className="w-full h-8 bg-blue-600 text-white text-[12px] font-semibold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
-                    >
-                      {creatingField && <Loader2 size={12} className="animate-spin" />}
-                      Add Field
-                    </button>
-                  </form>
-                )}
-
-                {/* Field values */}
-                {fieldLoading ? (
-                  <div className="flex items-center justify-center py-6 gap-2">
-                    <Loader2 className="animate-spin text-blue-500" size={14} />
-                    <span className="text-[12px] text-slate-400">Loading custom fields…</span>
                   </div>
-                ) : customFields.length === 0 ? (
-                  <div className="text-center py-6 rounded-lg border border-dashed border-slate-200">
-                    <p className="text-[12px] text-slate-400">No custom fields defined yet.</p>
-                    <button
-                      onClick={() => setShowCreateField(true)}
-                      className="mt-1 text-[11.5px] font-medium text-blue-500 hover:text-blue-700 cursor-pointer"
-                    >
-                      Create your first field
-                    </button>
-                  </div>
-                ) : (
-                  <div className="space-y-3 bg-slate-50 p-3.5 rounded-lg border border-slate-200 max-h-[220px] overflow-y-auto">
-                    {customFields.map((field) => (
-                      <div key={field.id} className="space-y-1">
-                        <label className="text-[11px] font-medium text-slate-600 flex items-center justify-between">
-                          <span>
-                            {field.label_name} {field.required && <span className="text-red-500">*</span>}
-                          </span>
-                          <span className="text-[9px] text-slate-400 font-mono">({field.type})</span>
-                        </label>
-                        {field.type === "boolean" ? (
-                          <div className="flex gap-2">
-                            {["true", "false"].map((val) => (
-                              <button
-                                key={val}
-                                type="button"
-                                onClick={() => setCustomValues({ ...customValues, [field.id]: val })}
-                                className={`px-3 py-1 rounded-lg border text-[12px] font-medium cursor-pointer transition-colors ${
-                                  customValues[field.id] === val
-                                    ? "bg-blue-50 border-blue-200 text-blue-600"
-                                    : "bg-white border-slate-200 text-slate-600"
-                                }`}
-                              >
-                                {val === "true" ? "Yes" : "No"}
-                              </button>
-                            ))}
-                          </div>
-                        ) : (
-                          <input
-                            type={field.type === "number" ? "number" : field.type === "date" ? "date" : "text"}
-                            value={customValues[field.id] || ""}
-                            onChange={(e) => setCustomValues({ ...customValues, [field.id]: e.target.value })}
-                            placeholder={`Enter ${field.label_name.toLowerCase()}…`}
-                            className="w-full h-8 bg-white border border-slate-200 rounded-lg px-2.5 text-[12px] outline-none focus:border-blue-400"
-                          />
-                        )}
-                      </div>
-                    ))}
-                  </div>
+                ))}
+
+                {additionalSections.length < 3 && (
+                  <button
+                    onClick={addSection}
+                    className="w-full py-3 border border-dashed border-slate-300 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                  >
+                    <Plus size={16} /> Add another section
+                  </button>
                 )}
               </div>
             </div>

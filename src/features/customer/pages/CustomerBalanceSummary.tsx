@@ -1,6 +1,6 @@
 import {
   Users, Search, Filter, Trash2, Edit3,
-  Eye, Bookmark, Banknote, Wallet, ExternalLink
+  Eye, Banknote, Wallet, ExternalLink
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useHeader } from "@/context/HeaderContext";
@@ -63,13 +63,7 @@ export default function CustomerBalanceSummary() {
             <ExternalLink size={13} />
           </button>
         )}
-        <button
-          onClick={() => navigate("/customers/drafts")}
-          className="h-8 px-3 rounded-md border border-slate-200 text-slate-600 font-medium text-[12px] bg-white hover:bg-slate-50 transition-colors flex items-center gap-1.5"
-        >
-          <Bookmark size={13} />
-          Drafts
-        </button>
+
         <GradientButton path="/customers/add" className="h-8 flex items-center px-4 text-[12px] rounded-md">
           + Add Customer
         </GradientButton>

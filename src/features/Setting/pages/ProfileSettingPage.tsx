@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import {
   ListTree,
   Settings,
-  ChevronRight,
   ShoppingBag,
   Percent,
   Activity,
@@ -13,8 +12,8 @@ import { Switch } from "@/components/ui/switch";
 import { ActivityLogPage } from "@/features/Setting/pages/ActivityLogPage";
 import { CustomListSettings } from "@/features/Setting/pages/CustomListSettings";
 import { ShopProfileForm } from "@/features/Setting/pages/ShopProfileForm";
+import { BusinessCategorySettings } from "@/features/Setting/pages/BusinessCategorySettings";
 import { usePurchaseSettings } from "@/context/PurchaseContext";
-import { useMediaQuery } from "@/hooks/use-media-query";
 import { shopApi } from "@/services/api/shop";
 import { SHOP_ID } from "@/services/endpoints";
 import { useToast } from "@/context/ToastContext";
@@ -72,7 +71,6 @@ const accentClasses: Record<string, { icon: string; badge: string }> = {
 export const ProfileSettingsPage = () => {
   const [activeTab, setActiveTab] = useState("dropdowns");
   const { settings, toggleSetting, setGstType } = usePurchaseSettings();
-  const isMobile = useMediaQuery("(max-width: 768px)");
   const { showToast } = useToast();
 
   React.useEffect(() => {
@@ -129,6 +127,7 @@ export const ProfileSettingsPage = () => {
       case "dropdowns":
         return wrapper(
           <div className="space-y-5">
+            <BusinessCategorySettings />
             <CustomListSettings type="categories" />
             <CustomListSettings type="units" />
           </div>
@@ -301,89 +300,32 @@ export const ProfileSettingsPage = () => {
     <div className="flex flex-col h-full overflow-hidden animate-in fade-in duration-400">
 
 
-      <div className="flex flex-col md:flex-row gap-6 flex-1 min-h-0">
-        {/* ── Sidebar ── */}
-        {isMobile ? (
-          /* Mobile: horizontal scroll chips */
-          <div className="flex gap-2 overflow-x-auto pb-1 px-2 shrink-0 scrollbar-hide w-full">
-            {MENU_ITEMS.map((item) => {
-              const isActive = activeTab === item.id;
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveTab(item.id)}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-bold whitespace-nowrap shrink-0 transition-all ${isActive
-                      ? "bg-blue-600 border-blue-500 text-white shadow-md shadow-blue-200"
-                      : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
-                    }`}
-                >
-                  <Icon size={13} />
-                  {item.label}
-                </button>
-              );
-            })}
-          </div>
-        ) : (
-          /* Desktop: full height sidebar */
-          <aside className="w-72 shrink-0 flex flex-col bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden h-full">
-            <div className="p-4 border-b border-slate-50/80 bg-slate-50/30">
-              <p className="text-[10px] font-black text-slate-400 tracking-[0.18em] uppercase">
-                Configuration
-              </p>
-            </div>
-            <div className="flex-1 overflow-y-auto p-3 space-y-1 custom-scrollbar">
-              {MENU_ITEMS.map((item) => {
-                const isActive = activeTab === item.id;
-                const Icon = item.icon;
-                const accent = accentClasses[item.accent];
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveTab(item.id)}
-                    className={`group w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-all duration-200 ${isActive
-                        ? "bg-slate-50 shadow-[0_2px_8px_rgba(0,0,0,0.02)] border border-slate-200/50"
-                        : "border border-transparent hover:bg-slate-50/50 hover:border-slate-100"
-                      }`}
-                  >
-                    {/* Icon */}
-                    <div
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${isActive
-                          ? accent.icon
-                          : "bg-white border border-slate-100 text-slate-400 group-hover:text-slate-600 shadow-sm"
-                        }`}
-                    >
-                      <Icon size={16} />
-                    </div>
-
-                    {/* Label + desc */}
-                    <div className="flex-1 min-w-0">
-                      <p
-                        className={`text-[13px] font-semibold leading-tight mb-1 ${isActive ? "text-slate-900" : "text-slate-600"
-                          }`}
-                      >
-                        {item.label}
-                      </p>
-                      <p className="text-[10px] text-slate-400 leading-tight truncate">
-                        {item.description}
-                      </p>
-                    </div>
-
-                    {/* Active chevron */}
-                    {isActive && (
-                      <ChevronRight size={14} className="text-slate-300 shrink-0" />
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </aside>
-        )}
+      <div className="flex flex-col gap-6 flex-1 min-h-0">
+        {/* ── Tabs ── */}
+        <div className="flex gap-2 overflow-x-auto pb-1 px-2 shrink-0 custom-scrollbar w-full border-b border-slate-100">
+          {MENU_ITEMS.map((item) => {
+            const isActive = activeTab === item.id;
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl border-b-2 text-[13px] font-bold whitespace-nowrap shrink-0 transition-all ${isActive
+                    ? "border-blue-600 text-blue-600 bg-blue-50/50"
+                    : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+                  }`}
+              >
+                <Icon size={15} />
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
 
         {/* ── Content Panel ── */}
         <section className="flex-1 min-w-0 h-full flex flex-col">
           {/* Panel header (Title context) */}
-          {activeItem && !isMobile && activeTab !== "activity" && (
+          {activeItem && activeTab !== "activity" && (
             <div className="flex items-center gap-2 shrink-0 mb-4 px-2">
               <span
                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold border ${accentClasses[activeItem.accent].badge

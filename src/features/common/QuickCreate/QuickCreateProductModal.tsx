@@ -4,11 +4,12 @@ import {
   BarChart2,
   Layers,
   CheckCircle2,
-  Barcode
+  Barcode,
+  ChevronDown
 } from "lucide-react";
 import { QuickCreateModal, QuickCreateStep } from "./QuickCreateModal";
 import Input from "@/components/ui/Input";
-import { ReusableSelect } from "@/components/ui/ReusableSelect";
+
 import { useApi } from "@/context/ApiContext";
 import { useToast } from "@/context/ToastContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
@@ -227,19 +228,39 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-1.5">
               <label className="text-[10px] font-black text-slate-400 ml-1">Category</label>
-              <ReusableSelect
-                value={form.category}
-                onValueChange={(val) => setForm(p => ({ ...p, category: val }))}
-                options={categories.map(c => ({ label: c.name, value: c.id }))}
-              />
+              <div className="relative">
+                <select
+                  value={form.category || ""}
+                  onChange={(e) => setForm(p => ({ ...p, category: e.target.value }))}
+                  className="w-full h-10 rounded-lg border border-slate-200 bg-white pl-4 pr-10 text-sm font-medium shadow-sm transition-all hover:border-blue-400 focus:ring-4 focus:ring-blue-500/10 outline-none appearance-none cursor-pointer text-slate-700"
+                >
+                  <option value="" disabled>Select Category</option>
+                  {categories.map((c: any) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
+                  <ChevronDown size={16} />
+                </div>
+              </div>
             </div>
             <div className="space-y-1.5">
               <label className="text-[10px] font-black text-slate-400 ml-1">Unit</label>
-              <ReusableSelect
-                value={form.unit}
-                onValueChange={(val) => setForm(p => ({ ...p, unit: val }))}
-                options={units.map(u => ({ label: u.name, value: u.id }))}
-              />
+              <div className="relative">
+                <select
+                  value={form.unit || ""}
+                  onChange={(e) => setForm(p => ({ ...p, unit: e.target.value }))}
+                  className="w-full h-10 rounded-lg border border-slate-200 bg-white pl-4 pr-10 text-sm font-medium shadow-sm transition-all hover:border-blue-400 focus:ring-4 focus:ring-blue-500/10 outline-none appearance-none cursor-pointer text-slate-700"
+                >
+                  <option value="" disabled>Select Unit</option>
+                  {units.map((u: any) => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))}
+                </select>
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
+                  <ChevronDown size={16} />
+                </div>
+              </div>
             </div>
             <div className="space-y-1.5">
               <Input

@@ -2,6 +2,8 @@ export interface StoreFormData {
   name: string;
   tagline?: string;
   address?: string;
+  latitude?: number;
+  longitude?: number;
   description?: string;
   contactEmail?: string;
   contactPhone?: string;
@@ -33,8 +35,9 @@ export interface DeliveryConfig {
   enabled: boolean;
   speed: string;
   freeThreshold: number;
-  manageStore: boolean;
-  partners: boolean;
+  radius?: number;
+  manageStore?: boolean;
+  partners?: boolean;
 }
 
 export interface SelectedProductConfig {

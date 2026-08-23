@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect, useMemo, Fragment } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
-  Package, Search, Filter, Bookmark, Trash2,
+  Package, Search, Filter, Trash2,
   ChevronDown, ChevronRight, Layers,
   X, AlertCircle, Calendar, Hash, ExternalLink,
   Copy, Check, Pencil, Eye, MoreVertical, RefreshCw, History, Plus
@@ -308,7 +308,7 @@ const ProductRow = React.memo(
     return (
       <Fragment key={p.id}>
         <tr
-          className={`group border-b border-slate-50 transition-colors cursor-pointer ${isSelected ? "bg-blue-50 border-l-2 border-l-blue-500" : isExpanded ? "bg-slate-50/70" : "hover:bg-slate-50/60"
+          className={`group border-b border-slate-200 transition-colors cursor-pointer ${isSelected ? "bg-blue-50 border-l-2 border-l-blue-500" : isExpanded ? "bg-slate-50/70" : "hover:bg-slate-50/60"
             }`}
           onClick={() => toggleExpand(p.id)}
         >
@@ -938,13 +938,7 @@ const ProductInfos = () => {
             <ExternalLink size={13} />
           </button>
         )}
-        <button
-          onClick={() => navigate("/product/drafts")}
-          className="h-8 px-3 rounded-md border border-slate-200 text-slate-600 font-medium text-[12px] bg-white hover:bg-slate-50 transition-colors flex items-center gap-1.5"
-        >
-          <Bookmark size={13} />
-          Drafts
-        </button>
+
         <GradientButton
           path="/product/add"
           className="h-8 flex items-center px-4 text-[12px] rounded-md"

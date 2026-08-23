@@ -566,3 +566,4 @@
     -webkit-backdrop-filter: none !important;
   }
 }
+.no-scroll { overflow: hidden; }

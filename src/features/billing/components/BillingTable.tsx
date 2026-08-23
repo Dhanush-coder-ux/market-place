@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback, useEffect, useRef } from "react"
 import { Package, Trash2, Barcode, Search, Plus, Minus, RotateCcw } from "lucide-react";
 import { AntBadge } from "@/components/ui/AntBadge";
 import { v4 as uuidv4 } from "uuid";
-import { BillingItem, InventoryItem, ProductVariant } from "../types";
+import { BillingItem, ProductVariant } from "../types";
 import ProductSelectionModal from "./ProductSelectionModel";
 import { useToast } from "@/context/ToastContext";
 import { inventoryApi } from "@/services/api/inventory";
@@ -130,7 +130,7 @@ const QtyAdjuster = ({
 const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => {
   const { showToast } = useToast();
   const [modalOpen, setModalOpen] = useState(false);
-  const [pendingProduct, setPendingProduct] = useState<InventoryItem | null>(null);
+  const [pendingProduct, setPendingProduct] = useState<any | null>(null);
 
   // Global search bar state
   const [searchQuery, setSearchQuery] = useState("");
@@ -200,6 +200,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
           barcodeDisplay: p.barcode || 'N/A',
           price: computedPrice,
           stocks: computedStock,
+          isStockTracked: p.have_tracking !== false && p.is_stock_tracked !== false && p.track_stock !== false && p.type !== "service",
           gst: parseInt(String(p.gst || p.datas?.gst || "18").replace("%", ""))
         };
       });
@@ -344,6 +345,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
         availableSerials: getSerialNames(fullProduct.serialno_infos || fullProduct.serial_number || fullProduct.serials || fullProduct.batches?.[0]?.serial_numbers),
         batchId: fullProduct.batch_infos?.[0]?.id || fullProduct.batches?.[0]?.id,
         unitInfos: fullProduct.unit_infos || fullProduct.unit,
+        isStockTracked: fullProduct.have_tracking !== false && fullProduct.is_stock_tracked !== false && fullProduct.track_stock !== false && fullProduct.type !== "service",
         gst: parseInt(String(fullProduct.gst || fullProduct.datas?.gst || "18").replace("%", ""))
       };
 
@@ -401,7 +403,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
               batchTracking: pMapped.batchTracking,
               manufacturingDate: pMapped.manufacturingDate,
               expiryDate: pMapped.expiryDate,
-              maxStock: defaultVariant.stock,
+              maxStock: pMapped.isStockTracked !== false ? defaultVariant.stock : undefined,
               baseStock: defaultVariant.stock,
               gst: pMapped.gst,
               unitInfos: pMapped.unitInfos,
@@ -616,7 +618,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
           batchTracking: pendingProduct.batchTracking,
           manufacturingDate: variant.manufacturingDate || pendingProduct.manufacturingDate,
           expiryDate: variant.expiryDate || pendingProduct.expiryDate,
-          maxStock: variant.stock,
+          maxStock: pendingProduct.isStockTracked !== false ? variant.stock : undefined,
           gst: pendingProduct.gst,
           unitInfos: pendingProduct.unitInfos,
           selectedUnit: pendingProduct.unitInfos?.name || null,

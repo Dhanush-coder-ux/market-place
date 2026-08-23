@@ -1,6 +1,7 @@
 import { ChangeEvent } from "react";
 import { StoreFormData } from "@/features/digitalstore/type";
 import { MapPin, ImagePlus } from "lucide-react";
+import LocationMapPicker from "@/components/ui/LocationMapPicker";
 
 interface Step1Props {
   form: StoreFormData;
@@ -212,9 +213,23 @@ export default function Step1BasicDetails({ form, setForm, errors, setErrors }: 
         />
       </div>
 
-      {/* BUSINESS ADDRESS */}
+      {/* BUSINESS ADDRESS WITH MAP */}
       <div>
-        <label className="block text-xs font-bold text-slate-500 mb-1.5">Business / Shop Address</label>
+        <label className="block text-xs font-bold text-slate-500 mb-1.5">Business / Shop Location <span className="text-blue-500">*</span></label>
+        <div className="mb-4">
+          <LocationMapPicker
+            lat={form.latitude}
+            lng={form.longitude}
+            onChange={(coords, address) => {
+              setForm(prev => ({
+                ...prev,
+                latitude: coords.lat,
+                longitude: coords.lng,
+                address: prev.address || address || prev.address,
+              }));
+            }}
+          />
+        </div>
         <div className="relative">
           <input
             type="text"
@@ -227,6 +242,7 @@ export default function Step1BasicDetails({ form, setForm, errors, setErrors }: 
           <MapPin className="absolute left-3.5 top-3.5 text-slate-400" size={16} />
         </div>
       </div>
+
     </div>
   );
 }

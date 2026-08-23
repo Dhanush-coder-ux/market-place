@@ -370,7 +370,7 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                       .filter(v => v.name.toLowerCase().includes(variantSearch.toLowerCase()))
                       .map((variant) => {
                         const isSelected = selectedVariant?.id === variant.id;
-                        const isOutOfStock = variant.stock === 0;
+                        const isOutOfStock = (product as any).isStockTracked !== false && variant.stock === 0;
 
                         return (
                           <button
@@ -444,7 +444,7 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                       })
                       .map((batch: any) => {
                         const isSelected = selectedBatch?.id === batch.id;
-                        const isOutOfStock = (batch.stocks !== undefined ? batch.stocks : batch.stock) === 0;
+                        const isOutOfStock = (product as any).isStockTracked !== false && (batch.stocks !== undefined ? batch.stocks : batch.stock) === 0;
                         const batchName = batch.name || (batch.batch_no ? `Batch: ${batch.batch_no}` : `Batch: ${batch.id.slice(0, 8)}`);
                         const batchStock = batch.stocks !== undefined ? batch.stocks : batch.stock;
                         const batchPrice = batch.sell_price || batch.price || product.price || 0;

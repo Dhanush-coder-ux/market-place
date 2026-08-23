@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import SkeletonLoader from "@/components/common/SkeletonLoader";
 import {
-  DollarSign, TrendingUp,
+  TrendingUp,
   ExternalLink, Globe, Store
 } from "lucide-react";
 import { useApi } from "@/context/ApiContext";
@@ -397,15 +397,6 @@ const SalesListPage: React.FC = () => {
       {/* ── KPI Row ── */}
       {!isCleanMode && (
         <div className="flex gap-3 pb-1 overflow-x-auto scrollbar-none">
-          <StatCard
-            label="Total Revenue"
-            value={(analyticsStats?.overview?.sales?.total_sales_amounts ?? stats?.total_order_value ?? 0).toLocaleString()}
-            prefix="₹"
-            icon={<DollarSign size={18} />}
-            iconBg="bg-emerald-50"
-            iconColor="text-emerald-600"
-            subValue="Completed"
-          />
           <StatCard
             label="Total Orders"
             value={analyticsStats?.overview?.sales?.total_sales ?? stats?.total_orders ?? 0}

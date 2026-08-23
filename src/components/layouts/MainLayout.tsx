@@ -83,7 +83,7 @@ const getPageHeaderInfo = (pathname: string) => {
       title: "Add Employee",
     },
     "/inventory": {
-      title: "Stock Levels",
+      title: "Stocks List",
     },
     "/stock-movement": {
       title: "Stock Movements",

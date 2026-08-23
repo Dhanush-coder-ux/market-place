@@ -312,8 +312,8 @@ const AnalyticsDashboard = () => {
       <div className="p-6 space-y-5">
 
         {/* ── TOP BAR: Title + Range Selector ── */}
-        <div className="bg-white rounded-xl border border-slate-100 shadow-sm">
-          <div className="flex items-center justify-between px-6 py-4">
+        <div className="bg-white rounded-lg border border-slate-200">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
             <div>
               <h1 className="display-font heading-page text-slate-800">Dashboard</h1>
               <p className="text-xs text-slate-400 mt-0.5">
@@ -331,7 +331,7 @@ const AnalyticsDashboard = () => {
                     key={r}
                     onClick={() => setActiveRange(r)}
                     className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${activeRange === r
-                        ? "bg-white text-blue-600 shadow-sm"
+                        ? "bg-white text-blue-600 border border-slate-200"
                         : "text-slate-500 hover:text-slate-700"
                       }`}
                   >
@@ -419,7 +419,7 @@ const AnalyticsDashboard = () => {
         {/* ── STAT CARDS ── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
           {/* Net Revenue */}
-          <div className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 group flex flex-col justify-between">
+          <div className="bg-white rounded-lg p-5 border border-slate-200 hover:border-slate-300 transition-all duration-200 group flex flex-col justify-between">
             <div>
               <div className="flex items-start justify-between mb-3">
                 <div>
@@ -461,7 +461,7 @@ const AnalyticsDashboard = () => {
           </div>
 
           {/* Total Profit */}
-          <div className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 group flex flex-col justify-between">
+          <div className="bg-white rounded-lg p-5 border border-slate-200 hover:border-slate-300 transition-all duration-200 group flex flex-col justify-between">
             <div>
               <div className="flex items-start justify-between mb-3">
                 <div>
@@ -492,7 +492,7 @@ const AnalyticsDashboard = () => {
           </div>
 
           {/* Total Purchase */}
-          <div className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 group flex flex-col justify-between">
+          <div className="bg-white rounded-lg p-5 border border-slate-200 hover:border-slate-300 transition-all duration-200 group flex flex-col justify-between">
             <div>
               <div className="flex items-start justify-between mb-3">
                 <div>
@@ -523,7 +523,7 @@ const AnalyticsDashboard = () => {
           </div>
 
           {/* Total Orders */}
-          <div className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 group flex flex-col justify-between">
+          <div className="bg-white rounded-lg p-5 border border-slate-200 hover:border-slate-300 transition-all duration-200 group flex flex-col justify-between">
             <div>
               <div className="flex items-start justify-between mb-3">
                 <div>
@@ -561,7 +561,7 @@ const AnalyticsDashboard = () => {
           </div>
 
           {/* AOV */}
-          <div className="bg-white rounded-xl p-5 border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 group flex flex-col justify-between">
+          <div className="bg-white rounded-lg p-5 border border-slate-200 hover:border-slate-300 transition-all duration-200 group flex flex-col justify-between">
             <div>
               <div className="flex items-start justify-between mb-3">
                 <div>
@@ -652,7 +652,7 @@ const AnalyticsDashboard = () => {
                       {totalProfit >= 0 ? "Profitable" : "Loss-making"}
                     </p>
                   </div>
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${totalProfit >= 0 ? "bg-emerald-50" : "bg-rose-50"}`}>
+                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${totalProfit >= 0 ? "bg-emerald-50" : "bg-rose-50"}`}>
                     <TrendingUp className={`w-6 h-6 ${totalProfit >= 0 ? "text-emerald-500" : "text-rose-500"}`} />
                   </div>
                 </div>

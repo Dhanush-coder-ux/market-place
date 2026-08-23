@@ -18,6 +18,8 @@ const INITIAL_STATE: StoreFormData = {
   name: "",
   tagline: "",
   address: "",
+  latitude: 0,
+  longitude: 0,
   description: "",
   contactEmail: "",
   contactPhone: "",
@@ -85,6 +87,8 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
             description: s.description || prev.description,
             category: s.categories?.[0] || prev.category,
             address: s.address?.full_address || prev.address,
+            latitude: s.address?.latitude || prev.latitude,
+            longitude: s.address?.longitude || prev.longitude,
             gstRegistered: !!s.business_infos?.gst_infos?.registered,
             gstNumber: s.business_infos?.gst_infos?.number || "",
             logoPreview: s.logo_url || prev.logoPreview,
@@ -140,8 +144,8 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
           full_address: form.address || "Not specified",
           zip_code: "000000",
           landmark: "",
-          latitude: 0,
-          longitude: 0
+          latitude: form.latitude || 0,
+          longitude: form.longitude || 0
         },
         datas: {
           emails: [],
@@ -252,7 +256,7 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
         )}
       </div>
     );
-    
+
     return () => setBottomActions(null);
   }, [currentStep, isLoading, form]);
 
@@ -285,8 +289,8 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
         <div className="pt-6" />
 
         {/* Form Card */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 relative overflow-hidden h-[calc(100vh-280px)] min-h-[400px] flex flex-col mb-24">
-          <div className="flex-1 h-full overflow-hidden">
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 relative mb-24 min-h-[400px]">
+          <div className="pb-4">
             {currentStep === 1 && <Step1BasicDetails form={form} setForm={setForm} errors={errors} setErrors={setErrors} />}
             {currentStep === 2 && <Step2OperatingHours form={form} setForm={setForm} />}
             {currentStep === 3 && <Step3DeliveryOptions form={form} setForm={setForm} />}

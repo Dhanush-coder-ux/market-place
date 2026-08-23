@@ -114,7 +114,7 @@ export const sidebarLinks: SidebarLink[] = [
     name: "Inventory",
     icon: Database,
     subLinks: [
-      { name: "Stock List", path: "/inventory", icon: Package, addPath: "/product/add" },
+      { name: "Stocks List", path: "/inventory", icon: Package, addPath: "/product/add" },
       { name: "Stock Movements", path: "/stock-movement", icon: History, addPath: "/stock-adjustment" },
       { name: "Stock Adjustments", path: "/stock-adjustment", icon: ClipboardList },
       { name: "Saved Drafts", path: "/stock-adjustment/drafts", icon: Bookmark },
@@ -158,13 +158,13 @@ export const sidebarLinks: SidebarLink[] = [
   },
 
 
-  { name: "Online Orders", icon: ShoppingCart, path: "/orders" },
-
   {
     name: "Digital Store",
     icon: Store,
     path: "/profile",
   },
+
+  { name: "Online Orders", icon: ShoppingCart, path: "/orders" },
 ];
 
 

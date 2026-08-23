@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { Search, X, Bookmark, Building2, Phone, ExternalLink, Filter, ChevronRight, Eye, Pencil, Trash2, MoreVertical, Plus, FileUp } from "lucide-react";
+import { Search, X, Building2, Phone, ExternalLink, Filter, ChevronRight, Eye, Pencil, Trash2, MoreVertical, Plus, FileUp } from "lucide-react";
 import ExcelImportModal from "@/components/common/ExcelImportModal";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -198,13 +198,7 @@ const Supplier = () => {
           <FileUp size={13} />
           Import
         </button>
-        <button
-          onClick={() => navigate("/supplier/drafts")}
-          className="h-8 px-3 rounded-md border border-slate-200 text-slate-650 font-medium text-[12px] bg-white hover:bg-slate-50 transition-colors flex items-center gap-1.5"
-        >
-          <Bookmark size={13} />
-          Drafts
-        </button>
+
         <GradientButton
           onClick={() => navigate("/supplier/add")}
           className="h-8 flex items-center px-4 text-[12px] rounded-md"

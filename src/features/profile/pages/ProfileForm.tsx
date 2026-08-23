@@ -17,8 +17,8 @@ import { useApi } from "@/context/ApiContext";
 import { usePurchaseSettings } from "@/context/PurchaseContext";
 import { ENDPOINTS } from "@/services/endpoints";
 import { GradientButton } from "@/components/ui/GradientButton";
-import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
+import LocationMapPicker from "@/components/ui/LocationMapPicker";
 import Loader from "@/components/common/Loader";
 
 // ─── Interfaces ─────────────────────────────────────────────────────────────
@@ -49,20 +49,6 @@ const categoryOptions = [
   { label: "Health & Beauty", value: "health" },
   { label: "Sports & Outdoors", value: "sports" },
   { label: "Other", value: "other" },
-];
-
-const businessTypeOptions = [
-  { label: "Sole Proprietor", value: "SOLO_PROPRIETOR" },
-  { label: "Partnership", value: "PARTNERSHIP" },
-  { label: "Private Limited (Pvt. Ltd.)", value: "PRIVATE_LIMITED" },
-  { label: "LLP", value: "LLP" },
-  { label: "Others", value: "OTHERS" },
-];
-
-const currencyOptions = [
-  { label: "INR — Indian Rupee (₹)", value: "INR" },
-  { label: "USD — US Dollar ($)", value: "USD" },
-  { label: "EUR — Euro (€)", value: "EUR" },
 ];
 
 // ─── Shared Styles (from ProductForm) ───────────────────────────────────────
@@ -371,28 +357,17 @@ const ProfileForm: React.FC = () => {
                   className="font-semibold text-base"
                 />
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div className="space-y-2">
-                    <Label text="Categories" required />
-                    <SearchSelect
-                      value={formData.category}
-                      onChange={(val) => setFormData(prev => ({ ...prev, category: val as string[] }))}
-                      options={categoryOptions}
-                      labelKey="label"
-                      valueKey="value"
-                      multiple
-                      placeholder="Select categories..."
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label text="Currency" />
-                    <ReusableSelect
-                      value={formData.currency}
-                      onValueChange={(val) => setFormData((p) => ({ ...p, currency: val }))}
-                      options={currencyOptions}
-                      placeholder="Select Currency"
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label text="Categories" required />
+                  <SearchSelect
+                    value={formData.category}
+                    onChange={(val) => setFormData(prev => ({ ...prev, category: val as string[] }))}
+                    options={categoryOptions}
+                    labelKey="label"
+                    valueKey="value"
+                    multiple
+                    placeholder="Select categories..."
+                  />
                 </div>
 
                 <div className="space-y-1.5">
@@ -417,6 +392,25 @@ const ProfileForm: React.FC = () => {
               subtitle="Where customers can find you"
             >
               <div className="space-y-5">
+
+                {/* Interactive Map Picker */}
+                <div className="space-y-1.5">
+                  <Label text="Pick Location on Map" tooltip="Click on the map or search to set your shop's exact location. Coordinates will be captured automatically." />
+                  <LocationMapPicker
+                    lat={parseFloat(formData.latitude) || undefined}
+                    lng={parseFloat(formData.longitude) || undefined}
+                    onChange={(coords, address) => {
+                      setFormData(prev => ({
+                        ...prev,
+                        latitude: String(coords.lat),
+                        longitude: String(coords.lng),
+                        // Only auto-fill address if user hasn't typed one
+                        full_address: prev.full_address || address || prev.full_address,
+                      }));
+                    }}
+                  />
+                </div>
+
                 <div className="space-y-1.5">
                   <Label text="Full Address" />
                   <textarea
@@ -446,20 +440,6 @@ const ProfileForm: React.FC = () => {
                     placeholder="e.g. Near City Mall"
                     leftEl={<MapPin size={14} />}
                   />
-                  <InputField
-                    label="Latitude"
-                    name="latitude"
-                    value={formData.latitude}
-                    onChange={handleChange}
-                    placeholder="e.g. 9.9252"
-                  />
-                  <InputField
-                    label="Longitude"
-                    name="longitude"
-                    value={formData.longitude}
-                    onChange={handleChange}
-                    placeholder="e.g. 78.1198"
-                  />
                 </div>
               </div>
             </SectionCard>
@@ -477,15 +457,7 @@ const ProfileForm: React.FC = () => {
               subtitle="Business registration and compliance"
             >
               <div className="space-y-5">
-                <div className="space-y-1.5">
-                  <Label text="Business Type" />
-                  <ReusableSelect
-                    value={formData.business_type}
-                    onValueChange={(val) => setFormData((p) => ({ ...p, business_type: val }))}
-                    options={businessTypeOptions}
-                    placeholder="Select Type"
-                  />
-                </div>
+
 
                 <div className="space-y-3 p-4 bg-slate-50 border border-slate-100 rounded-lg">
                   <label className="flex items-center gap-3 cursor-pointer">

@@ -404,7 +404,7 @@ const ProductRow = React.memo(
         <tr
           ref={innerRef}
           onClick={() => toggleExpand(item.id)}
-          className={`group border-b border-slate-50 transition-colors cursor-pointer ${
+          className={`group border-b border-slate-200 transition-colors cursor-pointer ${
             isSelected ? "bg-blue-50 border-l-2 border-l-blue-500" : isExpanded ? "bg-slate-50/70" : "hover:bg-slate-50/60"
           }`}
         >
@@ -530,23 +530,16 @@ const ProductRow = React.memo(
                     </div>
                   </button>
                 )}
-                <div className="flex items-center gap-2 text-[11px] text-slate-400 font-medium leading-none mt-0.5">
-                  {(() => {
-                    const barcode = item.barcode || datas.barcode || "";
-                    if (!barcode) return null;
-                    return (
-                      <span className="flex items-center gap-1">
-                        <span className="font-mono text-slate-400 tabular-nums" title={barcode}>
-                          Barcode: {barcode}
-                        </span>
-                      </span>
-                    );
-                  })()}
-                  {(datas.brand || item.brand) && (
-                    <>
-                      <span className="text-slate-200">·</span>
-                      <span>{datas.brand || item.brand}</span>
-                    </>
+                <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                  {Boolean(item.brand || datas.brand || (item as any).brand) && (
+                    <span className="text-[11px] font-medium text-[#38414F] bg-[#EEF1F5] px-2.5 py-0.5 rounded-full border border-[#CBD3DE]">
+                      {item.brand || datas.brand || (item as any).brand}
+                    </span>
+                  )}
+                  {(item.gst || datas.gst || (item as any).gst) && (
+                    <span className="text-[10px] font-semibold text-[var(--lb-gst-tx)] bg-[var(--lb-gst-bg)] px-1.5 py-0.5 rounded-md border border-[var(--lb-gst-bd)] uppercase">
+                      GST {item.gst || datas.gst || (item as any).gst}
+                    </span>
                   )}
                 </div>
               </div>
@@ -565,6 +558,19 @@ const ProductRow = React.memo(
                   </span>
                   <CopySKUButton val={actualSku} />
                 </div>
+              );
+            })()}
+          </td>
+
+          {/* Barcode */}
+          <td className="px-4 py-4 whitespace-nowrap">
+            {(() => {
+              const barcode = item.barcode || datas.barcode || "";
+              if (!barcode) return <span className="text-[12px] font-medium text-slate-400">—</span>;
+              return (
+                <span className="text-[12px] font-medium text-slate-700 font-mono tabular-nums" title={barcode}>
+                  {barcode}
+                </span>
               );
             })()}
           </td>
@@ -1357,6 +1363,9 @@ const InventoryPage = () => {
                   </th>
                   <th className="px-4 py-3 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
                     SKU
+                  </th>
+                  <th className="px-4 py-3 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                    Barcode
                   </th>
                   <th className="px-4 py-3 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
                     Category

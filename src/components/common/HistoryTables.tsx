@@ -963,7 +963,7 @@ export function CustomerCollectionsTable({ rows, loading }: CustomerCollectionsT
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="sticky top-0 bg-slate-50/90 backdrop-blur-sm z-10 text-[9px] font-black text-slate-400 tracking-wider uppercase border-b border-slate-100 shadow-[0_1px_0_rgba(0,0,0,0.05)]">
-                  <th className="px-5 py-3.5">Ref Identity</th>
+                  <th className="px-5 py-3.5">Invoice / Ref No</th>
                   <th className="px-5 py-3.5">Payment Date</th>
                   <th className="px-5 py-3.5">Cleared Amount</th>
                   <th className="px-5 py-3.5">Balance Transition</th>
@@ -984,7 +984,8 @@ export function CustomerCollectionsTable({ rows, loading }: CustomerCollectionsT
                   const calculatedCleared = paymentInfosArray.reduce((acc: number, p: any) => acc + Number(p.amount || 0), 0);
                   const rawCleared = h.cleared_amount ?? h.additional_infos?.paid_amount ?? (calculatedCleared > 0 ? calculatedCleared : (h.cleared_infos ? (Number(h.cleared_infos.outstanding_before || 0) - Number(h.cleared_infos.outstanding_after || 0)) : 0));
                   const clearedAmount = Math.max(0, Number(rawCleared || 0));
-                  const refId = `#${String(h.id).padStart(3, '0')}`;
+                  const refIdRaw = h.invoice_no || h.ref_no || h.entity_id || h.id;
+                  const refId = refIdRaw ? (String(refIdRaw).startsWith('#') ? refIdRaw : `#${String(refIdRaw).padStart(3, '0')}`) : `#${String(h.id).padStart(3, '0')}`;
                   const outstandingBefore = Number(h.cleared_infos?.outstanding_before ?? h.outstanding_before ?? 0);
                   const outstandingAfter = Number(h.cleared_infos?.outstanding_after ?? h.outstanding_after ?? 0);
 
@@ -1004,7 +1005,10 @@ export function CustomerCollectionsTable({ rows, loading }: CustomerCollectionsT
                   return (
                     <tr key={`${h.id}-${i}`} className="hover:bg-indigo-50/20 transition-colors border-l-[3px] border-l-emerald-500">
                       <td className="px-5 py-4 whitespace-nowrap">
-                        <span className="text-xs font-black text-slate-700 font-mono tracking-tight">{refId}</span>
+                        <div className="flex flex-col">
+                          <span className="text-xs font-black text-slate-700 font-mono tracking-tight">{refId}</span>
+                          {h.notes && <span className="text-[9px] font-bold text-slate-400 mt-0.5 truncate max-w-[120px]" title={h.notes}>{h.notes}</span>}
+                        </div>
                       </td>
                       <td className="px-5 py-4 text-xs font-bold text-slate-500 whitespace-nowrap">
                         {date}

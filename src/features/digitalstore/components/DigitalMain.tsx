@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import {
   Megaphone, Package, Settings2, AlertCircle,
-  MapPin, WifiOff,
+  WifiOff,
   Edit3, QrCode, Users, X, Download,
-  Tag, Hash, Globe, Mail, Phone, Truck, Clock,
-  BadgeCheck, Building2,
+  Hash,
+  BadgeCheck,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { shopApi } from "@/services/api/shop";
@@ -79,31 +79,6 @@ interface ShopData {
   created_at?: string;
 }
 
-// ─── Helpers ───────────────────────────────────────────────────────────────────
-
-/** Deduplicate operating hours — keep first entry per day */
-function getUniqueHours(hours: OperatingHour[]): OperatingHour[] {
-  const seen = new Set<string>();
-  return hours.filter((h) => {
-    if (seen.has(h.day)) return false;
-    seen.add(h.day);
-    return true;
-  });
-}
-
-function fmt24to12(time: string): string {
-  // time like "09:00:00+00:00"
-  const [h, m] = time.split(":").map(Number);
-  const suffix = h >= 12 ? "PM" : "AM";
-  const hour   = h % 12 || 12;
-  return `${hour}:${String(m).padStart(2, "0")} ${suffix}`;
-}
-
-const DAY_ORDER = ["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY","SUNDAY"];
-const DAY_SHORT: Record<string, string> = {
-  MONDAY:"Mon", TUESDAY:"Tue", WEDNESDAY:"Wed",
-  THURSDAY:"Thu", FRIDAY:"Fri", SATURDAY:"Sat", SUNDAY:"Sun",
-};
 
 // ─── Skeleton ──────────────────────────────────────────────────────────────────
 const Skeleton = ({ className }: { className?: string }) => (
@@ -284,10 +259,8 @@ const DigitalMain = () => {
   );
 
   const initials   = shop.name?.charAt(0)?.toUpperCase() ?? "S";
-  const uniqueHours = getUniqueHours(shop.operating_hours ?? []).sort(
-    (a, b) => DAY_ORDER.indexOf(a.day) - DAY_ORDER.indexOf(b.day)
-  );
-  const deliveryTypes = [...new Set((shop.delivery_options ?? []).map(d => d.type))];
+  
+  
 
   return (
     <div className="min-h-screen bg-slate-50 pb-16" style={{ fontFamily: "Inter, sans-serif" }}>
@@ -391,53 +364,7 @@ const DigitalMain = () => {
                 <p className="text-[12px] text-slate-500 leading-relaxed max-w-xl">{shop.description}</p>
               )}
 
-              {/* Row 4: Address + Contact */}
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-slate-400">
-                {shop.address?.full_address && (
-                  <span className="flex items-center gap-1">
-                    <MapPin size={11} className="shrink-0 text-slate-400" />
-                    {shop.address.full_address}
-                    {shop.address.zip_code && shop.address.zip_code !== "000000" && (
-                      <span className="text-slate-300 ml-1">· {shop.address.zip_code}</span>
-                    )}
-                  </span>
-                )}
-                {shop.additional_infos?.website && (
-                  <a href={shop.additional_infos.website} target="_blank" rel="noreferrer"
-                    className="flex items-center gap-1 hover:text-blue-500 transition-colors">
-                    <Globe size={11} /> {shop.additional_infos.website}
-                  </a>
-                )}
-                {shop.additional_infos?.emails?.[0] && (
-                  <span className="flex items-center gap-1">
-                    <Mail size={11} /> {shop.additional_infos.emails[0]}
-                  </span>
-                )}
-                {shop.additional_infos?.mobile_numbers?.[0] && (
-                  <span className="flex items-center gap-1">
-                    <Phone size={11} /> {shop.additional_infos.mobile_numbers[0]}
-                  </span>
-                )}
-              </div>
 
-              {/* Row 5: Categories + Business type + Currency */}
-              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                {shop.categories?.map((cat) => (
-                  <span key={cat} className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded">
-                    <Tag size={9} /> {cat}
-                  </span>
-                ))}
-                {shop.business_infos?.type && (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded">
-                    <Building2 size={9} /> {shop.business_infos.type}
-                  </span>
-                )}
-                {shop.business_infos?.currency && (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded">
-                    {shop.business_infos.currency}
-                  </span>
-                )}
-              </div>
             </div>
 
             {/* ── Right: QR + Followers ── */}
@@ -463,42 +390,6 @@ const DigitalMain = () => {
           {/* ── Quick info strips: Hours + Delivery ── */}
           <div className="flex flex-wrap gap-3 mt-1 pt-3 border-t border-slate-100">
 
-            {/* Hours strip */}
-            {uniqueHours.length > 0 && (
-              <div className="flex items-start gap-2">
-                <Clock size={13} className="text-slate-400 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1">Hours</p>
-                  <div className="flex flex-wrap gap-1">
-                    {uniqueHours.map((h) => (
-                      <span key={h.day} className="text-[11px] text-slate-600 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded">
-                        <span className="font-semibold">{DAY_SHORT[h.day]}</span>{" "}
-                        {fmt24to12(h.open_at)}–{fmt24to12(h.close_at)}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Delivery strip */}
-            {deliveryTypes.length > 0 && (
-              <div className="flex items-start gap-2">
-                <Truck size={13} className="text-slate-400 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1">Delivery</p>
-                  <div className="flex flex-wrap gap-1">
-                    {(shop.delivery_options ?? []).filter((d, i, arr) => arr.findIndex(x => x.type === d.type) === i).map((d) => (
-                      <span key={d.id} className="text-[11px] text-slate-600 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded">
-                        <span className="font-semibold">{d.type === "INSTANT" ? "Instant" : d.type === "NATIONWIDE" ? "Nationwide" : d.type}</span>
-                        {" · "}{d.speed}
-                        {d.free_shipping_amount > 0 && <> · Free above ₹{d.free_shipping_amount}</>}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Announcement count strip */}
             {shop.announcements?.length > 0 && (

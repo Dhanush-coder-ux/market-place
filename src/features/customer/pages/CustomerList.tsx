@@ -1,13 +1,14 @@
 import { useRef, useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Search, Users, Bookmark, Filter,
+  Search, Users, Filter,
   AlertCircle, CreditCard,
   Loader2, Eye, Pencil, MoreVertical, Trash2, Plus, FileUp
 } from "lucide-react";
 import ExcelImportModal from "@/components/common/ExcelImportModal";
 import ActionMenu, { ActionMenuItem, ActionMenuDivider } from "@/components/common/ActionMenu";
 import SkeletonLoader from "@/components/common/SkeletonLoader";
+import { RecordPaymentModal } from "@/features/customer/components/RecordPaymentModal";
 import { useHeader } from "@/context/HeaderContext";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { useBusinessApi } from "@/context/BusinessApiContext";
@@ -39,6 +40,7 @@ const CustomerList = () => {
 
   const { getData, deleteData } = useApi();
   const [analyticsStats, setAnalyticsStats] = useState<any>(null);
+  const [selectedCustomerForPayment, setSelectedCustomerForPayment] = useState<any>(null);
 
   useEffect(() => {
     getData(ENDPOINTS.ANALYTICS_CUSTOMER_OVERALL, { shop_id: SHOP_ID })
@@ -67,13 +69,7 @@ const CustomerList = () => {
           <FileUp size={13} />
           Import
         </button>
-        <button
-          onClick={() => navigate("/customers/drafts")}
-          className="h-8 px-3 rounded-md border border-slate-200 text-slate-650 font-medium text-[12px] bg-white hover:bg-slate-50 transition-colors flex items-center gap-1.5"
-        >
-          <Bookmark size={13} />
-          Drafts
-        </button>
+
         <GradientButton path="/customers/add" className="h-8 flex items-center px-4 text-[12px] rounded-md">+ Add Customer</GradientButton>
       </div>
     );
@@ -477,7 +473,7 @@ const CustomerList = () => {
                               onClose={() => setActiveMenuId(null)}
                               width={176}
                             >
-                              <ActionMenuItem icon={<CreditCard size={13} />} onClick={() => { setActiveMenuId(null); alert("Record payment initiated!"); }}>
+                              <ActionMenuItem icon={<CreditCard size={13} />} onClick={() => { setActiveMenuId(null); setSelectedCustomerForPayment(c); }}>
                                 Record Payment
                               </ActionMenuItem>
                               <ActionMenuItem icon={<Plus size={13} />} onClick={() => { setActiveMenuId(null); navigate(`/billing?customer_id=${c.id}`); }}>
@@ -509,6 +505,16 @@ const CustomerList = () => {
         </div>
       </div>
       </div>
+
+      <RecordPaymentModal 
+        show={!!selectedCustomerForPayment} 
+        onClose={() => setSelectedCustomerForPayment(null)} 
+        customer={selectedCustomerForPayment} 
+        onSuccess={() => { 
+          setSelectedCustomerForPayment(null); 
+          setRefreshKey(prev => prev + 1); 
+        }} 
+      />
 
       {/* ── Excel Import Modal ── */}
       <ExcelImportModal

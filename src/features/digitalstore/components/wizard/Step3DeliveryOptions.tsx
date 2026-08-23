@@ -1,5 +1,5 @@
 import { StoreFormData, DeliveryConfig } from "@/features/digitalstore/type";
-import { Truck, Timer, IndianRupee, MapPin } from "lucide-react";
+import { Timer, IndianRupee, MapPin } from "lucide-react";
 
 interface Step3Props {
   form: StoreFormData;
@@ -62,17 +62,14 @@ export default function Step3DeliveryOptions({ form, setForm }: Step3Props) {
               />
             </div>
             <div>
-              <label className="text-[11px] font-bold text-slate-500 mb-1.5 flex items-center gap-1"><Truck size={12}/> Delivery By</label>
-              <div className="flex gap-2">
-                <button 
-                  onClick={() => updateDelivery(type, "manageStore", !data.manageStore)}
-                  className={`flex-1 p-2 text-[11px] font-bold border rounded-lg ${data.manageStore ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-slate-200 text-slate-500'}`}
-                >In-house Staff</button>
-                <button 
-                  onClick={() => updateDelivery(type, "partners", !data.partners)}
-                  className={`flex-1 p-2 text-[11px] font-bold border rounded-lg ${data.partners ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-slate-200 text-slate-500'}`}
-                >3rd Party Partners</button>
-              </div>
+              <label className="text-[11px] font-bold text-slate-500 mb-1.5 flex items-center gap-1"><MapPin size={12}/> Delivery Radius (km)</label>
+              <input 
+                type="number" 
+                value={data.radius || ""} 
+                onChange={(e) => updateDelivery(type, "radius", Number(e.target.value))}
+                className="w-full text-xs p-2 rounded-lg border border-slate-200 outline-none focus:border-blue-500"
+                placeholder="e.g. 5"
+              />
             </div>
           </div>
         )}

@@ -3,10 +3,9 @@ import { StoreFormData, SelectedProductConfig } from "@/features/digitalstore/ty
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { inventoryCustomFieldsApi, inventoryApi } from "@/services/api/inventory";
-import type { InventoryCustomFieldDefinition } from "@/features/inventory/types";
 import {
   Search, Package, Check, Settings, Plus, Trash2,
-  Loader2, ChevronDown, X, Save,
+  Loader2, GripVertical,
 } from "lucide-react";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
 
@@ -15,22 +14,6 @@ interface Step3Props {
   setForm: React.Dispatch<React.SetStateAction<StoreFormData>>;
 }
 
-// ─── Field type label ─────────────────────────────────────────────────────────
-const TYPE_LABEL: Record<string, string> = {
-  text: "Text",
-  number: "Number",
-  date: "Date",
-  boolean: "Yes / No",
-};
-
-// ─── Type badge ───────────────────────────────────────────────────────────────
-function TypeBadge({ type }: { type: string }) {
-  return (
-    <span className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200">
-      {TYPE_LABEL[type] ?? type}
-    </span>
-  );
-}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function Step3Products({ form, setForm }: Step3Props) {
@@ -43,20 +26,25 @@ export default function Step3Products({ form, setForm }: Step3Props) {
   // Description in sidebar
   const [description, setDescription]       = useState("");
 
-  // Custom field definitions (shop-wide)
-  const [fieldDefs, setFieldDefs]           = useState<InventoryCustomFieldDefinition[]>([]);
   const [fieldValues, setFieldValues]       = useState<Record<string, string>>({});
-  const [loadingFields, setLoadingFields]   = useState(false);
 
-  // "Add Field" mini-form inside the sidebar
-  const [showAddField, setShowAddField]     = useState(false);
-  const [newFieldLabel, setNewFieldLabel]   = useState("");
-  const [newFieldName, setNewFieldName]     = useState("");
-  const [newFieldType, setNewFieldType]     = useState("text");
-  const [newFieldRequired, setNewFieldRequired] = useState(false);
-  const [newFieldVisible, setNewFieldVisible]   = useState(true);
-  const [creatingField, setCreatingField]   = useState(false);
   const [savingDesc, setSavingDesc]         = useState(false);
+
+  // Additional Details State
+  const [additionalSections, setAdditionalSections] = useState<{ id: string; title: string; content: string }[]>([]);
+
+  const addSection = () => {
+    if (additionalSections.length >= 3) return;
+    setAdditionalSections([...additionalSections, { id: Date.now().toString(), title: "", content: "" }]);
+  };
+
+  const updateSection = (id: string, field: 'title' | 'content', value: string) => {
+    setAdditionalSections(prev => prev.map(s => s.id === id ? { ...s, [field]: value } : s));
+  };
+
+  const removeSection = (id: string) => {
+    setAdditionalSections(prev => prev.filter(s => s.id !== id));
+  };
 
   // Load products
   useEffect(() => {
@@ -66,19 +54,8 @@ export default function Step3Products({ form, setForm }: Step3Props) {
     });
   }, []);
 
-  // Load global custom field definitions
-  useEffect(() => {
-    inventoryCustomFieldsApi.getAllFields(SHOP_ID).then(setFieldDefs);
-  }, []);
-
-  const reloadFieldDefs = async () => {
-    const defs = await inventoryCustomFieldsApi.getAllFields(SHOP_ID);
-    setFieldDefs(defs);
-  };
-
   // Load product-specific field values + description when opening sidebar
   const loadProductData = async (product: any) => {
-    setLoadingFields(true);
     setDescription(product.description || "");
     try {
       const values = await inventoryCustomFieldsApi.getValuesByProduct(SHOP_ID, product.id);
@@ -87,8 +64,6 @@ export default function Step3Products({ form, setForm }: Step3Props) {
       setFieldValues(map);
     } catch {
       setFieldValues({});
-    } finally {
-      setLoadingFields(false);
     }
   };
 
@@ -125,8 +100,7 @@ export default function Step3Products({ form, setForm }: Step3Props) {
           new_custom_fields: [],
         }
     );
-    setShowAddField(false);
-    setNewFieldLabel(""); setNewFieldName(""); setNewFieldType("text");
+    setAdditionalSections((existingConfig as any)?.additional_sections || []);
     loadProductData(product);
   };
 
@@ -167,37 +141,16 @@ export default function Step3Products({ form, setForm }: Step3Props) {
       ...prev,
       selectedProducts: {
         ...prev.selectedProducts,
-        [activeProduct.id]: sidebarConfig,
+        [activeProduct.id]: {
+          ...sidebarConfig,
+          additional_sections: additionalSections,
+        } as any,
       },
     }));
     setActiveProduct(null);
   };
 
-  const handleCreateField = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newFieldLabel.trim() || !newFieldName.trim()) return;
-    setCreatingField(true);
-    try {
-      await inventoryCustomFieldsApi.createField({
-        shop_id: SHOP_ID,
-        field_infos: [{
-          field_name: newFieldName,
-          label_name: newFieldLabel,
-          type: newFieldType,
-          required: newFieldRequired,
-          visible_online: newFieldVisible,
-        }],
-      });
-      await reloadFieldDefs();
-      setShowAddField(false);
-      setNewFieldLabel(""); setNewFieldName(""); setNewFieldType("text");
-      setNewFieldRequired(false); setNewFieldVisible(true);
-    } catch (e) {
-      console.error("Failed to create field", e);
-    } finally {
-      setCreatingField(false);
-    }
-  };
+  
 
   const filteredProducts = products.filter(p =>
     p.name?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -356,207 +309,58 @@ export default function Step3Products({ form, setForm }: Step3Props) {
 
             <div className="border-t border-slate-100" />
 
-            {/* ── Custom Fields ── */}
+            {/* ── Additional Details ── */}
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                    Additional Details
-                    <span className="text-slate-300 font-normal normal-case ml-1">(optional, up to 3)</span>
-                  </p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">
-                    Add custom sections like ingredients, storage, allergen info.
-                  </p>
-                </div>
-                {!showAddField && fieldDefs.length < 3 && (
-                  <button
-                    onClick={() => setShowAddField(true)}
-                    className="flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-700 transition-colors cursor-pointer shrink-0"
-                  >
-                    <Plus size={12} /> Add Field
-                  </button>
-                )}
+              <div>
+                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                  ADDITIONAL DETAILS <span className="text-slate-400 font-normal normal-case ml-1">(optional, up to 3)</span>
+                </p>
+                <p className="text-[12px] text-slate-500 mt-1">
+                  Add custom sections like ingredients, storage instructions, allergen info, or anything your customers should know.
+                </p>
               </div>
 
-              {/* Add new field form */}
-              {showAddField && (
-                <form
-                  onSubmit={handleCreateField}
-                  className="p-3 rounded-xl bg-blue-50/60 border border-blue-100 space-y-3"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-semibold text-blue-700">New Custom Field</span>
-                    <button type="button" onClick={() => setShowAddField(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
-                      <X size={13} />
-                    </button>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div>
-                      <label className="text-[10px] font-medium text-slate-500">Field Label</label>
+              {additionalSections.map((section, index) => (
+                <div key={section.id} className="border border-[#e5e2db] rounded-xl overflow-hidden bg-[#fdfaf5]">
+                  <div className="px-3 py-2.5 flex items-center justify-between border-b border-[#e5e2db]">
+                    <div className="flex items-center gap-3 flex-1">
+                      <GripVertical size={14} className="text-slate-300 cursor-grab shrink-0" />
+                      <div className="w-5 h-5 bg-slate-900 text-white rounded-full flex items-center justify-center text-[10px] font-bold shrink-0">
+                        {index + 1}
+                      </div>
                       <input
                         type="text"
-                        value={newFieldLabel}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setNewFieldLabel(v);
-                          setNewFieldName(v.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim().replace(/\s+/g, "_"));
-                        }}
-                        placeholder="e.g. Ingredients"
-                        required
-                        className="w-full mt-1 h-8 px-2.5 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:border-blue-400"
+                        value={section.title}
+                        onChange={(e) => updateSection(section.id, 'title', e.target.value)}
+                        placeholder="Section heading (e.g. Storage instructions)"
+                        className="bg-transparent border-none outline-none text-sm font-semibold text-slate-600 placeholder:text-slate-400 w-full"
                       />
                     </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="text-[10px] font-medium text-slate-500">DB Name (auto)</label>
-                        <input
-                          type="text"
-                          value={newFieldName}
-                          disabled
-                          className="w-full mt-1 h-8 px-2.5 text-[11px] font-mono bg-slate-50 border border-slate-200 rounded-lg outline-none text-slate-400"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-medium text-slate-500">Data Type</label>
-                        <div className="relative mt-1">
-                          <select
-                            value={newFieldType}
-                            onChange={(e) => setNewFieldType(e.target.value)}
-                            className="w-full h-8 pl-2.5 pr-7 text-xs bg-white border border-slate-200 rounded-lg outline-none focus:border-blue-400 appearance-none cursor-pointer"
-                          >
-                            <option value="text">Text</option>
-                            <option value="number">Number</option>
-                            <option value="date">Date</option>
-                            <option value="boolean">Yes / No</option>
-                          </select>
-                          <ChevronDown size={10} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-4">
-                      <label className="flex items-center gap-1.5 text-[11px] font-medium text-slate-600 cursor-pointer">
-                        <input type="checkbox" checked={newFieldRequired} onChange={(e) => setNewFieldRequired(e.target.checked)} className="rounded" />
-                        Required
-                      </label>
-                      <label className="flex items-center gap-1.5 text-[11px] font-medium text-slate-600 cursor-pointer">
-                        <input type="checkbox" checked={newFieldVisible} onChange={(e) => setNewFieldVisible(e.target.checked)} className="rounded" />
-                        Visible Online
-                      </label>
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={creatingField || !newFieldLabel.trim()}
-                    className="w-full h-8 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    {creatingField
-                      ? <><Loader2 size={12} className="animate-spin" /> Creating…</>
-                      : <><Save size={12} /> Save Field</>
-                    }
-                  </button>
-                </form>
-              )}
-
-              {/* Existing fields */}
-              {loadingFields ? (
-                <div className="flex items-center justify-center py-4 gap-2 text-xs text-slate-400">
-                  <Loader2 size={13} className="animate-spin" /> Loading fields…
-                </div>
-              ) : fieldDefs.length === 0 ? (
-                <div className="text-center py-5 rounded-xl border border-dashed border-slate-200">
-                  <p className="text-[11px] text-slate-400">No custom fields yet.</p>
-                  <button
-                    onClick={() => setShowAddField(true)}
-                    className="mt-1 text-[11px] font-semibold text-blue-500 hover:text-blue-700 cursor-pointer"
-                  >
-                    Create your first field
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {fieldDefs.map((field, idx) => (
-                    <div
-                      key={field.id}
-                      className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2"
-                    >
-                      {/* Field header */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="w-5 h-5 rounded-full bg-slate-800 text-white text-[10px] font-bold flex items-center justify-center shrink-0">
-                            {idx + 1}
-                          </span>
-                          <span className="text-xs font-semibold text-slate-700">
-                            {field.label_name}
-                            {field.required && <span className="text-red-400 ml-0.5">*</span>}
-                          </span>
-                          <TypeBadge type={field.type} />
-                          {field.visible_online && (
-                            <span className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-100">Online</span>
-                          )}
-                        </div>
-                        <button
-                          onClick={async () => {
-                            try {
-                              await inventoryCustomFieldsApi.deleteField(SHOP_ID, field.id);
-                              await reloadFieldDefs();
-                              const newVals = { ...fieldValues };
-                              delete newVals[field.id];
-                              setFieldValues(newVals);
-                            } catch (e) {
-                              console.error("Failed to delete field", e);
-                            }
-                          }}
-                          title="Delete field"
-                          className="w-6 h-6 rounded-md flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all cursor-pointer"
-                        >
-                          <Trash2 size={11} />
-                        </button>
-                      </div>
-
-                      {/* Field value input */}
-                      {field.type === "boolean" ? (
-                        <div className="flex gap-2">
-                          {["true", "false"].map((val) => (
-                            <button
-                              key={val}
-                              type="button"
-                              onClick={() => setFieldValues(prev => ({ ...prev, [field.id]: val }))}
-                              className={`px-3 py-1.5 rounded-lg border text-[11px] font-medium cursor-pointer transition-colors ${
-                                fieldValues[field.id] === val
-                                  ? "bg-blue-50 border-blue-200 text-blue-600"
-                                  : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-                              }`}
-                            >
-                              {val === "true" ? "Yes" : "No"}
-                            </button>
-                          ))}
-                        </div>
-                      ) : (
-                        <textarea
-                          rows={field.type === "text" ? 3 : 1}
-                          value={fieldValues[field.id] || ""}
-                          onChange={(e) => setFieldValues(prev => ({ ...prev, [field.id]: e.target.value }))}
-                          placeholder={`Enter ${field.label_name.toLowerCase()}…`}
-                          className="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-lg outline-none focus:border-blue-400 resize-none leading-relaxed"
-                        />
-                      )}
-                    </div>
-                  ))}
-
-                  {/* Add more fields button */}
-                  {!showAddField && fieldDefs.length < 3 && (
                     <button
-                      onClick={() => setShowAddField(true)}
-                      className="w-full py-2 rounded-xl border border-dashed border-slate-300 text-[11px] font-semibold text-slate-500 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50/50 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                      onClick={() => removeSection(section.id)}
+                      className="text-slate-400 hover:text-red-500 shrink-0 ml-2"
                     >
-                      <Plus size={12} /> Add another field
+                      <Trash2 size={14} />
                     </button>
-                  )}
+                  </div>
+                  <div className="p-3 bg-[#fdfaf5]">
+                    <textarea
+                      value={section.content}
+                      onChange={(e) => updateSection(section.id, 'content', e.target.value)}
+                      placeholder="What should customers know? Keep it short and clear."
+                      className="w-full h-20 resize-none border border-slate-300 rounded-lg p-2.5 text-sm outline-none focus:border-blue-500 bg-white"
+                    />
+                  </div>
                 </div>
+              ))}
+
+              {additionalSections.length < 3 && (
+                <button
+                  onClick={addSection}
+                  className="w-full py-3 border border-dashed border-slate-300 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                >
+                  <Plus size={16} /> Add another section
+                </button>
               )}
             </div>
           </div>

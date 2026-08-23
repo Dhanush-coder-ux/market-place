@@ -3,7 +3,7 @@ import {
   Search,
   X, ArrowUp, ArrowDown,
   User, TrendingUp, TrendingDown, Activity,
-  Bookmark, Filter,
+  Filter,
   FileText, Layers, Hash, Zap, Copy, ExternalLink,
   ChevronRight, Eye, Trash2
 } from "lucide-react";
@@ -494,13 +494,7 @@ export default function StockMovementPage() {
             <ExternalLink size={13} />
           </button>
         )}
-        <button
-          onClick={() => navigate("/stock-adjustment/drafts")}
-          className="h-8 px-3 rounded-md border border-slate-200 text-slate-650 font-medium text-[12px] bg-white hover:bg-slate-50 transition-colors flex items-center gap-1.5"
-        >
-          <Bookmark size={13} />
-          Drafts
-        </button>
+
         <GradientButton
           onClick={() => navigate("/stock-adjustment")}
           className="h-8 flex items-center px-4 text-[12px] rounded-md"

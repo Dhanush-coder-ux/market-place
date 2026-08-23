@@ -27,6 +27,7 @@ import {
   Users,
   Printer,
 } from "lucide-react";
+import { notificationApi } from "@/services/api/notification";
 
 import {
   DropdownMenu,
@@ -134,6 +135,74 @@ export const Navbar = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [showSignOutModal, setShowSignOutModal] = useState(false);
+
+  // Notifications
+  const [latestNotification, setLatestNotification] = useState<{ title: string; message: string } | null>(null);
+  const [isIslandExpanded, setIsIslandExpanded] = useState(false);
+
+  // A ref to keep track of all seen notification IDs
+  const seenNotifIds = useRef<Set<string>>(new Set());
+  // A ref to store the queue of incoming notifications
+  const notifQueue = useRef<{ id: string; title: string; message: string }[]>([]);
+  // A ref to track if we're currently animating a notification
+  const isAnimating = useRef(false);
+
+  const processQueue = useCallback(() => {
+    if (isAnimating.current || notifQueue.current.length === 0) return;
+
+    isAnimating.current = true;
+    const nextNotif = notifQueue.current.shift()!;
+    setLatestNotification(nextNotif);
+    setIsIslandExpanded(true);
+
+    // Hide after 4 seconds
+    setTimeout(() => {
+      setIsIslandExpanded(false);
+      // Wait for the hide animation to finish, then process the next one
+      setTimeout(() => {
+        isAnimating.current = false;
+        processQueue();
+      }, 500); // 500ms for CSS transition
+    }, 4000);
+  }, []);
+
+  useEffect(() => {
+    const userId = localStorage.getItem("user_id");
+    if (!userId) return;
+
+    let isFirstLoad = true;
+
+    const fetchNotifs = async () => {
+      try {
+        const data = await notificationApi.getNotifications(userId);
+        if (data && Array.isArray(data)) {
+          if (isFirstLoad) {
+            // First load: just record seen IDs and set the latest as current without animating
+            data.forEach((n: any) => seenNotifIds.current.add(n.id));
+            if (data.length > 0) {
+              setLatestNotification(data[0]);
+            }
+            isFirstLoad = false;
+          } else {
+            // Subsequent loads: find new notifications
+            // Since data is usually newest first, we reverse it to queue older new messages first
+            const newNotifs = data.filter((n: any) => !seenNotifIds.current.has(n.id)).reverse();
+            if (newNotifs.length > 0) {
+              newNotifs.forEach((n: any) => {
+                seenNotifIds.current.add(n.id);
+                notifQueue.current.push(n);
+              });
+              processQueue();
+            }
+          }
+        }
+      } catch (e) { }
+    };
+
+    fetchNotifs();
+    const interval = setInterval(fetchNotifs, 10000); // 10s poll
+    return () => clearInterval(interval);
+  }, [processQueue]);
 
   // Fetch real shops
   useEffect(() => {
@@ -261,19 +330,17 @@ export const Navbar = () => {
                   <DropdownMenuItem
                     key={shop.id}
                     onClick={() => handleSelectShop(shop)}
-                    className={`flex items-center justify-between cursor-pointer rounded-lg px-2.5 py-2 my-0.5 md:transition-colors ${
-                      selectedShopId === shop.id
+                    className={`flex items-center justify-between cursor-pointer rounded-lg px-2.5 py-2 my-0.5 md:transition-colors ${selectedShopId === shop.id
                         ? "bg-blue-50 text-blue-700"
                         : "md:hover:bg-slate-50 text-slate-700"
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-3">
                       <div
-                        className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold border shrink-0 ${
-                          selectedShopId === shop.id
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold border shrink-0 ${selectedShopId === shop.id
                             ? "bg-white border-blue-200 text-blue-600"
                             : "bg-slate-100 border-slate-200 text-slate-500"
-                        }`}
+                          }`}
                       >
                         {shop.name.charAt(0).toUpperCase()}
                       </div>
@@ -314,14 +381,14 @@ export const Navbar = () => {
         </DropdownMenu>
 
         {/* CENTER - Global Search */}
-        <div className="relative flex-1 max-w-lg mx-4 lg:mx-8 hidden md:block" ref={searchRef}>
-          <div className="relative group">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 md:group-focus-within:text-blue-500 md:transition-colors" />
+        <div className="relative flex-1 mx-4 lg:mx-8 hidden md:flex justify-center" ref={searchRef}>
+          <div className="relative group w-[240px] hover:w-[320px] focus-within:w-[480px] focus-within:!w-[480px] transition-all duration-300 ease-out">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 md:group-focus-within:text-blue-500 md:transition-colors z-10" />
             <input
               ref={inputRef}
               type="text"
               placeholder="Search pages, orders, products..."
-              className="w-full pl-10 pr-12 py-2 bg-slate-100/70 border border-slate-200/60 rounded-full text-sm font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white md:transition-all shadow-sm"
+              className="w-full pl-10 pr-12 py-2 bg-slate-100/70 border border-slate-200/60 rounded-lg text-sm font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all shadow-sm"
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -388,9 +455,9 @@ export const Navbar = () => {
             >
               {/* Shine effect ray */}
               <div className="absolute top-0 -inset-full h-full w-1/2 block transform -skew-x-12 bg-gradient-to-r from-transparent via-white/40 to-transparent animate-[shimmer_2.5s_infinite_linear] pointer-events-none" />
-              
+
               <Store size={13} className="relative z-10 shrink-0 text-blue-50" />
-              
+
               {/* Slideshow scrolling text container with reduced width */}
               <div className="relative z-10 overflow-hidden h-4 w-[190px]">
                 <div className="animate-[slideText_9s_infinite] flex flex-col absolute left-0 w-full text-left">
@@ -403,10 +470,22 @@ export const Navbar = () => {
           </div>
 
           <div className="flex items-center gap-1 sm:gap-2">
-            <Link to="/notifications">
-              <button className="relative p-2 text-slate-400 md:hover:bg-slate-100 md:hover:text-slate-700 rounded-full md:transition-colors">
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white"></span>
+            <Link to="/notifications" className="group">
+              <button className="relative flex items-center gap-2.5 px-3 py-1.5 bg-slate-900 hover:bg-black text-white rounded-full transition-all duration-300 ease-out shadow-sm overflow-hidden ring-1 ring-slate-800">
+                <div className="relative flex shrink-0 items-center justify-center">
+                  <Bell className="w-[17px] h-[17px] text-slate-300 group-hover:text-white transition-colors" />
+                  {latestNotification && (
+                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-rose-500 rounded-full shadow-[0_0_0_2px_rgba(15,23,42,1)] group-hover:shadow-[0_0_0_2px_rgba(0,0,0,1)] transition-shadow animate-pulse"></span>
+                  )}
+                </div>
+                <div className={`flex flex-col items-start transition-all duration-500 ease-out overflow-hidden whitespace-nowrap ${isIslandExpanded ? 'w-[140px] opacity-100' : 'w-0 opacity-0 group-hover:w-[140px] group-hover:opacity-100'}`}>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider leading-none mb-1">
+                    {latestNotification ? "New Message" : "Notifications"}
+                  </span>
+                  <span className="text-[11px] font-medium text-slate-100 leading-none truncate w-full text-left">
+                    {latestNotification ? (latestNotification.title || latestNotification.message) : "No new alerts"}
+                  </span>
+                </div>
               </button>
             </Link>
             <Link to={"/settings"}>
@@ -421,7 +500,7 @@ export const Navbar = () => {
 
         </div>
       </div>
-      
+
       {/* Dynamic CSS animations for Navbar text slideshow and shimmer */}
       <style>{`
         @keyframes slideText {

@@ -60,7 +60,7 @@ export function SearchSelect<T extends BaseOption>({
   renderOption,
   onCreateNew,
   onSearchChange,
-  getPopupContainer = (triggerNode) => (triggerNode.parentNode as HTMLElement) || document.body,
+  getPopupContainer = () => document.body,
 }: SearchSelectProps<T>) {
   const [searchValue, setSearchValue] = useState("");
   const [open, setOpen] = useState(false);

@@ -1,4 +1,4 @@
-import { Search, Filter, Users, Bookmark, X, AlertCircle, ExternalLink, Eye, Pencil, MoreVertical, Trash2, Mail } from 'lucide-react';
+import { Search, Filter, Users, X, AlertCircle, ExternalLink, Eye, Pencil, MoreVertical, Trash2, Mail } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { StatCard } from '@/components/common/StatsCard';
 import { ReusableSelect } from '@/components/ui/ReusableSelect';
@@ -58,13 +58,7 @@ export default function Employee() {
             <ExternalLink size={13} />
           </button>
         )}
-        <button
-          onClick={() => navigate("/employee/drafts")}
-          className="h-8 px-3 rounded-md border border-slate-200 text-slate-600 font-medium text-[12px] bg-white hover:bg-slate-50 transition-colors flex items-center gap-1.5"
-        >
-          <Bookmark size={13} />
-          Drafts
-        </button>
+
         <GradientButton path="/employee/add" className="h-8 flex items-center px-4 text-[12px] rounded-md">
           + Add Employee
         </GradientButton>

@@ -26,14 +26,14 @@ const ProductInfos = React.lazy(() => import("@/features/product/pages/ProductIn
 const ProductSearch = React.lazy(() => import("@/features/product/pages/ProductSearch"));
 const ProductDetail = React.lazy(() => import("@/features/product/pages/ProductDetail"));
 const ProductForm = React.lazy(() => import("@/features/product/pages/ProductForm"));
-const ProductDraftsPage = React.lazy(() => import("../features/product/pages/ProductDraftsPage"));
+// const ProductDraftsPage = React.lazy(() => import("../features/product/pages/ProductDraftsPage"));
 
 // ─── Purchase ────────────────────────────────────────────────────────────────
 const PurchaseDetail = React.lazy(() => import("@/features/purchase/pages/PurchaseDetail"));
 const PurchaseSearch = React.lazy(() => import("@/features/purchase/pages/PurchaseSearch"));
 const PurchaseForm = React.lazy(() => import("@/features/purchase/pages/PurchaseForm"));
 const PurchaseHistory = React.lazy(() => import("@/features/purchase/pages/PurchaseHistory"));
-const PurchaseDraftsPage = React.lazy(() => import("@/features/purchase/pages/PurchaseDraftsPage"));
+// const PurchaseDraftsPage = React.lazy(() => import("@/features/purchase/pages/PurchaseDraftsPage"));
 const GRNListView = React.lazy(() => import("@/features/purchase/pages/GrnListView"));
 const GRNForm = React.lazy(() => import("@/features/purchase/pages/GrnForm"));
 const ReceiveGoodsPage = React.lazy(() => import("@/features/purchase/pages/ReceiveGoodsForm"));
@@ -44,14 +44,14 @@ const Supplier = React.lazy(() => import("@/features/supplier/pages/Supplier"));
 const SupplierSearch = React.lazy(() => import("@/features/supplier/pages/SupplierSearch"));
 const SupplierDetail = React.lazy(() => import("@/features/supplier/pages/SupplierDetail"));
 const SupplierForm = React.lazy(() => import("@/features/supplier/pages/SupplierForm"));
-const SupplierDraftsPage = React.lazy(() => import("@/features/supplier/pages/SupplierDraftsPage"));
+// const SupplierDraftsPage = React.lazy(() => import("@/features/supplier/pages/SupplierDraftsPage"));
 
 // ─── Employee ────────────────────────────────────────────────────────────────
 const Employee = React.lazy(() => import("../features/employee/pages/Employee"));
 const EmployeeSearch = React.lazy(() => import("../features/employee/pages/EmployeeSearch"));
 const EmployeeForm = React.lazy(() => import("../features/employee/pages/EmployeeForm"));
 const EmployeeDetail = React.lazy(() => import("../features/employee/pages/EmployeeDetail"));
-const EmployeeDraftsPage = React.lazy(() => import("../features/employee/pages/EmployeeDraftsPage"));
+// const EmployeeDraftsPage = React.lazy(() => import("../features/employee/pages/EmployeeDraftsPage"));
 const EmployeeVerifyPage = React.lazy(() => import("../features/employee/pages/EmployeeVerifyPage"));
 
 // ─── Inventory ───────────────────────────────────────────────────────────────
@@ -59,7 +59,7 @@ const Inventory = React.lazy(() => import("../features/inventory/pages/Inventory
 const StockMovementPage = React.lazy(() => import("../features/inventory/pages/StockMovement"));
 const StockMovementDetail = React.lazy(() => import("../features/inventory/pages/StockMovementDetail"));
 const StockAdjustmentForm = React.lazy(() => import("../features/inventory/pages/StockAdjusstment"));
-const StockAdjustmentDraftsPage = React.lazy(() => import("../features/inventory/pages/StockAdjustmentDraftsPage"));
+// const StockAdjustmentDraftsPage = React.lazy(() => import("../features/inventory/pages/StockAdjustmentDraftsPage"));
 
 // ─── Customers ───────────────────────────────────────────────────────────────
 const CustomerSearch = React.lazy(() => import("@/features/customer/pages/CustomerSearch"));
@@ -67,7 +67,7 @@ const CustomerList = React.lazy(() => import("@/features/customer/pages/Customer
 const CustomerDetail = React.lazy(() => import("@/features/customer/pages/Customerdetail"));
 const CustomerBalanceSummary = React.lazy(() => import("@/features/customer/pages/CustomerBalanceSummary"));
 const CustomerFormPage = React.lazy(() => import("@/features/customer/pages/CustomerFormPage"));
-const CustomerDraftsPage = React.lazy(() => import("@/features/customer/pages/CustomerDraftsPage"));
+// const CustomerDraftsPage = React.lazy(() => import("@/features/customer/pages/CustomerDraftsPage"));
 
 // ─── Sales & Orders ──────────────────────────────────────────────────────────
 const SalesListPage = React.lazy(() => import("@/features/sales/pages/SalesPage"));
@@ -113,7 +113,7 @@ export const router = createBrowserRouter([
       { path: 'product', element: <Page><ProductSearch /></Page> },
       { path: '/product/all', element: <Page><ProductInfos /></Page> },
       { path: '/product/add', element: <Page><ProductForm /></Page> },
-      { path: '/product/drafts', element: <Page><ProductDraftsPage /></Page> },
+      // { path: '/product/drafts', element: <Page><ProductDraftsPage /></Page> },
       { path: '/product/:id/edit', element: <Page><ProductForm /></Page> },
       { path: '/product/:id', element: <Page><ProductDetail /></Page> },
 
@@ -128,13 +128,13 @@ export const router = createBrowserRouter([
       { path: '/purchase/detail/:id', element: <Page><PurchaseDetail /></Page> },
       { path: "/purchase/add", element: <Page><PurchaseForm /></Page> },
       { path: "/purchase/edit/:id", element: <Page><PurchaseForm /></Page> },
-      { path: "/purchase/drafts", element: <Page><PurchaseDraftsPage /></Page> },
+      // { path: "/purchase/drafts", element: <Page><PurchaseDraftsPage /></Page> },
 
       // Suppliers — static "add" before dynamic ":id"
       { path: 'supplier', element: <Page><SupplierSearch /></Page> },
       { path: '/supplier/all', element: <Page><Supplier /></Page> },
       { path: '/supplier/add', element: <Page><SupplierForm /></Page> },
-      { path: '/supplier/drafts', element: <Page><SupplierDraftsPage /></Page> },
+      // { path: '/supplier/drafts', element: <Page><SupplierDraftsPage /></Page> },
       { path: '/supplier/:id/edit', element: <Page><SupplierForm /></Page> },
       { path: '/supplier/:id', element: <Page><SupplierDetail /></Page> },
 
@@ -142,7 +142,7 @@ export const router = createBrowserRouter([
       { path: '/employee', element: <Page><EmployeeSearch /></Page> },
       { path: '/employee/all', element: <Page><Employee /></Page> },
       { path: '/employee/add', element: <Page><EmployeeForm /></Page> },
-      { path: '/employee/drafts', element: <Page><EmployeeDraftsPage /></Page> },
+      // { path: '/employee/drafts', element: <Page><EmployeeDraftsPage /></Page> },
       { path: '/employee/:id/edit', element: <Page><EmployeeForm /></Page> },
       { path: '/employee/:id', element: <Page><EmployeeDetail /></Page> },
 
@@ -151,7 +151,7 @@ export const router = createBrowserRouter([
       { path: "/stock-movement", element: <Page><StockMovementPage /></Page> },
       { path: "/stock-movement/:id", element: <Page><StockMovementDetail /></Page> },
       { path: "/stock-adjustment", element: <Page><StockAdjustmentForm /></Page> },
-      { path: "/stock-adjustment/drafts", element: <Page><StockAdjustmentDraftsPage /></Page> },
+      // { path: "/stock-adjustment/drafts", element: <Page><StockAdjustmentDraftsPage /></Page> },
 
       // Orders & Billing
       { path: '/billing', element: <Page><Billing /></Page> },
@@ -174,7 +174,7 @@ export const router = createBrowserRouter([
       { path: "/customers/all", element: <Page><CustomerList /></Page> },
       { path: "/customers-Summary", element: <Page><CustomerBalanceSummary /></Page> },
       { path: "/customers/add", element: <Page><CustomerFormPage /></Page> },
-      { path: "/customers/drafts", element: <Page><CustomerDraftsPage /></Page> },
+      // { path: "/customers/drafts", element: <Page><CustomerDraftsPage /></Page> },
       { path: "/customers/:id/edit", element: <Page><CustomerFormPage /></Page> },
       { path: "/customers/:id", element: <Page><CustomerDetail /></Page> },
     ]

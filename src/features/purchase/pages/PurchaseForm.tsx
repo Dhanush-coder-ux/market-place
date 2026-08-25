@@ -628,6 +628,8 @@ const PurchaseForm = () => {
         const updatePayload = {
           id: id,
           shop_id: SHOP_ID,
+          supplier_id: supplierDetails?.id || purchaseDetails.supplier || undefined,
+          invoice_no: purchaseDetails.invoiceNo || undefined,
           calculation_infos: {
             distribute_by: costMethodMap[costMethod] || "NONE",
             gst_type: gstMode

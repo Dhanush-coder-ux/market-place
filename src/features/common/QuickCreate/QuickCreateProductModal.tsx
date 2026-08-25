@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { 
+import {
   Zap,
   BarChart2,
   Layers,
@@ -14,12 +14,12 @@ import { useApi } from "@/context/ApiContext";
 import { useToast } from "@/context/ToastContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { Switch } from "@/components/ui/switch";
-import { 
-  VariantType, 
-  VariantCombination, 
-  VariantBuilder, 
-  VariantMatrixTable, 
-  generateCombinations 
+import {
+  VariantType,
+  VariantCombination,
+  VariantBuilder,
+  VariantMatrixTable,
+  generateCombinations
 } from "@/features/product/components/VariantManager";
 
 import { utilityApi } from "@/services/api/utility";
@@ -53,7 +53,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
   const { postData } = useApi();
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
-  
+
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [units, setUnits] = useState<{ id: string; name: string }[]>([]);
 
@@ -284,10 +284,10 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
       content: (
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-             <Input label="Reorder Point" type="number" name="reorder_point" value={form.reorder_point} onChange={handleChange} />
-             <Input label="Storage Location" name="location" value={form.location} onChange={handleChange} placeholder="e.g. Aisle 4, Shelf B" />
+            <Input label="Reorder Point" type="number" name="reorder_point" value={form.reorder_point} onChange={handleChange} />
+            <Input label="Storage Location" name="location" value={form.location} onChange={handleChange} placeholder="e.g. Aisle 4, Shelf B" />
           </div>
-          
+
           <div className="space-y-4 pt-2">
             <div className="flex items-center justify-between p-3 md:p-4 rounded-lg border border-slate-100 bg-slate-50/50">
               <div className="flex items-center gap-3">
@@ -344,7 +344,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
                 onChange={setVariantTypes}
                 suggestedTypes={config.suggestedVariantTypes}
               />
-              
+
               {variantTypes.some(t => t.values.length > 0) && (
                 <div className="pt-4 border-t border-slate-100">
                   <VariantMatrixTable
@@ -497,6 +497,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
           has_serialno: form.serial_tracking,
         },
         have_tracking: true,
+        variant_types: form.has_variants ? variantTypes.map(vt => ({ name: vt.name, values: vt.values })) : null,
         variant_infos: mappedVariants,
         storage_location: form.location || null,
         buy_price: null,
@@ -517,15 +518,15 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
       };
 
       const res = await postData(ENDPOINTS.INVENTORIES, payload);
-      
+
       if (res) {
         showToast("Product created successfully", "success");
         const createdProduct = res.data || res;
-        
+
         // Inject names so the caller can use them
         const selectedCat = categories.find(c => c.id === form.category);
         const selectedUnit = units.find(u => u.id === form.unit);
-        
+
         if (selectedCat) createdProduct.category_name = selectedCat.name;
         if (selectedUnit) createdProduct.unit_name = selectedUnit.name;
 

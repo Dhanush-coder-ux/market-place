@@ -4,6 +4,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ListMinus, Plus, Printer, ArrowRight } from "lucide-react";
 import { usePurchaseSettings } from "@/context/PurchaseContext";
 import type { SidebarLink, SubItem, SubGroup, SubLink } from "@/utils/constants";
+import { employeeApi } from "@/services/api/employee";
+import { apiClient } from "@/services/api/apiClient";
+import { ENDPOINTS } from "@/services/endpoints";
 
 // ─── Type Guards ─────────────────────────────────────────────────────────────
 
@@ -56,21 +59,73 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
     }
   };
 
-  const filteredLinks: SidebarLink[] = useMemo(() => links.map((link) => {
-    if (!link.subLinks) return link;
+  const [allowedModules, setAllowedModules] = useState<string[] | null>(null);
 
-    const visibleSubItems = link.subLinks.filter((item) => {
-      if (item.name === "Saved Drafts" || (!isSubGroup(item) && (item as SubLink).path?.includes('/drafts'))) {
-        return false;
-      }
-      if (link.name === "Purchases" && isSubGroup(item) && item.settingsKey) {
-        return settings[item.settingsKey] === true;
-      }
-      return true;
-    });
+  useEffect(() => {
+    const shopId = localStorage.getItem("shop_id");
+    const userId = localStorage.getItem("user_id");
+    if (!shopId || !userId) return;
 
-    return { ...link, subLinks: visibleSubItems };
-  }), [links, settings]);
+    employeeApi.getEmployeesByShop(shopId)
+      .then(() => {
+        // Call allowed modules API
+        return apiClient.get(`${ENDPOINTS.EMPLOYEES}/modules/allowed`);
+      })
+      .then((res: any) => {
+        if (res?.data && Array.isArray(res.data)) {
+          setAllowedModules(res.data);
+        }
+      })
+      .catch(() => {
+        // Fallback: try fetching modules directly
+        apiClient.get(`${ENDPOINTS.EMPLOYEES}/modules/allowed`)
+          .then((res: any) => {
+            if (res?.data && Array.isArray(res.data)) {
+              setAllowedModules(res.data);
+            }
+          })
+          .catch((err) => console.error("Failed to fetch allowed modules:", err));
+      });
+  }, []);
+
+  const MODULE_MAP: Record<string, string> = {
+    Dashboard: "DASHBOARD",
+    Products: "PRODUCTS",
+    Suppliers: "SUPPLIERS",
+    Purchases: "PURCHASES",
+    Inventory: "INVENTORY",
+    Billing: "BILLING",
+    Sales: "SALES",
+    Customers: "CUSTOMERS",
+    Employees: "EMPLOYEES",
+    "Digital Store": "DIGITAL_STORE",
+    "Online Orders": "ONLINE_ORDERS",
+  };
+
+  const filteredLinks: SidebarLink[] = useMemo(() => {
+    return links
+      .filter((link) => {
+        if (!allowedModules) return true; // Show default until loaded
+        const moduleKey = MODULE_MAP[link.name];
+        if (!moduleKey) return true;
+        return allowedModules.includes(moduleKey);
+      })
+      .map((link) => {
+        if (!link.subLinks) return link;
+
+        const visibleSubItems = link.subLinks.filter((item) => {
+          if (item.name === "Saved Drafts" || (!isSubGroup(item) && (item as SubLink).path?.includes('/drafts'))) {
+            return false;
+          }
+          if (link.name === "Purchases" && isSubGroup(item) && item.settingsKey) {
+            return settings[item.settingsKey] === true;
+          }
+          return true;
+        });
+
+        return { ...link, subLinks: visibleSubItems };
+      });
+  }, [links, settings, allowedModules]);
 
   const handleHover = useCallback(
     (link: SidebarLink | null, top: number) => setHoveredItem(link ? { link, top } : null),

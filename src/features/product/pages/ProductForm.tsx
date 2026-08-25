@@ -878,6 +878,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
           has_serialno: form.serial_tracking,
         },
         have_tracking: form.track_stock,
+        variant_types: form.has_variants ? variantTypes.map(vt => ({ name: vt.name, values: vt.values })) : null,
         variant_infos: form.has_variants ? mappedVariants : null,
         storage_location: form.location?.trim() || null,
         gst: gstFormatted,
@@ -911,6 +912,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
           has_serialno: form.serial_tracking,
         },
         have_tracking: form.track_stock,
+        variant_types: form.has_variants ? variantTypes.map(vt => ({ name: vt.name, values: vt.values })) : null,
         variant_infos: form.has_variants ? mappedVariants : null,
         storage_location: form.location || null,
         // For made-to-order items set price directly; for stocked items price comes from purchase

@@ -70,6 +70,15 @@ export interface OrderResponse {
   items?: OrderItemResponse[];
   exchanged_items?: ExchangeInfo[] | null;
   returns?: any[];
+  calculations?: {
+    gst_type?: string;
+    distribute_by?: string;
+    [key: string]: any;
+  };
+  gst_infos?: {
+    type?: string;
+    [key: string]: any;
+  };
   created_at: string;
   updated_at: string;
 }

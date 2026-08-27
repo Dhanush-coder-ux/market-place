@@ -546,7 +546,6 @@ const SalesListPage: React.FC = () => {
               <tr>
                 <th className="w-[110px] px-4 py-3 text-[10px] font-semibold tracking-wider text-slate-500 uppercase text-left">Order ID</th>
                 <th className="w-[140px] px-4 py-3 text-[10px] font-semibold tracking-wider text-slate-500 uppercase text-left">Customer</th>
-                <th className="w-[180px] px-4 py-3 text-[10px] font-semibold tracking-wider text-slate-500 uppercase text-left">Items</th>
                 <th className="w-[90px] px-4 py-3 text-[10px] font-semibold tracking-wider text-slate-500 uppercase text-left">Origin</th>
                 <th className="w-[100px] px-4 py-3 text-[10px] font-semibold tracking-wider text-slate-500 uppercase text-left">Payment</th>
                 <th className="w-[96px] px-4 py-3 text-[10px] font-semibold tracking-wider text-slate-500 uppercase text-left">Date</th>
@@ -559,7 +558,7 @@ const SalesListPage: React.FC = () => {
             <tbody className="divide-y divide-slate-200 bg-white">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="p-12 text-center">
+                  <td colSpan={9} className="p-12 text-center">
                     <Receipt size={32} className="text-slate-200 mx-auto mb-2" />
                     <p className="text-sm font-bold text-slate-600 mb-1">No sales found</p>
                     <p className="text-xs text-slate-400">Try adjusting your filters</p>
@@ -572,19 +571,6 @@ const SalesListPage: React.FC = () => {
                 const refundedCount = (sale.items || []).filter((i: any) => i.status === "REFUNDED").length;
                 const exchangedCount = (sale.items || []).filter((i: any) => i.status === "EXCHANGED").length;
                 const hasReturns = (sale.returns && sale.returns.length > 0) || (sale.items || []).some((i: any) => (i.returned_quantity && i.returned_quantity > 0) || i.status === "REFUNDED" || i.status === "EXCHANGED") || sale.status === "Returned" || sale.status === "RETURNED";
-
-                const itemsList = sale.items || [];
-                const getFirstItemDisplay = () => {
-                  const firstItem = itemsList[0];
-                  if (!firstItem) return "—";
-                  const name = firstItem.name || firstItem.product_name || "—";
-                  const qty = firstItem.entered_qty !== undefined ? firstItem.entered_qty : firstItem.quantity;
-                  const unit = firstItem.entered_unit || firstItem.unit || "";
-                  return `${name} (${qty} ${unit})`;
-                };
-                const itemsDisplay = itemsList.length > 1
-                  ? `${getFirstItemDisplay()} +${itemsList.length - 1} more`
-                  : getFirstItemDisplay();
 
                 const isSelected = selectedSale?.id === sale.id;
 
@@ -613,11 +599,6 @@ const SalesListPage: React.FC = () => {
                       {sale.customer?.customer_mobile_number && (
                         <span className="text-[10px] text-slate-500 block mt-0.5 truncate">{sale.customer.customer_mobile_number}</span>
                       )}
-                    </td>
-                    <td className="px-4 py-4 border-b border-slate-50">
-                      <span className="truncate text-xs font-semibold text-slate-700 block" title={itemsList.map((i: any) => i.name || i.product_name).join(", ")}>
-                        {itemsDisplay}
-                      </span>
                     </td>
                     <td className="px-4 py-4 border-b border-slate-50"><Badge cls={oCfg.cls} dot={oCfg.dot} label={sale.origin} /></td>
                     <td className="px-4 py-4 border-b border-slate-50">

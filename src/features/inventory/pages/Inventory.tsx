@@ -973,7 +973,7 @@ const InventoryPage = () => {
 
   const fetchPage = useCallback(async (limit: number, offset: number, filters: any) => {
     const params: any = {
-      is_active: "true",
+      active: "true",
       limit: limit.toString(),
       offset: offset.toString()
     };

@@ -50,8 +50,7 @@ const CustomerCreateModal: React.FC<CustomerCreateModalProps> = ({
     if (!formData.mobile_number.trim()) newErrors.mobile_number = "Mobile number is required";
     else if (!/^\d{10}$/.test(formData.mobile_number.trim())) newErrors.mobile_number = "Enter a valid 10-digit number";
     
-    if (!formData.email.trim()) newErrors.email = "Email address is required";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) newErrors.email = "Enter a valid email address";
+    if (formData.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) newErrors.email = "Enter a valid email address";
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -142,7 +141,7 @@ const CustomerCreateModal: React.FC<CustomerCreateModalProps> = ({
             <div className="space-y-1.5">
               <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
                 <Mail size={12} className="text-indigo-400" />
-                Email <span className="text-rose-500">*</span>
+                Email <span className="text-slate-400 text-[10px] font-normal">(optional)</span>
               </label>
               <input 
                 type="email"

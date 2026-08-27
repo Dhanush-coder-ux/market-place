@@ -332,7 +332,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     sku: "",
     supplier: (propInitialData.supplier as string) || "",
     opening_stock: (propInitialData.opening_stock as string) || "0",
-    reorder_point: (propInitialData.reorder_point as string) || "5",
+    reorder_point: (propInitialData.reorder_point as string) || "1",
     max_stock: (propInitialData.max_stock as string) || "",
     location: (propInitialData.location as string) || "",
     has_variants: false,
@@ -558,7 +558,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
               sku: prod.sku || "",
               supplier: additional.supplier || "",
               opening_stock: String(additional.opening_stock || "0"),
-              reorder_point: String(prod.reorder_point_infos?.reorder_point || "5"),
+              reorder_point: String(prod.reorder_point_infos?.reorder_point || "1"),
               max_stock: String(additional.max_stock || ""),
               location: prod.storage_location_infos?.storage_location || "",
               has_variants: !!prod.type_infos?.has_variant,
@@ -642,7 +642,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                   price: String(pricing.sell_price || v.sell_price || ""),
                   buy_price: String(pricing.buy_price || v.buy_price || ""),
                   mrp: String(v.additional_infos?.mrp || pricing.mrp || ""),
-                  reorder_point: String(reorderInfo.reorder_point || v.reorder_point || "5"),
+                  reorder_point: String(reorderInfo.reorder_point || v.reorder_point || "1"),
                   location: stlInfo.storage_location || stlInfo.name || v.storage_location || prod.storage_location_infos?.storage_location || "",
                   stock: String(stockInfo.available_stocks || "0"),
                   active: true,
@@ -704,7 +704,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       return;
     }
     const newCombos = generateCombinations(variantTypes, combinations, {
-      buy_price: "0", sell_price: "0", mrp: "0", reorder_point: form.reorder_point || "5",
+      buy_price: "0", sell_price: "0", mrp: "0", reorder_point: form.reorder_point || "1",
     });
     setCombinations(newCombos);
   }, [variantTypes, form.has_variants]);
@@ -794,16 +794,20 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     // For CREATE  → CreateProdInvVariantType  (no id field)
     // For UPDATE  → UpdateProdInvVariantType  (id field optional, pricing_id etc.)
     const mappedVariants = activeCombinations.map(combo => {
-      const variantName = Object.values(combo.attributes).join(" / ");
+      const variantName = Object.entries(combo.attributes).map(([k, v]) => `${k.toLowerCase()} : ${v}`).join(" / ");
       const isNew = combo.id.startsWith("id_");
+
+      const parsedBuyPrice = combo.buy_price !== "" && !isNaN(Number(combo.buy_price)) ? Number(combo.buy_price) : null;
+      const parsedSellPrice = combo.price !== "" && !isNaN(Number(combo.price)) ? Number(combo.price) : null;
+
       return {
         ...(id && !isNew ? { id: combo.id } : {}),   // only include id on update for existing variants
         name: variantName,
         storage_location: combo.location?.trim() || (combo as any).storage_location?.trim() || (form.location?.trim() ? form.location.trim() : null),
-        reorder_point: Number(combo.reorder_point) || Number(form.reorder_point) || 5,
-        buy_price: Number(combo.buy_price) || null,
-        sell_price: Number(combo.price) || null,
-        online_sell_price: Number(combo.price) || 0,
+        reorder_point: Number(combo.reorder_point) || Number(form.reorder_point) || 1,
+        buy_price: parsedBuyPrice,
+        sell_price: parsedSellPrice,
+        online_sell_price: parsedSellPrice || 0,
         visible_online: form.visible_online,
       };
     });
@@ -822,7 +826,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       // Store variant attribute map for edit-time reconstruction
       variant_attribute_map: form.has_variants
         ? activeCombinations.reduce((acc, combo) => {
-          const name = Object.values(combo.attributes).join(" / ");
+          const name = Object.entries(combo.attributes).map(([k, v]) => `${k.toLowerCase()} : ${v}`).join(" / ");
           acc[name] = { attributes: combo.attributes, barcode: combo.barcode, sku: combo.sku, mrp: combo.mrp };
           return acc;
         }, {} as Record<string, any>)
@@ -878,7 +882,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         variant_infos: form.has_variants ? mappedVariants : null,
         storage_location: form.location?.trim() || null,
         gst: gstFormatted,
-        reorder_point: Number(form.reorder_point) || 5,
+        reorder_point: Number(form.reorder_point) || 1,
         visible_online: form.visible_online,
         // Preserve pricing: for stocked items, send if the user has provided a value;
         // for made-to-order items, always send the entered value.
@@ -916,7 +920,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         sell_price: !form.track_stock ? (Number(form.selling_price) || null) : null,
         online_sell_price: !form.track_stock ? (Number(form.selling_price) || 0) : 0,
         gst: gstFormatted,
-        reorder_point: Number(form.reorder_point) || 5,
+        reorder_point: Number(form.reorder_point) || 1,
         visible_online: form.visible_online,
         custom_fields: {
           ...customFieldsBlob,
@@ -1295,6 +1299,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         combinations={combinations}
                         variantTypes={variantTypes}
                         onChange={setCombinations}
+                        trackStock={form.track_stock}
                       />
                     </div>
                   )}
@@ -1357,7 +1362,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         disabled={form.has_variants}
                         value={form.reorder_point}
                         onChange={handleChange}
-                        placeholder="5"
+                        placeholder="1"
                         rightEl={units.find(u => u.id === form.unit || u.name === form.unit)?.name || "pcs"}
                         tooltip="Alert triggered when stock falls to this level."
                       />

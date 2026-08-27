@@ -4,6 +4,7 @@ import {
 } from "lucide-react";
 import { BillingItem, CustomerData } from "../types";
 import InvoicePreviewModal from "./InvoicePreviewModal";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 
 type PaymentMode = "cash" | "upi" | "credit";
 type BillStatus = "COMPLETED" | "PENDING" | "CANCELLED";
@@ -53,6 +54,7 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
   onDetachCustomer
 }) => {
   const [showInvoice, setShowInvoice] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const totalQty = useMemo(() => items.reduce((s, i) => s + (i.qty || 0), 0), [items]);
   const filledItems = useMemo(() => items.filter(i => !!i.name).length, [items]);
@@ -104,7 +106,12 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
   const handleQuickCheckout = () => {
     if (totalQty === 0) return alert("Cart is empty");
     if (balanceAmount > 0.01) return alert("Please pay the full balance amount first.");
+    setShowConfirmDialog(true);
+  };
+
+  const handleConfirmCheckout = () => {
     onConfirmOrder(payments, includeGst, "COMPLETED");
+    setShowConfirmDialog(false);
   };
 
   const handleConfirm = (status: BillStatus) => {
@@ -387,6 +394,19 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
         finalAmount={finalAmount}
         isSubmitting={isSubmitting}
         onConfirm={handleConfirm}
+      />
+
+      {/* Generate Bill Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showConfirmDialog}
+        onClose={() => setShowConfirmDialog(false)}
+        onConfirm={handleConfirmCheckout}
+        title="Generate Bill"
+        description={`Are you sure you want to generate a bill of ₹${formatPrice(finalAmount)}? This will complete and record the order.`}
+        confirmText="Generate"
+        cancelText="Cancel"
+        loading={isSubmitting}
+        type="info"
       />
     </>
   );

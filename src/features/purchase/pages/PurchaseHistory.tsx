@@ -655,6 +655,12 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
                           {po.version && (
                             <AntBadge variant="meta-version" type="tag">{po.version}</AntBadge>
                           )}
+                          {po.purchaseType === "Purchase Return" && (
+                            <AntBadge variant="tx-sales-return" type="tag">Return</AntBadge>
+                          )}
+                          {(((po.returns?.length || 0) > 0 || ((po as any).purchase_returns?.length || 0) > 0)) && (
+                            <AntBadge variant="tx-sales-return" type="tag">Returned</AntBadge>
+                          )}
                         </div>
                       </div>
                     </div>

@@ -64,8 +64,13 @@ export default function NotificationsPage() {
     else setLoading(true);
 
     try {
-      const data = await notificationApi.getNotifications(userId);
-      setNotifications(data || []);
+      const res = await notificationApi.getNotifications(userId);
+      let actualData = res;
+      if (res && typeof res === 'object' && !Array.isArray(res)) {
+        if ('data' in res) actualData = res.data;
+        else if ('datas' in res) actualData = res.datas;
+      }
+      setNotifications(Array.isArray(actualData) ? actualData : []);
     } catch (error) {
       console.error("Failed to fetch notifications:", error);
       showToast("Could not load notifications", "error");

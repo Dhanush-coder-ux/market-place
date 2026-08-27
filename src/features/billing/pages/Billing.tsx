@@ -21,6 +21,8 @@ const Billing = () => {
   const { showToast } = useToast();
   const { loading: isSubmitting } = useApi();
 
+  const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
+
   // ── Cart Session (Order Service)
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [cartInitialized, setCartInitialized] = useState(false);
@@ -161,7 +163,7 @@ const Billing = () => {
 
   // ── Confirm Order → Order Service Cart flow
   const handleConfirmOrder = useCallback(async (paymentsArg: { mode: string, amount: number }[], _includeGst: boolean, _status: string) => {
-    if (isSubmittingRef.current) return;
+    if (isSubmittingRef.current || isCheckoutLoading) return;
     const filledItems = items.filter(i => !!i.name);
     if (filledItems.length === 0) return;
 
@@ -171,6 +173,7 @@ const Billing = () => {
     }
 
     isSubmittingRef.current = true;
+    setIsCheckoutLoading(true);
     try {
       const mapSerialsToInfos = (item: any) => {
         const serialNames = item.serialNumbers || [];
@@ -297,8 +300,9 @@ const Billing = () => {
       showToast(err?.message || "Failed to confirm order", "error");
     } finally {
       isSubmittingRef.current = false;
+      setIsCheckoutLoading(false);
     }
-  }, [items, customerData, sessionId, showToast, totalAmount, gstAmount, finalAmount, customerName, phone, includeGst]);
+  }, [items, customerData, sessionId, showToast, totalAmount, gstAmount, finalAmount, customerName, phone, includeGst, isCheckoutLoading]);
 
   const handleNextBill = useCallback(async () => {
     setItems([]);
@@ -371,7 +375,7 @@ const Billing = () => {
               customerName={customerName}
               phone={phone}
               onConfirmOrder={handleConfirmOrder}
-              isSubmitting={isSubmitting || !cartInitialized}
+              isSubmitting={isSubmitting || isCheckoutLoading || !cartInitialized}
               includeGst={includeGst}
               totalAmount={totalAmount}
               gstAmount={gstAmount}
@@ -409,7 +413,7 @@ const Billing = () => {
             customerName={customerName}
             phone={phone}
             onConfirmOrder={handleConfirmOrder}
-            isSubmitting={isSubmitting || !cartInitialized}
+            isSubmitting={isSubmitting || isCheckoutLoading || !cartInitialized}
             includeGst={includeGst}
             totalAmount={totalAmount}
             gstAmount={gstAmount}

@@ -130,9 +130,9 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
                     </div>
                   </div>
                   <p className="text-[10px] text-slate-400 mt-2 leading-relaxed">
-                    {(shopData?.gst_infos?.number || shopData?.gst_number || shopData?.gst) && 
-                    (shopData?.gst_infos?.number || shopData?.gst_number || shopData?.gst) !== "N/A" && (
-                      <>GSTIN: {shopData?.gst_infos?.number || shopData?.gst_number || shopData?.gst}<br /></>
+                    {(shopData?.business_infos?.gst_infos?.number || shopData?.gst_infos?.number || shopData?.gst_number || shopData?.gst) && 
+                    (shopData?.business_infos?.gst_infos?.number || shopData?.gst_infos?.number || shopData?.gst_number || shopData?.gst) !== "N/A" && (
+                      <>GSTIN: {shopData?.business_infos?.gst_infos?.number || shopData?.gst_infos?.number || shopData?.gst_number || shopData?.gst}<br /></>
                     )}
                     {shopData?.address?.full_address || shopData?.address_infos?.address_line_1 || shopData?.address || "Address N/A"}
                   </p>

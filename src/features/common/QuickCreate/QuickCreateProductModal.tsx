@@ -6,7 +6,6 @@ import {
   Layers,
   CheckCircle2,
   Barcode,
-  ChevronDown,
   Plus,
   X
 } from "lucide-react";
@@ -492,6 +491,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
                     combinations={combinations}
                     variantTypes={variantTypes}
                     onChange={setCombinations}
+                    trackStock={false}
                   />
                 </div>
               )}

@@ -139,6 +139,10 @@ const getPageHeaderInfo = (pathname: string) => {
   if (pathname.match(/^\/sales\/[^/]+$/)) {
     return { title: "Sale Detail" };
   }
+
+  if (pathname.match(/^\/sales\/return\/[^/]+$/)) {
+    return { title: "Return / Exchange" };
+  }
   // Dynamic match for Edit Customer
   if (pathname.match(/^\/customers\/[^/]+\/edit$/)) {
     return { title: "Edit Customer" };
@@ -199,6 +203,11 @@ const isDetailsRoute = (pathname: string) => {
     return false;
   }
 
+  // Full-page flows with 3-segment paths that need overflow-hidden layout
+  if (pathname.match(/^\/sales\/return\/[^/]+$/) || pathname === "/settings") {
+    return true;
+  }
+
   const parts = pathname.split("/").filter(Boolean);
   if (parts.length === 2) {
     const [entity, id] = parts;
@@ -222,6 +231,7 @@ const isDetailsRoute = (pathname: string) => {
 
   return false;
 };
+
 
 const MainLayout = () => {
   const location = useLocation();

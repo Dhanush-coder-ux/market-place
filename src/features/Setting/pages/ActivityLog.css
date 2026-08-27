@@ -949,3 +949,144 @@
     font-weight: 600
   }
 }
+
+.al-state-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 20px;
+  background: var(--brand);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  letter-spacing: -0.01em;
+}
+
+.al-state-action:hover {
+  background: var(--brand-dark);
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────────────────── */
+
+@media (max-width: 1280px) {
+  .al-wrapper {
+    --cols: 140px 148px 100px 1fr 1.2fr 44px;
+  }
+
+  .al-th--service,
+  .al-cell--service {
+    display: none;
+  }
+}
+
+@media (max-width: 1024px) {
+  .al-wrapper {
+    --cols: 132px 140px 1fr 1fr 40px;
+  }
+
+  .al-th--service,
+  .al-cell--service {
+    display: none;
+  }
+
+  .al-th--entity,
+  .al-cell--entity {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .al-wrapper {
+    --cols: 1fr;
+  }
+
+  .al-shell {
+    padding: 14px 14px 80px;
+  }
+
+  .al-thead {
+    display: none;
+  }
+
+  .al-row {
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto auto;
+    gap: 8px;
+    padding: 14px 16px;
+  }
+
+  /* Date spans full width at top */
+  .al-cell--date {
+    grid-column: 1/2;
+    grid-row: 1;
+  }
+
+  /* Action badge top right */
+  .al-cell--action {
+    grid-column: 2/3;
+    grid-row: 1;
+  }
+
+  /* User second row */
+  .al-cell--user {
+    grid-column: 1/-1;
+    grid-row: 2;
+  }
+
+  /* Changes full width third row */
+  .al-cell--changes {
+    grid-column: 1/-1;
+    grid-row: 3;
+  }
+
+  /* Hide service, entity, view button on mobile — drawer opens on row click */
+  .al-cell--service,
+  .al-cell--entity,
+  .al-cell--view {
+    display: none;
+  }
+
+  .al-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .al-search {
+    max-width: 100%;
+    min-width: auto;
+  }
+
+  .al-count {
+    margin-left: 0;
+  }
+
+  .al-drawer {
+    max-width: 100%;
+    border-left: none;
+    border-top: 1px solid var(--line);
+  }
+
+  .al-change-complex-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .al-val-object-row {
+    grid-template-columns: 90px 1fr;
+  }
+}
+
+/* ─── Reduced motion ─────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+
+  .al-drawer,
+  .al-drawer-backdrop,
+  * {
+    transition: none !important;
+  }
+}

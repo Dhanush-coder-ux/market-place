@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  DollarSign, AlertCircle, Star,
   Mail, Pencil, User, Phone, Trash2,
   CreditCard, Database, MapPin, Tag, FileText, Banknote,
   Layers, Check, X as XIcon
@@ -10,7 +9,6 @@ import {
   fmt, SectionCard, FormInput, FormTextarea
 } from "./CustomerDetailComponents";
 import { Modal, ProfileHeaderCard } from "@/components/common/SuperUI";
-import { StatCard } from "@/components/common/StatsCard";
 import { BiLogoWhatsapp } from "react-icons/bi";
 import { useApi } from "@/context/ApiContext";
 import { useBusinessApi } from "@/context/BusinessApiContext";
@@ -114,7 +112,7 @@ export default function CustomerDetail() {
   const [clearingLoading, setClearingLoading] = useState(false);
   const [customerOrders, setCustomerOrders] = useState<any[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
-  const [stats, setStats] = useState<any>(null);
+  const [, setStats] = useState<any>(null);
 
   // Custom Fields state
   const [customFieldDefs, setCustomFieldDefs] = useState<CustomerCustomFieldDefinition[]>([]);
@@ -343,14 +341,6 @@ export default function CustomerDetail() {
             name={name}
             initials={initials}
             subText={`ID: ${customer.id}`}
-            badges={[
-              { text: String(datas.customer_type || "Normal"), variant: "primary" },
-              {
-                text: customer.is_active ? "Active" : "Inactive",
-                variant: customer.is_active ? "success" : "danger",
-                showPulse: true
-              }
-            ]}
             infoItems={[
               { icon: Mail, text: customerEmail || "No email" },
               { icon: Phone, text: customerPhone || "No phone" }
@@ -399,36 +389,7 @@ export default function CustomerDetail() {
             ))}
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            <StatCard
-              icon={DollarSign}
-              label="Total Sales"
-              value={`${stats?.total_sales || 0} (₹${(stats?.total_sales_amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`}
-              iconBg="bg-blue-50 text-blue-600"
-              className="flex-1 min-w-[140px]"
-            />
-            <StatCard
-              icon={CreditCard}
-              label="Credit Limit"
-              value={`₹${(stats?.total_credit_limits || customerCreditLimit || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-              iconBg="bg-emerald-50 text-emerald-600"
-              className="flex-1 min-w-[140px]"
-            />
-            <StatCard
-              icon={AlertCircle}
-              label="Outstanding"
-              value={`₹${(stats?.total_outstandings || customer?.outstanding_infos?.amount || customer?.outstanding || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-              iconBg={(stats?.total_outstandings || customer?.outstanding_infos?.amount || customer?.outstanding || 0) > 0 ? "bg-rose-50 text-rose-600" : "bg-emerald-50 text-emerald-600"}
-              className="flex-1 min-w-[140px]"
-            />
-            <StatCard
-              icon={Star}
-              label="Cleared Amount"
-              value={`₹${(stats?.total_cleared_amounts || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-              iconBg="bg-amber-50 text-amber-600"
-              className="flex-1 min-w-[140px]"
-            />
-          </div>
+
         </div>
 
         {/* Tab Panels (scrollable or flex-locked depending on active tab) */}

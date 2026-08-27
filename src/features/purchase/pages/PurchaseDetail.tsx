@@ -48,6 +48,8 @@ interface ReturnItem {
   buy_price: number;
   returnQty: number;
   reason: string;
+  gst_rate: number;
+  gst_type: string;
 }
 
 interface PurchaseReturnDialogProps {
@@ -89,21 +91,27 @@ const PurchaseReturnDialog = ({
       .then((res: any) => {
         const raw = res?.data ? (Array.isArray(res.data) ? res.data[0] : res.data) : (res?.id ? res : null);
         const rawItems: any[] = raw?.items ?? raw?.products ?? [];
+        const gstType = String(raw?.calculations?.gst_type || raw?.gst_infos?.type || "EXCLUSIVE").toUpperCase();
         setReturnItems(
           rawItems
             .filter((p: any) => {
               const qty = Number(p.stocks_infos?.stocks ?? p.stocks ?? p.quantity ?? p.stocks_added ?? 0);
               return qty > 0;
             })
-            .map((p: any) => ({
-              purchase_item_id: p.id || p.purchase_item_id || "",
-              name: String(p.name || p.product_name || p.product_id || "Unknown"),
-              quantity: Number(p.stocks_infos?.stocks ?? p.stocks ?? p.quantity ?? p.stocks_added ?? 0),
-              maxQuantity: Number(p.stocks_infos?.stocks ?? p.stocks ?? p.quantity ?? p.stocks_added ?? 0),
-              buy_price: Number(p.buy_price ?? p.pricing_infos?.[0]?.buy_price ?? 0),
-              returnQty: 0,
-              reason: "",
-            }))
+            .map((p: any) => {
+              const gstRate = parseFloat(String(p.gst || "0").replace('%', '')) || 0;
+              return {
+                purchase_item_id: p.id || p.purchase_item_id || "",
+                name: String(p.name || p.product_name || p.product_id || "Unknown"),
+                quantity: Number(p.stocks_infos?.stocks ?? p.stocks ?? p.quantity ?? p.stocks_added ?? 0),
+                maxQuantity: Number(p.stocks_infos?.stocks ?? p.stocks ?? p.quantity ?? p.stocks_added ?? 0),
+                buy_price: Number(p.buy_price ?? p.pricing_infos?.[0]?.buy_price ?? 0),
+                returnQty: 0,
+                reason: "",
+                gst_rate: gstRate,
+                gst_type: gstType,
+              };
+            })
         );
       })
       .catch(() => {
@@ -126,7 +134,14 @@ const PurchaseReturnDialog = ({
 
   const selectedItems = returnItems.filter((r) => r.returnQty > 0);
   const returnValue = selectedItems.reduce(
-    (sum, r) => sum + r.returnQty * r.buy_price,
+    (sum, r) => {
+      const itemBase = r.returnQty * r.buy_price;
+      let gstAmount = 0;
+      if (r.gst_type === "EXCLUSIVE") {
+        gstAmount = itemBase * (r.gst_rate / 100);
+      }
+      return sum + itemBase + gstAmount;
+    },
     0
   );
   const adjustedAgainstOutstanding = Math.min(outstanding, returnValue);
@@ -271,7 +286,7 @@ const PurchaseReturnDialog = ({
                               <>
                                 <span className="text-[10px] text-slate-300">•</span>
                                 <span className="text-[10px] text-rose-600 font-bold">
-                                  Return value: {fmt(item.returnQty * item.buy_price)}
+                                  Return value: {fmt(item.gst_type === "EXCLUSIVE" ? (item.returnQty * item.buy_price) * (1 + item.gst_rate / 100) : item.returnQty * item.buy_price)}
                                 </span>
                               </>
                             )}
@@ -357,14 +372,18 @@ const PurchaseReturnDialog = ({
             <div className="p-6 space-y-4">
               <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 space-y-2">
                 <p className="text-[10px] font-black text-rose-600 uppercase tracking-wider mb-3">Return Summary</p>
-                {selectedItems.map((item, idx) => (
-                  <div key={idx} className="flex justify-between items-center text-xs">
-                    <span className="text-slate-700 font-medium">
-                      {item.name} × {item.returnQty}
-                    </span>
-                    <span className="font-black text-slate-800">{fmt(item.returnQty * item.buy_price)}</span>
-                  </div>
-                ))}
+                {selectedItems.map((item, idx) => {
+                  const itemBase = item.returnQty * item.buy_price;
+                  const itemTotal = item.gst_type === "EXCLUSIVE" ? itemBase + (itemBase * (item.gst_rate / 100)) : itemBase;
+                  return (
+                    <div key={idx} className="flex justify-between items-center text-xs">
+                      <span className="text-slate-700 font-medium">
+                        {item.name} × {item.returnQty}
+                      </span>
+                      <span className="font-black text-slate-800">{fmt(itemTotal)}</span>
+                    </div>
+                  );
+                })}
                 <div className="pt-2 mt-2 border-t border-rose-200 flex justify-between items-center">
                   <span className="text-xs font-black text-rose-700">Total Return Value</span>
                   <span className="text-sm font-black text-rose-700">{fmt(returnValue)}</span>
@@ -505,9 +524,9 @@ const PurchaseDetail = () => {
     return () => setBottomActions(null);
   }, [setBottomActions, navigate, po, showToast]);
 
-  const fetchPo = useCallback(async () => {
+  const fetchPo = useCallback(async (silent = false) => {
     if (!id) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       // First try the purchases endpoint (direct purchase ID with shop scope)
       const res = await purchase.getPurchaseById(SHOP_ID, id);
@@ -535,7 +554,7 @@ const PurchaseDetail = () => {
       console.error("Failed to fetch purchase:", err);
       setErrorMsg(err.message || String(err));
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [id, purchase, getData]);
 
@@ -556,7 +575,7 @@ const PurchaseDetail = () => {
         setReturnsLoading(true);
         const timer = setTimeout(async () => {
           try {
-            await fetchPo();
+            await fetchPo(true);
           } finally {
             setReturnsLoading(false);
           }
@@ -641,12 +660,19 @@ const PurchaseDetail = () => {
           initials="PO"
           subText={po.systemId && po.systemId !== po.poNumber ? `Invoice No: ${po.poNumber}` : ""}
           badges={[
-            { text: po.purchaseType, variant: "vendor", dotColor: "bg-[var(--mv-purchase-dot)]" },
+            {
+              text: po.version && po.version.toLowerCase() !== 'v1' ? 'Purchase Update' : po.purchaseType,
+              variant: po.purchaseType === "Purchase Return" ? "tx-sales-return" : "vendor",
+              dotColor: "bg-[var(--mv-purchase-dot)]"
+            },
             po.outstanding && po.outstanding > 0
               ? (po.paid_amount === 0
                 ? { text: "Pending", variant: "pay-pending", dotColor: "bg-[var(--pay-pending-dot)]" }
                 : { text: "Partially paid", variant: "pay-partial", dotColor: "bg-[var(--pay-partial-dot)]" })
-              : { text: "Paid", variant: "pay-paid", dotColor: "bg-[var(--pay-paid-dot)]" }
+              : { text: "Paid", variant: "pay-paid", dotColor: "bg-[var(--pay-paid-dot)]" },
+            ...(((po.returns?.length || 0) > 0 || ((po as any).purchase_returns?.length || 0) > 0)
+              ? [{ text: "Returned", variant: "tx-sales-return" }]
+              : [])
           ]}
           infoItems={[
             { icon: Calendar, text: `${po.date} at ${po.time}` },

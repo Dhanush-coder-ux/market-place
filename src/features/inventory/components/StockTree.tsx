@@ -264,20 +264,20 @@ export const BatchCards = ({ batches }: { batches: any | any[] }) => {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         {visible.map((batch: any, idx: number) => {
-          const physicalQty   = Number(batch.stock_infos?.physical_stocks   ?? batch.stocks ?? batch.quantity ?? batch.qty ?? 0);
-          const availableQty  = Number(batch.stock_infos?.available_stocks  ?? physicalQty);
-          const reservedQty   = Number(batch.stock_infos?.reserved_stocks   ?? 0);
-          const serials       = extractSerials(batch.serialno_infos ?? batch.serial_numbers ?? batch.datas?.serial_numbers);
-          const daysToExpiry  = getDaysDiff(batch.expiry_date || batch.expiry);
-          const bSell         = batch.pricing_infos?.sell_price  ?? batch.sell_price;
-          const storageLoc    = batch.storage_location_infos?.storage_location ?? batch.storage_location ?? null;
-          const reorderPt     = batch.reorder_point_infos?.reorder_point       ?? batch.reorder_point    ?? null;
+          const physicalQty = Number(batch.stock_infos?.physical_stocks ?? batch.stocks ?? batch.quantity ?? batch.qty ?? 0);
+          const availableQty = Number(batch.stock_infos?.available_stocks ?? physicalQty);
+          const reservedQty = Number(batch.stock_infos?.reserved_stocks ?? 0);
+          const serials = extractSerials(batch.serialno_infos ?? batch.serial_numbers ?? batch.datas?.serial_numbers);
+          const daysToExpiry = getDaysDiff(batch.expiry_date || batch.expiry);
+          const bSell = batch.pricing_infos?.sell_price ?? batch.sell_price;
+          const storageLoc = batch.storage_location_infos?.storage_location ?? batch.storage_location ?? null;
+          const reorderPt = batch.reorder_point_infos?.reorder_point ?? batch.reorder_point ?? null;
 
           const stockStatus = availableQty <= 0
             ? { label: 'Out of Stock', variant: 'stk-out-of-stock' }
             : reorderPt !== null && availableQty <= reorderPt
-              ? { label: 'Low Stock',    variant: 'stk-low-stock' }
-              : { label: 'In Stock',     variant: 'stk-in-stock' };
+              ? { label: 'Low Stock', variant: 'stk-low-stock' }
+              : { label: 'In Stock', variant: 'stk-in-stock' };
 
           return (
             <div key={batch.id || idx} className="flex flex-col border border-slate-200 rounded-xl bg-white shadow-sm hover:shadow-md hover:border-blue-200 transition-all p-3.5 relative gap-3">
@@ -292,7 +292,7 @@ export const BatchCards = ({ batches }: { batches: any | any[] }) => {
                       {batch.name || batch.batch || `BAT-${String(idx + 1).padStart(3, '0')}`}
                     </p>
                     {batch.id && (
-                       <p className="text-[9px] font-mono text-slate-400 font-medium">#{batch.id.slice(0, 8)}</p>
+                      <p className="text-[9px] font-mono text-slate-400 font-medium">#{batch.id.slice(0, 8)}</p>
                     )}
                   </div>
                 </div>
@@ -434,7 +434,7 @@ export const VariantRows = ({
               <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-left">Variant</th>
               <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-left">SKU / Barcode</th>
               <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Stock</th>
-              <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-left">Sell Price</th>
+              <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Sell Price</th>
               <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-left">Batch Count</th>
               <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-left">Location</th>
               <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Status</th>
@@ -480,14 +480,14 @@ export const VariantRows = ({
 
               return (
                 <Fragment key={variantId}>
-                  <tr 
+                  <tr
                     className={`group transition-colors h-[56px] ${isVarExpanded ? 'bg-slate-50/80 shadow-inner' : 'bg-white hover:bg-slate-50/50'}`}
                   >
                     {/* Variant */}
                     <td className="px-4 py-2 align-middle">
                       <div className="flex items-center gap-2.5">
                         {hasBatches ? (
-                          <button 
+                          <button
                             onClick={() => setExpandedVariant(isVarExpanded ? null : variantId)}
                             className={`w-5 h-5 rounded flex items-center justify-center transition-colors shrink-0 ${isVarExpanded ? "bg-blue-600 text-white shadow-sm" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}
                           >
@@ -562,13 +562,13 @@ export const VariantRows = ({
 
                     {/* Batch Count */}
                     <td className="px-4 py-2 align-middle">
-                       {hasBatches ? (
-                         <span className="text-[11px] font-medium text-slate-600 bg-slate-100 px-2 py-1 rounded-xl whitespace-nowrap">
-                           {batches.length} {batches.length === 1 ? 'Batch' : 'Batches'}
-                         </span>
-                       ) : (
-                         <span className="text-[11px] text-slate-400">—</span>
-                       )}
+                      {hasBatches ? (
+                        <span className="text-[11px] font-medium text-slate-600 bg-slate-100 px-2 py-1 rounded-xl whitespace-nowrap">
+                          {batches.length} {batches.length === 1 ? 'Batch' : 'Batches'}
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-slate-400">—</span>
+                      )}
                     </td>
 
                     {/* Location */}
@@ -608,7 +608,7 @@ export const VariantRows = ({
                     <tr className="bg-slate-50/50">
                       <td colSpan={7} className="p-0 border-t border-slate-100">
                         <div className="p-3 md:pl-10 pl-6 border-l-2 border-slate-200 ml-4 my-2">
-                           <BatchCards batches={batches} />
+                          <BatchCards batches={batches} />
                         </div>
                       </td>
                     </tr>

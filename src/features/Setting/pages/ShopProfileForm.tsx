@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Store } from "lucide-react";
+import { Store, Edit } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/context/ToastContext";
 import { SHOP_ID } from "@/services/endpoints";
@@ -82,13 +82,22 @@ export const ShopProfileForm = () => {
             </p>
           </div>
         </div>
-        <button
-          onClick={() => navigate("/setup-digital-store")}
-          className="h-9 px-4 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-all flex items-center gap-2 shadow-sm"
-        >
-          <Store className="w-4 h-4" />
-          Edit Digital Store
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => navigate(`/create-shop?id=${SHOP_ID}`)}
+            className="h-9 px-4 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-all flex items-center gap-2 shadow-sm"
+          >
+            <Edit className="w-4 h-4" />
+            Edit Shop Details
+          </button>
+          <button
+            onClick={() => navigate("/setup-digital-store")}
+            className="h-9 px-4 bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-bold rounded-lg transition-all flex items-center gap-2 shadow-sm"
+          >
+            <Store className="w-4 h-4" />
+            Edit Digital Store
+          </button>
+        </div>
       </div>
 
       <div className="p-6 space-y-5 max-w-2xl">

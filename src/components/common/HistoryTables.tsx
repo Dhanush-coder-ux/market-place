@@ -402,15 +402,15 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
               <thead>
                 <tr className="sticky top-0 bg-slate-50/90 backdrop-blur-sm z-10 text-[9px] font-black text-slate-400 tracking-wider uppercase border-b border-slate-100 shadow-[0_1px_0_rgba(0,0,0,0.05)]">
                   <th className="px-5 py-3.5">#</th>
+                  <th className="px-5 py-3.5">Supplier</th>
                   <th className="px-5 py-3.5">Date</th>
-                  <th className="px-5 py-3.5">Type</th>
                   <th className="px-5 py-3.5">Variant / Batch</th>
                   <th className="px-5 py-3.5 text-center">Stock In/Out</th>
                   <th className="px-5 py-3.5 text-center">Stock After</th>
                   <th className="px-5 py-3.5">Buy Price</th>
                   <th className="px-5 py-3.5">Sell Price</th>
+                  <th className="px-5 py-3.5">Type</th>
                   <th className="px-5 py-3.5">Payment</th>
-                  <th className="px-5 py-3.5">Supplier</th>
                   <th className="px-5 py-3.5 w-12"></th>
                 </tr>
               </thead>
@@ -453,14 +453,11 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
                             )}
                           </div>
                         </td>
+                        <td className="px-5 py-4 text-xs font-bold text-slate-700 max-w-[150px] truncate" title={r.description}>
+                          {r.description.replace('Supplier: ', '')}
+                        </td>
                         <td className="px-5 py-4 text-xs text-slate-500 font-medium whitespace-nowrap">
                           {r.date ? new Date(r.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
-                        </td>
-                        <td className="px-5 py-4 whitespace-nowrap">
-                          <TypeBadge 
-                            type={r.displayType} 
-                            icon={ArrowUp} 
-                          />
                         </td>
                         <td className="px-5 py-4">
                           {hasList ? (
@@ -523,6 +520,12 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
                           {hasList ? '—' : `₹${firstProd.sellPrice ?? r.sellPrice ?? '—'}`}
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap">
+                          <TypeBadge 
+                            type={r.displayType} 
+                            icon={ArrowUp} 
+                          />
+                        </td>
+                        <td className="px-5 py-4 whitespace-nowrap">
                           <div className="flex flex-col gap-0.5">
                             <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md w-fit ${
                                 r.paymentMethod?.toLowerCase() === 'outstanding' ? 'bg-rose-50 text-rose-700' :
@@ -536,10 +539,6 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
                               <span className="text-[9px] text-slate-400 font-bold">Paid: ₹{r.amountPaid}</span>
                             ) : null}
                           </div>
-                        </td>
-
-                        <td className="px-5 py-4 text-xs font-bold text-slate-700 max-w-[150px] truncate" title={r.description}>
-                          {r.description.replace('Supplier: ', '')}
                         </td>
                         <td className="px-5 py-4">
                           {onNavigateToPurchase && (
@@ -832,10 +831,17 @@ export function CustomerPurchasesTable({ rows, loading, onNavigateToSale }: Cust
                     })
                     : '—';
                   const total = Number(order.calculation_infos?.total ?? order.total_sellprice ?? order.grand_total ?? order.total_amount ?? 0);
-                  const products = order.items || order.products || [];
-                  const itemCount = order.item_infos?.total_order_qty ?? order.total_quantity ?? products.length;
+                  const products = order.items || order.products || order.datas?.items || order.datas?.products || [];
+                  const itemCount = order.item_infos?.total_order_qty ?? order.total_quantity ?? order.datas?.total_quantity ?? products.length;
                   const unit = products[0]?.product?.unit || products[0]?.unit || products[0]?.datas?.unit || (itemCount === 1 ? "Item" : "Units");
                   const invoiceId = order.ui_id ? `Order #${order.ui_id}` : `#${order.id.slice(0, 8).toUpperCase()}`;
+
+                  let firstProductName = "";
+                  if (products.length > 0) {
+                    const p = products[0];
+                    const calcItem = order.calculation_infos?.items?.find((ci: any) => ci.product_id === p.product_id || ci.product_id === p.inventory_id);
+                    firstProductName = p.product?.name || p.name || p.product_name || p.datas?.product_name || p.datas?.name || calcItem?.name || "Unknown Item";
+                  }
 
                   return (
                     <tr key={`${order.id}-${i}`} className="hover:bg-indigo-50/20 transition-colors border-l-[3px] border-l-indigo-400">
@@ -854,7 +860,13 @@ export function CustomerPurchasesTable({ rows, loading, onNavigateToSale }: Cust
                         {date}
                       </td>
                       <td className="px-5 py-4 whitespace-nowrap">
-                        <div className="flex flex-col items-start gap-1">
+                        <div className="flex flex-col items-start gap-1.5">
+                          {firstProductName && (
+                            <div className="text-xs font-bold text-slate-700 truncate max-w-[180px]" title={firstProductName}>
+                              {firstProductName}
+                              {products.length > 1 && <span className="text-slate-400 font-normal ml-1">+{products.length - 1} more</span>}
+                            </div>
+                          )}
                           <span className="px-2 py-0.5 rounded bg-slate-100 text-[10px] font-black text-slate-500">
                             {itemCount} {unit}
                           </span>
@@ -865,14 +877,17 @@ export function CustomerPurchasesTable({ rows, loading, onNavigateToSale }: Cust
                                 setSelectedRecord({
                                   uiId: order.ui_id || order.id.slice(0, 8).toUpperCase(),
                                   type: order.type === 'Return' ? 'RETURN' : order.type,
-                                  productsList: products.map((p: any) => ({
-                                    name: p.product?.name || p.name || p.product_name,
-                                    receivedStocks: p.quantity || 0,
-                                    sellPrice: p.sellprice || p.price,
-                                    variant: p.variant || p.variant_details || p.variant_infos?.variant_name,
-                                    batch: p.batch || p.batch_details || p.batch_infos?.batch_name,
-                                    serials: p.serials || p.serial_info?.serial_numbers || (p.serialno_infos ? p.serialno_infos.map((x: any) => x.name) : undefined),
-                                  }))
+                                  productsList: products.map((p: any) => {
+                                    const calcItem = order.calculation_infos?.items?.find((ci: any) => ci.product_id === p.product_id || ci.product_id === p.inventory_id);
+                                    return {
+                                      name: p.product?.name || p.name || p.product_name || p.datas?.product_name || p.datas?.name || calcItem?.name || "Unknown Item",
+                                      receivedStocks: p.quantity || p.qty || calcItem?.qty || 0,
+                                      sellPrice: p.sellprice || p.sell_price || p.price || calcItem?.price || 0,
+                                      variant: p.variant || p.variant_details || p.variant_infos?.variant_name,
+                                      batch: p.batch || p.batch_details || p.batch_infos?.batch_name,
+                                      serials: p.serials || p.serial_info?.serial_numbers || (p.serialno_infos ? p.serialno_infos.map((x: any) => x.name) : undefined),
+                                    };
+                                  })
                                 });
                               }}
                               className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-extrabold bg-indigo-50 text-indigo-600 border border-indigo-100 hover:bg-indigo-100 transition-colors shadow-sm"

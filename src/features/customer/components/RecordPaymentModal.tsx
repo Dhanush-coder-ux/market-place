@@ -22,7 +22,7 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
   const { showToast } = useToast();
 
   const [isClearing, setIsClearing] = useState(false);
-  
+
   // Selection state
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
   const [clearSearch, setClearSearch] = useState("");
@@ -47,7 +47,7 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
               actualData = actualData.datas;
             }
             const fetchedOrders = Array.isArray(actualData) ? actualData : [actualData];
-            
+
             // Try to filter to only outstanding, or just show all if we can't tell
             // For now, let's just show all recent orders since they can have balances.
             setOrders(fetchedOrders);
@@ -74,9 +74,9 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
     if (!customer || !selectedOrder || !clearAmount) return;
 
     const amount = parseFloat(clearAmount);
-    if (isNaN(amount) || amount <= 0) { 
-      showToast("Please enter a valid payment amount", "error"); 
-      return; 
+    if (isNaN(amount) || amount <= 0) {
+      showToast("Please enter a valid payment amount", "error");
+      return;
     }
 
     setIsClearing(true);
@@ -97,14 +97,6 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
     try {
       // 1. Record the payment to clearing history
       await customerApi.clearOutstanding(payload);
-      
-      // 2. Decrement the customer's outstanding balance
-      await customerApi.addOutstanding({
-        id: customer.id,
-        shop_id: SHOP_ID,
-        outstanding_infos: { amount: amount },
-        type: 'DECREMENT'
-      });
 
       showToast(`₹${amount.toLocaleString()} collected successfully`, "success");
       onSuccess();
@@ -165,17 +157,17 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
               ) : orders.length === 0 ? (
                 <div className="p-4 text-center text-xs text-slate-500">No recent orders found.</div>
               ) : (
-                orders.filter(o => 
-                  !clearSearch || 
-                  (o.ui_id && o.ui_id.toLowerCase().includes(clearSearch.toLowerCase())) || 
+                orders.filter(o =>
+                  !clearSearch ||
+                  (o.ui_id && o.ui_id.toLowerCase().includes(clearSearch.toLowerCase())) ||
                   (o.id && o.id.toLowerCase().includes(clearSearch.toLowerCase()))
                 ).map(o => {
                   const total = Number(o.calculation_infos?.total ?? o.total_sellprice ?? o.grand_total ?? o.total_amount ?? 0);
                   const date = o.created_at || o.date ? new Date(o.created_at || o.date).toLocaleDateString() : 'Unknown Date';
-                  
+
                   return (
-                    <div 
-                      key={o.id} 
+                    <div
+                      key={o.id}
                       onClick={() => setSelectedOrder(o)}
                       className="p-3 bg-white border border-slate-200 hover:border-blue-400 rounded-lg cursor-pointer transition-all shadow-sm flex justify-between items-center group"
                     >
@@ -200,7 +192,7 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
                 <p className="text-[10px] font-bold text-blue-400 uppercase tracking-wider mb-0.5">Selected Invoice</p>
                 <p className="text-sm font-bold text-blue-700">{selectedOrder.ui_id || selectedOrder.id.slice(0, 8).toUpperCase()}</p>
               </div>
-              <button 
+              <button
                 onClick={() => setSelectedOrder(null)}
                 className="text-[10px] font-bold px-2.5 py-1.5 bg-white text-blue-600 hover:bg-blue-600 hover:text-white rounded-md transition-colors border border-blue-200 hover:border-blue-600"
               >
@@ -250,7 +242,7 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
                       }
                       let num = parseFloat(val);
                       if (isNaN(num) || num < 0) return;
-                      
+
                       const maxAllowed = round2(Math.max(0, maxOutstanding));
                       if (num > maxAllowed) {
                         num = maxAllowed;
@@ -264,7 +256,7 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
                 </div>
               </div>
             </div>
-            
+
             <div className="space-y-1.5">
               <label className="text-[10px] font-semibold text-slate-400 ml-1">Notes (Optional)</label>
               <input

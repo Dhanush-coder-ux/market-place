@@ -136,7 +136,7 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
           type: "OTHERS",
           gst_infos: {
             registered: !!form.gstRegistered,
-            number: form.gstRegistered ? (form.gstNumber?.toUpperCase().trim() || null) : null
+            ...(form.gstRegistered && form.gstNumber ? { number: form.gstNumber.toUpperCase().trim() } : {})
           },
           currency: "INR"
         },

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Mail, Pencil, User, MapPin, Phone, Trash2,
-  Store, Database, AlertCircle, Layers, Check, X as XIcon
+  Store, Database, AlertCircle, Layers, Check, X as XIcon, ArrowUp, ArrowDown
 } from "lucide-react";
 import {
   SectionCard, DetailItem, InfoRow, Modal,
@@ -685,7 +685,7 @@ export default function SupplierDetail() {
                         <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Ref / Invoice No</th>
                         <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Cleared Amount</th>
                         <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Invoice Outstanding</th>
-                        <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Payment Method</th>
+                        <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Payment Mode</th>
                         <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Notes</th>
                       </tr>
                     </thead>
@@ -695,30 +695,36 @@ export default function SupplierDetail() {
                       ) : clearedHistory.length === 0 ? (
                         <tr><td colSpan={6} className="p-8 text-center text-slate-400 text-sm font-semibold">No cleared records found.</td></tr>
                       ) : (
-                        clearedHistory.map((h, i) => (
-                          <tr key={h.id || i} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="px-4 py-3 text-xs font-bold text-slate-600 whitespace-nowrap">
-                              {h.created_at || h.date ? new Date(h.created_at || h.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
-                            </td>
-                            <td className="px-4 py-3 text-xs font-black text-indigo-600 whitespace-nowrap font-mono">
-                              {h.invoice_no || h.ref_no || h.entity_id || "—"}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-emerald-600 font-black whitespace-nowrap">
-                              ₹{Number(h.cleared_amount ?? h.amount ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-slate-700 font-bold whitespace-nowrap">
-                              ₹{Number(h.outstanding_amount ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap">
-                              <span className="text-[11px] font-black bg-slate-100 text-slate-700 px-2.5 py-1 rounded-md uppercase tracking-wider">
-                                {h.payment_method || h.method || "CASH"}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-xs font-medium text-slate-500 max-w-xs truncate" title={h.notes}>
-                              {h.notes || "—"}
-                            </td>
-                          </tr>
-                        ))
+                        clearedHistory.map((h, i) => {
+                          const isRefund = h.type === 'PURCHASE_RETURN' || h.type === 'REFUND' || h.notes?.toLowerCase().includes('refund');
+                          return (
+                            <tr key={h.id || i} className="hover:bg-slate-50/50 transition-colors">
+                              <td className="px-4 py-3 text-xs font-bold text-slate-600 whitespace-nowrap">
+                                {h.created_at || h.date ? new Date(h.created_at || h.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                              </td>
+                              <td className="px-4 py-3 text-xs font-black text-indigo-600 whitespace-nowrap font-mono">
+                                {h.reference_no || h.invoice_no || h.ref_no || h.entity_id || "—"}
+                              </td>
+                              <td className="px-4 py-3 text-sm font-black whitespace-nowrap">
+                                <span className={`flex items-center gap-1 ${isRefund ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                  {isRefund ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
+                                  ₹{Number(h.cleared_amount ?? h.amount ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-sm text-slate-700 font-bold whitespace-nowrap">
+                                ₹{Number(h.outstanding_amount ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap">
+                                <span className={`text-[11px] font-black px-2.5 py-1 rounded-md uppercase tracking-wider flex items-center w-fit ${isRefund ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+                                  {h.payment_method || h.method || "CASH"}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-xs font-medium text-slate-500 max-w-xs truncate" title={h.notes}>
+                                {isRefund && !h.notes ? "Supplier refund" : (h.notes || (isRefund ? "Supplier refund" : "—"))}
+                              </td>
+                            </tr>
+                          );
+                        })
                       )}
                     </tbody>
                   </table>

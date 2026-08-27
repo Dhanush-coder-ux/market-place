@@ -113,6 +113,7 @@ interface InventoryItemsCardProps {
   setCostMethod?: (val: string) => void;
   gstMode?: "inclusive" | "exclusive";
   setGstMode?: (val: "inclusive" | "exclusive") => void;
+  isUpdate?: boolean;
 }
 
 export const InventoryItemsCard = ({
@@ -128,6 +129,7 @@ export const InventoryItemsCard = ({
   purchaseType,
   gstMode = "exclusive",
   setGstMode,
+  isUpdate = false,
 }: InventoryItemsCardProps) => {
   const [expandedBreakdown, setExpandedBreakdown] = useState<Set<number>>(new Set());
   const [expandedSettings, setExpandedSettings] = useState<Set<number>>(new Set());
@@ -139,7 +141,7 @@ export const InventoryItemsCard = ({
   useEffect(() => {
     products.forEach((p, idx) => {
       if (!p.id) return;
-      const needsDetails = p.batchTracking || p.serialTracking;
+      const needsDetails = p.batchTracking || p.serialTracking || !!p.storageLoc || p.reorderPoint !== undefined;
       if (needsDetails && !autoExpanded.has(p.id)) {
         setExpandedSettings(prev => {
           const next = new Set(prev);
@@ -794,7 +796,7 @@ const executeProductSelect = async (targetIndex: number, val: any, initialOpt: a
                   ? (((computedSellPrice - netCostForSp) / netCostForSp) * 100).toFixed(1)
                   : null;
 
-                const isExpanded = expandedSettings.has(index) || expandedBreakdown.has(index) || product.batchTracking || product.serialTracking;
+                const isExpanded = expandedSettings.has(index) || expandedBreakdown.has(index) || product.batchTracking || product.serialTracking || !!product.storageLoc || product.reorderPoint !== undefined;
 
                 return (
                   <Fragment key={product.id}>
@@ -1016,39 +1018,47 @@ const executeProductSelect = async (targetIndex: number, val: any, initialOpt: a
 
                       {/* Pricing & Margin */}
                       <td className="py-3 px-2 align-top">
-                        <div className="flex items-center gap-2">
-                          <div className="flex bg-slate-100 rounded-lg p-0.5 shrink-0">
-                            {["percent", "amount", "sellingPrice"].map((m) => (
-                              <button
-                                key={m}
-                                onClick={() => handleProductChange(index, "marginType", m)}
-                                className={`w-6 h-6 flex items-center justify-center rounded-md text-[9px] font-black transition-all ${product.marginType === m ? "bg-white text-blue-600 shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
-                              >
-                                {m === "percent" ? "%" : m === "amount" ? "₹" : "SP"}
-                              </button>
-                            ))}
+                        <div className="flex flex-col gap-1.5">
+                          <div className="flex items-center gap-2">
+                            <div className="flex bg-slate-100 rounded-lg p-0.5 shrink-0">
+                              {["percent", "amount", "sellingPrice"].map((m) => (
+                                <button
+                                  key={m}
+                                  onClick={() => handleProductChange(index, "marginType", m)}
+                                  className={`w-6 h-6 flex items-center justify-center rounded-md text-[9px] font-black transition-all ${product.marginType === m ? "bg-white text-blue-600 shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
+                                >
+                                  {m === "percent" ? "%" : m === "amount" ? "₹" : "SP"}
+                                </button>
+                              ))}
+                            </div>
+                            <div className="flex-1 min-w-[70px]">
+                              <Input
+                                type="number"
+                                value={(product.marginType === "percent" ? product.marginPercent : product.marginType === "amount" ? product.marginAmount : product.sellingPrice) as any}
+                                onChange={(e) => {
+                                  let val = e.target.value;
+                                  if (val.length > 1 && val.startsWith("0") && val[1] !== ".") {
+                                    val = val.replace(/^0+/, "");
+                                  }
+                                  handleProductChange(index, product.marginType === "percent" ? "marginPercent" : product.marginType === "amount" ? "marginAmount" : "sellingPrice", val);
+                                }}
+                                className="!h-7 !text-[11px] !font-bold !w-full"
+                                placeholder={product.marginType === "sellingPrice" ? "Price" : "Margin"}
+                              />
+                            </div>
+                            <div className="flex items-center gap-1 px-1.5 py-1 bg-emerald-50/50 border border-emerald-100 rounded-md shrink-0">
+                              <span className="text-[9px] font-black text-emerald-600 uppercase tracking-tighter">SP</span>
+                              <span className="text-[11px] font-black text-emerald-700 tabular-nums">
+                                ₹{computedSellPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </span>
+                            </div>
                           </div>
-                          <div className="flex-1 min-w-[70px]">
-                            <Input
-                              type="number"
-                              value={(product.marginType === "percent" ? product.marginPercent : product.marginType === "amount" ? product.marginAmount : product.sellingPrice) as any}
-                              onChange={(e) => {
-                                let val = e.target.value;
-                                if (val.length > 1 && val.startsWith("0") && val[1] !== ".") {
-                                  val = val.replace(/^0+/, "");
-                                }
-                                handleProductChange(index, product.marginType === "percent" ? "marginPercent" : product.marginType === "amount" ? "marginAmount" : "sellingPrice", val);
-                              }}
-                              className="!h-7 !text-[11px] !font-bold !w-full"
-                              placeholder={product.marginType === "sellingPrice" ? "Price" : "Margin"}
-                            />
-                          </div>
-                          <div className="flex items-center gap-1 px-1.5 py-1 bg-emerald-50/50 border border-emerald-100 rounded-md shrink-0">
-                            <span className="text-[9px] font-black text-emerald-600 uppercase tracking-tighter">SP</span>
-                            <span className="text-[11px] font-black text-emerald-700 tabular-nums">
-                              ₹{computedSellPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </span>
-                          </div>
+                          {isUpdate && (
+                            <div className="text-[8.5px] text-amber-600 flex items-start gap-1 font-bold leading-tight bg-amber-50/80 p-1.5 rounded border border-amber-200/50 mt-2">
+                              <Info size={10} className="shrink-0 mt-0.5" />
+                              Note: New selling price applies to all existing stock.
+                            </div>
+                          )}
                         </div>
                       </td>
 

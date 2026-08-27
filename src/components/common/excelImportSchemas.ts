@@ -434,8 +434,13 @@ export function validateRow(
     }
 
     if (!isEmpty) {
-      if (col.type === "number" && isNaN(Number(val))) {
-        errors[col.key] = `"${col.label}" must be a number`;
+      if (col.type === "number") {
+        const numVal = Number(val);
+        if (isNaN(numVal)) {
+          errors[col.key] = `"${col.label}" must be a number`;
+        } else if (col.key === "stocks" && numVal <= 0) {
+          errors[col.key] = `"${col.label}" must be greater than 0`;
+        }
       }
       if (
         col.type === "boolean" &&

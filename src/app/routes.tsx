@@ -73,6 +73,7 @@ const CustomerFormPage = React.lazy(() => import("@/features/customer/pages/Cust
 const SalesListPage = React.lazy(() => import("@/features/sales/pages/SalesPage"));
 const SaleDetailPage = React.lazy(() => import("@/features/sales/pages/SaleDetailPage"));
 const SaleSearch = React.lazy(() => import("@/features/sales/pages/SaleSearch"));
+const ReturnPage = React.lazy(() => import("@/features/sales/pages/ReturnPage"));
 const Order = React.lazy(() => import("../features/order/pages/Order"));
 const DeliveryVerifyPage = React.lazy(() => import("../features/order/pages/DeliveryVerifyPage"));
 const Billing = React.lazy(() => import("../features/billing/pages/Billing"));
@@ -107,6 +108,7 @@ export const router = createBrowserRouter([
       { path: '/dashboard', element: <Page><AnalyticsDashboard /></Page> },
       { path: "/sales", element: <Page><SalesListPage /></Page> },
       { path: "/sales/detail", element: <Page><SaleSearch /></Page> },
+      { path: "/sales/return/:id", element: <Page><ReturnPage /></Page> },
       { path: "/sales/:id", element: <Page><SaleDetailPage /></Page> },
 
       // Products — static "add" before dynamic ":id"

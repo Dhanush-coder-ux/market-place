@@ -571,20 +571,20 @@ const ProductDetail = () => {
                     ].filter(Boolean).map(row => {
                       if (!row) return null;
                       return (
-                      <div key={row.label} className="flex items-center justify-between py-2.5">
-                        <span className="text-[10px] font-bold text-slate-400  ">{row.label}</span>
-                        {(row as any).isStatus ? (
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isActive ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"}`}>
-                            {row.value}
-                          </span>
-                        ) : (row as any).isOnline ? (
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${(product as any).visible_online ? "bg-blue-50 text-blue-600" : "bg-slate-100 text-slate-500"}`}>
-                            {row.value}
-                          </span>
-                        ) : (
-                          <span className="text-[11px] font-bold text-slate-700">{row.value}</span>
-                        )}
-                      </div>
+                        <div key={row.label} className="flex items-center justify-between py-2.5">
+                          <span className="text-[10px] font-bold text-slate-400  ">{row.label}</span>
+                          {(row as any).isStatus ? (
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isActive ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"}`}>
+                              {row.value}
+                            </span>
+                          ) : (row as any).isOnline ? (
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${(product as any).visible_online ? "bg-blue-50 text-blue-600" : "bg-slate-100 text-slate-500"}`}>
+                              {row.value}
+                            </span>
+                          ) : (
+                            <span className="text-[11px] font-bold text-slate-700">{row.value}</span>
+                          )}
+                        </div>
                       );
                     })}
                   </div>
@@ -818,7 +818,8 @@ const ProductDetail = () => {
               const d = p.datas ?? {};
               const pd = d.purchaseDetails ?? {};
               const payment = d.payment ?? {};
-              const pType = p.type === 'PURCHASE_UPDATE' ? 'Purchase Update' : (p.type === 'DIRECT' ? 'Purchase' : (p.type?.includes('PO') ? 'PO Purchase' : 'Purchase'));
+              const isUpdated = p.version && p.version !== 'v1';
+              const pType = p.type || (isUpdated ? 'PURCHASE_UPDATE' : 'PURCHASE');
 
               const dateStr = isNewFormat ? p.purchase_date : (pd.date || p.created_at);
               const supplierName = isNewFormat ? p.supplier?.supplier_name : d.supplier_name;

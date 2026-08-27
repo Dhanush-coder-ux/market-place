@@ -203,21 +203,28 @@ const PurchaseForm = () => {
           });
 
           if (loadedSupplierId && !data.purchaseDetails) {
-            if (!loadedSupplierName) {
-              supplierApi.getById(SHOP_ID, loadedSupplierId).then((supRes: any) => {
-                if (supRes && (supRes.data || supRes.id)) {
-                  const supData = supRes.data ? (Array.isArray(supRes.data) ? supRes.data[0] : supRes.data) : supRes;
-                  setSupplierDetails({ id: loadedSupplierId, name: supData.name || supData.supplier_name || "Unknown Supplier" });
-                }
-              }).catch(() => {
-                setSupplierDetails({ id: loadedSupplierId, name: "Unknown Supplier" });
+            supplierApi.getById(SHOP_ID, loadedSupplierId).then((supRes: any) => {
+              if (supRes && (supRes.data || supRes.id)) {
+                const supData = supRes.data ? (Array.isArray(supRes.data) ? supRes.data[0] : supRes.data) : supRes;
+                setSupplierDetails({ 
+                  ...supData,
+                  id: loadedSupplierId, 
+                  name: supData.name || supData.supplier_name || loadedSupplierName || "Unknown Supplier" 
+                });
+              } else {
+                setSupplierDetails({
+                  ...(data.supplier || {}),
+                  id: loadedSupplierId,
+                  name: loadedSupplierName || "Unknown Supplier"
+                });
+              }
+            }).catch(() => {
+              setSupplierDetails({ 
+                ...(data.supplier || {}),
+                id: loadedSupplierId, 
+                name: loadedSupplierName || "Unknown Supplier" 
               });
-            } else {
-              setSupplierDetails({
-                id: loadedSupplierId,
-                name: loadedSupplierName
-              });
-            }
+            });
           }
 
           setPurchaseType(data.type || "DIRECT");
@@ -258,7 +265,7 @@ const PurchaseForm = () => {
             const parsedSku = p.sku || p.datas?.sku || p.ui_id || p.barcode || "";
             const pBuyPrice = p.pricing_infos?.[0]?.buy_price ?? p.pricing_infos?.buy_price ?? p.buy_price;
             const pSellPrice = p.pricing_infos?.[0]?.sell_price ?? p.pricing_infos?.sell_price ?? p.sell_price;
-            const pStorage = p.storage_locations?.[0]?.name ?? p.storage_location_infos?.name ?? p.datas?.storage_location ?? "";
+            const pStorage = p.storage_locations?.[0]?.name ?? p.storage_locations?.[0]?.storage_location ?? p.storage_location_infos?.name ?? p.storage_location_infos?.storage_location ?? p.datas?.storage_location ?? "";
 
             return {
               // Store the real backend item ID (used in update payload). Never generate a temp ID here
@@ -406,33 +413,6 @@ const PurchaseForm = () => {
     }
   };
 
-  const handleSaveDraft = useCallback(() => {
-    const savedDrafts = JSON.parse(localStorage.getItem("purchase_drafts") || "[]");
-    const draftId = searchParams.get("draftId") || Date.now().toString();
-
-    const newDraft = {
-      id: draftId,
-      type: "PURCHASE",
-      data: { purchaseDetails, products, charges, payment, supplierDetails },
-      timestamp: new Date().toISOString(),
-      displayName: supplierDetails?.name || purchaseDetails.supplier || "Untitled Purchase"
-    };
-
-    const existingIndex = savedDrafts.findIndex((d: any) => d.id === draftId);
-    if (existingIndex > -1) {
-      savedDrafts[existingIndex] = newDraft;
-    } else {
-      savedDrafts.push(newDraft);
-    }
-
-    localStorage.setItem("purchase_drafts", JSON.stringify(savedDrafts));
-    showToast("Progress saved as draft", "info");
-    if (!searchParams.get("draftId")) {
-      navigate(`?draftId=${draftId}`, { replace: true });
-    }
-  }, [purchaseDetails, products, charges, payment, supplierDetails, navigate, searchParams, showToast]);
-
-
 
   const resetForm = () => {
     // Clear draft
@@ -478,7 +458,8 @@ const PurchaseForm = () => {
     setSoldStockWarnings([]);
   }
 
-  const handleSavePurchase = useCallback(async () => {
+  const handleSavePurchase = useCallback(async (isDraft: boolean | React.MouseEvent = false) => {
+    const draftStatus = typeof isDraft === 'boolean' && isDraft;
     if (isSubmittingRef.current) return;
     if (!purchaseDetails.supplier && !supplierDetails?.id) {
       showToast("Please select a supplier.", "error");
@@ -606,6 +587,7 @@ const PurchaseForm = () => {
         shop_id: SHOP_ID,
         supplier_id: supplierDetails?.id || "SUP_" + (purchaseDetails?.supplier?.substring(0, 3)?.toUpperCase() || "UNK"),
         type: purchaseType,
+        status: draftStatus ? "DRAFT" : "COMPLETED",
         calculation_infos: {
           distribute_by: costMethodMap[costMethod] || "NONE",
           gst_type: gstMode
@@ -630,6 +612,7 @@ const PurchaseForm = () => {
           shop_id: SHOP_ID,
           supplier_id: supplierDetails?.id || purchaseDetails.supplier || undefined,
           invoice_no: purchaseDetails.invoiceNo || undefined,
+          status: draftStatus ? "DRAFT" : "COMPLETED",
           calculation_infos: {
             distribute_by: costMethodMap[costMethod] || "NONE",
             gst_type: gstMode
@@ -673,7 +656,11 @@ const PurchaseForm = () => {
 
       if (res) {
         showToast(id ? "Purchase updated" : "Purchase created", "success");
-        setShowSuccessModal(true);
+        if (draftStatus) {
+          navigate("/purchase-history");
+        } else {
+          setShowSuccessModal(true);
+        }
       }
     } catch (error: any) {
       showToast(error.message || "Failed to save purchase", "error");
@@ -690,7 +677,7 @@ const PurchaseForm = () => {
         {!id && (
           <button
             type="button"
-            onClick={handleSaveDraft}
+            onClick={() => handleSavePurchase(true)}
             className="px-4 h-8 rounded-xl border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2 whitespace-nowrap overflow-hidden"
           >
             <Bookmark size={14} className="shrink-0" />
@@ -708,7 +695,7 @@ const PurchaseForm = () => {
       </div>
     );
     return () => setBottomActions(null);
-  }, [setBottomActions, submitting, id, handleSavePurchase, handleSaveDraft]);
+  }, [setBottomActions, submitting, id, handleSavePurchase]);
 
   const handleAddNewProduct = useCallback((query: string) => {
     openQuickCreate("PRODUCT", (newProduct: any) => {
@@ -1078,6 +1065,7 @@ const PurchaseForm = () => {
               onAddNewProduct={handleAddNewProduct}
               gstMode={gstMode}
               setGstMode={setGstMode}
+              isUpdate={!!id}
             />
 
           </div>

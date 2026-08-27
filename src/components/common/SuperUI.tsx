@@ -320,13 +320,15 @@ export function ProfileHeaderCard({
       <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/5 rounded-full -mr-24 -mt-24 blur-3xl" />
 
       <div className="relative flex flex-col md:flex-row items-start md:items-center gap-4">
-        <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-xl font-bold text-white shadow-lg shadow-blue-200 ring-2 ring-white overflow-hidden shrink-0">
-          {imageUrl && (Array.isArray(imageUrl) ? imageUrl.length > 0 : true) ? (
+        {imageUrl && (Array.isArray(imageUrl) ? imageUrl.length > 0 : true) ? (
+          <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-xl font-bold text-white shadow-lg shadow-blue-200 ring-2 ring-white overflow-hidden shrink-0">
             <ImageCarousel images={Array.isArray(imageUrl) ? imageUrl : [imageUrl]} alt={typeof name === 'string' ? name : 'Profile Image'} />
-          ) : (
-            initials
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-xl font-bold text-white shadow-lg shadow-blue-200 ring-2 ring-white overflow-hidden shrink-0">
+            {initials}
+          </div>
+        )}
 
         <div className="flex-1 space-y-1">
           <div className="flex flex-col mb-1">

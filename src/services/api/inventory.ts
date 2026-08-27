@@ -142,7 +142,7 @@ export const inventoryApi = {
    */
   searchInventories: async (query: string, isActive?: boolean): Promise<any[]> => {
     try {
-      const params: Record<string, string> = { limit: '20', offset: '1' };
+      const params: Record<string, string> = { limit: '200', offset: '1' };
       if (query) params.q = query;
       if (isActive !== undefined) params.active = isActive ? 'true' : 'false';
 
@@ -157,8 +157,18 @@ export const inventoryApi = {
 
       return items.map((i: any) => {
         const priceInfos  = i.pricing_infos  || i.price_infos  || {};
-        const stockInfos  = i.stock_infos    || {};
+        const stockInfos  = i.stock_infos    || i.stocks_infos || {};
         const typeInfos   = i.type_infos     || {};
+
+        // Resolve stock using the same comprehensive fallback chain as the rest of the codebase.
+        // i.stocks can be 0 (and ?? won't fall through on 0), so we use || to also catch 0.
+        const resolvedStocks = 
+          stockInfos.available_stocks ??
+          stockInfos.physical_stocks ??
+          i.stocks_infos?.stocks ??
+          i.stock_infos?.stocks ??
+          i.stocks ??
+          0;
 
         return {
           ...i,
@@ -166,7 +176,7 @@ export const inventoryApi = {
           name:       i.name || 'Unknown Product',
           sell_price: i.sell_price  ?? priceInfos.sell_price  ?? priceInfos.online_sell_price ?? 0,
           buy_price:  i.buy_price   ?? priceInfos.buy_price   ?? 0,
-          stocks:     i.stocks      ?? stockInfos.available_stocks ?? stockInfos.physical_stocks ?? 0,
+          stocks:     resolvedStocks,
           barcode:    i.barcode     ?? '',
           unit:       i.unit || i.unit_infos?.name || 'pc',
           gst:        i.gst  || priceInfos.gst || '0%',

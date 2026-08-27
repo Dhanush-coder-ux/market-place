@@ -1,10 +1,10 @@
 import React, { useState, useRef } from "react";
-import { 
-  Plus, 
-  Trash2, 
-  X, 
-  ChevronDown, 
-  RefreshCw, 
+import {
+  Plus,
+  Trash2,
+  X,
+  ChevronDown,
+  RefreshCw,
   Plus as PlusIcon,
   Zap
 } from "lucide-react";
@@ -187,7 +187,7 @@ export const VariantBuilder: React.FC<VariantBuilderProps> = ({ variantTypes, on
                 Add
               </button>
               {presets.length > 0 && (
-                  <button type="button"
+                <button type="button"
                   onClick={() => setShowPresets(p => ({ ...p, [vt.id]: !p[vt.id] }))}
                   className="px-4 h-10 text-[10px] font-black uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-200 transition-colors flex items-center gap-2">
                   <ChevronDown size={14} className={`transition-transform duration-300 ${showPresets[vt.id] ? "rotate-180" : ""}`} />
@@ -232,10 +232,11 @@ interface VariantMatrixTableProps {
   combinations: VariantCombination[];
   variantTypes: VariantType[];
   onChange: (combos: VariantCombination[]) => void;
+  trackStock: boolean;
 }
 
 export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
-  combinations, onChange
+  combinations, onChange, trackStock
 }) => {
 
   const [barcodeBase, setbarcodeBase] = useState("");
@@ -273,7 +274,7 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
             {combinations.length} combination{combinations.length !== 1 ? "s" : ""} generated
           </span>
         </div>
-        
+
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <input
@@ -282,7 +283,7 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
               value={barcodeBase}
               onChange={e => setbarcodeBase(e.target.value)}
             />
-              <button type="button" onClick={() => regenAllbarcodes(barcodeBase)}
+            <button type="button" onClick={() => regenAllbarcodes(barcodeBase)}
               disabled={!barcodeBase}
               className="flex items-center gap-2 h-9 px-4 text-[10px] font-black uppercase tracking-wider text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all disabled:opacity-40">
               <RefreshCw size={12} /> Auto Generate
@@ -313,6 +314,8 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                   </th>
                 ))}
                 <th className="px-5 py-4 text-[10px] font-black uppercase text-slate-400 whitespace-nowrap">Barcode</th>
+                {!trackStock && <th className="px-5 py-4 text-center text-[10px] font-black uppercase text-slate-400">Cost Price</th>}
+                {!trackStock && <th className="px-5 py-4 text-center text-[10px] font-black uppercase text-slate-400">Sell Price</th>}
                 <th className="px-5 py-4 text-[10px] font-black uppercase text-slate-400 whitespace-nowrap">Storage Location</th>
                 <th className="px-5 py-4 text-center text-[10px] font-black uppercase text-slate-400">Reorder Pt</th>
                 <th className="px-5 py-4 text-center text-[10px] font-black uppercase text-slate-400">Active</th>
@@ -338,6 +341,28 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                           onChange={e => update(combo.id, "barcode", e.target.value)}
                         />
                       </td>
+                      {!trackStock && (
+                        <td className="px-5 py-4">
+                          <input
+                            className="h-9 px-3 text-xs border border-slate-200 rounded-lg w-24 text-center font-mono focus:ring-2 focus:ring-blue-100 outline-none"
+                            placeholder="0.00"
+                            type="number"
+                            value={combo.buy_price}
+                            onChange={e => update(combo.id, "buy_price", e.target.value)}
+                          />
+                        </td>
+                      )}
+                      {!trackStock && (
+                        <td className="px-5 py-4">
+                          <input
+                            className="h-9 px-3 text-xs border border-slate-200 rounded-lg w-24 text-center font-mono focus:ring-2 focus:ring-blue-100 outline-none"
+                            placeholder="0.00"
+                            type="number"
+                            value={combo.price}
+                            onChange={e => update(combo.id, "price", e.target.value)}
+                          />
+                        </td>
+                      )}
                       <td className="px-5 py-4">
                         <input
                           className="h-9 px-3 text-xs border border-slate-200 rounded-lg w-36 focus:ring-2 focus:ring-blue-100 outline-none"

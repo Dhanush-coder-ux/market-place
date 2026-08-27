@@ -471,18 +471,18 @@ export const Navbar = () => {
 
           <div className="flex items-center gap-1 sm:gap-2">
             <Link to="/notifications" className="group">
-              <button className="relative flex items-center gap-2.5 px-3 py-1.5 bg-slate-900 hover:bg-black text-white rounded-full transition-all duration-300 ease-out shadow-sm overflow-hidden ring-1 ring-slate-800">
+              <button className="relative flex items-center gap-2.5 px-3 py-1.5 bg-blue-500/10 backdrop-blur-md hover:bg-blue-500/20 text-blue-600 rounded-full transition-all duration-300 ease-out shadow-sm overflow-hidden border border-blue-500/20">
                 <div className="relative flex shrink-0 items-center justify-center">
-                  <Bell className="w-[17px] h-[17px] text-slate-300 group-hover:text-white transition-colors" />
+                  <Bell className="w-[17px] h-[17px] text-blue-600 group-hover:text-blue-800 transition-colors" />
                   {latestNotification && (
-                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-rose-500 rounded-full shadow-[0_0_0_2px_rgba(15,23,42,1)] group-hover:shadow-[0_0_0_2px_rgba(0,0,0,1)] transition-shadow animate-pulse"></span>
+                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-rose-500 rounded-full shadow-[0_0_0_2px_white] transition-shadow animate-pulse"></span>
                   )}
                 </div>
                 <div className={`flex flex-col items-start transition-all duration-500 ease-out overflow-hidden whitespace-nowrap ${isIslandExpanded ? 'w-[140px] opacity-100' : 'w-0 opacity-0 group-hover:w-[140px] group-hover:opacity-100'}`}>
-                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider leading-none mb-1">
+                  <span className="text-[9px] font-extrabold text-blue-500/80 uppercase tracking-wider leading-none mb-1">
                     {latestNotification ? "New Message" : "Notifications"}
                   </span>
-                  <span className="text-[11px] font-medium text-slate-100 leading-none truncate w-full text-left">
+                  <span className="text-[11px] font-semibold text-blue-900 leading-none truncate w-full text-left">
                     {latestNotification ? (latestNotification.title || latestNotification.message) : "No new alerts"}
                   </span>
                 </div>

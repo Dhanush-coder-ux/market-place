@@ -151,9 +151,10 @@ const SectionCard: React.FC<{ icon: React.ReactNode; iconBg: string; title: stri
 // ─── ProfileForm ────────────────────────────────────────────────────────────
 
 const ProfileForm: React.FC = () => {
-  const { id } = useParams();
+  const { id: pathId } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const id = pathId || searchParams.get("id") || undefined;
   const { setBottomActions } = useHeader();
   const { showToast } = useToast();
   const { postData, putData, getData, loading } = useApi();
@@ -181,7 +182,7 @@ const ProfileForm: React.FC = () => {
   // Load Data/Draft
   useEffect(() => {
     if (id) {
-      getData(`${ENDPOINTS.SHOPS}/${id}`).then((res) => {
+      getData(`${ENDPOINTS.SHOPS}/by/${id}`).then((res) => {
         if (res && res.data) {
           const shop = res.data;
           const b = shop.business_infos || {};
@@ -283,7 +284,7 @@ const ProfileForm: React.FC = () => {
         type: formData.business_type || "SOLO_PROPRIETOR",
         gst_infos: {
           registered: formData.gst_registered,
-          number: formData.gst_registered ? (formData.gst_number || null) : null,
+          ...(formData.gst_registered && formData.gst_number ? { number: formData.gst_number } : {}),
         },
         currency: formData.currency || "INR",
       },
@@ -316,7 +317,7 @@ const ProfileForm: React.FC = () => {
           );
         }
         setGstType(formData.gst_registered ? "registered" : "non-registered");
-        navigate(id ? "/profile" : "/shop-select");
+        navigate(id ? "/" : "/shop-select");
       }
     } catch {
       showToast("Operation failed", "error");

@@ -575,10 +575,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
             setForm(nextForm);
             if (prod.ui_id && setBreadcrumbOverride) setBreadcrumbOverride(prod.ui_id);
 
-            // Ensure the product's category and unit are in the dropdown lists.
-            // They might not be if the shop has >100 of them (pagination) or if
-            // the lists haven't loaded yet. Inject stub entries so ReusableSelect
-            // can resolve the display label immediately.
             if (prod.category_id) {
               setCategories(prev => {
                 if (prev.some(c => c.id === prod.category_id)) return prev;

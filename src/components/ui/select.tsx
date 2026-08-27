@@ -75,7 +75,7 @@ function SelectContent({
         <SelectPrimitive.Viewport
           onScroll={onViewportScroll}
           className={cn(
-            "p-1 flex-1 overflow-y-auto",
+            "p-1 flex-1 overflow-y-auto modal-content",
             position === "popper" &&
             "w-full min-w-[var(--radix-select-trigger-width)]"
           )}

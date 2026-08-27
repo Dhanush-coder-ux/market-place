@@ -26,7 +26,7 @@ interface BillingHeaderProps {
   onDetachCustomer: () => void;
 }
 
-const formatINR = (amount: number, decimals = 2) => 
+const formatINR = (amount: number, decimals = 2) =>
   amount.toLocaleString("en-IN", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 
 const formatPrice = (amount: number) => {
@@ -118,7 +118,7 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
   return (
     <>
       <div className="w-full h-full flex flex-col font-sans bg-white p-3 space-y-4 overflow-y-auto custom-scrollbar">
-        
+
         {/* ── Customer Selection Panel (Top of Right Panel) ────────────────── */}
         <div className="shrink-0">
           {!customerData ? (
@@ -134,13 +134,13 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
                 </div>
               </div>
               <div>
-              <button 
-                onClick={onAddCustomerClick}
-                className="flex items-center gap-1 px-2.5 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-bold text-slate-600 shadow-sm transition-all duration-150 active:scale-95 cursor-pointer animate-none"
-              >
-                <Search size={10} strokeWidth={3} /> Select
-                <kbd className="ml-1 text-[8px] text-slate-400 font-mono font-bold leading-none bg-slate-50 border border-slate-200 px-1 py-0.2 rounded shadow-sm">F4</kbd>
-              </button>
+                <button
+                  onClick={onAddCustomerClick}
+                  className="flex items-center gap-1 px-2.5 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-bold text-slate-600 shadow-sm transition-all duration-150 active:scale-95 cursor-pointer animate-none"
+                >
+                  <Search size={10} strokeWidth={3} /> Select
+                  <kbd className="ml-1 text-[8px] text-slate-400 font-mono font-bold leading-none bg-slate-50 border border-slate-200 px-1 py-0.2 rounded shadow-sm">F4</kbd>
+                </button>
               </div>
             </div>
           ) : (
@@ -156,7 +156,7 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
                     <p className="text-[10px] text-blue-600/70 font-mono mt-0.5 tracking-wide">{customerData.phone}</p>
                   </div>
                 </div>
-                <button 
+                <button
                   onClick={onDetachCustomer}
                   className="w-6 h-6 rounded-full bg-white hover:bg-red-50 text-slate-400 hover:text-red-500 border border-slate-200 flex items-center justify-center transition-all z-10 shadow-sm cursor-pointer animate-in fade-in duration-200"
                 >
@@ -187,7 +187,7 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
         {/* ── Billing Summary ────────────────────────────────────────── */}
         <div className="border border-slate-150 rounded-xl p-3.5 space-y-3 shadow-sm bg-slate-50/20">
           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-1.5">BILLING SUMMARY</p>
-          
+
           <div className="space-y-1.5 text-[11px] font-semibold text-slate-600">
             <div className="flex justify-between">
               <span>Items count</span>
@@ -204,9 +204,9 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
               </div>
             )}
           </div>
-          
+
           <div className="h-px bg-slate-100 border-dashed my-2" />
-          
+
           <div className="flex justify-between items-center">
             <span className="text-xs font-black text-slate-700 uppercase tracking-wider">Grand Total</span>
             <span className="text-base font-black text-blue-600 tabular-nums">₹{formatPrice(finalAmount)}</span>
@@ -263,21 +263,21 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
           {/* Quick Actions */}
           <div className="shrink-0 space-y-2 pt-2 border-t border-slate-100">
             <div className="grid grid-cols-3 gap-2 p-2 border border-dashed border-slate-200 rounded-lg">
-              <button 
+              <button
                 onClick={() => addPayment('cash')}
                 disabled={payments.some(p => p.mode === 'cash')}
                 className="flex items-center justify-center gap-1.5 py-1.5 rounded bg-white border border-slate-200 text-slate-600 text-[11px] font-bold hover:bg-slate-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <Banknote size={12} className="opacity-60" /> Cash
               </button>
-              <button 
+              <button
                 onClick={() => addPayment('upi')}
                 disabled={payments.some(p => p.mode === 'upi')}
                 className="flex items-center justify-center gap-1.5 py-1.5 rounded bg-white border border-slate-200 text-slate-600 text-[11px] font-bold hover:bg-slate-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <CreditCard size={12} className="opacity-60" /> UPI
               </button>
-              <button 
+              <button
                 onClick={() => addPayment('credit')}
                 disabled={!isCreditAllowed || payments.some(p => p.mode === 'credit')}
                 className="flex items-center justify-center gap-1.5 py-1.5 rounded bg-white border border-slate-200 text-slate-600 text-[11px] font-bold hover:bg-slate-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
@@ -286,21 +286,21 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
               </button>
             </div>
             <div className="flex flex-wrap gap-2">
-              <button 
-                onClick={() => onPaymentsChange([{mode: 'cash', amount: finalAmount}])}
+              <button
+                onClick={() => onPaymentsChange([{ mode: 'cash', amount: finalAmount }])}
                 className="px-2.5 py-1.5 bg-blue-50/80 text-blue-700 rounded-md text-[11px] font-bold border border-blue-100/80 hover:bg-blue-100/80 transition-colors"
               >
                 Full ₹{formatINR(finalAmount)} in Cash
               </button>
-              <button 
-                onClick={() => onPaymentsChange([{mode: 'upi', amount: finalAmount}])}
+              <button
+                onClick={() => onPaymentsChange([{ mode: 'upi', amount: finalAmount }])}
                 className="px-2.5 py-1.5 bg-blue-50/80 text-blue-700 rounded-md text-[11px] font-bold border border-blue-100/80 hover:bg-blue-100/80 transition-colors"
               >
                 Full ₹{formatINR(finalAmount)} in UPI
               </button>
               {customerData && (
-                <button 
-                  onClick={() => onPaymentsChange([{mode: 'credit', amount: finalAmount}])}
+                <button
+                  onClick={() => onPaymentsChange([{ mode: 'credit', amount: finalAmount }])}
                   disabled={finalAmount > Math.max(0, customerData.creditLimit - customerData.outstanding)}
                   className="px-2.5 py-1.5 bg-blue-50/80 text-blue-700 rounded-md text-[11px] font-bold border border-blue-100/80 hover:bg-blue-100/80 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
@@ -312,10 +312,10 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
 
           {/* Settle Status Indicator */}
           <div className={`p-2.5 rounded-lg border transition-all shrink-0 ${Math.abs(balanceAmount) < 0.01
-              ? "bg-emerald-50/50 border-emerald-100"
-              : balanceAmount > 0
-                ? "bg-amber-50/50 border-amber-100"
-                : "bg-blue-50/50 border-blue-100"
+            ? "bg-emerald-50/50 border-emerald-100"
+            : balanceAmount > 0
+              ? "bg-amber-50/50 border-amber-100"
+              : "bg-blue-50/50 border-blue-100"
             }`}>
             <div className="flex items-center justify-between text-[11px] font-bold">
               <div>
@@ -348,26 +348,24 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
 
         {/* ── Bottom Confirm Buttons (Generate Bill & Generate Invoice) ────── */}
         <div className="shrink-0 flex gap-2.5 pt-1">
-          <button 
-            onClick={handleQuickCheckout} 
+          <button
+            onClick={handleQuickCheckout}
             disabled={totalQty === 0 || balanceAmount > 0.01 || isSubmitting}
-            className={`flex-1 h-11 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-200 ${
-              totalQty === 0 || balanceAmount > 0.01 || isSubmitting
+            className={`flex-1 h-11 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-200 ${totalQty === 0 || balanceAmount > 0.01 || isSubmitting
                 ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed shadow-none"
                 : "text-blue-500 border-blue-400 border-2 hover:bg-blue-500 hover:text-white shadow-md shadow-slate-900/10 active:scale-97"
-            }`}
+              }`}
           >
             {isSubmitting ? "..." : "Generate Bill"}
           </button>
-          
-          <button 
-            onClick={handleGenerateInvoice} 
+
+          <button
+            onClick={handleGenerateInvoice}
             disabled={totalQty === 0 || isSubmitting}
-            className={`flex-1 h-11 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-200 ${
-              totalQty === 0 || isSubmitting
+            className={`flex-1 h-11 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-200 ${totalQty === 0 || isSubmitting
                 ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed shadow-none"
                 : "text-blue-500 border-blue-400 border-2 hover:bg-blue-500 hover:text-white shadow-lg shadow-blue-500/20 active:scale-97"
-            }`}
+              }`}
           >
             Generate Invoice
           </button>

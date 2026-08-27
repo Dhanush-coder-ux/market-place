@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   Zap,
   BarChart2,
   Layers,
   CheckCircle2,
   Barcode,
-  ChevronDown
+  ChevronDown,
+  Plus,
+  X
 } from "lucide-react";
 import { QuickCreateModal, QuickCreateStep } from "./QuickCreateModal";
 import Input from "@/components/ui/Input";
+import { ReusableSelect } from "@/components/ui/ReusableSelect";
 
 import { useApi } from "@/context/ApiContext";
 import { useToast } from "@/context/ToastContext";
@@ -37,6 +41,82 @@ const CATEGORY_CONFIGS: Record<string, { suggestedVariantTypes: string[]; suppor
 };
 
 
+interface QuickCreateDropdownModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  type: "Category" | "Unit";
+  onSuccess: (item: { id: string; name: string }) => void;
+}
+
+const QuickCreateDropdownModal: React.FC<QuickCreateDropdownModalProps> = ({ isOpen, onClose, type, onSuccess }) => {
+  const [value, setValue] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { showToast } = useToast();
+
+  if (!isOpen) return null;
+
+  const handleSave = async () => {
+    if (!value.trim()) return;
+    setLoading(true);
+
+    try {
+      if (type === "Category") {
+        const res = await utilityApi.createShopCategory({ shop_id: SHOP_ID, name: value.trim() });
+        if (res?.data) onSuccess({ id: res.data.id, name: res.data.name });
+      } else {
+        const res = await utilityApi.createShopUnit({
+          shop_id: SHOP_ID,
+          name: value.trim(),
+          short_name: value.trim().substring(0, 3).toUpperCase()
+        });
+        if (res?.data) onSuccess({ id: res.data.id, name: res.data.name });
+      }
+      setValue("");
+      onClose();
+    } catch (err) {
+      showToast(`Failed to create ${type}`, "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+          <h3 className="font-bold text-slate-800">Add New {type}</h3>
+          <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors">
+            <X size={18} />
+          </button>
+        </div>
+        <div className="p-5">
+          <label className="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wide">Name</label>
+          <input
+            type="text"
+            autoFocus
+            className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all shadow-sm"
+            placeholder={`e.g. ${type === "Category" ? "Beverages" : "Box"}`}
+            value={value}
+            onChange={e => setValue(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleSave()}
+          />
+        </div>
+        <div className="px-5 py-4 bg-slate-50/50 border-t border-slate-100 flex justify-end gap-2">
+          <button onClick={onClose} className="px-4 h-9 rounded-lg font-semibold text-xs text-slate-600 hover:bg-slate-100 transition-colors">Cancel</button>
+          <button
+            onClick={handleSave}
+            disabled={!value.trim() || loading}
+            className="px-4 h-9 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? "Saving..." : "Save"}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
 interface QuickCreateProductModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -56,6 +136,63 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
 
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [units, setUnits] = useState<{ id: string; name: string }[]>([]);
+  const [modalState, setModalState] = useState<{ type: "Category" | "Unit" | null; query: string }>({ type: null, query: "" });
+
+  const [categoriesOffset, setCategoriesOffset] = useState(1);
+  const [hasMoreCategories, setHasMoreCategories] = useState(true);
+  const [loadingCategories, setLoadingCategories] = useState(false);
+
+  const [unitsOffset, setUnitsOffset] = useState(1);
+  const [hasMoreUnits, setHasMoreUnits] = useState(true);
+  const [loadingUnits, setLoadingUnits] = useState(false);
+
+  const fetchMoreCategories = async () => {
+    if (loadingCategories || !hasMoreCategories) return;
+    setLoadingCategories(true);
+    try {
+      const nextPage = categoriesOffset + 1;
+      const res = await utilityApi.getShopCategories(SHOP_ID, { limit: "100", offset: String(nextPage) });
+      if (res?.data && res.data.length > 0) {
+        setCategories(prev => {
+          const existingIds = new Set(prev.map(c => c.id));
+          const filtered = res.data.filter((c: any) => !existingIds.has(c.id));
+          return [...prev, ...filtered];
+        });
+        setCategoriesOffset(nextPage);
+        if (res.data.length < 100) setHasMoreCategories(false);
+      } else {
+        setHasMoreCategories(false);
+      }
+    } catch (e) {
+      console.error("Failed to fetch more categories", e);
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
+
+  const fetchMoreUnits = async () => {
+    if (loadingUnits || !hasMoreUnits) return;
+    setLoadingUnits(true);
+    try {
+      const nextPage = unitsOffset + 1;
+      const res = await utilityApi.getShopUnits(SHOP_ID, { limit: "100", offset: String(nextPage) });
+      if (res?.data && res.data.length > 0) {
+        setUnits(prev => {
+          const existingIds = new Set(prev.map(u => u.id));
+          const filtered = res.data.filter((u: any) => !existingIds.has(u.id));
+          return [...prev, ...filtered];
+        });
+        setUnitsOffset(nextPage);
+        if (res.data.length < 100) setHasMoreUnits(false);
+      } else {
+        setHasMoreUnits(false);
+      }
+    } catch (e) {
+      console.error("Failed to fetch more units", e);
+    } finally {
+      setLoadingUnits(false);
+    }
+  };
 
   useEffect(() => {
     const fetchDropdowns = async () => {
@@ -228,39 +365,43 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-1.5">
               <label className="text-[10px] font-black text-slate-400 ml-1">Category</label>
-              <div className="relative">
-                <select
-                  value={form.category || ""}
-                  onChange={(e) => setForm(p => ({ ...p, category: e.target.value }))}
-                  className="w-full h-10 rounded-lg border border-slate-200 bg-white pl-4 pr-10 text-sm font-medium shadow-sm transition-all hover:border-blue-400 focus:ring-4 focus:ring-blue-500/10 outline-none appearance-none cursor-pointer text-slate-700"
-                >
-                  <option value="" disabled>Select Category</option>
-                  {categories.map((c: any) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
-                  <ChevronDown size={16} />
-                </div>
-              </div>
+             <ReusableSelect
+                          key={`cat-${categories.length}`}
+                          value={form.category}
+                          onValueChange={(val) => { setForm(p => ({ ...p, category: val })); setVariantTypes([]); setCombinations([]); }}
+                          options={categories.map(c => ({ value: c.id, label: c.name }))}
+                          placeholder="Select category"
+                          onScrollEnd={fetchMoreCategories}
+                          footer={
+                            <button
+                              onClick={() => setModalState({ type: "Category", query: "" })}
+                              className="w-full flex items-center justify-center gap-2 py-2 text-xs font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors"
+                            >
+                              <Plus size={14} />
+                              Create New Category
+                            </button>
+                          }
+                        />
             </div>
             <div className="space-y-1.5">
               <label className="text-[10px] font-black text-slate-400 ml-1">Unit</label>
-              <div className="relative">
-                <select
-                  value={form.unit || ""}
-                  onChange={(e) => setForm(p => ({ ...p, unit: e.target.value }))}
-                  className="w-full h-10 rounded-lg border border-slate-200 bg-white pl-4 pr-10 text-sm font-medium shadow-sm transition-all hover:border-blue-400 focus:ring-4 focus:ring-blue-500/10 outline-none appearance-none cursor-pointer text-slate-700"
-                >
-                  <option value="" disabled>Select Unit</option>
-                  {units.map((u: any) => (
-                    <option key={u.id} value={u.id}>{u.name}</option>
-                  ))}
-                </select>
-                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
-                  <ChevronDown size={16} />
-                </div>
-              </div>
+               <ReusableSelect
+                          key={`unit-${units.length}`}
+                          value={form.unit}
+                          onValueChange={(val) => setForm(p => ({ ...p, unit: val }))}
+                          options={units.map(u => ({ value: u.id, label: u.name }))}
+                          placeholder="Select unit"
+                          onScrollEnd={fetchMoreUnits}
+                          footer={
+                            <button
+                              onClick={() => setModalState({ type: "Unit", query: "" })}
+                              className="w-full flex items-center justify-center gap-2 py-2 text-xs font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors"
+                            >
+                              <Plus size={14} />
+                              Create New Unit
+                            </button>
+                          }
+                        />
             </div>
             <div className="space-y-1.5">
               <Input
@@ -541,16 +682,33 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
   };
 
   return (
-    <QuickCreateModal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Create New Product"
-      steps={steps}
-      onSubmit={handleSubmit}
-      isSubmitting={submitting}
-      submitLabel="Complete Creation"
-      size="xl"
-    />
+    <>
+      <QuickCreateModal
+        isOpen={isOpen}
+        onClose={onClose}
+        title="Create New Product"
+        steps={steps}
+        onSubmit={handleSubmit}
+        isSubmitting={submitting}
+        submitLabel="Complete Creation"
+        size="xl"
+      />
+      <QuickCreateDropdownModal
+        isOpen={modalState.type !== null}
+        onClose={() => setModalState({ type: null, query: "" })}
+        type={modalState.type as "Category" | "Unit"}
+        onSuccess={(newItem) => {
+          if (modalState.type === "Category") {
+            setCategories((prev) => [newItem, ...prev]);
+            setForm((prev) => ({ ...prev, category: newItem.id }));
+          } else if (modalState.type === "Unit") {
+            setUnits((prev) => [newItem, ...prev]);
+            setForm((prev) => ({ ...prev, unit: newItem.id }));
+          }
+          setModalState({ type: null, query: "" });
+        }}
+      />
+    </>
   );
 };
 

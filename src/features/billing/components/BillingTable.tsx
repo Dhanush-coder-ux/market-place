@@ -720,15 +720,18 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                 const isHighlighted = idx === activeIndex;
                 const initials = getInitials(product.product_name);
                 const avatarBg = getAvatarBg(product.product_name);
-                const isOutOfStock = product.stocks === 0;
+                const isStockTracked = product.have_tracking !== false && product.is_stock_tracked !== false && product.track_stock !== false && product.type !== "service";
+                const isOutOfStock = isStockTracked && product.stocks <= 0;
 
                 return (
                   <div
                     key={product.id}
-                    onClick={() => handleProductSelect(product)}
+                    onClick={() => { if (!isOutOfStock) handleProductSelect(product); }}
                     onMouseEnter={() => setActiveIndex(idx)}
-                    className={`flex items-center justify-between p-3.5 cursor-pointer transition-all duration-100 ${isHighlighted ? "bg-blue-50/50" : "hover:bg-slate-50/50"
-                      }`}
+                    className={`flex items-center justify-between p-3.5 transition-all duration-100 ${
+                      isOutOfStock ? "opacity-50 cursor-not-allowed bg-slate-50/50" :
+                      isHighlighted ? "bg-blue-50/50 cursor-pointer" : "hover:bg-slate-50/50 cursor-pointer"
+                    }`}
                   >
                     <div className="flex items-center gap-3.5 min-w-0">
                       <div
@@ -763,7 +766,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                     <div className="text-right shrink-0">
                       <p className="text-[13px] font-bold text-slate-800">₹{product.price}</p>
                       <p className={`text-[9px] font-extrabold mt-1 leading-none ${isOutOfStock ? "text-red-500" : "text-emerald-500"}`}>
-                        {isOutOfStock ? "Out of Stock" : `Stock: ${product.stocks} units`}
+                        {isOutOfStock ? "Out of Stock" : !isStockTracked ? "Stock Not Tracked" : `Stock: ${product.stocks} units`}
                       </p>
                     </div>
                   </div>

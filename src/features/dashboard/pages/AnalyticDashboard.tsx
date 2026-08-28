@@ -647,7 +647,7 @@ const AnalyticsDashboard = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs text-slate-400">Gross Margin</p>
-                    <p className="display-font text-xl font-semibold text-slate-800">{grossMargin}%</p>
+                    <p className="display-font text-xl font-semibold text-slate-800">{grossMargin.toFixed(2)}%</p>
                     <p className={`text-xs font-medium ${totalProfit >= 0 ? "text-emerald-500" : "text-rose-500"}`}>
                       {totalProfit >= 0 ? "Profitable" : "Loss-making"}
                     </p>
@@ -665,7 +665,7 @@ const AnalyticsDashboard = () => {
                 </div>
                 <div className="flex justify-between text-xs text-slate-400">
                   <span>0%</span>
-                  <span>Margin: {grossMargin}%</span>
+                  <span>Margin: {grossMargin.toFixed(2)}%</span>
                   <span>100%</span>
                 </div>
               </div>

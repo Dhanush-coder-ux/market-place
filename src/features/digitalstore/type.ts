@@ -36,6 +36,8 @@ export interface DeliveryConfig {
   speed: string;
   freeThreshold: number;
   radius?: number;
+  minOrderAmount?: number;
+  chargePerKm?: number;
   manageStore?: boolean;
   partners?: boolean;
 }

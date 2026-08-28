@@ -119,9 +119,18 @@ export const SerialBadgeList = ({ serials }: { serials: string[] }) => {
   );
 };
 const parseBatches = (b: any) => {
+  if (!b) return [];
   if (Array.isArray(b)) return b;
   if (typeof b === 'string') {
-    try { return JSON.parse(b); } catch (e) { return []; }
+    try {
+      const parsed = JSON.parse(b);
+      if (Array.isArray(parsed)) return parsed;
+      if (parsed && typeof parsed === 'object') return Object.values(parsed);
+      return [];
+    } catch (e) { return []; }
+  }
+  if (typeof b === 'object') {
+    return Object.values(b);
   }
   return [];
 };
@@ -264,8 +273,8 @@ export const BatchCards = ({ batches }: { batches: any | any[] }) => {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         {visible.map((batch: any, idx: number) => {
-          const physicalQty = Number(batch.stock_infos?.physical_stocks ?? batch.stocks ?? batch.quantity ?? batch.qty ?? 0);
-          const availableQty = Number(batch.stock_infos?.available_stocks ?? physicalQty);
+          const physicalQty = Number(batch.stock_infos?.physical_stocks ?? batch.stocks ?? batch.stock ?? batch.quantity ?? batch.qty ?? batch.available_stocks ?? 0);
+          const availableQty = Number(batch.stock_infos?.available_stocks ?? batch.available_stocks ?? physicalQty);
           const reservedQty = Number(batch.stock_infos?.reserved_stocks ?? 0);
           const serials = extractSerials(batch.serialno_infos ?? batch.serial_numbers ?? batch.datas?.serial_numbers);
           const daysToExpiry = getDaysDiff(batch.expiry_date || batch.expiry);

@@ -19,6 +19,116 @@ const parseError = async (res: Response): Promise<string> => {
   }
 };
 
+const handleLogout = () => {
+  if (window.location.pathname !== '/login') {
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("refresh_token");
+    localStorage.removeItem("shop_id");
+    localStorage.removeItem("user_id");
+    localStorage.removeItem("session_id");
+    localStorage.removeItem("user_email");
+    localStorage.removeItem("user_name");
+    window.location.href = "/login";
+  }
+};
+
+let isRefreshing = false;
+let isPrompting = false;
+let promptQueue: Array<(val: boolean) => void> = [];
+let failedQueue: Array<(success: boolean) => void> = [];
+
+async function askUserToRestart(): Promise<boolean> {
+  if (isPrompting) {
+    return new Promise(resolve => promptQueue.push(resolve));
+  }
+  isPrompting = true;
+  
+  return new Promise(resolve => {
+    // If we're not in a browser environment or the event is somehow not caught, fallback
+    let handled = false;
+    
+    const resolveAndClean = (result: boolean) => {
+      if (handled) return;
+      handled = true;
+      isPrompting = false;
+      promptQueue.forEach(cb => cb(result));
+      promptQueue = [];
+      resolve(result);
+    };
+
+    const event = new CustomEvent("session-expired", {
+      detail: { resolve: resolveAndClean }
+    });
+    window.dispatchEvent(event);
+
+    // Fallback: if no listener handles it within 1 second, just assume false (logout)
+    setTimeout(() => {
+      if (!handled) resolveAndClean(false);
+    }, 1000);
+  });
+}
+
+async function handleTokenRefresh(): Promise<boolean> {
+  if (isRefreshing) {
+    return new Promise((resolve) => {
+      failedQueue.push((success: boolean) => resolve(success));
+    });
+  }
+
+  // Ask for user confirmation via the modal
+  const userWantsToRestart = await askUserToRestart();
+  if (!userWantsToRestart) {
+    // They rejected or it failed
+    return false;
+  }
+
+  // User accepted, proceed with actual token refresh
+  isRefreshing = true;
+  const refreshToken = localStorage.getItem("refresh_token");
+  if (!refreshToken) {
+    isRefreshing = false;
+    return false;
+  }
+
+  try {
+    let tokenVersion = "1";
+    try {
+      const p = JSON.parse(atob(refreshToken.split(".")[1]));
+      if (p.version) tokenVersion = p.version;
+    } catch { /* ignore */ }
+
+    const refreshRes = await fetch(`${BASE_URL}/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: refreshToken, version: tokenVersion })
+    });
+
+    if (refreshRes.ok) {
+      const refreshData = await refreshRes.json();
+      localStorage.setItem("auth_token", refreshData.access_token);
+      if (refreshData.refresh_token) {
+        localStorage.setItem("refresh_token", refreshData.refresh_token);
+      }
+      
+      isRefreshing = false;
+      failedQueue.forEach(cb => cb(true));
+      failedQueue = [];
+      return true;
+    } else {
+      isRefreshing = false;
+      failedQueue.forEach(cb => cb(false));
+      failedQueue = [];
+      return false;
+    }
+  } catch (err) {
+    console.error("Token refresh failed:", err);
+    isRefreshing = false;
+    failedQueue.forEach(cb => cb(false));
+    failedQueue = [];
+    return false;
+  }
+}
+
 async function request(options: RequestOptions): Promise<any> {
   const { method, endpoint, body, params } = options;
 
@@ -73,39 +183,20 @@ async function request(options: RequestOptions): Promise<any> {
   });
 
   if (res.status === 401) {
-    const refreshToken = localStorage.getItem("refresh_token");
-    if (refreshToken && !endpoint.includes("/auth/refresh")) {
-      try {
-        // Extract token version from the refresh token payload
-        let tokenVersion = "1";
-        try {
-          const p = JSON.parse(atob(refreshToken.split(".")[1]));
-          if (p.version) tokenVersion = p.version;
-        } catch { /* ignore */ }
-
-        const refreshRes = await fetch(`${BASE_URL}/auth/refresh`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ refresh_token: refreshToken, version: tokenVersion })
+    if (!endpoint.includes("/auth/refresh")) {
+      const refreshSuccess = await handleTokenRefresh();
+      if (refreshSuccess) {
+        // Retry the original request
+        res = await fetch(url, {
+          method,
+          headers: getHeaders(),
+          ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
         });
-
-        if (refreshRes.ok) {
-          const refreshData = await refreshRes.json();
-          localStorage.setItem("auth_token", refreshData.access_token);
-          if (refreshData.refresh_token) {
-            localStorage.setItem("refresh_token", refreshData.refresh_token);
-          }
-
-          // Retry the original request
-          res = await fetch(url, {
-            method,
-            headers: getHeaders(),
-            ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
-          });
-        }
-      } catch (err) {
-        console.error("Token refresh failed:", err);
+      } else {
+        handleLogout();
       }
+    } else {
+      handleLogout();
     }
   }
 
@@ -168,37 +259,20 @@ async function requestFormData(endpoint: string, formData: FormData): Promise<an
   });
 
   if (res.status === 401) {
-    const refreshToken = localStorage.getItem("refresh_token");
-    if (refreshToken) {
-      try {
-        let tokenVersion = "1";
-        try {
-          const p = JSON.parse(atob(refreshToken.split(".")[1]));
-          if (p.version) tokenVersion = p.version;
-        } catch { /* ignore */ }
-
-        const refreshRes = await fetch(`${BASE_URL}/auth/refresh`, {
+    if (!endpoint.includes("/auth/refresh")) {
+      const refreshSuccess = await handleTokenRefresh();
+      if (refreshSuccess) {
+        // Retry the original request
+        res = await fetch(url, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ refresh_token: refreshToken, version: tokenVersion })
+          headers: getHeaders(),
+          body: formData,
         });
-
-        if (refreshRes.ok) {
-          const refreshData = await refreshRes.json();
-          localStorage.setItem("auth_token", refreshData.access_token);
-          if (refreshData.refresh_token) {
-            localStorage.setItem("refresh_token", refreshData.refresh_token);
-          }
-
-          res = await fetch(url, {
-            method: "POST",
-            headers: getHeaders(),
-            body: formData,
-          });
-        }
-      } catch (err) {
-        console.error("Token refresh failed:", err);
+      } else {
+        handleLogout();
       }
+    } else {
+      handleLogout();
     }
   }
 

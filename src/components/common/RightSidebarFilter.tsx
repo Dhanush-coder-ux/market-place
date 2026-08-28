@@ -21,16 +21,16 @@ export const RightSidebarFilter: React.FC<RightSidebarFilterProps> = ({
   children,
   applyLabel,
 }) => {
-  // Prevent body scroll when filter sidebar is open
+  // Prevent background/body scrolling while sidebar is open
   useEffect(() => {
     if (isOpen) {
-      document.body.classList.add("no-scroll");
+      document.body.style.overflow = "hidden";
     } else {
-      document.body.classList.remove("no-scroll");
+      document.body.style.overflow = "";
     }
 
     return () => {
-      document.body.classList.remove("no-scroll");
+      document.body.style.overflow = "";
     };
   }, [isOpen]);
 
@@ -38,190 +38,212 @@ export const RightSidebarFilter: React.FC<RightSidebarFilterProps> = ({
 
   return createPortal(
     <>
-      {/* Backdrop */}
+      {/* ================= BACKDROP ================= */}
       <div
-        className="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300 animate-fade-in"
+        className="
+          fixed
+          inset-0
+          z-[9998]
+          bg-slate-900/40
+          backdrop-blur-sm
+          animate-fade-in
+        "
         onClick={onClose}
       />
 
-      {/* Sidebar */}
-      <div
+      {/* ================= SIDEBAR ================= */}
+      <aside
         className="
           fixed
           top-0
           right-0
-          z-[10000]
-          h-full
+          z-[9999]
+          h-dvh
           w-full
           max-w-[360px]
           sm:max-w-[400px]
           bg-white
-          shadow-xl
           border-l
-          border-slate-100
+          border-slate-200
+          shadow-2xl
           flex
           flex-col
-          min-h-0
+          overflow-hidden
           animate-[slideLeft_0.25s_ease-out]
         "
       >
         {/* ================= HEADER ================= */}
-        <div
+        <header
           className="
             flex
             items-center
             justify-between
             px-5
             py-4
+            shrink-0
             border-b
             border-slate-100
-            shrink-0
-            bg-slate-50/50
+            bg-white
           "
         >
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             {/* Filter Icon */}
             <div
               className="
-                w-7
-                h-7
-                rounded-lg
-                bg-blue-50
                 flex
+                h-8
+                w-8
                 items-center
                 justify-center
+                rounded-lg
+                bg-blue-50
                 text-blue-600
               "
             >
-              <Filter size={13} />
+              <Filter size={14} strokeWidth={2} />
             </div>
 
             {/* Title */}
-            <h3 className="text-sm font-bold text-slate-800 tracking-tight">
+            <h3
+              className="
+                text-sm
+                font-semibold
+                tracking-tight
+                text-slate-800
+              "
+            >
               {title}
             </h3>
           </div>
 
           {/* Close Button */}
           <button
+            type="button"
             onClick={onClose}
+            title="Close Filters"
             className="
-              w-7
-              h-7
               flex
+              h-8
+              w-8
               items-center
               justify-center
-              bg-white
+              rounded-lg
               border
               border-slate-200
-              hover:bg-slate-50
-              rounded-lg
+              bg-white
               text-slate-500
-              hover:text-slate-700
-              transition-colors
               shadow-sm
+              transition-all
+              hover:bg-slate-50
+              hover:text-slate-700
               active:scale-95
             "
-            title="Close Filters"
           >
-            <X size={14} />
+            <X size={15} strokeWidth={2} />
           </button>
-        </div>
+        </header>
 
         {/* ================= SCROLLABLE CONTENT ================= */}
-        <div className="flex-1 relative min-h-0">
-          <div
-            className="
-              absolute
-              inset-0
-              overflow-y-auto
-              overflow-x-hidden
-              p-5
-              space-y-5
-  
-              /* Firefox */
-              scrollbar-thin
-              scrollbar-thumb-slate-300
-              scrollbar-track-transparent
-            "
-          >
-            {children}
-          </div>
-        </div>
-
-        {/* ================= FOOTER ================= */}
-        <div
+        <main
           className="
-            p-4
-            border-t
-            border-slate-100
-            flex
-            items-center
-            gap-3
-            bg-slate-50
-            shrink-0
+            flex-1
+            min-h-0
+            overflow-y-auto
+            overflow-x-hidden
+            overscroll-contain
+            px-5
+            py-5
+            space-y-5
+
+            scrollbar-thin
+            scrollbar-thumb-slate-300
+            scrollbar-track-transparent
+
+            hover:scrollbar-thumb-slate-400
           "
         >
-          {/* Reset Button */}
-          <button
-            type="button"
-            onClick={onClear}
-            className="
-              h-9
-              px-4
-              flex-1
-              text-slate-500
-              font-semibold
-              bg-white
-              border
-              border-slate-200
-              rounded-lg
-              hover:bg-slate-50
-              active:scale-95
-              transition-all
-              text-[11px]
-              uppercase
-              tracking-wider
-              flex
-              items-center
-              justify-center
-              gap-1.5
-              shadow-sm
-            "
-          >
-            <RotateCcw size={12} />
-            Reset
-          </button>
+          {children}
 
-          {/* Apply Button */}
-          <button
-            type="button"
-            onClick={() => {
-              onApply();
-              onClose();
-            }}
-            className="
-              h-9
-              px-4
-              flex-1
-              text-white
-              font-semibold
-              bg-blue-600
-              rounded-lg
-              hover:bg-blue-700
-              active:scale-95
-              transition-all
-              text-[11px]
-              uppercase
-              tracking-wider
-              shadow-md
-              shadow-blue-100
-            "
-          >
-            {applyLabel || "Apply Filters"}
-          </button>
-        </div>
-      </div>
+          {/* Extra bottom spacing so last field isn't hidden */}
+          <div className="h-2 shrink-0" />
+        </main>
+
+        {/* ================= FOOTER ================= */}
+        <footer
+          className="
+            shrink-0
+            border-t
+            border-slate-100
+            bg-slate-50
+            p-4
+          "
+        >
+          <div className="flex items-center gap-3">
+            {/* Reset Button */}
+            <button
+              type="button"
+              onClick={onClear}
+              className="
+                flex
+                h-10
+                flex-1
+                items-center
+                justify-center
+                gap-1.5
+                rounded-lg
+                border
+                border-slate-200
+                bg-white
+                px-4
+                text-[11px]
+                font-semibold
+                uppercase
+                tracking-wider
+                text-slate-500
+                shadow-sm
+                transition-all
+                hover:bg-slate-50
+                hover:text-slate-700
+                active:scale-[0.98]
+              "
+            >
+              <RotateCcw size={13} />
+              Reset
+            </button>
+
+            {/* Apply Button */}
+            <button
+              type="button"
+              onClick={() => {
+                onApply();
+                onClose();
+              }}
+              className="
+                flex
+                h-10
+                flex-1
+                items-center
+                justify-center
+                rounded-lg
+                bg-blue-600
+                px-4
+                text-[11px]
+                font-semibold
+                uppercase
+                tracking-wider
+                text-white
+                shadow-md
+                shadow-blue-100
+                transition-all
+                hover:bg-blue-700
+                active:scale-[0.98]
+              "
+            >
+              {applyLabel || "Apply Filters"}
+            </button>
+          </div>
+        </footer>
+      </aside>
     </>,
     document.body
   );

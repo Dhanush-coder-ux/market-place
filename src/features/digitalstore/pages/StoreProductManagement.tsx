@@ -1,17 +1,16 @@
 import { useMemo, useState, useEffect } from "react";
 import { useRef } from "react";
-import { createPortal } from "react-dom";
 import {
   Edit2, Plus, Search,
   AlertCircle, Eye, EyeOff,
   CheckCircle2, XCircle, LayoutGrid, List,
-  Tag, X, Settings2, Loader2,
+  Tag, Loader2,
   MoreVertical, ChevronDown, Sliders, GripVertical, Trash2,
 } from "lucide-react";
 import { inventoryApi, inventoryCustomFieldsApi } from "../../../services/api/inventory";
 import { SHOP_ID } from "../../../services/endpoints";
 import { useToast } from "../../../context/ToastContext";
-import { useBusinessApi } from "@/context/BusinessApiContext";
+import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Product {
@@ -19,6 +18,8 @@ interface Product {
   name: string;
   description: string;
   price: number;
+  buyPrice?: number;
+  onlineSellPrice?: number;
   stock: number;
   category: string;
   status: "Active" | "Out of Stock" | "Draft";
@@ -36,14 +37,15 @@ interface Product {
   uiId: string;
   gst: string;
   isActive: boolean;
+  haveTracking?: boolean;
   raw: any;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function stockStyle(stock: number): { textColor: string; label: string; indicator: string } {
-  if (stock === 0)    return { textColor: "text-red-600",    label: "Out of stock",  indicator: "bg-red-400" };
-  if (stock <= 10)    return { textColor: "text-amber-600",  label: `${stock} left`, indicator: "bg-amber-400" };
-  return               { textColor: "text-emerald-600",      label: `${stock}`,      indicator: "bg-emerald-400" };
+  if (stock === 0) return { textColor: "text-red-600", label: "Out of stock", indicator: "bg-red-400" };
+  if (stock <= 10) return { textColor: "text-amber-600", label: `${stock} left`, indicator: "bg-amber-400" };
+  return { textColor: "text-emerald-600", label: `${stock}`, indicator: "bg-emerald-400" };
 }
 
 // ─── Visibility Toggle ────────────────────────────────────────────────────────
@@ -53,11 +55,10 @@ function AppVisibilityToggle({ visible, onChange, loading }: { visible: boolean;
       onClick={(e) => { e.stopPropagation(); if (!loading) onChange(); }}
       disabled={loading}
       title={visible ? "Visible on app — click to hide" : "Hidden from app — click to show"}
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-[12px] font-medium transition-all cursor-pointer disabled:opacity-50 ${
-        visible
-          ? "bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100"
-          : "bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100"
-      }`}
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-[12px] font-medium transition-all cursor-pointer disabled:opacity-50 ${visible
+        ? "bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100"
+        : "bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100"
+        }`}
     >
       {loading ? (
         <Loader2 size={11} className="animate-spin" />
@@ -91,9 +92,8 @@ function ProductCard({
 
   return (
     <div
-      className={`bg-white rounded-xl border overflow-hidden flex flex-col transition-all duration-150 ${
-        selected ? "border-blue-300 ring-2 ring-blue-100" : "border-slate-200 hover:border-slate-300"
-      }`}
+      className={`bg-white rounded-xl border overflow-hidden flex flex-col transition-all duration-150 ${selected ? "border-blue-300 ring-2 ring-blue-100" : "border-slate-200 hover:border-slate-300"
+        }`}
       style={{ opacity: product.visibleOnApp ? 1 : 0.65 }}
     >
       {/* Image */}
@@ -109,9 +109,8 @@ function ProductCard({
         {/* Checkbox */}
         <div
           onClick={onSelect}
-          className={`absolute top-2.5 left-2.5 w-5 h-5 rounded border-2 flex items-center justify-center cursor-pointer transition-all ${
-            selected ? "bg-blue-600 border-blue-600" : "bg-white/90 border-slate-300"
-          }`}
+          className={`absolute top-2.5 left-2.5 w-5 h-5 rounded border-2 flex items-center justify-center cursor-pointer transition-all ${selected ? "bg-blue-600 border-blue-600" : "bg-white/90 border-slate-300"
+            }`}
         >
           {selected && <CheckCircle2 size={12} className="text-white" strokeWidth={3} />}
         </div>
@@ -145,13 +144,18 @@ function ProductCard({
           <p className="text-[13px] font-semibold text-slate-800 leading-snug line-clamp-2 mt-1.5">
             {product.name}
           </p>
+          {product.description && (
+            <p className="text-[11px] text-slate-500 line-clamp-2 italic mt-1 bg-slate-50 p-1.5 rounded border border-slate-100">
+              {product.description}
+            </p>
+          )}
           {product.sku && (
-            <p className="text-[10px] font-mono text-slate-400 mt-0.5">{product.sku}</p>
+            <p className="text-[10px] font-mono text-slate-400 mt-1">{product.sku}</p>
           )}
         </div>
 
         {/* Tracking badges */}
-        {(product.hasBatch || product.hasVariant || product.hasSerialNo || !product.isActive) && (
+        {(product.hasBatch || product.hasVariant || product.hasSerialNo || (!product.isActive && product.haveTracking !== false)) && (
           <div className="flex flex-wrap gap-1">
             {product.hasBatch && (
               <span className="text-[9.5px] font-medium px-1.5 py-0.5 rounded border bg-slate-50 text-slate-500 border-slate-200">
@@ -168,7 +172,7 @@ function ProductCard({
                 Serial
               </span>
             )}
-            {!product.isActive && (
+            {!product.isActive && product.haveTracking !== false && (
               <span className="text-[9.5px] font-medium px-1.5 py-0.5 rounded border bg-slate-50 text-slate-400 border-slate-200">
                 Inactive
               </span>
@@ -177,13 +181,22 @@ function ProductCard({
         )}
 
         {/* Price + Stock */}
-        <div className="flex items-center justify-between mt-auto">
-          <span className="text-[15px] font-bold text-slate-800">
-            {product.price > 0
-              ? `₹${product.price.toLocaleString("en-IN")}`
-              : <span className="text-slate-300 text-[12px]">No price</span>
-            }
-          </span>
+        <div className="flex items-center justify-between mt-auto pt-1">
+          <div className="flex flex-col">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[14px] font-bold text-emerald-600">
+                ₹{(product.onlineSellPrice ?? product.price ?? 0).toLocaleString("en-IN")}
+              </span>
+              <span className="text-[9px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 py-0.2 rounded">
+                Online SP
+              </span>
+            </div>
+            {product.price > 0 && (
+              <span className="text-[10px] text-slate-400">
+                Store SP: ₹{product.price.toLocaleString("en-IN")}
+              </span>
+            )}
+          </div>
           <span className={`text-[11px] font-medium ${stock.textColor} flex items-center gap-1`}>
             <span className={`w-1.5 h-1.5 rounded-full ${stock.indicator} inline-block`} />
             {stock.label}
@@ -222,17 +235,15 @@ function ProductRow({
 
   return (
     <tr
-      className={`border-b border-slate-100 last:border-b-0 hover:bg-slate-50/60 transition-colors ${
-        !product.visibleOnApp ? "opacity-65" : ""
-      }`}
+      className={`border-b border-slate-100 last:border-b-0 hover:bg-slate-50/60 transition-colors ${!product.visibleOnApp ? "opacity-65" : ""
+        }`}
     >
       {/* Checkbox */}
       <td className="pl-4 pr-2 py-3">
         <div
           onClick={onSelect}
-          className={`w-4 h-4 rounded border-[1.5px] flex items-center justify-center cursor-pointer transition-all ${
-            selected ? "bg-blue-600 border-blue-600" : "bg-white border-slate-300"
-          }`}
+          className={`w-4 h-4 rounded border-[1.5px] flex items-center justify-center cursor-pointer transition-all ${selected ? "bg-blue-600 border-blue-600" : "bg-white border-slate-300"
+            }`}
         >
           {selected && <CheckCircle2 size={10} className="text-white" strokeWidth={3} />}
         </div>
@@ -251,9 +262,12 @@ function ProductRow({
             />
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-medium text-slate-800 truncate max-w-[200px]">{product.name}</p>
+            <p className="text-sm font-medium text-slate-800 truncate max-w-[180px]">{product.name}</p>
+            {product.description && (
+              <p className="text-[11px] text-slate-400 truncate max-w-[200px] italic">{product.description}</p>
+            )}
             <div className="flex items-center gap-1.5 mt-0.5">
-              {!product.isActive && (
+              {!product.isActive && product.haveTracking !== false && (
                 <span className="text-[10px] font-medium text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
                   Inactive
                 </span>
@@ -283,13 +297,20 @@ function ProductRow({
         </span>
       </td>
 
-      {/* Price */}
+      {/* Store SP */}
       <td className="px-3 py-3">
-        <span className="text-sm font-semibold text-slate-800">
+        <span className="text-xs font-semibold text-slate-600">
           {product.price > 0
             ? `₹${product.price.toLocaleString("en-IN")}`
             : <span className="text-slate-300">—</span>
           }
+        </span>
+      </td>
+
+      {/* Online SP */}
+      <td className="px-3 py-3">
+        <span className="text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-md inline-block">
+          ₹{(product.onlineSellPrice ?? product.price ?? 0).toLocaleString("en-IN")}
         </span>
       </td>
 
@@ -426,23 +447,14 @@ function CardMoreMenu({ onEdit, onToggleVisibility, visible, actionLoading }: { 
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 const ProductDashboard = () => {
-  const { shop } = useBusinessApi();
-  const [storeName, setStoreName] = useState("Manage Online Listing");
 
-  useEffect(() => {
-    const currentShopId = localStorage.getItem("shop_id") || SHOP_ID;
-    shop.getShopById(currentShopId).then((res: any) => {
-      if (res && res.name) setStoreName(res.name);
-    }).catch(console.error);
-  }, [shop]);
-
-  const [products, setProducts]           = useState<Product[]>([]);
-  const [loading, setLoading]             = useState(true);
-  const [selectedIds, setSelectedIds]     = useState<string[]>([]);
-  const [search, setSearch]               = useState("");
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
-  const [statusFilter, setStatusFilter]   = useState<"All" | "Visible" | "Hidden">("All");
-  const [viewMode, setViewMode]           = useState<"grid" | "list">("list");
+  const [statusFilter, setStatusFilter] = useState<"All" | "Visible" | "Hidden">("All");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
 
   // Custom Field / Edit Modal State
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -473,7 +485,7 @@ const ProductDashboard = () => {
   const loadProducts = async () => {
     try {
       setLoading(true);
-      const res = await inventoryApi.getInventoriesByShop(SHOP_ID);
+      const res = await inventoryApi.getInventoriesByShop(SHOP_ID, { active: "true" });
       const rawList = Array.isArray(res?.data)
         ? res.data
         : (res?.data?.inventories ?? (Array.isArray(res?.datas) ? res.datas : (res?.datas?.inventories ?? [])));
@@ -483,12 +495,14 @@ const ProductDashboard = () => {
           ? p.image_url[0]
           : (p.images?.[0] || "https://placehold.co/200x160/f1f5f9/94a3b8?text=No+Image");
 
-        const hasBatch    = p.type_infos?.has_batch    ?? false;
-        const hasVariant  = p.type_infos?.has_variant  ?? false;
+        const hasBatch = p.type_infos?.has_batch ?? false;
+        const hasVariant = p.type_infos?.has_variant ?? false;
         const hasSerialNo = p.type_infos?.has_serialno ?? false;
 
         let totalStock = 0;
         let price = 0;
+        let buyPrice = 0;
+        let onlineSellPrice = 0;
 
         if (hasBatch && Array.isArray(p.batch_infos) && p.batch_infos.length > 0) {
           totalStock = p.batch_infos.reduce((sum: number, b: any) => {
@@ -496,6 +510,8 @@ const ProductDashboard = () => {
           }, 0);
           const batchWithPrice = p.batch_infos.find((b: any) => b.pricing_infos?.sell_price);
           price = batchWithPrice?.pricing_infos?.sell_price ?? 0;
+          buyPrice = batchWithPrice?.pricing_infos?.buy_price ?? 0;
+          onlineSellPrice = batchWithPrice?.pricing_infos?.online_sell_price ?? price;
         } else if (hasVariant && p.variants && typeof p.variants === "object") {
           const variantList = Object.values(p.variants) as any[];
           totalStock = variantList.reduce((sum: number, v: any) => {
@@ -503,12 +519,16 @@ const ProductDashboard = () => {
           }, 0);
           const variantWithPrice = variantList.find((v: any) => v.pricing_infos?.sell_price);
           price = variantWithPrice?.pricing_infos?.sell_price ?? 0;
+          buyPrice = variantWithPrice?.pricing_infos?.buy_price ?? 0;
+          onlineSellPrice = variantWithPrice?.pricing_infos?.online_sell_price ?? price;
         } else {
           totalStock = p.stock_infos?.available_stocks ?? p.stock_infos?.physical_stocks ?? 0;
           price = p.pricing_infos?.sell_price ?? p.sell_price ?? 0;
+          buyPrice = p.pricing_infos?.buy_price ?? p.buy_price ?? 0;
+          onlineSellPrice = p.pricing_infos?.online_sell_price ?? p.online_sell_price ?? price;
         }
 
-        const batchCount   = Array.isArray(p.batch_infos) ? p.batch_infos.length : 0;
+        const batchCount = Array.isArray(p.batch_infos) ? p.batch_infos.length : 0;
         const variantCount = p.variants && typeof p.variants === "object" ? Object.keys(p.variants).length : 0;
 
         return {
@@ -516,6 +536,8 @@ const ProductDashboard = () => {
           name: p.name || "Unnamed Product",
           description: p.description || "",
           price,
+          buyPrice,
+          onlineSellPrice,
           stock: Math.floor(totalStock),
           category: p.category_infos?.name || p.category_id || "Uncategorized",
           status: !p.is_active ? "Draft" : totalStock === 0 ? "Out of Stock" : "Active",
@@ -533,6 +555,7 @@ const ProductDashboard = () => {
           uiId: p.ui_id || "",
           gst: p.gst || "0%",
           isActive: p.is_active ?? true,
+          haveTracking: p.have_tracking ?? true,
           raw: p,
         };
       });
@@ -572,7 +595,7 @@ const ProductDashboard = () => {
     loadCustomFieldsForProduct(product);
   };
 
-  
+
 
   const handleSaveProduct = async () => {
     if (!editingProduct) return;
@@ -589,11 +612,17 @@ const ProductDashboard = () => {
           values: valuesToSave,
         });
       }
+      const buyPrice = editingProduct.buyPrice ?? editingProduct.raw?.pricing_infos?.buy_price ?? editingProduct.raw?.buy_price ?? 0;
+      const sellPrice = editingProduct.price ?? editingProduct.raw?.pricing_infos?.sell_price ?? 0;
+      const onlinePrice = editingProduct.onlineSellPrice ?? sellPrice;
       await inventoryApi.updateInventory({
         id: editingProduct.id,
         shop_id: SHOP_ID,
         visible_online: editingProduct.visibleOnApp,
         description: editingProduct.description,
+        buy_price: buyPrice,
+        sell_price: sellPrice,
+        online_sell_price: onlinePrice,
       });
       showToast("Product updated successfully", "success");
       setEditingProduct(null);
@@ -607,20 +636,20 @@ const ProductDashboard = () => {
   };
 
   const stats = useMemo(() => ({
-    total:          products.length,
-    visible:        products.filter((p) => p.visibleOnApp).length,
-    hidden:         products.filter((p) => !p.visibleOnApp).length,
-    lowStock:       products.filter((p) => p.stock > 0 && p.stock <= 10).length,
-    outOfStock:     products.filter((p) => p.stock === 0).length,
+    total: products.length,
+    visible: products.filter((p) => p.visibleOnApp).length,
+    hidden: products.filter((p) => !p.visibleOnApp).length,
+    lowStock: products.filter((p) => p.stock > 0 && p.stock <= 10).length,
+    outOfStock: products.filter((p) => p.stock === 0).length,
     inventoryValue: products.reduce((a, p) => a + p.price * p.stock, 0),
   }), [products]);
 
   const filtered = useMemo(() => products.filter((p) => {
-    const matchSearch   = p.name.toLowerCase().includes(search.toLowerCase()) || p.id.toString().includes(search);
+    const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) || p.id.toString().includes(search);
     const matchCategory = categoryFilter === "All" || p.category === categoryFilter;
-    const matchStatus   = statusFilter === "All"
+    const matchStatus = statusFilter === "All"
       || (statusFilter === "Visible" && p.visibleOnApp)
-      || (statusFilter === "Hidden"  && !p.visibleOnApp);
+      || (statusFilter === "Hidden" && !p.visibleOnApp);
     return matchSearch && matchCategory && matchStatus;
   }), [products, search, categoryFilter, statusFilter]);
 
@@ -707,11 +736,10 @@ const ProductDashboard = () => {
             <button
               key={v}
               onClick={() => setStatusFilter(v)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-[12px] font-medium cursor-pointer transition-colors ${
-                statusFilter === v
-                  ? "bg-white text-blue-600 shadow-sm border border-blue-100"
-                  : "text-slate-500 hover:text-slate-700"
-              }`}
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-[12px] font-medium cursor-pointer transition-colors ${statusFilter === v
+                ? "bg-white text-blue-600 shadow-sm border border-blue-100"
+                : "text-slate-500 hover:text-slate-700"
+                }`}
             >
               {v === "Visible" && <Eye size={11} />}
               {v === "Hidden" && <EyeOff size={11} />}
@@ -736,11 +764,10 @@ const ProductDashboard = () => {
             <button
               key={m}
               onClick={() => setViewMode(m)}
-              className={`w-7 h-7 rounded-md flex items-center justify-center cursor-pointer transition-colors ${
-                viewMode === m
-                  ? "bg-white text-blue-600 shadow-sm border border-blue-100"
-                  : "text-slate-400 hover:text-slate-600"
-              }`}
+              className={`w-7 h-7 rounded-md flex items-center justify-center cursor-pointer transition-colors ${viewMode === m
+                ? "bg-white text-blue-600 shadow-sm border border-blue-100"
+                : "text-slate-400 hover:text-slate-600"
+                }`}
             >
               {icon}
             </button>
@@ -792,7 +819,7 @@ const ProductDashboard = () => {
                 <div
                   className="w-4 h-4 rounded border-[1.5px] flex items-center justify-center"
                   style={{
-                    background:  selectedIds.length === filtered.length ? "#2563eb" : "white",
+                    background: selectedIds.length === filtered.length ? "#2563eb" : "white",
                     borderColor: selectedIds.length === filtered.length ? "#2563eb" : "#cbd5e1",
                   }}
                 >
@@ -839,7 +866,8 @@ const ProductDashboard = () => {
                     <th className="px-3 py-2.5 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Product</th>
                     <th className="px-3 py-2.5 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide hidden md:table-cell">SKU</th>
                     <th className="px-3 py-2.5 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Category</th>
-                    <th className="px-3 py-2.5 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Price</th>
+                    <th className="px-3 py-2.5 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Store SP</th>
+                    <th className="px-3 py-2.5 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Online SP</th>
                     <th className="px-3 py-2.5 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Stock</th>
                     <th className="px-3 py-2.5 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Visibility</th>
                     <th className="px-3 py-2.5 pr-4 text-right text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Actions</th>
@@ -865,139 +893,140 @@ const ProductDashboard = () => {
       )}
 
       {/* ── Product & Custom Fields Sidebar ── */}
-      {editingProduct && createPortal(
-        <>
-          <div
-            className="fixed inset-0 z-[9999] bg-slate-900/40 backdrop-blur-sm"
-            onClick={() => setEditingProduct(null)}
-          />
-          <div className="fixed top-0 right-0 h-full z-[10000] bg-white shadow-xl w-full max-w-[420px] flex flex-col border-l border-slate-200">
+      {editingProduct && (
+        <RightSidebarFilter
+          isOpen={!!editingProduct}
+          onClose={() => setEditingProduct(null)}
+          onApply={handleSaveProduct}
+          applyLabel={savingProduct ? "Saving..." : "Save Changes"}
+          onClear={() => setEditingProduct(null)}
+          title={`Configure ${editingProduct.name}`}
+        >
+          <div className="space-y-6 pb-4">
 
-            {/* Sidebar Header */}
-            <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <Settings2 className="text-blue-500" size={18} />
+            {/* ── PRICING ── */}
+            <div className="space-y-4">
+              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">PRICING</p>
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h3 className="font-semibold text-slate-800 text-sm">{storeName}</h3>
-                  <p className="text-[11px] text-slate-400">Configure visibility and custom attributes</p>
+                  <label className="text-[11px] font-semibold text-slate-500 mb-1.5 block">Shop price (from catalog)</label>
+                  <div className="flex items-center h-9 rounded-lg border border-slate-200 bg-[#fbfaf8] overflow-hidden">
+                    <div className="h-full px-2.5 flex items-center justify-center border-r border-slate-200 bg-[#f4f2ee] text-slate-500 text-xs font-semibold">
+                      ₹
+                    </div>
+                    <input
+                      type="number"
+                      readOnly
+                      value={editingProduct.price || 0}
+                      className="w-full bg-transparent px-3 text-sm font-medium text-blue-600 outline-none"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-500 mb-1.5 block">Store price (online)</label>
+                  <div className="flex items-center h-9 rounded-lg border border-slate-200 bg-white overflow-hidden focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all">
+                    <div className="h-full px-2.5 flex items-center justify-center border-r border-slate-200 bg-[#f4f2ee] text-slate-500 text-xs font-semibold">
+                      ₹
+                    </div>
+                    <input
+                      type="number"
+                      value={editingProduct.onlineSellPrice ?? editingProduct.price ?? 0}
+                      onChange={(e) => setEditingProduct({ ...editingProduct, onlineSellPrice: e.target.value !== "" ? Number(e.target.value) : 0 })}
+                      className="w-full bg-transparent px-3 text-sm font-semibold text-slate-800 outline-none"
+                      placeholder="e.g. 299"
+                    />
+                  </div>
                 </div>
               </div>
-              <button
-                onClick={() => setEditingProduct(null)}
-                className="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
-              >
-                <X size={15} />
-              </button>
             </div>
 
-            {/* Sidebar Content */}
-            <div className="p-5 overflow-y-auto space-y-5 flex-1">
+            <div className="border-t border-slate-100" />
 
-              {/* Product mini info */}
-              <div className="flex gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
-                <img
-                  src={editingProduct.image}
-                  alt={editingProduct.name}
-                  className="w-14 h-14 rounded-lg object-cover border border-slate-200"
-                />
-                <div className="flex-1 min-w-0">
-                  <span className="text-[10px] font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
-                    {editingProduct.category}
-                  </span>
-                  <h4 className="font-semibold text-slate-800 text-sm truncate mt-1">{editingProduct.name}</h4>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
-                    ₹{editingProduct.price} · {editingProduct.stock} in stock
-                  </p>
-                </div>
+            {/* Product mini info */}
+            <div className="flex gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+              <img
+                src={editingProduct.image}
+                alt={editingProduct.name}
+                className="w-14 h-14 rounded-lg object-cover border border-slate-200"
+              />
+              <div className="flex-1 min-w-0">
+                <span className="text-[10px] font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
+                  {editingProduct.category}
+                </span>
+                <h4 className="font-semibold text-slate-800 text-sm truncate mt-1">{editingProduct.name}</h4>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  ₹{editingProduct.price} · {editingProduct.stock} in stock
+                </p>
+              </div>
+            </div>
+
+            {/* Product Description */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Description</label>
+              <textarea
+                value={editingProduct.description || ""}
+                onChange={(e) => setEditingProduct({ ...editingProduct, description: e.target.value })}
+                placeholder="Enter product description..."
+                className="w-full h-24 resize-none border border-slate-200 rounded-lg p-3 text-[12px] outline-none focus:border-blue-500 bg-white"
+              />
+            </div>
+
+            {/* Additional Details */}
+            <div className="space-y-3">
+              <div>
+                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                  ADDITIONAL DETAILS <span className="text-slate-400 font-normal normal-case ml-1">(optional, up to 3)</span>
+                </p>
+                <p className="text-[12px] text-slate-500 mt-1">
+                  Add custom sections like ingredients, storage instructions, allergen info, or anything your customers should know.
+                </p>
               </div>
 
-              {/* Product Description */}
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Description</label>
-                <textarea
-                  value={editingProduct.description || ""}
-                  onChange={(e) => setEditingProduct({ ...editingProduct, description: e.target.value })}
-                  placeholder="Enter product description..."
-                  className="w-full h-24 resize-none border border-slate-200 rounded-lg p-3 text-[12px] outline-none focus:border-blue-500 bg-white"
-                />
-              </div>
-
-              {/* Additional Details */}
-              <div className="space-y-3">
-                <div>
-                  <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                    ADDITIONAL DETAILS <span className="text-slate-400 font-normal normal-case ml-1">(optional, up to 3)</span>
-                  </p>
-                  <p className="text-[12px] text-slate-500 mt-1">
-                    Add custom sections like ingredients, storage instructions, allergen info, or anything your customers should know.
-                  </p>
-                </div>
-
-                {additionalSections.map((section, index) => (
-                  <div key={section.id} className="border border-[#e5e2db] rounded-xl overflow-hidden bg-[#fdfaf5]">
-                    <div className="px-3 py-2.5 flex items-center justify-between border-b border-[#e5e2db]">
-                      <div className="flex items-center gap-3 flex-1">
-                        <GripVertical size={14} className="text-slate-300 cursor-grab shrink-0" />
-                        <div className="w-5 h-5 bg-slate-900 text-white rounded-full flex items-center justify-center text-[10px] font-bold shrink-0">
-                          {index + 1}
-                        </div>
-                        <input
-                          type="text"
-                          value={section.title}
-                          onChange={(e) => updateSection(section.id, 'title', e.target.value)}
-                          placeholder="Section heading (e.g. Storage instructions)"
-                          className="bg-transparent border-none outline-none text-sm font-semibold text-slate-600 placeholder:text-slate-400 w-full"
-                        />
+              {additionalSections.map((section, index) => (
+                <div key={section.id} className="border border-[#e5e2db] rounded-xl overflow-hidden bg-[#fdfaf5]">
+                  <div className="px-3 py-2.5 flex items-center justify-between border-b border-[#e5e2db]">
+                    <div className="flex items-center gap-3 flex-1">
+                      <GripVertical size={14} className="text-slate-300 cursor-grab shrink-0" />
+                      <div className="w-5 h-5 bg-slate-900 text-white rounded-full flex items-center justify-center text-[10px] font-bold shrink-0">
+                        {index + 1}
                       </div>
-                      <button
-                        onClick={() => removeSection(section.id)}
-                        className="text-slate-400 hover:text-red-500 shrink-0 ml-2"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                    <div className="p-3 bg-[#fdfaf5]">
-                      <textarea
-                        value={section.content}
-                        onChange={(e) => updateSection(section.id, 'content', e.target.value)}
-                        placeholder="What should customers know? Keep it short and clear."
-                        className="w-full h-20 resize-none border border-slate-300 rounded-lg p-2.5 text-sm outline-none focus:border-blue-500 bg-white"
+                      <input
+                        type="text"
+                        value={section.title}
+                        onChange={(e) => updateSection(section.id, 'title', e.target.value)}
+                        placeholder="Section heading (e.g. Storage instructions)"
+                        className="bg-transparent border-none outline-none text-sm font-semibold text-slate-600 placeholder:text-slate-400 w-full"
                       />
                     </div>
+                    <button
+                      onClick={() => removeSection(section.id)}
+                      className="text-slate-400 hover:text-red-500 shrink-0 ml-2"
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </div>
-                ))}
+                  <div className="p-3 bg-[#fdfaf5]">
+                    <textarea
+                      value={section.content}
+                      onChange={(e) => updateSection(section.id, 'content', e.target.value)}
+                      placeholder="What should customers know? Keep it short and clear."
+                      className="w-full h-20 resize-none border border-slate-300 rounded-lg p-2.5 text-sm outline-none focus:border-blue-500 bg-white"
+                    />
+                  </div>
+                </div>
+              ))}
 
-                {additionalSections.length < 3 && (
-                  <button
-                    onClick={addSection}
-                    className="w-full py-3 border border-dashed border-slate-300 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 flex items-center justify-center gap-2 transition-colors cursor-pointer"
-                  >
-                    <Plus size={16} /> Add another section
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Sidebar Footer */}
-            <div className="px-5 py-4 border-t border-slate-200 flex items-center justify-end gap-2.5 shrink-0">
-              <button
-                onClick={() => setEditingProduct(null)}
-                className="px-4 py-2 border border-slate-200 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveProduct}
-                disabled={savingProduct}
-                className="inline-flex items-center gap-2 bg-blue-600 text-white font-semibold px-5 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors cursor-pointer disabled:opacity-50"
-              >
-                {savingProduct && <Loader2 size={13} className="animate-spin" />}
-                Save Changes
-              </button>
+              {additionalSections.length < 3 && (
+                <button
+                  onClick={addSection}
+                  className="w-full py-3 border border-dashed border-slate-300 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                >
+                  <Plus size={16} /> Add another section
+                </button>
+              )}
             </div>
           </div>
-        </>,
-        document.body
+        </RightSidebarFilter>
       )}
     </div>
   );

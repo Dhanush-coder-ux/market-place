@@ -113,29 +113,57 @@ const formatDate = (dateStr?: string) => {
   });
 };
 
+const parseObjects = (val: any): any[] => {
+  if (!val) return [];
+  if (Array.isArray(val)) return val;
+  if (typeof val === "string") {
+    try {
+      const parsed = JSON.parse(val);
+      if (Array.isArray(parsed)) return parsed;
+      if (parsed && typeof parsed === "object") return Object.values(parsed);
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+  if (typeof val === "object") {
+    return Object.values(val);
+  }
+  return [];
+};
+
+const parseSerials = (val: any): string[] => {
+  if (!val) return [];
+  const getNames = (arr: any[]): string[] => {
+    return arr.map((v: any) => typeof v === 'object' && v !== null ? v.name || v.serial || v.serial_number || String(v) : String(v)).filter(Boolean);
+  };
+  if (Array.isArray(val)) return getNames(val);
+  if (typeof val === "object") {
+    if (Array.isArray(val.serial_numbers)) return getNames(val.serial_numbers);
+    if (Array.isArray(val.serialno_infos)) return getNames(val.serialno_infos);
+    return getNames(Object.values(val));
+  }
+  if (typeof val === "string") {
+    try {
+      const parsed = JSON.parse(val);
+      if (parsed && typeof parsed === "object" && Array.isArray(parsed.serial_numbers))
+        return getNames(parsed.serial_numbers);
+      if (parsed && typeof parsed === "object" && Array.isArray(parsed.serialno_infos))
+        return getNames(parsed.serialno_infos);
+      return Array.isArray(parsed) ? getNames(parsed) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+  return [];
+};
+
 const calculateProductStock = (item: any) => {
   const datas = item.datas || {};
-  const parseDataLocal = (val: any) => {
-    if (Array.isArray(val)) return val;
-    if (val && typeof val === "object") {
-      if (Array.isArray(val.serial_numbers)) return val.serial_numbers;
-      return Object.values(val);
-    }
-    if (typeof val === "string") {
-      try {
-        const parsed = JSON.parse(val);
-        if (parsed && typeof parsed === "object" && Array.isArray(parsed.serial_numbers)) return parsed.serial_numbers;
-        return parsed;
-      } catch (e) {
-        return [];
-      }
-    }
-    return [];
-  };
 
   const combinations = (() => {
-    const raw = parseDataLocal(item.variants || item.variant_infos || datas.combinations || datas.variants);
-    return raw.filter((v: any) => v && v.id !== null);
+    const raw = parseObjects(item.variants || item.variant_infos || datas.combinations || datas.variants);
+    return raw.filter((v: any) => v && typeof v === "object");
   })();
 
   const batches = (() => {
@@ -145,11 +173,11 @@ const calculateProductStock = (item: any) => {
       ((item.variants?.length ?? 0) > 0 || (item.variant_infos?.length ?? 0) > 0)
     ) {
       const firstVar = item.variants?.[0] || item.variant_infos?.[0];
-      raw = parseDataLocal(firstVar?.batches || firstVar?.batch_infos);
+      raw = parseObjects(firstVar?.batches || firstVar?.batch_infos);
     } else {
-      raw = parseDataLocal(item.batches || item.batch_infos || datas.batches);
+      raw = parseObjects(item.batches || item.batch_infos || datas.batches || item.type_infos?.batch_infos);
     }
-    return raw.filter((b: any) => b && b.id !== null);
+    return raw.filter((b: any) => b && typeof b === "object");
   })();
 
   const hasVariants =
@@ -161,11 +189,12 @@ const calculateProductStock = (item: any) => {
   const hasBatches = batches.length > 0 || item.has_batch || item.type_infos?.has_batch;
 
   const calculateVariantStock = (comb: any) => {
-    const vBatches = comb.batch_infos ?? comb.batches ?? [];
+    const vBatches = parseObjects(comb.batch_infos ?? comb.batches ?? []);
     const vHasBatches = vBatches.length > 0;
     let vStock = Number(comb.stock_infos?.available_stocks ?? comb.stock_infos?.physical_stocks ?? comb.stocks ?? comb.stock ?? comb.datas?.stocks ?? comb.datas?.datas?.stocks ?? 0);
-    if (vHasBatches && vStock === 0) {
-      vStock = vBatches.reduce((acc: number, b: any) => acc + Number(b.stock_infos?.available_stocks ?? b.stock_infos?.physical_stocks ?? b.stocks ?? 0), 0);
+    if (vHasBatches || vStock === 0) {
+      const bSum = vBatches.reduce((acc: number, b: any) => acc + Number(b.stock_infos?.available_stocks ?? b.stock_infos?.physical_stocks ?? b.stocks ?? b.stock ?? b.quantity ?? b.qty ?? b.available_stocks ?? 0), 0);
+      if (bSum > 0) vStock = bSum;
     }
     return vStock;
   };
@@ -173,11 +202,14 @@ const calculateProductStock = (item: any) => {
   let stockNumber = Number(item.stock_infos?.available_stocks ?? item.stock_infos?.physical_stocks ?? item.stocks ?? item.quantity ?? 0);
   if (hasVariants) {
     stockNumber = combinations.reduce((acc: number, comb: any) => acc + calculateVariantStock(comb), 0);
-  } else if (hasBatches && stockNumber === 0) {
-    stockNumber = batches.reduce((acc, b) => {
-      const bStock = Number(b.stock_infos?.available_stocks ?? b.stock_infos?.physical_stocks ?? b.stocks ?? 0);
+  } else if (hasBatches) {
+    const bSum = batches.reduce((acc: number, b: any) => {
+      const bStock = Number(b.stock_infos?.available_stocks ?? b.stock_infos?.physical_stocks ?? b.stocks ?? b.stock ?? b.quantity ?? b.qty ?? b.available_stocks ?? 0);
       return acc + bStock;
     }, 0);
+    if (bSum > 0 || stockNumber === 0) {
+      stockNumber = bSum;
+    }
   }
   return stockNumber;
 };
@@ -211,43 +243,6 @@ const formatCurrency = (amount?: number | string) => {
     maximumFractionDigits: 2,
   })}`;
 };
-
-const parseData = (val: any) => {
-  if (!val) return [];
-  const getNames = (arr: any[]): string[] => {
-    return arr.map((v: any) => typeof v === 'object' && v !== null ? v.name || v.serial || "" : String(v)).filter(Boolean);
-  };
-  if (Array.isArray(val)) return getNames(val);
-  if (val && typeof val === "object") {
-    if (Array.isArray(val.serial_numbers)) return getNames(val.serial_numbers);
-    if (Array.isArray(val.serialno_infos)) return getNames(val.serialno_infos);
-    return Object.values(val);
-  }
-  if (typeof val === "string") {
-    try {
-      const parsed = JSON.parse(val);
-      if (
-        parsed &&
-        typeof parsed === "object" &&
-        Array.isArray(parsed.serial_numbers)
-      )
-        return getNames(parsed.serial_numbers);
-      if (
-        parsed &&
-        typeof parsed === "object" &&
-        Array.isArray(parsed.serialno_infos)
-      )
-        return getNames(parsed.serialno_infos);
-      return Array.isArray(parsed) ? getNames(parsed) : parsed;
-    } catch (e) {
-      return [];
-    }
-  }
-  return [];
-};
-
-
-
 
 // --- Copy SKU Button with Micro-Animation ---
 const CopySKUButton = ({ val }: { val: string }) => {
@@ -298,10 +293,10 @@ const ProductRow = React.memo(
     const datas = item.datas || {};
 
     const combinations = useMemo(() => {
-      const raw = parseData(
+      const raw = parseObjects(
         item.variants || (item as any).variant_infos || datas.combinations || datas.variants
       );
-      return raw.filter((v: any) => v && v.id !== null);
+      return raw.filter((v: any) => v && typeof v === "object");
     }, [item.variants, (item as any).variant_infos, datas.combinations, datas.variants]);
 
     const batches = useMemo(() => {
@@ -311,24 +306,27 @@ const ProductRow = React.memo(
         ((item.variants?.length ?? 0) > 0 || ((item as any).variant_infos?.length ?? 0) > 0)
       ) {
         const firstVar = item.variants?.[0] || (item as any).variant_infos?.[0];
-        raw = parseData(firstVar?.batches || firstVar?.batch_infos);
+        raw = parseObjects(firstVar?.batches || firstVar?.batch_infos);
       } else {
-        raw = parseData(item.batches || (item as any).batch_infos || datas.batches);
+        raw = parseObjects(item.batches || (item as any).batch_infos || datas.batches || (item as any).type_infos?.batch_infos);
       }
-      return raw.filter((b: any) => b && b.id !== null);
+      return raw.filter((b: any) => b && typeof b === "object");
     }, [
       item.variants,
       (item as any).variant_infos,
       item.batches,
       (item as any).batch_infos,
       datas.batches,
+      (item as any).type_infos?.batch_infos,
       datas.has_variants,
       datas.has_varients,
     ]);
 
-    const serials = parseData(
-      datas.serial_numbers || item.serial_numbers || item.serial_number || (item as any).serialno_infos
-    );
+    const serials = useMemo(() => {
+      return parseSerials(
+        datas.serial_numbers || item.serial_numbers || item.serial_number || (item as any).serialno_infos
+      );
+    }, [datas.serial_numbers, item.serial_numbers, item.serial_number, (item as any).serialno_infos]);
 
     const hasVariants = !!(datas.has_variants || datas.has_varients || (item as any).has_variant || (item as any).type_infos?.has_variant) || combinations.length > 0;
     const hasBatches = batches.length > 0 || !!((item as any).has_batch || (item as any).type_infos?.has_batch);
@@ -357,13 +355,13 @@ const ProductRow = React.memo(
       if (hasVariants) {
         combinations.forEach((c: any) => {
           const cDatas = c.datas || {};
-          const cSerials = parseData(
+          const cSerials = parseSerials(
             cDatas.serial_numbers ||
               c.serial_numbers ||
               (cDatas.datas && cDatas.datas.serial_numbers)
           );
           ts += cSerials.length;
-          const cBatches = parseData(c.batches);
+          const cBatches = parseObjects(c.batches || c.batch_infos);
           tb += cBatches.length;
         });
       }

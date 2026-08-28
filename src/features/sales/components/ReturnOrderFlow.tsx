@@ -78,7 +78,7 @@ const generateItems = (sale: SaleRecord, productMap: Record<string, string> = {}
     } as any;
   });
 
-const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
+const fmt = (n: number) => `₹${n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 /* ═══════════════════════════════════════════════════════════════
    HELPER COMPONENTS
@@ -398,9 +398,44 @@ const initialState = (): ReturnState => ({
 });
 
 const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string, string> = {}) => {
+  const [localProductMap, setLocalProductMap] = useState<Record<string, string>>(productMap);
   const [state, setState] = useState<ReturnState>(initialState());
   const [customerOutstanding, setCustomerOutstanding] = useState<number>(0);
   const { getData } = useApi();
+
+  useEffect(() => {
+    if (!sale) return;
+    const missingItems = sale.items?.filter(item => {
+      const nameInItem = (item as any).inventory_name || (item as any).name || (item as any).product_name || (item as any).product?.name || (item as any).inventory_infos?.name || (item as any).datas?.product_name || (item as any).datas?.name;
+      const invId = item.inventory_id || (item as any).product_id;
+      return !nameInItem && invId && !localProductMap[invId];
+    });
+
+    if (missingItems && missingItems.length > 0) {
+      Promise.all(missingItems.map(item => {
+        const invId = item.inventory_id || (item as any).product_id;
+        return inventoryApi.getInventoryById(SHOP_ID, invId)
+          .then(res => {
+            const data = res?.data || res;
+            if (data?.name) {
+              return { id: invId, name: data.name };
+            }
+            return null;
+          })
+          .catch(() => null);
+      })).then(results => {
+        const newMap = { ...localProductMap };
+        let updated = false;
+        results.forEach(res => {
+          if (res) {
+            newMap[res.id] = res.name;
+            updated = true;
+          }
+        });
+        if (updated) setLocalProductMap(newMap);
+      });
+    }
+  }, [sale, localProductMap]);
 
   useEffect(() => {
     const customerId = sale?.customer_id || sale?.customer?.customer_id;
@@ -416,7 +451,7 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
     }
   }, [sale?.customer_id, sale?.customer?.customer_id, getData]);
 
-  const saleItems = useMemo<SaleItem[]>(() => (sale ? generateItems(sale, productMap) : []), [sale?.id, productMap]);
+  const saleItems = useMemo<SaleItem[]>(() => (sale ? generateItems(sale, localProductMap) : []), [sale, localProductMap]);
   const reset = useCallback(() => setState(initialState()), []);
   const setStep = (step: ReturnStep) => setState(s => ({ ...s, step }));
   const setMode = (mode: ReturnMode) => setState(s => ({ ...s, mode, payments: [{ mode: "Cash", amount: 0 }] }));
@@ -559,9 +594,9 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
     }, 0) : 0;
 
     return {
-      returnValue: returnValue,
-      exchangeValue: exchangeValue,
-      diff: exchangeValue - returnValue
+      returnValue: Number(returnValue.toFixed(2)),
+      exchangeValue: Number(exchangeValue.toFixed(2)),
+      diff: Number((exchangeValue - returnValue).toFixed(2))
     };
   }, [selectedItems, state.mode, sale]);
 
@@ -853,15 +888,27 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
   }, [isInline]);
 
   const mapToInventoryItem = (fullProduct: any): InventoryItem => {
+    // Variants may be returned as a keyed object {uuid: {...}} or as an array.
+    // Normalise to an array first so all downstream logic works uniformly.
+    const normaliseVariants = (src: any): any[] => {
+      if (!src) return [];
+      if (Array.isArray(src) && src.length > 0) return src;
+      if (typeof src === 'object' && !Array.isArray(src)) {
+        const vals = Object.values(src);
+        if (vals.length > 0) return vals as any[];
+      }
+      return [];
+    };
+
     let rawVariants: any[] = [];
     const candidateSources = [
-      fullProduct.variants,
-      fullProduct.varients,
-      fullProduct.combinations,
-      fullProduct.datas?.variants,
-      fullProduct.datas?.varients,
-      fullProduct.datas?.combinations
-    ].filter(arr => Array.isArray(arr) && arr.length > 0);
+      normaliseVariants(fullProduct.variants),
+      normaliseVariants(fullProduct.varients),
+      normaliseVariants(fullProduct.combinations),
+      normaliseVariants(fullProduct.datas?.variants),
+      normaliseVariants(fullProduct.datas?.varients),
+      normaliseVariants(fullProduct.datas?.combinations),
+    ].filter(arr => arr.length > 0);
 
     if (candidateSources.length > 0) {
       rawVariants = candidateSources.reduce((max, current) => current.length > max.length ? current : max, candidateSources[0]);
@@ -893,12 +940,20 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
 
       const extractedAvailable = extractSerialsStr(v.serial_numbers).length > 0 ? extractSerialsStr(v.serial_numbers) : extractSerialsStr(v.serial_number).length > 0 ? extractSerialsStr(v.serial_number) : extractSerialsStr(v.batches?.[0]?.serial_numbers).length > 0 ? extractSerialsStr(v.batches?.[0]?.serial_numbers) : extractSerialsStr(combDatas.serial_numbers).length > 0 ? extractSerialsStr(combDatas.serial_numbers) : extractSerialsStr(fullProduct.serial_number).length > 0 ? extractSerialsStr(fullProduct.serial_number) : extractSerialsStr(fullProduct.serials);
 
+      // Resolve variant price — new API stores it inside pricing_infos
+      const varPriceInfos = v.pricing_infos || {};
+      const varPrice = v.sell_price ?? varPriceInfos.sell_price ?? v.price ?? combDatas.sell_price ?? combDatas.price ?? fullProduct.sell_price ?? 0;
+
+      // Resolve variant stock — new API stores it inside stock_infos
+      const varStockInfos = v.stock_infos || v.stocks_infos || {};
+      const varStock = varStockInfos.available_stocks ?? varStockInfos.physical_stocks ?? v.stocks ?? v.stock ?? combDatas.stocks ?? 0;
+
       return {
         ...v,
         id: v.id || String(Math.random()),
         name: variantLabel,
-        price: v.sell_price || v.price || combDatas.sell_price || combDatas.price || fullProduct.sell_price || 0,
-        stock: v.stocks !== undefined ? v.stocks : (v.stock !== undefined ? v.stock : (combDatas.stocks !== undefined ? combDatas.stocks : 0)),
+        price: varPrice,
+        stock: Number(varStock),
         serialnoId: v.serial_numbers?.id || v.serial_number?.id || v.batches?.[0]?.serial_numbers?.id || combDatas.serial_numbers?.id || fullProduct.serial_number?.id || fullProduct.serials?.id,
         availableSerials: extractedAvailable,
         batchId: v.batches?.[0]?.id || v.batchId || combDatas.batches?.[0]?.id,
@@ -909,7 +964,7 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
       mappedVariants = fullProduct.batches.map((b: any) => ({
         id: b.id,
         name: `Batch: ${b.batch_no || b.id.slice(0, 8)}`,
-        price: b.sell_price || fullProduct.sell_price || 0,
+        price: b.pricing_infos?.sell_price ?? b.sell_price ?? fullProduct.sell_price ?? 0,
         stock: Number(b.stock_infos?.available_stocks ?? b.stock_infos?.physical_stocks ?? b.stocks_infos?.stocks ?? b.stocks ?? 0),
         serialnoId: b.serial_numbers?.id || fullProduct.serial_number?.id || fullProduct.serials?.id,
         availableSerials: b.serial_numbers?.serial_numbers || fullProduct.serial_number?.serial_numbers || fullProduct.serials?.serial_numbers || [],
@@ -929,7 +984,7 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
       batchTracking: fullProduct.has_batch || false,
       manufacturingDate: fullProduct.batches?.[0]?.manufacturing_date,
       expiryDate: fullProduct.batches?.[0]?.expiry_date,
-      price: fullProduct.sell_price || 0,
+      price: fullProduct.sell_price ?? fullProduct.pricing_infos?.sell_price ?? 0,
       stocks: Number(fullProduct.stock_infos?.available_stocks ?? fullProduct.stock_infos?.physical_stocks ?? fullProduct.stocks_infos?.stocks ?? fullProduct.stocks ?? 0),
       serialnoId: fullProduct.serial_number?.id || fullProduct.serials?.id || fullProduct.batches?.[0]?.serial_numbers?.id,
       availableSerials: fullProduct.serial_number?.serial_numbers || fullProduct.serials?.serial_numbers || fullProduct.batches?.[0]?.serial_numbers?.serial_numbers || [],
@@ -1125,13 +1180,65 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                               <div className="flex flex-col gap-2 max-h-[300px] overflow-y-scroll pr-1 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-slate-50">
                                 {exchProducts.map(ep => {
                                   const sel = state.exchangeMap[activeReplaceId]?.id === ep.id;
-                                  // For variant/batch products, root stocks may be 0 even if variants have stock.
-                                  // Treat them as always available — the ProductSelectionModal will handle variant-level stock.
-                                  const resolvedStock = 
-                                    Number(ep.stock_infos?.available_stocks ?? ep.stocks_infos?.available_stocks ?? ep.stock_infos?.physical_stocks ?? ep.stocks ?? 0);
-                                  const hasVariants = ep.has_variant || ep.has_batch || (Array.isArray(ep.variants) && ep.variants.length > 0) || (Array.isArray(ep.batches) && ep.batches.length > 0);
+
+                                  // Normalise variants: API returns them as a keyed object {uuid:{...}} — same as parseObjects() in Inventory.tsx
+                                  const variantsArr: any[] = (() => {
+                                    const src = ep.variants;
+                                    if (!src) return [];
+                                    if (Array.isArray(src)) return src;
+                                    if (typeof src === 'object') return Object.values(src) as any[];
+                                    return [];
+                                  })();
+
+                                  const hasVariants = !!(ep.has_variant || ep.has_batch || variantsArr.length > 0);
+
+                                  // Aggregate stock exactly like calculateVariantStock() in Inventory.tsx
+                                  // Each variant: stock_infos.available_stocks ?? stock_infos.physical_stocks ?? stocks
+                                  const resolvedStock: number = (() => {
+                                    if (hasVariants && variantsArr.length > 0) {
+                                      const sum = variantsArr.reduce((acc: number, v: any) => {
+                                        const vStock = Number(
+                                          v.stock_infos?.available_stocks ??
+                                          v.stock_infos?.physical_stocks ??
+                                          v.stocks ??
+                                          v.stock ??
+                                          0
+                                        );
+                                        return acc + vStock;
+                                      }, 0);
+                                      return sum;
+                                    }
+                                    // Non-variant product — use root stock_infos like Inventory.tsx line 202
+                                    return Number(
+                                      ep.stock_infos?.available_stocks ??
+                                      ep.stock_infos?.physical_stocks ??
+                                      ep.stocks ??
+                                      0
+                                    );
+                                  })();
+
                                   const inStock = hasVariants || resolvedStock > 0;
-                                  const stockLabel = hasVariants ? "HAS VARIANTS" : resolvedStock > 0 ? `${resolvedStock} IN STOCK` : 'OUT OF STOCK';
+
+                                  // Stock label: for variants show count + aggregate; for simple products show exact stock
+                                  const variantCount = variantsArr.length;
+                                  const stockLabel = hasVariants
+                                    ? variantCount > 0
+                                      ? `${variantCount} VARIANT${variantCount > 1 ? 'S' : ''} · ${resolvedStock > 0 ? resolvedStock + ' IN STOCK' : 'OUT OF STOCK'}`
+                                      : 'HAS VARIANTS'
+                                    : resolvedStock > 0 ? `${resolvedStock} IN STOCK` : 'OUT OF STOCK';
+
+                                  // Price: use pricing_infos.sell_price per variant exactly like StockTree.tsx line 488
+                                  // comb.pricing_infos?.sell_price ?? comb.sell_price ?? comb.price ?? baseSellPrice
+                                  const rootPrice: number = ep.sell_price ?? ep.pricing_infos?.sell_price ?? 0;
+                                  const variantPrices: number[] = variantsArr
+                                    .map((v: any) => Number(v.pricing_infos?.sell_price ?? v.sell_price ?? v.price ?? rootPrice ?? 0))
+                                    .filter((p: number) => p > 0);
+                                  const minPrice = variantPrices.length > 0 ? Math.min(...variantPrices) : 0;
+                                  const maxPrice = variantPrices.length > 0 ? Math.max(...variantPrices) : 0;
+                                  const displayPrice = rootPrice > 0 ? rootPrice : minPrice;
+                                  // Show price range when variants have different prices
+                                  const hasPriceRange = hasVariants && minPrice > 0 && minPrice !== maxPrice;
+
                                   return (
                                     <div
                                       key={ep.id ?? ep._id ?? ep.name}
@@ -1141,18 +1248,32 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                                           "bg-white border-slate-100 hover:border-blue-400 hover:shadow-lg"
                                         }`}
                                     >
-                                      <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-50 transition-colors">
+                                      <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center flex-shrink-0 transition-colors">
                                         <Package size={16} className="text-slate-400" />
                                       </div>
                                       <div className="flex-1 min-w-0">
                                         <p className="text-[13px] font-bold text-slate-800 truncate">{ep.name}</p>
-                                        <div className="flex items-center gap-2.5 mt-0.5">
+                                        <div className="flex items-center gap-2.5 mt-0.5 flex-wrap">
                                           <span className="font-mono text-[10px] text-slate-400 font-medium">{ep.barcode || (ep.id ?? ep._id ?? '').slice(-6)}</span>
-                                          <span className={`text-[10px] font-black uppercase tracking-tight ${inStock ? (hasVariants ? 'text-blue-500' : 'text-emerald-600') : 'text-red-500'}`}>{stockLabel}</span>
+                                          <span className={`text-[10px] font-black uppercase tracking-tight ${
+                                            inStock ? (hasVariants ? 'text-blue-500' : 'text-emerald-600') : 'text-red-500'
+                                          }`}>{stockLabel}</span>
                                         </div>
                                       </div>
                                       <div className="text-right flex-shrink-0">
-                                        <p className="font-mono text-[13px] font-black text-slate-900">{fmt(ep.sell_price)}</p>
+                                        {hasPriceRange ? (
+                                          <div className="flex flex-col items-end gap-0.5">
+                                            <p className="font-mono text-[11px] font-black text-slate-900">{fmt(minPrice)} – {fmt(maxPrice)}</p>
+                                            <span className="text-[9px] text-slate-400 font-medium">price range</span>
+                                          </div>
+                                        ) : (
+                                          <p className="font-mono text-[13px] font-black text-slate-900">
+                                            {displayPrice === 0 && hasVariants
+                                              ? <span className="text-slate-400 font-normal text-[11px]">see variants</span>
+                                              : <>{rootPrice === 0 && displayPrice > 0 && hasVariants && <span className="font-normal text-[11px] text-slate-400">from </span>}{fmt(displayPrice)}</>
+                                            }
+                                          </p>
+                                        )}
                                         {sel && <div className="mt-1 flex justify-end"><div className="w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/30"><Check size={11} className="text-white" /></div></div>}
                                       </div>
                                     </div>

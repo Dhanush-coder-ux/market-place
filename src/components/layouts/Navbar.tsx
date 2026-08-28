@@ -447,27 +447,7 @@ export const Navbar = () => {
         {/* RIGHT - Actions */}
         <div className="flex items-center gap-2 sm:gap-4">
 
-          {/* Animated Highlighted Digital Store Button */}
-          <div className="relative group/ds hidden md:block select-none">
-            <Link
-              to="/setup-digital-store"
-              className="relative inline-flex items-center gap-2 h-9 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md shadow-blue-100/50 hover:shadow-lg hover:shadow-blue-200/50 transition-all hover:-translate-y-0.5 overflow-hidden"
-            >
-              {/* Shine effect ray */}
-              <div className="absolute top-0 -inset-full h-full w-1/2 block transform -skew-x-12 bg-gradient-to-r from-transparent via-white/40 to-transparent animate-[shimmer_2.5s_infinite_linear] pointer-events-none" />
 
-              <Store size={13} className="relative z-10 shrink-0 text-blue-50" />
-
-              {/* Slideshow scrolling text container with reduced width */}
-              <div className="relative z-10 overflow-hidden h-4 w-[190px]">
-                <div className="animate-[slideText_9s_infinite] flex flex-col absolute left-0 w-full text-left">
-                  <div className="h-4 leading-4 truncate">Digital Store: 1000+ onboarded</div>
-                  <div className="h-4 leading-4 truncate">Digital Store: Make it yours & grow</div>
-                  <div className="h-4 leading-4 truncate">Digital Store: Start shop in 60s</div>
-                </div>
-              </div>
-            </Link>
-          </div>
 
           <div className="flex items-center gap-1 sm:gap-2">
             <Link to="/notifications" className="group">

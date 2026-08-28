@@ -764,7 +764,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                     </div>
 
                     <div className="text-right shrink-0">
-                      <p className="text-[13px] font-bold text-slate-800">₹{product.price}</p>
+                      <p className="text-[13px] font-bold text-slate-800">₹{Number(product.price).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                       <p className={`text-[9px] font-extrabold mt-1 leading-none ${isOutOfStock ? "text-red-500" : "text-emerald-500"}`}>
                         {isOutOfStock ? "Out of Stock" : !isStockTracked ? "Stock Not Tracked" : `Stock: ${product.stocks} units`}
                       </p>

@@ -24,9 +24,14 @@ const setCache = (url: string, data: unknown) => {
 };
 
 const clearAuthTokens = () => {
-  localStorage.removeItem("auth_token");
-  localStorage.removeItem("refresh_token");
   if (window.location.pathname !== "/login") {
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("refresh_token");
+    localStorage.removeItem("shop_id");
+    localStorage.removeItem("user_id");
+    localStorage.removeItem("session_id");
+    localStorage.removeItem("user_email");
+    localStorage.removeItem("user_name");
     window.location.href = "/login";
   }
 };
@@ -44,7 +49,10 @@ const isJwtExpired = (token: string | null): boolean => {
 
 const refreshAccessToken = async (): Promise<string | null> => {
   const refreshToken = localStorage.getItem("refresh_token");
-  if (!refreshToken) return null;
+  if (!refreshToken) {
+    clearAuthTokens();
+    return null;
+  }
 
   if (!refreshPromise) {
     let tokenVersion = "1";

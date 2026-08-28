@@ -936,7 +936,7 @@ const executeProductSelect = async (targetIndex: number, val: any, initialOpt: a
                           <div className="flex items-center gap-1.5">
                             <Input
                               type="number"
-                              value={product.costPrice as any}
+                              value={typeof product.costPrice === "number" ? parseFloat(product.costPrice.toFixed(2)) : (product.costPrice as any)}
                               onChange={(e) => {
                                 let val = e.target.value;
                                 if (val.length > 1 && val.startsWith("0") && val[1] !== ".") {
@@ -1034,7 +1034,10 @@ const executeProductSelect = async (targetIndex: number, val: any, initialOpt: a
                             <div className="flex-1 min-w-[70px]">
                               <Input
                                 type="number"
-                                value={(product.marginType === "percent" ? product.marginPercent : product.marginType === "amount" ? product.marginAmount : product.sellingPrice) as any}
+                                value={(() => {
+                                  const val = product.marginType === "percent" ? product.marginPercent : product.marginType === "amount" ? product.marginAmount : product.sellingPrice;
+                                  return typeof val === "number" ? parseFloat(val.toFixed(2)) : val;
+                                })() as any}
                                 onChange={(e) => {
                                   let val = e.target.value;
                                   if (val.length > 1 && val.startsWith("0") && val[1] !== ".") {

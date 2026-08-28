@@ -1,8 +1,7 @@
-
 import { RouterProvider } from 'react-router-dom'
 import '../App.css'
 import { router } from './routes'
-
+import SessionExpiryModal from '@/components/ui/SessionExpiryModal'
 
 function App() {
   // Capture session_id and other user parameters from URL query params
@@ -27,7 +26,12 @@ function App() {
     window.history.replaceState({}, document.title, window.location.pathname);
   }
 
-  return <RouterProvider router={router} />
+  return (
+    <>
+      <RouterProvider router={router} />
+      <SessionExpiryModal />
+    </>
+  )
 }
 
 export default App

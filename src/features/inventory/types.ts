@@ -106,7 +106,9 @@ export interface CreateInventoryPayload {
   buy_price?: number | null;
   gst?: string;          // default "0%"
   sell_price?: number | null;
+  online_sell_price?: number | null;
   reorder_point?: number; // default 5
+  online_reorder_point?: number;
   custom_fields?: Record<string, any>;
   datas?: Record<string, any>;
   additional_infos?: Record<string, any>;
@@ -130,10 +132,12 @@ export interface UpdateInventoryPayload {
   storage_location?: string | null;
   buy_price?: number | null;
   sell_price?: number | null;
+  online_sell_price?: number | null;
   pricing_id?: string | null;
   storage_location_id?: string | null;
   reorder_point_id?: string | null;
   reorder_point?: number;
+  online_reorder_point?: number;
   custom_fields?: Record<string, any>;
   visible_online?: boolean;
 }

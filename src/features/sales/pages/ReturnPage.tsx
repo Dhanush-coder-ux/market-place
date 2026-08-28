@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+﻿import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import {
   ArrowLeft, Package, AlertCircle, CheckCircle2,
@@ -15,7 +15,7 @@ import {
 import ProductSelectionModal from "../../billing/components/ProductSelectionModel";
 import { InventoryItem, ProductVariant } from "../../billing/types";
 
-const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
+const fmt = (n: number) => `₹${n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const STEP_LABELS: Record<ReturnStep, string> = { 1: "Mode", 2: "Items", 3: "Reason", 4: "Review", 5: "Done" };
 const RETURN_REASONS = ["Damaged", "Wrong Item", "Customer Request", "Size Issue", "Other"];
 const ITEM_COLORS = ["#dbeafe", "#dcfce7", "#fef3c7", "#fce7f3", "#ede9fe", "#ffedd5", "#f0fdf4", "#ecfeff"];
@@ -137,17 +137,38 @@ const ReturnPageContent: React.FC<{ sale: SaleRecord; productMap: Record<string,
   }, [selectedItems, activeReplaceId]);
 
   const mapToInventoryItem = (p: any): InventoryItem => {
-    const candidates = [p.variants, p.varients, p.combinations, p.datas?.variants].filter((a: any) => Array.isArray(a) && a.length > 0);
+    // Normalise variants — API may return them as a keyed object {uuid: {...}} or an array
+    const normaliseVariants = (src: any): any[] => {
+      if (!src) return [];
+      if (Array.isArray(src) && src.length > 0) return src;
+      if (typeof src === 'object' && !Array.isArray(src)) {
+        const vals = Object.values(src);
+        if (vals.length > 0) return vals as any[];
+      }
+      return [];
+    };
+    const candidates = [
+      normaliseVariants(p.variants),
+      normaliseVariants(p.varients),
+      normaliseVariants(p.combinations),
+      normaliseVariants(p.datas?.variants),
+    ].filter((a: any[]) => a.length > 0);
     let rawVariants: any[] = candidates.length > 0 ? candidates.reduce((max: any, cur: any) => cur.length > max.length ? cur : max, candidates[0]) : [];
     let mappedVariants = rawVariants.map((v: any) => {
       const attrs = v.attributes || v.datas?.attributes || {};
       const label = Object.keys(attrs).length > 0 ? Object.values(attrs).join(' / ') : (v.name || "Standard Variant");
-      return { ...v, id: v.id || String(Math.random()), name: label, price: v.sell_price || p.sell_price || 0, stock: Number(v.stock_infos?.available_stocks ?? v.stocks ?? 0), serialnoId: v.serial_numbers?.id, availableSerials: [], batchId: v.batches?.[0]?.id };
+      // Resolve price from pricing_infos (new API) or legacy fields
+      const varPriceInfos = v.pricing_infos || {};
+      const varPrice = v.sell_price ?? varPriceInfos.sell_price ?? v.price ?? p.sell_price ?? 0;
+      // Resolve stock from stock_infos (new API) or legacy fields
+      const varStockInfos = v.stock_infos || v.stocks_infos || {};
+      const varStock = varStockInfos.available_stocks ?? varStockInfos.physical_stocks ?? v.stocks ?? v.stock ?? 0;
+      return { ...v, id: v.id || String(Math.random()), name: label, price: varPrice, stock: Number(varStock), serialnoId: v.serial_numbers?.id, availableSerials: [], batchId: v.batches?.[0]?.id };
     });
     if (mappedVariants.length === 0 && p.has_batch && Array.isArray(p.batches)) {
-      mappedVariants = p.batches.map((b: any) => ({ id: b.id, name: `Batch: ${b.batch_no || b.id.slice(0, 8)}`, price: b.sell_price || p.sell_price || 0, stock: Number(b.stock_infos?.available_stocks ?? b.stocks ?? 0), serialnoId: b.serial_numbers?.id, availableSerials: b.serial_numbers?.serial_numbers || [], batchId: b.id, expiryDate: b.expiry_date }));
+      mappedVariants = p.batches.map((b: any) => ({ id: b.id, name: `Batch: ${b.batch_no || b.id.slice(0, 8)}`, price: b.pricing_infos?.sell_price ?? b.sell_price ?? p.sell_price ?? 0, stock: Number(b.stock_infos?.available_stocks ?? b.stocks ?? 0), serialnoId: b.serial_numbers?.id, availableSerials: b.serial_numbers?.serial_numbers || [], batchId: b.id, expiryDate: b.expiry_date }));
     }
-    return { ...p, product_name: p.name || "Unknown", product_barcode: p.barcode || "N/A", category: p.category || "Other", variants: mappedVariants, requireSerial: p.has_serialno || false, batchTracking: p.has_batch || false, price: p.sell_price || 0, stocks: Number(p.stock_infos?.available_stocks ?? p.stocks ?? 0), gst: parseInt(String(p.gst || "18").replace("%", "")) } as InventoryItem;
+    return { ...p, product_name: p.name || "Unknown", product_barcode: p.barcode || "N/A", category: p.category || "Other", variants: mappedVariants, requireSerial: p.has_serialno || false, batchTracking: p.has_batch || false, price: p.sell_price ?? p.pricing_infos?.sell_price ?? 0, stocks: Number(p.stock_infos?.available_stocks ?? p.stocks ?? 0), gst: parseInt(String(p.gst || "18").replace("%", "")) } as InventoryItem;
   };
 
   const handleExchangeClick = async (ep: any) => {
@@ -330,10 +351,46 @@ const ReturnPageContent: React.FC<{ sale: SaleRecord; productMap: Record<string,
                 exchProducts.map(ep => {
                   if (!activeReplaceId) return null;
                   const sel = state.exchangeMap[activeReplaceId]?.id === ep.id;
-                  const resolvedStock = Number(ep.stock_infos?.available_stocks ?? ep.stocks ?? 0);
-                  const hasVariants = ep.has_variant || ep.has_batch;
+
+                  // Normalise variants: API returns them as a keyed object {uuid:{...}} - same as parseObjects() in Inventory.tsx
+                  const variantsArr: any[] = (() => {
+                    const src = ep.variants;
+                    if (!src) return [];
+                    if (Array.isArray(src)) return src;
+                    if (typeof src === 'object') return Object.values(src) as any[];
+                    return [];
+                  })();
+                  const hasVariants = !!(ep.has_variant || ep.has_batch || variantsArr.length > 0);
+
+                  // Aggregate variant stock exactly like calculateVariantStock() in Inventory.tsx
+                  // Each variant: stock_infos.available_stocks ?? stock_infos.physical_stocks ?? stocks
+                  const resolvedStock: number = (() => {
+                    if (hasVariants && variantsArr.length > 0) {
+                      return variantsArr.reduce((acc: number, v: any) => acc + Number(
+                        v.stock_infos?.available_stocks ?? v.stock_infos?.physical_stocks ?? v.stocks ?? v.stock ?? 0
+                      ), 0);
+                    }
+                    return Number(ep.stock_infos?.available_stocks ?? ep.stock_infos?.physical_stocks ?? ep.stocks ?? 0);
+                  })();
+
                   const inStock = hasVariants || resolvedStock > 0;
-                  const stockLabel = hasVariants ? "HAS VARIANTS" : resolvedStock > 0 ? `${resolvedStock} IN STOCK` : "OUT OF STOCK";
+                  const variantCount = variantsArr.length;
+                  const stockLabel = hasVariants
+                    ? variantCount > 0
+                      ? `${variantCount} VARIANT${variantCount > 1 ? 'S' : ''} - ${resolvedStock > 0 ? resolvedStock + ' IN STOCK' : 'OUT OF STOCK'}`
+                      : 'HAS VARIANTS'
+                    : resolvedStock > 0 ? `${resolvedStock} IN STOCK` : 'OUT OF STOCK';
+
+                  // Price: use pricing_infos.sell_price per variant exactly like StockTree.tsx line 488
+                  const rootPrice: number = ep.sell_price ?? ep.pricing_infos?.sell_price ?? 0;
+                  const variantPrices: number[] = variantsArr
+                    .map((v: any) => Number(v.pricing_infos?.sell_price ?? v.sell_price ?? v.price ?? rootPrice ?? 0))
+                    .filter((p: number) => p > 0);
+                  const minPrice = variantPrices.length > 0 ? Math.min(...variantPrices) : 0;
+                  const maxPrice = variantPrices.length > 0 ? Math.max(...variantPrices) : 0;
+                  const displayPrice = rootPrice > 0 ? rootPrice : minPrice;
+                  const hasPriceRange = hasVariants && minPrice > 0 && minPrice !== maxPrice;
+
                   return (
                     <div key={ep.id} onClick={() => inStock && handleExchangeClick(ep)}
                       className={`flex items-center gap-3 p-3 px-4 bg-white border rounded-xl transition-all ${sel ? "border-blue-500 bg-blue-50/60 ring-2 ring-blue-500/10 shadow-sm cursor-pointer" : !inStock ? "opacity-40 grayscale cursor-not-allowed border-slate-100" : "border-slate-100 hover:border-blue-300 hover:shadow-md cursor-pointer"}`}>
@@ -342,13 +399,25 @@ const ReturnPageContent: React.FC<{ sale: SaleRecord; productMap: Record<string,
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-[13px] font-bold text-slate-800 truncate">{ep.name}</p>
-                        <div className="flex items-center gap-2.5 mt-0.5">
+                        <div className="flex items-center gap-2.5 mt-0.5 flex-wrap">
                           <span className="font-mono text-[10px] text-slate-400">{ep.barcode || ep.id?.slice(-6)}</span>
                           <span className={`text-[10px] font-black uppercase ${inStock ? (hasVariants ? 'text-blue-500' : 'text-emerald-600') : 'text-red-400'}`}>{stockLabel}</span>
                         </div>
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <p className="font-mono text-[13px] font-black text-slate-900">{fmt(ep.sell_price || 0)}</p>
+                        {hasPriceRange ? (
+                          <div className="flex flex-col items-end gap-0.5">
+                            <p className="font-mono text-[11px] font-black text-slate-900">{fmt(minPrice)} - {fmt(maxPrice)}</p>
+                            <span className="text-[9px] text-slate-400 font-medium">price range</span>
+                          </div>
+                        ) : (
+                          <p className="font-mono text-[13px] font-black text-slate-900">
+                            {displayPrice === 0 && hasVariants
+                              ? <span className="text-slate-400 font-normal text-[11px]">see variants</span>
+                              : <>{rootPrice === 0 && displayPrice > 0 && hasVariants && <span className="font-normal text-[11px] text-slate-400">from </span>}{fmt(displayPrice)}</>
+                            }
+                          </p>
+                        )}
                         {sel && <CheckCircle2 size={15} className="text-blue-600 ml-auto mt-1" />}
                       </div>
                     </div>
@@ -537,3 +606,4 @@ const ReturnPageContent: React.FC<{ sale: SaleRecord; productMap: Record<string,
 };
 
 export default ReturnPage;
+

@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Printer, Share2, PlusCircle, User, Calendar, Landmark, Coins, HeartHandshake } from "lucide-react";
+import { PlusCircle, User, Calendar, Landmark, Coins, HeartHandshake } from "lucide-react";
 
 interface BillingSuccessModalProps {
   isOpen: boolean;
@@ -54,23 +54,6 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
     minute: "2-digit",
   });
 
-  const handlePrint = () => {
-    window.print();
-  };
-
-  const handleWhatsApp = () => {
-    const cleanPhone = details.phone.replace(/[^0-9]/g, "");
-    const phoneWithCountry = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
-    
-    const itemsText = details.items
-      .map((item, idx) => `${idx + 1}. ${item.name} x ${item.qty} = ₹${item.tprice}`)
-      .join("\n");
-
-    const message = `*MarketPlace - Invoice Receipt* 🧾\n\n*Customer*: ${details.customerName}\n*Date*: ${new Date().toLocaleDateString("en-IN")}\n\n*Items*:\n${itemsText}\n\n*Total Amount*: ₹${details.finalAmount}\n*Status*: Paid & Completed\n\nThank you for shopping with us! 😊`;
-
-    const waUrl = `https://api.whatsapp.com/send?phone=${phoneWithCountry}&text=${encodeURIComponent(message)}`;
-    window.open(waUrl, "_blank");
-  };
 
   return createPortal(
     <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 sm:p-6 no-print">
@@ -199,30 +182,7 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
           </div>
         </div>
 
-        {/* Action Button Strip */}
-        <div className="grid grid-cols-2 gap-3 w-full mt-6">
-          <button 
-            onClick={handlePrint}
-            className="h-10 border border-slate-200 hover:bg-slate-50 rounded-xl text-slate-650 hover:text-slate-850 flex items-center justify-center gap-2 text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer"
-          >
-            <Printer size={15} />
-            Print Receipt
-          </button>
-          
-          <button 
-            onClick={handleWhatsApp}
-            disabled={!details.phone}
-            className={`h-10 rounded-xl flex items-center justify-center gap-2 text-xs font-bold transition-all shadow-sm active:scale-95 cursor-pointer ${
-              details.phone 
-                ? "bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-200" 
-                : "bg-slate-50 text-slate-350 border border-slate-100 cursor-not-allowed"
-            }`}
-            title={details.phone ? "Send to customer's WhatsApp" : "No phone number available"}
-          >
-            <Share2 size={15} />
-            Send WhatsApp
-          </button>
-        </div>
+
 
         {/* Start Next Bill Action Button */}
         <button 

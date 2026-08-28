@@ -1,4 +1,5 @@
 import { ChangeEvent, useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import { StoreFormData } from "@/features/digitalstore/type";
 import { MapPin, ImagePlus, AlertTriangle, X, Camera, Store, Tag, Building2, Loader2, CheckCircle2 } from "lucide-react";
 import LocationMapPicker from "@/components/ui/LocationMapPicker";
@@ -456,7 +457,7 @@ export default function Step1BasicDetails({ form, setForm, errors, setErrors }: 
       </section>
 
       {/* ── GST Switch Confirmation Modal ───────────────────────────────────── */}
-      {showGstConfirm && (
+      {showGstConfirm && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center">
           {/* Backdrop */}
           <div
@@ -528,7 +529,8 @@ export default function Step1BasicDetails({ form, setForm, errors, setErrors }: 
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

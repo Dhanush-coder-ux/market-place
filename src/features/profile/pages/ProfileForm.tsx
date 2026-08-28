@@ -56,16 +56,38 @@ const categoryOptions = [
 const STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
-  .pf-root { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
-  .pf-input:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.12); }
-  .pf-input { transition: border-color 0.15s, box-shadow 0.15s; }
-  .pf-section-enter { animation: secIn 0.22s ease forwards; }
-  @keyframes secIn { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform: translateY(0); } }
-  .pf-fade-in { animation: fadeIn 0.2s ease forwards; }
+  .pf-root { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; background: #f8fafc; }
+  .pf-root::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; height: 100vh;
+    background: radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.04), transparent 50%),
+                radial-gradient(circle at 85% 30%, rgba(16, 185, 129, 0.04), transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  
+  .pf-input:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 4px rgba(99,102,241,0.1); }
+  .pf-input { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+  .pf-input:hover:not(:disabled) { border-color: #cbd5e1; }
+  
+  .pf-section-enter { animation: secIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+  @keyframes secIn { from { opacity:0; transform: translateY(12px); } to { opacity:1; transform: translateY(0); } }
+  .pf-fade-in { animation: fadeIn 0.3s ease forwards; }
   @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
 
-  .pf-card { transition: box-shadow 0.18s ease; }
-  .pf-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.07); }
+  .pf-card { 
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -2px rgba(0, 0, 0, 0.02);
+  }
+  .pf-card:hover { 
+    box-shadow: 0 12px 24px -8px rgba(99, 102, 241, 0.08); 
+    transform: translateY(-2px);
+    border-color: rgba(99, 102, 241, 0.2);
+  }
 
   .pf-bottom-bar {
     position: fixed;
@@ -73,13 +95,14 @@ const STYLES = `
     left: 0;
     right: 0;
     z-index: 50;
-    background: white;
-    border-top: 1px solid #e2e8f0;
-    padding: 10px 24px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(226, 232, 240, 0.8);
+    padding: 12px 24px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.03);
   }
 `;
 
@@ -87,15 +110,15 @@ const STYLES = `
 
 interface LabelProps { text: string; required?: boolean; hint?: string; tooltip?: string; }
 const Label: React.FC<LabelProps> = ({ text, required, hint, tooltip }) => (
-  <div className="flex items-center gap-1.5 mb-1.5">
-    <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
-      {text}{required && <span className="text-red-400 ml-0.5">*</span>}
-      {hint && <span className="ml-1.5 normal-case font-normal text-slate-400 lowercase">({hint})</span>}
+  <div className="flex items-center gap-1.5 mb-2">
+    <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider">
+      {text}{required && <span className="text-red-500 ml-1 text-sm leading-none">*</span>}
+      {hint && <span className="ml-2 normal-case font-medium text-slate-400 capitalize-first tracking-normal">({hint})</span>}
     </label>
     {tooltip && (
       <div className="group relative flex items-center">
-        <Info size={11} className="text-slate-400 cursor-help hover:text-indigo-500 transition-colors" />
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-52 p-2.5 bg-slate-800 text-white text-[10px] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl normal-case font-medium tracking-normal leading-relaxed">
+        <Info size={13} className="text-slate-400 cursor-help hover:text-indigo-500 transition-colors" />
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-52 p-3 bg-slate-800 text-white text-[11px] rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl normal-case font-medium tracking-normal leading-relaxed">
           {tooltip}
           <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-800" />
         </div>
@@ -116,34 +139,36 @@ interface InputFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
 const InputField: React.FC<InputFieldProps> = ({ label, required, hint, leftEl, rightEl, error, tooltip, className = "", ...rest }) => (
   <div className={`transition-opacity duration-200 ${rest.disabled ? "opacity-50" : ""}`}>
     {label && <Label text={label} required={required} hint={hint} tooltip={tooltip} />}
-    <div className="relative">
-      {leftEl && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">{leftEl}</span>}
+    <div className="relative group">
+      {leftEl && <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none group-hover:text-indigo-400 transition-colors">{leftEl}</span>}
       <input
         {...rest}
-        className={`pf-input w-full px-3 py-2.5 text-sm border border-slate-200 rounded-lg bg-white text-slate-800 placeholder-slate-300 ${leftEl ? "pl-8" : ""} ${rightEl ? "pr-14" : ""} ${error ? "border-red-300 bg-red-50/30" : ""} ${rest.disabled ? "bg-slate-50 cursor-not-allowed" : ""} ${className}`}
+        className={`pf-input w-full px-4 py-3 text-sm font-medium border border-slate-200/80 rounded-xl bg-white/80 backdrop-blur-sm text-slate-800 placeholder-slate-400 ${leftEl ? "pl-10" : ""} ${rightEl ? "pr-14" : ""} ${error ? "border-red-300 bg-red-50/30" : ""} ${rest.disabled ? "bg-slate-50 cursor-not-allowed" : ""} ${className}`}
       />
-      {rightEl && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-semibold">{rightEl}</span>}
+      {rightEl && <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-semibold">{rightEl}</span>}
     </div>
-    {error && <p className="mt-1 text-[11px] text-red-500 flex items-center gap-1"><AlertCircle size={10} />{error}</p>}
+    {error && <p className="mt-1.5 text-xs font-medium text-red-500 flex items-center gap-1.5"><AlertCircle size={12} />{error}</p>}
   </div>
 );
 
 const SectionCard: React.FC<{ icon: React.ReactNode; iconBg: string; title: string; subtitle?: string; children: React.ReactNode; extra?: React.ReactNode }> = ({ icon, iconBg, title, subtitle, children, extra }) => (
-  <div className="pf-card bg-white rounded-xl border border-slate-200 overflow-hidden">
-    <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        <div className={`w-9 h-9 rounded-xl ${iconBg} flex items-center justify-center shrink-0`}>
-          {icon}
+  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 py-8 border-b border-slate-200/50 last:border-0 relative z-10">
+    <div className="lg:col-span-1">
+      <div className="sticky top-24">
+        <div className="flex items-center gap-4 mb-3">
+          <div className={`w-11 h-11 rounded-2xl ${iconBg} flex items-center justify-center shrink-0 shadow-sm border border-white/50`}>
+            {icon}
+          </div>
+          <h2 className="text-lg font-bold text-slate-800 tracking-tight">{title}</h2>
         </div>
-        <div>
-          <h2 className="text-sm font-bold text-slate-800">{title}</h2>
-          {subtitle && <p className="text-[11px] text-slate-400 mt-0.5">{subtitle}</p>}
-        </div>
+        {subtitle && <p className="text-sm text-slate-500 leading-relaxed pr-6">{subtitle}</p>}
+        {extra && <div className="mt-4">{extra}</div>}
       </div>
-      {extra}
     </div>
-    <div className="p-6">
-      {children}
+    <div className="lg:col-span-2">
+      <div className="pf-card rounded-2xl overflow-hidden p-7 bg-white/60">
+        {children}
+      </div>
     </div>
   </div>
 );
@@ -329,18 +354,21 @@ const ProfileForm: React.FC = () => {
   if (loading && id) return <div className="py-20 text-center"><Loader /></div>;
 
   return (
-    <div className="pf-root bg-slate-50 min-h-screen pb-32">
+    <div className="pf-root min-h-screen pb-32 relative">
       <style>{STYLES}</style>
       
       {/* Main Container */}
-      <div className="w-full mx-auto px-4 py-8 md:animate-in md:fade-in md:duration-500">
+      <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:animate-in md:fade-in md:duration-500 relative z-10">
+        
+        {/* Header Title */}
+        <div className="mb-8 border-b border-slate-200/60 pb-6">
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">{id ? "Edit Shop Profile" : "Create New Shop"}</h1>
+          <p className="text-sm text-slate-500 mt-2">Fill out the details below to set up your shop's profile and settings.</p>
+        </div>
 
-        {/* Using a grid to accommodate the sections nicely */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div className="space-y-4">
           
-          <div className="lg:col-span-8 space-y-6">
-            
-            {/* SECTION 1: Shop Identity */}
+          {/* SECTION 1: Shop Identity */}
             <SectionCard
               icon={<Store size={17} className="text-blue-600" />}
               iconBg="bg-blue-50"
@@ -348,15 +376,17 @@ const ProfileForm: React.FC = () => {
               subtitle="Brand and visual presence"
             >
               <div className="space-y-5">
-                <InputField
-                  label="Shop Name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  placeholder="e.g. Sunrise Mart"
-                  required
-                  className="font-semibold text-base"
-                />
+                <div className="space-y-2">
+                  <InputField
+                    label="Shop Name"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    placeholder="e.g. Sunrise Mart"
+                    required
+                    className="font-bold text-lg py-3"
+                  />
+                </div>
                 
                 <div className="space-y-2">
                   <Label text="Categories" required />
@@ -372,13 +402,13 @@ const ProfileForm: React.FC = () => {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label text="Description" />
+                  <Label text="Description" hint="Optional" />
                   <textarea
                     name="description"
                     value={formData.description}
                     onChange={handleChange}
                     rows={4}
-                    className="pf-input w-full bg-white border border-slate-200 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 focus:ring-0 transition-all placeholder:text-slate-300 resize-none"
+                    className="pf-input w-full bg-white/80 backdrop-blur-sm border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium text-slate-700 focus:ring-0 transition-all placeholder:text-slate-400 resize-none hover:border-slate-300"
                     placeholder="Tell customers what makes your shop special..."
                   />
                 </div>
@@ -405,21 +435,20 @@ const ProfileForm: React.FC = () => {
                         ...prev,
                         latitude: String(coords.lat),
                         longitude: String(coords.lng),
-                        // Only auto-fill address if user hasn't typed one
-                        full_address: prev.full_address || address || prev.full_address,
+                        full_address: address || prev.full_address,
                       }));
                     }}
                   />
                 </div>
 
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 mt-4">
                   <Label text="Full Address" />
                   <textarea
                     name="full_address"
                     value={formData.full_address}
                     onChange={handleChange}
                     rows={3}
-                    className="pf-input w-full bg-white border border-slate-200 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 focus:ring-0 transition-all placeholder:text-slate-300 resize-none"
+                    className="pf-input w-full bg-white/80 backdrop-blur-sm border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium text-slate-700 focus:ring-0 transition-all placeholder:text-slate-400 resize-none hover:border-slate-300"
                     placeholder="Full street address including area"
                   />
                 </div>
@@ -445,11 +474,6 @@ const ProfileForm: React.FC = () => {
               </div>
             </SectionCard>
 
-          </div>
-
-          {/* Right Column */}
-          <div className="lg:col-span-4 space-y-6">
-            
             {/* SECTION 3: Legal & Tax Information */}
             <SectionCard
               icon={<BadgeCheck size={17} className="text-purple-600" />}
@@ -460,15 +484,17 @@ const ProfileForm: React.FC = () => {
               <div className="space-y-5">
 
 
-                <div className="space-y-3 p-4 bg-slate-50 border border-slate-100 rounded-lg">
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      checked={formData.gst_registered}
-                      onChange={(e) => setFormData(p => ({ ...p, gst_registered: e.target.checked }))}
-                      className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 border-slate-300"
-                    />
-                    <span className="text-sm font-semibold text-slate-700">GST Registered</span>
+                <div className="space-y-4 p-5 bg-slate-50/50 backdrop-blur-sm border border-slate-200/60 rounded-xl transition-all hover:bg-slate-50">
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <div className="relative flex items-center justify-center">
+                      <input 
+                        type="checkbox" 
+                        checked={formData.gst_registered}
+                        onChange={(e) => setFormData(p => ({ ...p, gst_registered: e.target.checked }))}
+                        className="peer w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 transition-all cursor-pointer shadow-sm"
+                      />
+                    </div>
+                    <span className="text-sm font-semibold text-slate-700 group-hover:text-indigo-700 transition-colors">GST Registered Business</span>
                   </label>
                   {formData.gst_registered && (
                     <div className="pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
@@ -488,29 +514,28 @@ const ProfileForm: React.FC = () => {
 
             {/* What happens next — only on create */}
             {!id && (
-              <div className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-5 shadow-sm">
-                <h3 className="text-sm font-bold text-indigo-900 mb-4 flex items-center gap-2">
+              <div className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6 shadow-sm mt-8 relative z-10">
+                <h3 className="text-base font-bold text-indigo-900 mb-4 flex items-center gap-2">
                   What happens next?
                 </h3>
-                <div className="flex flex-col gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                   {[
                     "Your shop is created and saved securely.",
                     "You'll be redirected to the shop selector.",
                     "Select your new shop to enter its dashboard.",
                     "Use the Setup Wizard to launch your store."
                   ].map((text, idx) => (
-                    <div key={idx} className="flex items-start gap-2.5">
-                      <div className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[9px] font-bold shrink-0 mt-0.5">
+                    <div key={idx} className="flex items-start gap-3 bg-white/50 p-4 rounded-xl">
+                      <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
                         {idx + 1}
                       </div>
-                      <p className="text-xs font-medium text-indigo-800 leading-relaxed">{text}</p>
+                      <p className="text-sm font-medium text-indigo-800 leading-relaxed">{text}</p>
                     </div>
                   ))}
                 </div>
               </div>
             )}
             
-          </div>
         </div>
       </div>
     </div>

@@ -1,5 +1,5 @@
-﻿import React, { useState, useEffect, useRef, useCallback } from "react";
-import { MapPin, Search, Navigation, Loader2, X } from "lucide-react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { MapPin, Search, Navigation, Loader2, X, AlertCircle } from "lucide-react";
 
 const LEAFLET_CSS_ID = "leaflet-css-injected";
 
@@ -63,6 +63,8 @@ const LocationMapPicker: React.FC<LocationMapPickerProps> = ({ lat, lng, onChang
   const [reverseLoading, setReverseLoading] = useState(false);
   const [currentAddress, setCurrentAddress] = useState("");
   const [mapReady, setMapReady] = useState(false);
+  const [geolocating, setGeolocating] = useState(false);
+  const [geoError, setGeoError] = useState("");
 
   const initialCoords: LatLng = lat && lng ? { lat, lng } : DEFAULT_CENTER;
 
@@ -161,21 +163,38 @@ const LocationMapPicker: React.FC<LocationMapPickerProps> = ({ lat, lng, onChang
   };
 
   const handleGeolocate = () => {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition((pos) => {
-      const { latitude, longitude } = pos.coords;
-      if (mapRef.current) mapRef.current.flyTo([latitude, longitude], 16, { animate: true, duration: 1.2 });
-      if (markerRef.current) {
-        markerRef.current.setLatLng([latitude, longitude]);
-      } else if (LRef.current && mapRef.current) {
-        markerRef.current = LRef.current.marker([latitude, longitude], { icon: makePinIcon(LRef.current), draggable: true }).addTo(mapRef.current);
-        markerRef.current.on("dragend", async () => {
-          const pos = markerRef.current.getLatLng();
-          await handleLocationChange(pos.lat, pos.lng);
-        });
-      }
-      handleLocationChange(latitude, longitude);
-    }, () => {});
+    if (!navigator.geolocation) {
+      setGeoError("Geolocation is not supported by your browser");
+      return;
+    }
+    setGeolocating(true);
+    setGeoError("");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setGeolocating(false);
+        const { latitude, longitude } = pos.coords;
+        if (mapRef.current) mapRef.current.flyTo([latitude, longitude], 16, { animate: true, duration: 1.2 });
+        if (markerRef.current) {
+          markerRef.current.setLatLng([latitude, longitude]);
+        } else if (LRef.current && mapRef.current) {
+          markerRef.current = LRef.current.marker([latitude, longitude], { icon: makePinIcon(LRef.current), draggable: true }).addTo(mapRef.current);
+          markerRef.current.on("dragend", async () => {
+            const pos = markerRef.current.getLatLng();
+            await handleLocationChange(pos.lat, pos.lng);
+          });
+        }
+        handleLocationChange(latitude, longitude);
+      },
+      (err) => {
+        setGeolocating(false);
+        if (err.code === err.PERMISSION_DENIED) {
+          setGeoError("Location permission denied. Please allow location access in your browser.");
+        } else {
+          setGeoError("Unable to retrieve your location. Please check your connection.");
+        }
+      },
+      { timeout: 10000, enableHighAccuracy: true }
+    );
   };
 
   return (
@@ -203,11 +222,19 @@ const LocationMapPicker: React.FC<LocationMapPickerProps> = ({ lat, lng, onChang
             {searching ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
             Search
           </button>
-          <button type="button" onClick={handleGeolocate} title="Use my location"
-            className="px-3 py-2.5 border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600 transition-colors">
-            <Navigation size={15} />
+          <button type="button" onClick={handleGeolocate} disabled={geolocating} title="Use my location"
+            className="px-4 py-2.5 border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-indigo-200 hover:text-indigo-600 text-slate-700 transition-all flex items-center gap-2 font-medium shadow-sm active:scale-95 whitespace-nowrap disabled:opacity-70 disabled:cursor-not-allowed">
+            {geolocating ? <Loader2 size={15} className="text-indigo-500 animate-spin" /> : <Navigation size={15} className="text-indigo-500" />}
+            <span className="text-sm hidden sm:inline">{geolocating ? "Locating..." : "Use My Location"}</span>
           </button>
         </div>
+        {geoError && (
+          <div className="absolute top-full left-0 mt-2 flex items-center gap-2 text-xs font-semibold text-red-600 bg-red-50 px-3 py-2 rounded-lg border border-red-100 shadow-sm z-50">
+            <AlertCircle size={14} />
+            {geoError}
+            <button type="button" onClick={() => setGeoError("")} className="ml-2 hover:text-red-800"><X size={12} /></button>
+          </div>
+        )}
         {searchResults.length > 0 && (
           <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-[9999] overflow-hidden">
             {searchResults.map((r, i) => (

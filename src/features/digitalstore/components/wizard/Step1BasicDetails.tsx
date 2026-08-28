@@ -44,7 +44,7 @@ function FieldLabel({ children, required }: { children: React.ReactNode; require
   return (
     <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1.5">
       {children}
-      {required && <span className="text-blue-500 ml-0.5 normal-case tracking-normal">*</span>}
+      {required && <span className="text-red-500 ml-0.5 normal-case tracking-normal">*</span>}
     </label>
   );
 }
@@ -382,7 +382,7 @@ export default function Step1BasicDetails({ form, setForm, errors, setErrors }: 
                 ...prev,
                 latitude: coords.lat,
                 longitude: coords.lng,
-                address: prev.address || address || prev.address,
+                address: address || prev.address,
               }));
             }}
           />

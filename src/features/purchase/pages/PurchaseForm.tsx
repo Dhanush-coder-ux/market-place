@@ -887,8 +887,8 @@ const PurchaseForm = () => {
                         </div>
                         <div className="flex flex-col">
                           <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Address</span>
-                          <span className="text-[10px] font-bold text-slate-600 truncate max-w-[200px]" title={supplierDetails.location_infos?.full_address || supplierDetails.address || "Missing"}>
-                            {supplierDetails.location_infos?.full_address || supplierDetails.address || "Missing"}
+                          <span className="text-[10px] font-bold text-slate-600 truncate max-w-[200px]" title={supplierDetails.location_infos?.full_address || supplierDetails.address?.full_address || (typeof supplierDetails.address === 'string' ? supplierDetails.address : "Missing")}>
+                            {supplierDetails.location_infos?.full_address || supplierDetails.address?.full_address || (typeof supplierDetails.address === 'string' ? supplierDetails.address : "Missing")}
                           </span>
                         </div>
                       </div>

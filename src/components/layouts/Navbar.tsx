@@ -173,17 +173,17 @@ export const Navbar = () => {
     <>
 
 
-      <div className="sticky top-0 z-40 w-full flex items-center justify-between px-3 lg:px-5 bg-white/80 backdrop-blur-md border-b border-slate-200/60 shadow-sm h-9">
+      <div className="sticky top-0 z-40 w-full flex items-center justify-between px-4 lg:px-6 bg-white/80 backdrop-blur-md border-b border-slate-200/60 shadow-sm h-14">
 
         {/* Search */}
         <div className="relative flex-1 mr-3 lg:mr-6 hidden md:flex" ref={searchRef}>
           <div className="relative group w-[180px] hover:w-[240px] focus-within:w-[350px] focus-within:!w-[350px] transition-all duration-300 ease-out">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 md:group-focus-within:text-blue-500 md:transition-colors z-10" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 md:group-focus-within:text-blue-500 md:transition-colors z-10" />
             <input
               ref={inputRef}
               type="text"
               placeholder="Search the pages"
-              className="w-full pl-8 pr-3 py-1 bg-slate-100/70 border border-slate-200/60 rounded-md text-xs font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all shadow-sm"
+              className="w-full pl-9 pr-4 py-1.5 bg-slate-100/70 border border-slate-200/60 rounded-md text-sm font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all shadow-sm"
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -192,8 +192,8 @@ export const Navbar = () => {
               onFocus={() => setIsSearchOpen(true)}
             />
             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-0.5 pointer-events-none">
-              <kbd className="hidden lg:inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-slate-200 bg-white text-[10px] font-medium text-slate-400 shadow-sm">
-                <Command size={10} /> K
+              <kbd className="hidden lg:inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-slate-200 bg-white text-xs font-medium text-slate-400 shadow-sm">
+                <Command size={12} /> K
               </kbd>
             </div>
           </div>
@@ -240,26 +240,26 @@ export const Navbar = () => {
 
           <div className="flex items-center gap-1">
             <Link to="/notifications" className="group">
-              <button className="relative flex items-center gap-1.5 px-2 py-1 bg-blue-500/10 backdrop-blur-md hover:bg-blue-500/20 text-blue-600 rounded-full transition-all duration-300 ease-out shadow-sm overflow-hidden border border-blue-500/20">
+              <button className="relative flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 backdrop-blur-md hover:bg-blue-500/20 text-blue-600 rounded-full transition-all duration-300 ease-out shadow-sm overflow-hidden border border-blue-500/20">
                 <div className="relative flex shrink-0 items-center justify-center">
-                  <Bell className="w-3.5 h-3.5 text-blue-600 group-hover:text-blue-800 transition-colors" />
+                  <Bell className="w-4 h-4 text-blue-600 group-hover:text-blue-800 transition-colors" />
                   {latestNotification && (
-                    <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-rose-500 rounded-full shadow-[0_0_0_2px_white] transition-shadow animate-pulse"></span>
+                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-rose-500 rounded-full shadow-[0_0_0_2px_white] transition-shadow animate-pulse"></span>
                   )}
                 </div>
-                <div className={`flex flex-col items-start transition-all duration-500 ease-out overflow-hidden whitespace-nowrap ${isIslandExpanded ? 'w-[120px] opacity-100' : 'w-0 opacity-0 group-hover:w-[120px] group-hover:opacity-100'}`}>
-                  <span className="text-[8px] font-extrabold text-blue-500/80 uppercase tracking-wider leading-none mb-0.5">
+                <div className={`flex flex-col items-start transition-all duration-500 ease-out overflow-hidden whitespace-nowrap ${isIslandExpanded ? 'w-[130px] opacity-100' : 'w-0 opacity-0 group-hover:w-[130px] group-hover:opacity-100'}`}>
+                  <span className="text-[9px] font-extrabold text-blue-500/80 uppercase tracking-wider leading-none mb-0.5">
                     {latestNotification ? "New Message" : "Notifications"}
                   </span>
-                  <span className="text-[10px] font-semibold text-blue-900 leading-none truncate w-full text-left">
+                  <span className="text-[11px] font-semibold text-blue-900 leading-none truncate w-full text-left">
                     {latestNotification ? (latestNotification.title || latestNotification.message) : "No new alerts"}
                   </span>
                 </div>
               </button>
             </Link>
             <Link to={"/settings"}>
-              <button className="p-1.5 text-slate-400 md:hover:bg-slate-100 md:hover:text-slate-700 rounded-full md:transition-colors group">
-                <Settings className="w-4 h-4 md:group-hover:rotate-45 md:transition-transform md:duration-300" />
+              <button className="p-2 text-slate-400 md:hover:bg-slate-100 md:hover:text-slate-700 rounded-full md:transition-colors group">
+                <Settings className="w-5 h-5 md:group-hover:rotate-45 md:transition-transform md:duration-300" />
               </button>
             </Link>
 

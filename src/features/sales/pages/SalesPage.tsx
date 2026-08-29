@@ -9,7 +9,7 @@ import {
 import SkeletonLoader from "@/components/common/SkeletonLoader";
 import {
   TrendingUp,
-  ExternalLink, Globe, Store
+  ExternalLink, Globe, Store, RotateCw
 } from "lucide-react";
 import { useApi } from "@/context/ApiContext";
 import { useHeader } from "@/context/HeaderContext";
@@ -91,6 +91,16 @@ const SalesListPage: React.FC = () => {
   useEffect(() => {
     setActions(
       <div className="flex items-center gap-2">
+        <button
+          onClick={() => {
+            window.dispatchEvent(new CustomEvent('clear-api-cache'));
+            window.dispatchEvent(new CustomEvent('refresh-sales'));
+          }}
+          className="h-8 w-8 flex items-center justify-center rounded-md border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0"
+          title="Refresh"
+        >
+          <RotateCw size={13} />
+        </button>
         {!isCleanMode && (
           <button
             onClick={handleOpenNewTab}
@@ -104,6 +114,17 @@ const SalesListPage: React.FC = () => {
     );
     return () => setActions(null);
   }, [setActions, isCleanMode]);
+
+  // Hook to handle the global refresh event
+  useEffect(() => {
+    const handleRefresh = () => {
+      // the actual reload function is returned from useInfiniteScroll below
+      const event = new CustomEvent('do-refresh-sales');
+      document.dispatchEvent(event);
+    };
+    window.addEventListener('refresh-sales', handleRefresh);
+    return () => window.removeEventListener('refresh-sales', handleRefresh);
+  }, []);
 
 
   const [orders, setOrders] = useState<OrderResponse[]>([]);
@@ -319,11 +340,19 @@ const SalesListPage: React.FC = () => {
     toDate,
   }), [debouncedSearch, filterOrigin, filterPayment, filterStatus, fromDate, toDate]);
 
-  const { items, loading, loadingMore, stats, totalCount, lastElementRef } = useInfiniteScroll({
+  const { items, loading, loadingMore, stats, totalCount, lastElementRef, reload } = useInfiniteScroll({
     fetchPage,
     filters,
     limit: 50
   });
+
+  useEffect(() => {
+    const handleDoRefresh = () => {
+      reload();
+    };
+    document.addEventListener('do-refresh-sales', handleDoRefresh);
+    return () => document.removeEventListener('do-refresh-sales', handleDoRefresh);
+  }, [reload]);
 
   const filtered = useMemo<any[]>(() => {
     let result = [...(items as any[])];

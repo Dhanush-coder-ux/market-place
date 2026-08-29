@@ -281,16 +281,17 @@ const MainLayout = () => {
   const { title, icon } = getPageHeaderInfo(location.pathname);
 
   return (
-    <div className="h-screen w-full flex flex-col overflow-hidden bg-slate-50">
-      {!hideNav && <Navbar />}
+    <div className="h-screen w-full flex overflow-hidden bg-slate-50">
+      {/* Sidebar — full viewport height left column, hidden on mobile */}
+      {!hideNav && (
+        <div className="hidden md:flex flex-shrink-0 h-full">
+          <Sidebar links={sidebarLinks} />
+        </div>
+      )}
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar — hidden on mobile, visible on md+ */}
-        {!hideNav && (
-          <div className="hidden md:flex">
-            <Sidebar links={sidebarLinks} />
-          </div>
-        )}
+      {/* Right column: navbar sits at the top, content below */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {!hideNav && <Navbar />}
 
         <main className="flex-1 flex flex-col min-w-0 relative overflow-hidden">
           <div className={`flex-1 flex flex-col min-h-0 overflow-hidden relative ${hideNav ? (isBillingPage ? "p-0" : "p-2.5 md:p-4") : isStorePage ? "p-0 pb-20 md:pb-0" : isBillingPage ? "pl-6 pr-3.5 pt-4 pb-2 md:pl-8 lg:pl-10 lg:pr-6" : "p-1.5 md:p-2 lg:p-2.5"} ${!bottomActions && "pb-20 md:pb-0"}`}>
@@ -334,10 +335,10 @@ const MainLayout = () => {
             </div>
           )}
         </main>
-      </div>
 
-      {/* Mobile Bottom Navigation Bar */}
-      {!hideNav && <MobileBottomBar />}
+        {/* Mobile Bottom Navigation Bar */}
+        {!hideNav && <MobileBottomBar />}
+      </div>
     </div>
   );
 };

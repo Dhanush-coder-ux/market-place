@@ -869,6 +869,7 @@ const PurchaseHistory = () => {
   const location = useLocation();
   const isCleanMode = new URLSearchParams(location.search).get("mode") === "clean";
   const { setActions, setBottomActions } = useHeader();
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const handleOpenNewTab = () => {
     window.open(`${window.location.pathname}?mode=clean`, "_blank", "noopener,noreferrer");
@@ -877,6 +878,16 @@ const PurchaseHistory = () => {
   useEffect(() => {
     setActions(
       <div className="flex items-center gap-2">
+        <button
+          onClick={() => {
+            window.dispatchEvent(new CustomEvent('clear-api-cache'));
+            setRefreshKey(prev => prev + 1);
+          }}
+          className="h-8 w-8 flex items-center justify-center rounded-md border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0"
+          title="Refresh"
+        >
+          <RotateCw size={13} />
+        </button>
         {!isCleanMode && (
           <button
             onClick={handleOpenNewTab}
@@ -889,14 +900,13 @@ const PurchaseHistory = () => {
       </div>
     );
     return () => setActions(null);
-  }, [setActions, isCleanMode]);
+  }, [setActions, isCleanMode, setRefreshKey]);
 
   const [_activeKpi, _setActiveKpi] = useState("All Purchases");
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
   const { getData } = useApi();
-  const [refreshKey, setRefreshKey] = useState(0);
   const [analyticsStats, setAnalyticsStats] = useState<any>(null);
 
   useEffect(() => {

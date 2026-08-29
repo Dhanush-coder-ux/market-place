@@ -1,4 +1,4 @@
-import { Search, Filter, Users, X, AlertCircle, ExternalLink, Eye, Pencil, MoreVertical, Trash2, Mail } from 'lucide-react';
+import { Search, Filter, Users, X, AlertCircle, ExternalLink, Eye, Pencil, MoreVertical, Trash2, Mail, RefreshCw } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { StatCard } from '@/components/common/StatsCard';
 import { ReusableSelect } from '@/components/ui/ReusableSelect';
@@ -49,6 +49,16 @@ export default function Employee() {
   useEffect(() => {
     setActions(
       <div className="flex items-center gap-2">
+        <button
+          onClick={() => {
+            window.dispatchEvent(new CustomEvent('clear-api-cache'));
+            setRefreshKey(prev => prev + 1);
+          }}
+          className="h-8 w-8 flex items-center justify-center rounded-md border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0"
+          title="Refresh"
+        >
+          <RefreshCw size={13} />
+        </button>
         {!isCleanMode && (
           <button
             onClick={handleOpenNewTab}

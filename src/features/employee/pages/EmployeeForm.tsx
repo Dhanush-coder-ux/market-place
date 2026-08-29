@@ -21,17 +21,9 @@ import { useToast } from "@/context/ToastContext";
 import { NavigationBlocker } from "@/components/common/NavigationBlocker";
 
 const roleOptions = [
-  { label: "Owner", value: "OWNER" },
   { label: "Super Admin", value: "SUPER_ADMIN" },
   { label: "Admin", value: "ADMIN" },
   { label: "Biller", value: "BILLER" },
-  { label: "User", value: "USER" },
-];
-
-const departmentOptions = [
-  { label: "Sales", value: "SALES" },
-  { label: "Biller", value: "BILLER" },
-  { label: "Manager", value: "MANAGER" },
 ];
 
 const EmployeeForm = () => {
@@ -54,13 +46,12 @@ const EmployeeForm = () => {
   const initialFormData = {
     name: "",
     email: "",
-    role: "USER",
+    role: "ADMIN",
     mobile_number: "",
     address: "",
     zip_code: "",
     joinDate: new Date().toISOString().split('T')[0],
     is_accepted: true,
-    department: "",
     salary_range: "",
   };
 
@@ -120,10 +111,9 @@ const EmployeeForm = () => {
             ...initialFormData,
             name: empData.name || "",
             email: empData.email || "",
-            role: empData.role || "USER",
+            role: empData.role || "ADMIN",
             mobile_number: empData.mobile_number || "",
             joinDate: empData.joined_date ? empData.joined_date.split('T')[0] : new Date().toISOString().split('T')[0],
-            department: empData.department || "",
             address: addr.full_address || "",
             zip_code: addr.zip_code || "",
             salary_range: String(datas.salary_range || additional.salary_range || ""),
@@ -180,7 +170,6 @@ const EmployeeForm = () => {
       role: formData.role,
       mobile_number: formData.mobile_number,
       joined_date: formData.joinDate,
-      department: formData.department,
     };
     
     const nestedData = {
@@ -286,15 +275,6 @@ const EmployeeForm = () => {
                     value={formData.role}
                     onValueChange={(val) => handleSelectChange("role", val)}
                     placeholder="Select Permissions"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-500 ml-1  ">Department</label>
-                  <ReusableSelect
-                    options={departmentOptions}
-                    value={formData.department}
-                    onValueChange={(val) => handleSelectChange("department", val)}
-                    placeholder="Select Department"
                   />
                 </div>
               </div>

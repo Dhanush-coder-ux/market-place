@@ -4,8 +4,13 @@
 
 /* Skeleton shimmer animation */
 @keyframes shimmer {
-  0%   { background-position: 100% 0; }
-  100% { background-position: -100% 0; }
+  0% {
+    background-position: 100% 0;
+  }
+
+  100% {
+    background-position: -100% 0;
+  }
 }
 
 @custom-variant dark (&:is(.dark *));
@@ -80,7 +85,7 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  
+
 }
 
 :root {
@@ -88,67 +93,179 @@
 
   /* ============ ANTARIS COLOR SYSTEM (NEW v2) ============ */
   /* ---- Transaction types: bg | border | text | dot ---- */
-  --tx-purchase-bg: #DBFBE8; --tx-purchase-bd: #7EE2A8; --tx-purchase-tx: #0F5132; --tx-purchase-dot: #12A150;
-  --tx-sales-bg: #DCEEFE; --tx-sales-bd: #8FC5F8; --tx-sales-tx: #0A4585; --tx-sales-dot: #1877E5;
-  --tx-sales-return-bg: #EAE6FE; --tx-sales-return-bd: #C4B8FA; --tx-sales-return-tx: #3A2A85; --tx-sales-return-dot: #7C5CE6;
-  --tx-purchase-return-bg: #FDE4EE; --tx-purchase-return-bd: #F9AECB; --tx-purchase-return-tx: #7A1F42; --tx-purchase-return-dot: #DB3F76;
-  --tx-opening-bg: #D2F4F0; --tx-opening-bd: #79DDD4; --tx-opening-tx: #0A5450; --tx-opening-dot: #0FA79B;
-  --tx-adjustment-bg: #FEF1D0; --tx-adjustment-bd: #FACC5F; --tx-adjustment-tx: #78430A; --tx-adjustment-dot: #F0A414;
+  --tx-purchase-bg: #DBFBE8;
+  --tx-purchase-bd: #7EE2A8;
+  --tx-purchase-tx: #0F5132;
+  --tx-purchase-dot: #12A150;
+  --tx-sales-bg: #DCEEFE;
+  --tx-sales-bd: #8FC5F8;
+  --tx-sales-tx: #0A4585;
+  --tx-sales-dot: #1877E5;
+  --tx-sales-return-bg: #EAE6FE;
+  --tx-sales-return-bd: #C4B8FA;
+  --tx-sales-return-tx: #3A2A85;
+  --tx-sales-return-dot: #7C5CE6;
+  --tx-purchase-return-bg: #FDE4EE;
+  --tx-purchase-return-bd: #F9AECB;
+  --tx-purchase-return-tx: #7A1F42;
+  --tx-purchase-return-dot: #DB3F76;
+  --tx-opening-bg: #D2F4F0;
+  --tx-opening-bd: #79DDD4;
+  --tx-opening-tx: #0A5450;
+  --tx-opening-dot: #0FA79B;
+  --tx-adjustment-bg: #FEF1D0;
+  --tx-adjustment-bd: #FACC5F;
+  --tx-adjustment-tx: #78430A;
+  --tx-adjustment-dot: #F0A414;
 
   /* dot + text variant for dense tables: text | dot */
-  --dt-purchase-tx: #197A45; --dt-purchase-dot: #22B563;
-  --dt-sales-tx: #1565C7; --dt-sales-dot: #3B94F0;
-  --dt-sales-return-tx: #5741B8; --dt-sales-return-dot: #9478F0;
-  --dt-purchase-return-tx: #A82F5C; --dt-purchase-return-dot: #E9679A;
-  --dt-opening-tx: #0E766D; --dt-opening-dot: #17BFAF;
-  --dt-adjustment-tx: #9A6208; --dt-adjustment-dot: #F5B72E;
+  --dt-purchase-tx: #197A45;
+  --dt-purchase-dot: #22B563;
+  --dt-sales-tx: #1565C7;
+  --dt-sales-dot: #3B94F0;
+  --dt-sales-return-tx: #5741B8;
+  --dt-sales-return-dot: #9478F0;
+  --dt-purchase-return-tx: #A82F5C;
+  --dt-purchase-return-dot: #E9679A;
+  --dt-opening-tx: #0E766D;
+  --dt-opening-dot: #17BFAF;
+  --dt-adjustment-tx: #9A6208;
+  --dt-adjustment-dot: #F5B72E;
 
   /* ---- Attribute labels: bg | border | text ---- */
-  --lb-gst-bg: #D2F4F0; --lb-gst-bd: #79DDD4; --lb-gst-tx: #0A5450;
-  --lb-variant-bg: #EAE6FE; --lb-variant-bd: #C4B8FA; --lb-variant-tx: #3A2A85;
-  --lb-batch-bg: #FFEBDC; --lb-batch-bd: #FDBE96; --lb-batch-tx: #7C3A0F;
-  --lb-serial-bg: #FAE3FB; --lb-serial-bd: #EFAFF2; --lb-serial-tx: #6B1F70;
-  --lb-brand-bg: #EEF1F5; --lb-brand-bd: #CBD3DE; --lb-brand-tx: #38414F;
-  --lb-product-active-bg: #DBFBE8; --lb-product-active-bd: #7EE2A8; --lb-product-active-tx: #0F5132;
-  --lb-product-archived-bg: #EEF1F5; --lb-product-archived-bd: #CBD3DE; --lb-product-archived-tx: #38414F;
-  --lb-store-online-bg: #DCEEFE; --lb-store-online-bd: #8FC5F8; --lb-store-online-tx: #0A4585;
-  --lb-store-offline-bg: #EEF1F5; --lb-store-offline-bd: #CBD3DE; --lb-store-offline-tx: #38414F;
-  --at-variant-bg: #EAE6FE; --at-variant-bd: #C4B8FA; --at-variant-tx: #3A2A85;
-  --at-batch-bg: #FFEBDC; --at-batch-bd: #FDBE96; --at-batch-tx: #7C3A0F;
-  --at-serial-bg: var(--lb-serial-bg); --at-serial-bd: var(--lb-serial-bd); --at-serial-tx: var(--lb-serial-tx);
+  --lb-gst-bg: #D2F4F0;
+  --lb-gst-bd: #79DDD4;
+  --lb-gst-tx: #0A5450;
+  --lb-variant-bg: #EAE6FE;
+  --lb-variant-bd: #C4B8FA;
+  --lb-variant-tx: #3A2A85;
+  --lb-batch-bg: #FFEBDC;
+  --lb-batch-bd: #FDBE96;
+  --lb-batch-tx: #7C3A0F;
+  --lb-serial-bg: #FAE3FB;
+  --lb-serial-bd: #EFAFF2;
+  --lb-serial-tx: #6B1F70;
+  --lb-brand-bg: #EEF1F5;
+  --lb-brand-bd: #CBD3DE;
+  --lb-brand-tx: #38414F;
+  --lb-product-active-bg: #DBFBE8;
+  --lb-product-active-bd: #7EE2A8;
+  --lb-product-active-tx: #0F5132;
+  --lb-product-archived-bg: #EEF1F5;
+  --lb-product-archived-bd: #CBD3DE;
+  --lb-product-archived-tx: #38414F;
+  --lb-store-online-bg: #DCEEFE;
+  --lb-store-online-bd: #8FC5F8;
+  --lb-store-online-tx: #0A4585;
+  --lb-store-offline-bg: #EEF1F5;
+  --lb-store-offline-bd: #CBD3DE;
+  --lb-store-offline-tx: #38414F;
+  --at-variant-bg: #EAE6FE;
+  --at-variant-bd: #C4B8FA;
+  --at-variant-tx: #3A2A85;
+  --at-batch-bg: #FFEBDC;
+  --at-batch-bd: #FDBE96;
+  --at-batch-tx: #7C3A0F;
+  --at-serial-bg: var(--lb-serial-bg);
+  --at-serial-bd: var(--lb-serial-bd);
+  --at-serial-tx: var(--lb-serial-tx);
 
   /* ---- Purchase status ---- */
-  --ps-completed-bg: #DBFBE8; --ps-completed-bd: #7EE2A8; --ps-completed-tx: #0F5132; --ps-completed-dot: #12A150;
-  --ps-draft-bg: #EEF1F5; --ps-draft-bd: #CBD3DE; --ps-draft-tx: #38414F; --ps-draft-dot: #7C8798;
-  --ps-cancelled-bg: #FEE2E2; --ps-cancelled-bd: #FCA5A5; --ps-cancelled-tx: #7F1D1D; --ps-cancelled-dot: #E5484D;
-  --ps-cancel-bg: #FEE2E2; --ps-cancel-bd: #FCA5A5; --ps-cancel-tx: #7F1D1D; --ps-cancel-dot: #E5484D;
+  --ps-completed-bg: #DBFBE8;
+  --ps-completed-bd: #7EE2A8;
+  --ps-completed-tx: #0F5132;
+  --ps-completed-dot: #12A150;
+  --ps-draft-bg: #EEF1F5;
+  --ps-draft-bd: #CBD3DE;
+  --ps-draft-tx: #38414F;
+  --ps-draft-dot: #7C8798;
+  --ps-cancelled-bg: #FEE2E2;
+  --ps-cancelled-bd: #FCA5A5;
+  --ps-cancelled-tx: #7F1D1D;
+  --ps-cancelled-dot: #E5484D;
+  --ps-cancel-bg: #FEE2E2;
+  --ps-cancel-bd: #FCA5A5;
+  --ps-cancel-tx: #7F1D1D;
+  --ps-cancel-dot: #E5484D;
 
   /* ---- Payment status ---- */
-  --pay-paid-bg: #DBFBE8; --pay-paid-bd: #7EE2A8; --pay-paid-tx: #0F5132; --pay-paid-dot: #12A150;
-  --pay-partial-bg: #FEF1D0; --pay-partial-bd: #FACC5F; --pay-partial-tx: #78430A; --pay-partial-dot: #F0A414;
-  --pay-pending-bg: #FFE4DB; --pay-pending-bd: #FDB29B; --pay-pending-tx: #7E2D14; --pay-pending-dot: #E85D34;
-  --pay-outstanding-increment-bg: #FDE4EE; --pay-outstanding-increment-bd: #F9AECB; --pay-outstanding-increment-tx: #7A1F42; --pay-outstanding-increment-dot: #DB3F76;
-  --pay-outstanding-decrement-bg: #DBFBE8; --pay-outstanding-decrement-bd: #7EE2A8; --pay-outstanding-decrement-tx: #0F5132; --pay-outstanding-decrement-dot: #12A150;
-  --pay-outstanding-direct-bg: #DCEEFE; --pay-outstanding-direct-bd: #8FC5F8; --pay-outstanding-direct-tx: #0A4585; --pay-outstanding-direct-dot: #1877E5;
+  --pay-paid-bg: #DBFBE8;
+  --pay-paid-bd: #7EE2A8;
+  --pay-paid-tx: #0F5132;
+  --pay-paid-dot: #12A150;
+  --pay-partial-bg: #FEF1D0;
+  --pay-partial-bd: #FACC5F;
+  --pay-partial-tx: #78430A;
+  --pay-partial-dot: #F0A414;
+  --pay-pending-bg: #FFE4DB;
+  --pay-pending-bd: #FDB29B;
+  --pay-pending-tx: #7E2D14;
+  --pay-pending-dot: #E85D34;
+  --pay-outstanding-increment-bg: #FDE4EE;
+  --pay-outstanding-increment-bd: #F9AECB;
+  --pay-outstanding-increment-tx: #7A1F42;
+  --pay-outstanding-increment-dot: #DB3F76;
+  --pay-outstanding-decrement-bg: #DBFBE8;
+  --pay-outstanding-decrement-bd: #7EE2A8;
+  --pay-outstanding-decrement-tx: #0F5132;
+  --pay-outstanding-decrement-dot: #12A150;
+  --pay-outstanding-direct-bg: #DCEEFE;
+  --pay-outstanding-direct-bd: #8FC5F8;
+  --pay-outstanding-direct-tx: #0A4585;
+  --pay-outstanding-direct-dot: #1877E5;
 
   /* ---- Stock status ---- */
-  --stk-in-stock-bg: #DBFBE8; --stk-in-stock-bd: #7EE2A8; --stk-in-stock-tx: #0F5132; --stk-in-stock-dot: #12A150;
-  --stk-low-stock-bg: #FEF1D0; --stk-low-stock-bd: #FACC5F; --stk-low-stock-tx: #78430A; --stk-low-stock-dot: #F0A414;
-  --stk-out-of-stock-bg: #FFE4DB; --stk-out-of-stock-bd: #FDB29B; --stk-out-of-stock-tx: #7E2D14; --stk-out-of-stock-dot: #E85D34;
-  --stk-never-stocked-bg: #EEF1F5; --stk-never-stocked-bd: #CBD3DE; --stk-never-stocked-tx: #38414F; --stk-never-stocked-dot: #7C8798;
-  --stk-not-tracked-bg: transparent; --stk-not-tracked-bd: #CBD3DE; --stk-not-tracked-tx: #4B5567;  /* dashed border */
+  --stk-in-stock-bg: #DBFBE8;
+  --stk-in-stock-bd: #7EE2A8;
+  --stk-in-stock-tx: #0F5132;
+  --stk-in-stock-dot: #12A150;
+  --stk-low-stock-bg: #FEF1D0;
+  --stk-low-stock-bd: #FACC5F;
+  --stk-low-stock-tx: #78430A;
+  --stk-low-stock-dot: #F0A414;
+  --stk-out-of-stock-bg: #FFE4DB;
+  --stk-out-of-stock-bd: #FDB29B;
+  --stk-out-of-stock-tx: #7E2D14;
+  --stk-out-of-stock-dot: #E85D34;
+  --stk-never-stocked-bg: #EEF1F5;
+  --stk-never-stocked-bd: #CBD3DE;
+  --stk-never-stocked-tx: #38414F;
+  --stk-never-stocked-dot: #7C8798;
+  --stk-not-tracked-bg: transparent;
+  --stk-not-tracked-bd: #CBD3DE;
+  --stk-not-tracked-tx: #4B5567;
+  /* dashed border */
 
   /* ---- Other states ---- */
-  --flag-overdue-tx: #C0292E; --flag-overdue-bd: #FCA5A5;
-  --meta-version-bg: #EAECFB; --meta-version-bd: #C3C9F2; --meta-version-tx: #363E8F;
-  --tag-returned-bg: #FDE4EE; --tag-returned-bd: #F9AECB; --tag-returned-tx: #7A1F42; --tag-returned-dot: #DB3F76;
-  --meta-corrected-bg: #EAE6FE; --meta-corrected-bd: #C4B8FA; --meta-corrected-tx: #3A2A85;
-  --meta-variant-bg: #EEF1F5; --meta-variant-bd: #CBD3DE; --meta-variant-tx: #38414F;
-  
+  --flag-overdue-tx: #C0292E;
+  --flag-overdue-bd: #FCA5A5;
+  --meta-version-bg: #EAECFB;
+  --meta-version-bd: #C3C9F2;
+  --meta-version-tx: #363E8F;
+  --tag-returned-bg: #FDE4EE;
+  --tag-returned-bd: #F9AECB;
+  --tag-returned-tx: #7A1F42;
+  --tag-returned-dot: #DB3F76;
+  --meta-corrected-bg: #EAE6FE;
+  --meta-corrected-bd: #C4B8FA;
+  --meta-corrected-tx: #3A2A85;
+  --meta-variant-bg: #EEF1F5;
+  --meta-variant-bd: #CBD3DE;
+  --meta-variant-tx: #38414F;
+
   /* ---- Aliases for StockMovement ---- */
-  --mv-sales-bg: var(--tx-sales-bg); --mv-sales-bd: var(--tx-sales-bd); --mv-sales-tx: var(--tx-sales-tx); --mv-sales-dot: var(--tx-sales-dot);
-  --mv-purchase-bg: var(--tx-purchase-bg); --mv-purchase-bd: var(--tx-purchase-bd); --mv-purchase-tx: var(--tx-purchase-tx); --mv-purchase-dot: var(--tx-purchase-dot);
-  --mv-preturn-bg: var(--tx-purchase-return-bg); --mv-preturn-bd: var(--tx-purchase-return-bd); --mv-preturn-tx: var(--tx-purchase-return-tx); --mv-preturn-dot: var(--tx-purchase-return-dot);
+  --mv-sales-bg: var(--tx-sales-bg);
+  --mv-sales-bd: var(--tx-sales-bd);
+  --mv-sales-tx: var(--tx-sales-tx);
+  --mv-sales-dot: var(--tx-sales-dot);
+  --mv-purchase-bg: var(--tx-purchase-bg);
+  --mv-purchase-bd: var(--tx-purchase-bd);
+  --mv-purchase-tx: var(--tx-purchase-tx);
+  --mv-purchase-dot: var(--tx-purchase-dot);
+  --mv-preturn-bg: var(--tx-purchase-return-bg);
+  --mv-preturn-bd: var(--tx-purchase-return-bd);
+  --mv-preturn-tx: var(--tx-purchase-return-tx);
+  --mv-preturn-dot: var(--tx-purchase-return-dot);
 
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -264,6 +381,7 @@
     -webkit-appearance: none;
     margin: 0;
   }
+
   input[type="number"] {
     -moz-appearance: textfield;
   }
@@ -274,13 +392,15 @@
   .ant-pill {
     @apply inline-flex items-center gap-[7px] px-[13px] py-[5px] rounded-full text-[12.5px] font-semibold border whitespace-nowrap tracking-[-0.01em];
   }
+
   .ant-pill .ant-dot {
     @apply w-[7px] h-[7px] rounded-full flex-none;
   }
-  
+
   .ant-mini {
     @apply inline-flex items-center gap-[8px] text-[13px] font-semibold whitespace-nowrap tracking-[-0.01em];
   }
+
   .ant-mini .ant-dot {
     @apply w-[8px] h-[8px] rounded-full flex-none;
   }
@@ -292,6 +412,7 @@
   .ant-otag {
     @apply inline-flex items-center gap-[6px] px-[11px] py-[3px] rounded-full text-[11px] font-bold tracking-[0.04em] border-[1.5px] bg-transparent;
   }
+
   .ant-otag svg {
     @apply w-[11px] h-[11px];
   }
@@ -566,4 +687,7 @@
     -webkit-backdrop-filter: none !important;
   }
 }
-.no-scroll { overflow: hidden; }
+
+.no-scroll {
+  overflow: hidden;
+}

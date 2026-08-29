@@ -230,8 +230,8 @@ const AnalyticsDashboard = () => {
 
   // Format daily trend for chart
   const dailyTrend = useMemo(() => {
-    const salesTrend = stats?.trends?.sales || [];
-    const purchaseTrend = stats?.trends?.purchases || [];
+    const salesTrend = stats?.dashboard?.sales?.trend || stats?.trends?.sales || [];
+    const purchaseTrend = stats?.dashboard?.purchase?.trend || stats?.trends?.purchases || [];
     const map: Record<string, any> = {};
 
     salesTrend.forEach((s: any) => {
@@ -278,7 +278,8 @@ const AnalyticsDashboard = () => {
 
   const salesByCategory = useMemo(() => {
     const categoriesMap: Record<string, number> = {};
-    (stats?.top?.top_products || []).forEach((p: any) => {
+    const products = stats?.dashboard?.inventory?.top_products || stats?.top?.top_products || [];
+    products.forEach((p: any) => {
       const prodDetail = productsList.find((item: any) => item.id === p.product_id);
       const cat = prodDetail?.category_infos?.name || prodDetail?.datas?.category_infos?.name || "General";
       categoriesMap[cat] = (categoriesMap[cat] || 0) + (p.total_sales_amounts || 0);
@@ -287,7 +288,8 @@ const AnalyticsDashboard = () => {
   }, [stats, productsList]);
 
   const topProducts = useMemo(() => {
-    return (stats?.top?.top_products || []).map((p: any) => ({
+    const products = stats?.dashboard?.inventory?.top_products || stats?.top?.top_products || [];
+    return products.map((p: any) => ({
       inventory_id: p.product_id,
       name: productNameMap[p.product_id] || p.product_name || "Unknown Product",
       total_revenue: p.total_sales_amounts || 0,
@@ -297,7 +299,8 @@ const AnalyticsDashboard = () => {
   }, [stats, productNameMap]);
 
   const topSuppliers = useMemo(() => {
-    return (stats?.top?.top_suppliers || []).map((s: any) => ({
+    const supps = stats?.dashboard?.supplier?.top_suppliers || stats?.top?.top_suppliers || [];
+    return supps.map((s: any) => ({
       supplier_id: s.supplier_id,
       id: s.supplier_id,
       name: supplierNameMap[s.supplier_id] || s.supplier_name || "Unknown Supplier",

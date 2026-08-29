@@ -206,10 +206,10 @@ const PurchaseForm = () => {
             supplierApi.getById(SHOP_ID, loadedSupplierId).then((supRes: any) => {
               if (supRes && (supRes.data || supRes.id)) {
                 const supData = supRes.data ? (Array.isArray(supRes.data) ? supRes.data[0] : supRes.data) : supRes;
-                setSupplierDetails({ 
+                setSupplierDetails({
                   ...supData,
-                  id: loadedSupplierId, 
-                  name: supData.name || supData.supplier_name || loadedSupplierName || "Unknown Supplier" 
+                  id: loadedSupplierId,
+                  name: supData.name || supData.supplier_name || loadedSupplierName || "Unknown Supplier"
                 });
               } else {
                 setSupplierDetails({
@@ -219,10 +219,10 @@ const PurchaseForm = () => {
                 });
               }
             }).catch(() => {
-              setSupplierDetails({ 
+              setSupplierDetails({
                 ...(data.supplier || {}),
-                id: loadedSupplierId, 
-                name: loadedSupplierName || "Unknown Supplier" 
+                id: loadedSupplierId,
+                name: loadedSupplierName || "Unknown Supplier"
               });
             });
           }
@@ -575,11 +575,11 @@ const PurchaseForm = () => {
       const hasPaidAmount = payment.amountPaid !== "" && payment.amountPaid !== null && payment.amountPaid !== undefined && Number(payment.amountPaid) > 0;
       const paymentInfosPayload = hasPaidAmount
         ? [
-            {
-              method: payment.method,
-              amount: Number(payment.amountPaid)
-            }
-          ]
+          {
+            method: payment.method,
+            amount: Number(payment.amountPaid)
+          }
+        ]
         : [];
 
       const payload = {
@@ -621,12 +621,7 @@ const PurchaseForm = () => {
             transport_charge: Number(charges.transport) || 0,
             other_charge: Number(charges.other) || 0
           },
-          payment_infos: [
-            {
-              method: payment.method,
-              amount: Number(payment.amountPaid) || stats.grandTotal
-            }
-          ],
+          payment_infos: paymentInfosPayload,
           purchase_date: purchaseDetails.date,
           items: transformedProducts
             .filter((p: any) => {

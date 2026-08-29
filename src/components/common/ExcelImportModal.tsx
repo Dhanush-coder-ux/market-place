@@ -202,7 +202,7 @@ const VISIBLE_STEPS = [
   { id: "result" as Step, label: "Done" },
 ];
 
-const StepIndicator: FC<{ current: Step; from: string; to: string }> = ({ current, from, to }) => {
+const StepIndicator: FC<{ current: Step }> = ({ current }) => {
   const currentIdx = VISIBLE_STEPS.findIndex((s) => s.id === current);
   const isDone = current === "result";
 
@@ -215,27 +215,17 @@ const StepIndicator: FC<{ current: Step; from: string; to: string }> = ({ curren
           <React.Fragment key={step.id}>
             <div className="flex flex-col items-center gap-1 shrink-0">
               <div
-                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${done || active ? "text-white" : "bg-slate-100 text-slate-400"
-                  }`}
-                style={
-                  done || active
-                    ? {
-                      background: `linear-gradient(135deg, ${from}, ${to})`,
-                      boxShadow: active ? `0 0 0 4px ${from}30` : undefined,
-                    }
-                    : {}
-                }
+                className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-medium transition-all duration-300 ${done || active ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-400"}`}
               >
                 {done ? <CheckCircle2 size={14} /> : idx + 1}
               </div>
-              <span className={`text-[10px] font-semibold leading-none whitespace-nowrap ${active ? "text-slate-800" : done ? "text-slate-500" : "text-slate-400"}`}>
+              <span className={`text-[11px] font-medium leading-none whitespace-nowrap mt-1 ${active ? "text-slate-900" : done ? "text-slate-600" : "text-slate-400"}`}>
                 {step.label}
               </span>
             </div>
             {idx < VISIBLE_STEPS.length - 1 && (
               <div
-                className="flex-1 h-0.5 mx-1 rounded-full transition-all duration-500"
-                style={{ background: idx < currentIdx || isDone ? `linear-gradient(90deg, ${from}, ${to})` : "#e2e8f0" }}
+                className={`flex-1 h-px mx-2 transition-all duration-500 ${idx < currentIdx || isDone ? "bg-slate-900" : "bg-slate-200"}`}
               />
             )}
           </React.Fragment>
@@ -859,35 +849,28 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
           transition: "width 0.35s cubic-bezier(0.4,0,0.2,1), height 0.35s cubic-bezier(0.4,0,0.2,1)",
         }}
       >
-        {/* ── Gradient Header ── */}
-        <div
-          className="relative flex items-center justify-between px-6 py-5 shrink-0"
-          style={{ background: `linear-gradient(135deg, ${meta.gradientFrom} 0%, ${meta.gradientTo} 100%)` }}
-        >
+        {/* ── Header ── */}
+        <div className="relative flex items-center justify-between px-6 py-4 shrink-0 border-b border-slate-200 bg-white">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-              <FileSpreadsheet className="text-white" size={20} />
+            <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center">
+              <FileSpreadsheet className="text-slate-600" size={18} />
             </div>
             <div>
-              <h2 className="text-white font-bold text-[15px] leading-tight">Import {meta.label}</h2>
-              <p className="text-white/70 text-[11px] font-medium">Bulk import from Excel spreadsheet</p>
+              <h2 className="text-slate-900 font-semibold text-[15px] leading-tight">Import {meta.label}</h2>
+              <p className="text-slate-500 text-[12px]">Bulk import from Excel spreadsheet</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center text-white transition-colors"
+            className="w-8 h-8 rounded-md hover:bg-slate-100 flex items-center justify-center text-slate-500 transition-colors"
           >
             <X size={16} />
           </button>
-          {/* Decorative blobs */}
-          <div className="absolute right-24 top-1 w-24 h-24 rounded-full bg-white/10 pointer-events-none" />
-          <div className="absolute right-14 top-5 w-12 h-12 rounded-full bg-white/10 pointer-events-none" />
         </div>
 
-        {/* ── Step indicator (hide during submitting/result when in split mode) ── */}
         {step !== "submitting" && (
           <div className="px-6 pt-4 pb-3 border-b border-slate-100 shrink-0">
-            <StepIndicator current={step} from={meta.gradientFrom} to={meta.gradientTo} />
+            <StepIndicator current={step} />
           </div>
         )}
 
@@ -955,8 +938,7 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
 
               <button
                 onClick={() => downloadSampleXlsx(columns, meta.label, hasCategoryUnit)}
-                className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-xl border-2 border-dashed text-[13px] font-bold transition-all hover:scale-[1.01] active:scale-100"
-                style={{ borderColor: meta.gradientFrom, color: meta.gradientFrom, background: `${meta.gradientFrom}08` }}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-lg border border-slate-300 text-[13px] font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors"
               >
                 <Download size={16} />
                 Download Sample Template (.xlsx)
@@ -972,20 +954,13 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
                 onDragLeave={() => setIsDragging(false)}
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
-                className="relative cursor-pointer rounded-2xl border-2 border-dashed transition-all duration-300 p-12 flex flex-col items-center gap-3"
-                style={{
-                  borderColor: isDragging ? meta.gradientFrom : "#cbd5e1",
-                  background: isDragging ? `${meta.gradientFrom}08` : "#f8fafc",
-                }}
+                className={`relative cursor-pointer rounded-xl border-2 border-dashed transition-all duration-300 p-10 flex flex-col items-center gap-3 ${isDragging ? "border-slate-400 bg-slate-50" : "border-slate-300 bg-slate-50/50 hover:bg-slate-50"}`}
               >
-                <div
-                  className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg"
-                  style={{ background: `linear-gradient(135deg, ${meta.gradientFrom}, ${meta.gradientTo})` }}
-                >
-                  <FileUp className="text-white" size={28} />
+                <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center border border-slate-200">
+                  <FileUp className="text-slate-500" size={24} />
                 </div>
                 <div className="text-center">
-                  <p className="text-[14px] font-bold text-slate-700">
+                  <p className="text-[14px] font-medium text-slate-700">
                     {isDragging ? "Drop your file here" : "Click to upload or drag & drop"}
                   </p>
                   <p className="text-[11px] text-slate-400 mt-1 font-medium">Supports .xlsx, .xls and .csv files</p>
@@ -1069,10 +1044,7 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
                     <>
                       {/* Header for mapping section */}
                       <div className="flex items-center gap-2 mb-4">
-                        <div
-                          className="w-6 h-6 rounded-md flex items-center justify-center text-white text-[10px] font-black"
-                          style={{ background: `linear-gradient(135deg, ${meta.gradientFrom}, ${meta.gradientTo})` }}
-                        >
+                        <div className="w-6 h-6 rounded-md bg-slate-900 flex items-center justify-center text-white text-[11px] font-semibold">
                           {unmatchedCategories.length + unmatchedUnits.length > 0
                             ? (unmatchedCategories.length + unmatchedUnits.length)
                             : "✓"}
@@ -1134,25 +1106,22 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
           {/* ═══ SUBMITTING ═══ */}
           {step === "submitting" && (
             <div className="flex-1 flex flex-col items-center justify-center gap-5 p-8">
-              <div
-                className="w-20 h-20 rounded-2xl flex items-center justify-center shadow-xl"
-                style={{ background: `linear-gradient(135deg, ${meta.gradientFrom}, ${meta.gradientTo})` }}
-              >
-                <Loader2 className="text-white animate-spin" size={36} />
+              <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center">
+                <Loader2 className="text-slate-600 animate-spin" size={32} />
               </div>
               <div className="text-center">
-                <p className="text-[16px] font-black text-slate-800">Importing {meta.label}…</p>
-                <p className="text-[12px] text-slate-400 mt-1">Submitting {rows.length} records to the server</p>
+                <p className="text-[16px] font-bold text-slate-800">Importing {meta.label}…</p>
+                <p className="text-[12px] text-slate-500 mt-1">Submitting {rows.length} records to the server</p>
               </div>
               <div className="w-full max-w-sm space-y-2">
-                <div className="flex justify-between text-[11px] font-bold">
-                  <span className="text-slate-500">Progress</span>
-                  <span style={{ color: meta.gradientFrom }}>{submitProgress}%</span>
+                <div className="flex justify-between text-[11px] font-medium text-slate-600">
+                  <span>Progress</span>
+                  <span>{submitProgress}%</span>
                 </div>
-                <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
                   <div
-                    className="h-full rounded-full transition-all duration-300"
-                    style={{ width: `${submitProgress}%`, background: `linear-gradient(90deg, ${meta.gradientFrom}, ${meta.gradientTo})` }}
+                    className="h-full bg-slate-900 rounded-full transition-all duration-300"
+                    style={{ width: `${submitProgress}%` }}
                   />
                 </div>
               </div>
@@ -1163,13 +1132,13 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
           {step === "result" && submitResult && (
             <div className="flex-1 flex flex-col items-center justify-center gap-5 p-8">
               <div
-                className={`w-20 h-20 rounded-2xl flex items-center justify-center shadow-xl ${submitResult.success ? "bg-gradient-to-br from-emerald-500 to-green-400" : "bg-gradient-to-br from-red-500 to-rose-400"
+                className={`w-16 h-16 rounded-full flex items-center justify-center ${submitResult.success ? "bg-emerald-100" : "bg-red-100"
                   }`}
               >
                 {submitResult.success ? (
-                  <CheckCircle2 className="text-white" size={36} />
+                  <CheckCircle2 className="text-emerald-600" size={32} />
                 ) : (
-                  <AlertTriangle className="text-white" size={36} />
+                  <AlertTriangle className="text-red-600" size={32} />
                 )}
               </div>
               <div className="text-center max-w-sm">
@@ -1179,10 +1148,7 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
                 <p className="text-[13px] text-slate-500 mt-2 leading-relaxed">{submitResult.message}</p>
               </div>
               {submitResult.success && (
-                <div
-                  className="flex items-center gap-3 px-5 py-3 rounded-xl border"
-                  style={{ borderColor: `${meta.gradientFrom}40`, background: `${meta.gradientFrom}08`, color: meta.gradientFrom }}
-                >
+                <div className="flex items-center gap-3 px-4 py-2 rounded-lg border border-slate-200 bg-slate-50 text-slate-700">
                   <CheckCircle2 size={16} />
                   <span className="text-[13px] font-bold">{submitResult.count} {meta.label} imported</span>
                 </div>
@@ -1227,8 +1193,7 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
             {step === "intro" && (
               <button
                 onClick={() => setStep("upload")}
-                className="h-9 px-5 rounded-lg text-white text-[12px] font-bold flex items-center gap-1.5 transition-all hover:opacity-90 active:scale-95"
-                style={{ background: `linear-gradient(135deg, ${meta.gradientFrom}, ${meta.gradientTo})` }}
+                className="h-9 px-5 rounded-md bg-slate-900 text-white text-[12px] font-medium flex items-center gap-1.5 hover:bg-slate-800 transition-colors"
               >
                 Next: Upload File <ChevronRight size={14} />
               </button>
@@ -1237,8 +1202,7 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
             {step === "upload" && (
               <button
                 disabled
-                className="h-9 px-5 rounded-lg text-white text-[12px] font-bold flex items-center gap-1.5 opacity-40 cursor-not-allowed"
-                style={{ background: `linear-gradient(135deg, ${meta.gradientFrom}, ${meta.gradientTo})` }}
+                className="h-9 px-5 rounded-md bg-slate-900 text-white text-[12px] font-medium flex items-center gap-1.5 opacity-50 cursor-not-allowed"
               >
                 <Upload size={14} /> Select a file to continue
               </button>
@@ -1249,8 +1213,7 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
                 onClick={handleSubmit}
                 disabled={validRowCount === 0 || (hasCategoryUnit && !allMappingsDone)}
                 title={hasCategoryUnit && !allMappingsDone ? "Resolve all category & unit mappings first" : ""}
-                className="h-9 px-5 rounded-lg text-white text-[12px] font-bold flex items-center gap-1.5 transition-all hover:opacity-90 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-                style={{ background: `linear-gradient(135deg, ${meta.gradientFrom}, ${meta.gradientTo})` }}
+                className="h-9 px-5 rounded-md bg-slate-900 text-white text-[12px] font-medium flex items-center gap-1.5 hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Upload size={14} />
                 {hasCategoryUnit && !allMappingsDone
@@ -1262,8 +1225,7 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
             {step === "result" && (
               <button
                 onClick={onClose}
-                className="h-9 px-5 rounded-lg text-white text-[12px] font-bold flex items-center gap-1.5 hover:opacity-90 transition-all"
-                style={{ background: `linear-gradient(135deg, ${meta.gradientFrom}, ${meta.gradientTo})` }}
+                className="h-9 px-5 rounded-md bg-slate-900 text-white text-[12px] font-medium flex items-center gap-1.5 hover:bg-slate-800 transition-colors"
               >
                 Done
               </button>

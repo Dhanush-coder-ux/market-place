@@ -149,6 +149,14 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    const handleClearCache = () => {
+      cache.clear();
+    };
+    window.addEventListener('clear-api-cache', handleClearCache);
+    return () => window.removeEventListener('clear-api-cache', handleClearCache);
+  }, []);
+
   const loadingMapRef = useRef<Record<string, boolean>>({});
   const subscribersRef = useRef<Set<() => void>>(new Set());
   const inflightRef = useRef(0);

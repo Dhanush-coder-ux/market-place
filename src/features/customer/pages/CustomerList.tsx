@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Search, Users, Filter,
   AlertCircle, CreditCard,
-  Loader2, Eye, Pencil, MoreVertical, Trash2, Plus, FileUp
+  Loader2, Eye, Pencil, MoreVertical, Trash2, Plus, FileUp, RefreshCw
 } from "lucide-react";
 import ExcelImportModal from "@/components/common/ExcelImportModal";
 import ActionMenu, { ActionMenuItem, ActionMenuDivider } from "@/components/common/ActionMenu";
@@ -62,6 +62,16 @@ const CustomerList = () => {
   useEffect(() => {
     setActions(
       <div className="flex items-center gap-2">
+        <button
+          onClick={() => {
+            window.dispatchEvent(new CustomEvent('clear-api-cache'));
+            setRefreshKey(prev => prev + 1);
+          }}
+          className="h-8 w-8 flex items-center justify-center rounded-md border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0"
+          title="Refresh"
+        >
+          <RefreshCw size={13} />
+        </button>
         <button
           onClick={() => setIsImportOpen(true)}
           className="h-8 px-3 rounded-md border border-slate-200 text-slate-650 font-medium text-[12px] bg-white hover:bg-slate-50 transition-colors flex items-center gap-1.5"

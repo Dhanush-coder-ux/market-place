@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { Search, X, Building2, Phone, ExternalLink, Filter, ChevronRight, Eye, Pencil, Trash2, MoreVertical, Plus, FileUp } from "lucide-react";
+import { Search, X, Building2, Phone, ExternalLink, Filter, ChevronRight, Eye, Pencil, Trash2, MoreVertical, Plus, FileUp, RefreshCw } from "lucide-react";
 import ExcelImportModal from "@/components/common/ExcelImportModal";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -182,6 +182,16 @@ const Supplier = () => {
   useEffect(() => {
     setActions(
       <div className="flex items-center gap-2">
+        <button
+          onClick={() => {
+            window.dispatchEvent(new CustomEvent('clear-api-cache'));
+            setRefreshKey(prev => prev + 1);
+          }}
+          className="h-8 w-8 flex items-center justify-center rounded-md border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0"
+          title="Refresh"
+        >
+          <RefreshCw size={13} />
+        </button>
         {!isCleanMode && (
           <button
             onClick={handleOpenNewTab}

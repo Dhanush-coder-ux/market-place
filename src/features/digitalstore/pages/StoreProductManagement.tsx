@@ -235,22 +235,20 @@ function ProductRow({
 
   return (
     <tr
-      className={`border-b border-slate-100 last:border-b-0 hover:bg-slate-50/60 transition-colors ${!product.visibleOnApp ? "opacity-65" : ""
-        }`}
+      className={`group transition-all cursor-default ${selected ? "bg-blue-50 border-l-2 border-l-blue-500" : "hover:bg-slate-50/60"} ${!product.visibleOnApp ? "opacity-65" : ""}`}
     >
       {/* Checkbox */}
-      <td className="pl-4 pr-2 py-3">
-        <div
-          onClick={onSelect}
-          className={`w-4 h-4 rounded border-[1.5px] flex items-center justify-center cursor-pointer transition-all ${selected ? "bg-blue-600 border-blue-600" : "bg-white border-slate-300"
-            }`}
-        >
-          {selected && <CheckCircle2 size={10} className="text-white" strokeWidth={3} />}
-        </div>
+      <td className="px-4 py-4 border-b border-slate-200 w-10 text-center">
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={onSelect}
+          className="rounded border-slate-350 text-blue-600 focus:ring-blue-500/20 cursor-pointer"
+        />
       </td>
 
       {/* Product */}
-      <td className="px-3 py-3">
+      <td className="px-4 py-4 border-b border-slate-200">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg border border-slate-100 overflow-hidden shrink-0 bg-slate-50">
             <img
@@ -262,7 +260,7 @@ function ProductRow({
             />
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-medium text-slate-800 truncate max-w-[180px]">{product.name}</p>
+            <p className="text-[13px] font-bold text-slate-800 truncate max-w-[180px]">{product.name}</p>
             {product.description && (
               <p className="text-[11px] text-slate-400 truncate max-w-[200px] italic">{product.description}</p>
             )}
@@ -284,22 +282,22 @@ function ProductRow({
       </td>
 
       {/* SKU */}
-      <td className="px-3 py-3 hidden md:table-cell">
-        <span className="text-[11px] font-mono text-slate-400">
+      <td className="px-4 py-4 border-b border-slate-200 hidden md:table-cell">
+        <span className="text-[11px] font-mono text-slate-400 font-semibold">
           {product.sku || product.uiId || `#${product.id.slice(-6)}`}
         </span>
       </td>
 
       {/* Category */}
-      <td className="px-3 py-3">
+      <td className="px-4 py-4 border-b border-slate-200">
         <span className="text-[11px] font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
           {product.category}
         </span>
       </td>
 
       {/* Store SP */}
-      <td className="px-3 py-3">
-        <span className="text-xs font-semibold text-slate-600">
+      <td className="px-4 py-4 border-b border-slate-200 text-right">
+        <span className="text-[13px] font-bold text-slate-700 font-mono">
           {product.price > 0
             ? `₹${product.price.toLocaleString("en-IN")}`
             : <span className="text-slate-300">—</span>
@@ -308,14 +306,14 @@ function ProductRow({
       </td>
 
       {/* Online SP */}
-      <td className="px-3 py-3">
-        <span className="text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-md inline-block">
+      <td className="px-4 py-4 border-b border-slate-200 text-right">
+        <span className="text-[13px] font-bold font-mono text-emerald-600 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-md inline-block">
           ₹{(product.onlineSellPrice ?? product.price ?? 0).toLocaleString("en-IN")}
         </span>
       </td>
 
       {/* Stock */}
-      <td className="px-3 py-3">
+      <td className="px-4 py-4 border-b border-slate-200">
         <span className={`text-[12px] font-medium ${stock.textColor} flex items-center gap-1.5`}>
           <span className={`w-1.5 h-1.5 rounded-full ${stock.indicator} inline-block shrink-0`} />
           {stock.label}
@@ -323,12 +321,12 @@ function ProductRow({
       </td>
 
       {/* Visibility */}
-      <td className="px-3 py-3">
+      <td className="px-4 py-4 border-b border-slate-200">
         <AppVisibilityToggle visible={product.visibleOnApp} onChange={onToggleVisibility} loading={actionLoading} />
       </td>
 
       {/* Actions */}
-      <td className="px-3 py-3 pr-4">
+      <td className="px-4 py-4 border-b border-slate-200 text-right sticky right-0 bg-white group-hover:bg-slate-50 border-l border-slate-200 z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] transition-colors whitespace-nowrap">
         <RowMoreMenu onEdit={onEdit} onToggleVisibility={onToggleVisibility} visible={product.visibleOnApp} actionLoading={actionLoading} />
       </td>
     </tr>
@@ -858,21 +856,29 @@ const ProductDashboard = () => {
               ))}
             </div>
           ) : (
-            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-slate-100 bg-slate-50/60">
-                    <th className="pl-4 pr-2 py-2.5 w-8" />
-                    <th className="px-3 py-2.5 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Product</th>
-                    <th className="px-3 py-2.5 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide hidden md:table-cell">SKU</th>
-                    <th className="px-3 py-2.5 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Category</th>
-                    <th className="px-3 py-2.5 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Store SP</th>
-                    <th className="px-3 py-2.5 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Online SP</th>
-                    <th className="px-3 py-2.5 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Stock</th>
-                    <th className="px-3 py-2.5 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Visibility</th>
-                    <th className="px-3 py-2.5 pr-4 text-right text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Actions</th>
-                  </tr>
-                </thead>
+            <div className="bg-white rounded-lg shadow-sm border border-slate-100 min-w-0 overflow-hidden flex flex-col flex-1 min-h-0 mt-1">
+              <div className="overflow-auto flex-1 scrollbar-thin scrollbar-thumb-slate-100">
+                <table className="w-full text-left min-w-[700px] border-collapse relative">
+                  <thead className="sticky top-14 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0]">
+                    <tr>
+                      <th className="py-3 px-4 text-[10px] font-semibold text-slate-500 uppercase tracking-wider w-10 text-center">
+                        <input
+                          type="checkbox"
+                          checked={filtered.length > 0 && selectedIds.length === filtered.length}
+                          onChange={toggleSelectAll}
+                          className="rounded border-slate-350 text-blue-600 focus:ring-blue-500/20 cursor-pointer"
+                        />
+                      </th>
+                      <th className="py-3 px-4 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Product</th>
+                      <th className="py-3 px-4 text-[10px] font-semibold text-slate-500 uppercase tracking-wider hidden md:table-cell">SKU</th>
+                      <th className="py-3 px-4 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Category</th>
+                      <th className="py-3 px-4 text-[10px] font-semibold text-slate-500 uppercase tracking-wider text-right">Store SP</th>
+                      <th className="py-3 px-4 text-[10px] font-semibold text-slate-500 uppercase tracking-wider text-right">Online SP</th>
+                      <th className="py-3 px-4 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Stock</th>
+                      <th className="py-3 px-4 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Visibility</th>
+                      <th className="py-3 px-4 text-[10px] font-semibold text-slate-500 uppercase tracking-wider text-right w-16 sticky right-0 bg-white shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)]">Actions</th>
+                    </tr>
+                  </thead>
                 <tbody>
                   {filtered.map((p) => (
                     <ProductRow
@@ -886,7 +892,8 @@ const ProductDashboard = () => {
                     />
                   ))}
                 </tbody>
-              </table>
+                </table>
+              </div>
             </div>
           )}
         </>

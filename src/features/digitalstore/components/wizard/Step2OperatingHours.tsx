@@ -59,11 +59,19 @@ function TimePicker({ value, onChange, id }: TimePickerProps) {
     if (!triggerRef.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
     const DROPDOWN_H = 320; // approximate dropdown height
+    const DROPDOWN_W = 280;
     const spaceBelow = window.innerHeight - rect.bottom;
     const openUp = spaceBelow < DROPDOWN_H + 16;
+
+    let left = rect.left + window.scrollX;
+    if (rect.left + DROPDOWN_W > window.innerWidth - 16) {
+      left = rect.right + window.scrollX - DROPDOWN_W;
+      if (left < 16) left = 16;
+    }
+
     setDropdownPos({
       top: openUp ? rect.top + window.scrollY - DROPDOWN_H - 6 : rect.bottom + window.scrollY + 6,
-      left: rect.left + window.scrollX,
+      left,
       openUp,
     });
   }, []);

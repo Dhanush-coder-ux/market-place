@@ -571,14 +571,14 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
     setState(s => ({ ...s, returnItems: { ...s.returnItems, [itemId]: Math.min(Math.max(1, v), maxReturnableInSelectedUnit) } }));
   }, [saleItems]);
 
-  const addExchangeProduct = useCallback((itemId: string, product: any) => setState(s => {
-    const current = s.exchangeMap[itemId] || [];
-    return { ...s, exchangeMap: { ...s.exchangeMap, [itemId]: [...current, { ...product, exchangeId: crypto.randomUUID() }] } };
+  const addExchangeProduct = useCallback((_itemId: string, product: any) => setState(s => {
+    const current = s.exchangeMap["__global__"] || [];
+    return { ...s, exchangeMap: { ...s.exchangeMap, "__global__": [...current, { ...product, exchangeId: crypto.randomUUID() }] } };
   }), []);
 
-  const removeExchangeProduct = useCallback((itemId: string, exchangeId: string) => setState(s => {
-    const current = s.exchangeMap[itemId] || [];
-    return { ...s, exchangeMap: { ...s.exchangeMap, [itemId]: current.filter((x: any) => x.exchangeId !== exchangeId) } };
+  const removeExchangeProduct = useCallback((_itemId: string, exchangeId: string) => setState(s => {
+    const current = s.exchangeMap["__global__"] || [];
+    return { ...s, exchangeMap: { ...s.exchangeMap, "__global__": current.filter((x: any) => x.exchangeId !== exchangeId) } };
   }), []);
 
   const selectedItems = useMemo<SelectedReturnItem[]>(() =>
@@ -601,21 +601,17 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
       const itemBase = i.unitPrice * i.returnQty * factor;
       return s + itemBase;
     }, 0);
-    const exchangeValue = state.mode === "exchange" ? selectedItems.reduce((s, i) => {
-      if (!i.exchangeItems || i.exchangeItems.length === 0) return s;
-      let itemTotal = 0;
-      for (const ep of i.exchangeItems) {
-        const qty = ep?.quantity || ep?.qty || 1;
-        const price = ep?.price ?? ep?.sell_price ?? 0;
-        const exBase = price * qty;
-        let exTotal = exBase;
-        const gstRate = parseFloat(String(ep?.gst || "0").replace('%', '')) || 0;
-        if (gstType === "EXCLUSIVE") {
-          exTotal += exBase * (gstRate / 100);
-        }
-        itemTotal += exTotal;
+    const globalExchangeList = state.exchangeMap["__global__"] || [];
+    const exchangeValue = state.mode === "exchange" ? globalExchangeList.reduce((s, ep) => {
+      const qty = ep?.quantity || ep?.qty || 1;
+      const price = ep?.price ?? ep?.sell_price ?? 0;
+      const exBase = price * qty;
+      let exTotal = exBase;
+      const gstRate = parseFloat(String(ep?.gst || "0").replace('%', '')) || 0;
+      if (gstType === "EXCLUSIVE") {
+        exTotal += exBase * (gstRate / 100);
       }
-      return s + itemTotal;
+      return s + exTotal;
     }, 0) : 0;
 
     return {
@@ -753,10 +749,8 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
         const replacementItemsMap = new Map<string, any>();
         const exchangeItems: any[] = [];
 
+        // Build exact exchange_items payload mapping the returned items
         selectedItems.forEach(item => {
-          const replacements = state.exchangeMap[item.id] || [];
-          if (replacements.length === 0) return;
-
           exchangeItems.push({
             order_item_id: item.id,
             quantity: item.returnQty,
@@ -771,30 +765,32 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
               })
               : []
           });
+        });
 
-          replacements.forEach((replacement: any) => {
-            const key = `${replacement.id}-${replacement.variant_id || "none"}-${replacement.batch_id || "none"}`;
-            if (replacementItemsMap.has(key)) {
-              const ex = replacementItemsMap.get(key);
-              ex.quantity += replacement.quantity || 1;
-            } else {
-              replacementItemsMap.set(key, {
-                product_id: replacement.id,
-                variant_id: replacement.variant_id || null,
-                batch_id: replacement.batch_id || null,
-                quantity: replacement.quantity || 1,
-                unit: replacement.unit !== undefined ? replacement.unit : "",
-                serialno_infos: replacement.serial_numbers?.length
-                  ? replacement.serial_numbers.map((s: any) => {
-                    if (typeof s === 'object' && s !== null) {
-                      return { id: s.id || "", name: s.name || s.serial_number || "" };
-                    }
-                    return { id: "", name: String(s) };
-                  })
-                  : []
-              });
-            }
-          });
+        // Build replacement items from the global pool
+        const globalReplacements = state.exchangeMap["__global__"] || [];
+        globalReplacements.forEach((replacement: any) => {
+          const key = `${replacement.id}-${replacement.variant_id || "none"}-${replacement.batch_id || "none"}`;
+          if (replacementItemsMap.has(key)) {
+            const ex = replacementItemsMap.get(key);
+            ex.quantity += replacement.quantity || 1;
+          } else {
+            replacementItemsMap.set(key, {
+              product_id: replacement.id,
+              variant_id: replacement.variant_id || null,
+              batch_id: replacement.batch_id || null,
+              quantity: replacement.quantity || 1,
+              unit: replacement.unit !== undefined ? replacement.unit : "",
+              serialno_infos: replacement.serial_numbers?.length
+                ? replacement.serial_numbers.map((s: any) => {
+                  if (typeof s === 'object' && s !== null) {
+                    return { id: s.id || "", name: s.name || s.serial_number || "" };
+                  }
+                  return { id: "", name: String(s) };
+                })
+                : []
+            });
+          }
         });
 
         const paymentArray = state.payments.filter(p => p.amount > 0).map(p => ({
@@ -832,20 +828,21 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
       if (!reasonsOk) return false;
       // only require replacement items for exchange mode
       if (state.mode === "exchange") {
-        return selectedItems.every(i => {
-          const exItems = state.exchangeMap[i.id];
-          if (!exItems || exItems.length === 0) return false;
-          let totalQty = 0;
-          for (const ex of exItems) {
-            const qty = ex.quantity || ex.qty || 1;
-            totalQty += qty;
-            if (ex.requireSerial && (!ex.serialNumbers && !ex.serial_numbers || (ex.serialNumbers || ex.serial_numbers).length !== qty)) return false;
-            if (ex.batchTracking && !ex.batch_id && !ex.batchId) return false;
-            if (ex.maxStock !== undefined && qty > ex.maxStock) return false;
-          }
-          if (totalQty !== i.returnQty) return false;
-          return true;
-        });
+        const totalReturnQty = selectedItems.reduce((acc, i) => acc + i.returnQty, 0);
+        const globalList = state.exchangeMap["__global__"] || [];
+        if (globalList.length === 0) return false;
+        
+        let totalReplacementQty = 0;
+        for (const ex of globalList) {
+          const qty = ex.quantity || ex.qty || 1;
+          totalReplacementQty += qty;
+          if (ex.requireSerial && (!ex.serialNumbers && !ex.serial_numbers || (ex.serialNumbers || ex.serial_numbers).length !== qty)) return false;
+          if (ex.batchTracking && !ex.batch_id && !ex.batchId) return false;
+          if (ex.maxStock !== undefined && qty > ex.maxStock) return false;
+        }
+        
+        if (totalReplacementQty !== totalReturnQty) return false;
+        return true;
       }
       return state.mode === "refund";
     }
@@ -915,7 +912,7 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
   const { state, saleItems, selectedItems, totals, customerOutstanding } = m;
   const scrollRef = useRef<HTMLDivElement>(null);
   const [exchSearch, setExchSearch] = useState("");
-  const [activeReplaceId, setActiveReplaceId] = useState<string | null>(null);
+
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [pendingProduct, setPendingProduct] = useState<InventoryItem | null>(null);
   const [allExchProducts, setAllExchProducts] = useState<any[]>([]);  // full catalog
@@ -932,91 +929,85 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
   }, [isInline]);
 
   const mapToInventoryItem = (fullProduct: any): InventoryItem => {
-    // Variants may be returned as a keyed object {uuid: {...}} or as an array.
-    // Normalise to an array first so all downstream logic works uniformly.
-    const normaliseVariants = (src: any): any[] => {
-      if (!src) return [];
-      if (Array.isArray(src) && src.length > 0) return src;
-      if (typeof src === 'object' && !Array.isArray(src)) {
-        const vals = Object.values(src);
-        if (vals.length > 0) return vals as any[];
+    let rawVariants: any[] = [];
+    let variantsSource = fullProduct.variant_infos || fullProduct.variants || fullProduct.varients || fullProduct.combinations;
+    if (variantsSource && typeof variantsSource === 'object' && !Array.isArray(variantsSource)) {
+      variantsSource = Object.values(variantsSource);
+    }
+    if (Array.isArray(variantsSource)) {
+      rawVariants = variantsSource;
+    }
+
+    const getSerialNames = (infos: any): string[] => {
+      if (!infos) return [];
+      if (Array.isArray(infos)) {
+        return infos.map((s: any) => typeof s === 'object' && s !== null ? s.name || s.serial || "" : String(s)).filter(Boolean);
       }
       return [];
     };
-
-    let rawVariants: any[] = [];
-    const candidateSources = [
-      normaliseVariants(fullProduct.variants),
-      normaliseVariants(fullProduct.varients),
-      normaliseVariants(fullProduct.combinations),
-      normaliseVariants(fullProduct.datas?.variants),
-      normaliseVariants(fullProduct.datas?.varients),
-      normaliseVariants(fullProduct.datas?.combinations),
-    ].filter(arr => arr.length > 0);
-
-    if (candidateSources.length > 0) {
-      rawVariants = candidateSources.reduce((max, current) => current.length > max.length ? current : max, candidateSources[0]);
-    }
 
     let mappedVariants = rawVariants.map((v: any) => {
       const combDatas = v.datas || {};
       const attributes = v.attributes || combDatas.attributes || combDatas.datas?.attributes || {};
       let variantLabel = v.name || combDatas.name;
-      if (attributes && Object.keys(attributes).length > 0) {
+      if (variantLabel) {
+        // Keep defined name
+      } else if (attributes && Object.keys(attributes).length > 0) {
         variantLabel = Object.values(attributes).join(' / ');
-      } else if (v.barcode && v.barcode !== combDatas.barcode) {
+      } else if (v.barcode && combDatas.barcode && v.barcode !== combDatas.barcode) {
         variantLabel = v.barcode;
       }
-      if (!variantLabel) {
-        variantLabel = "Standard Variant";
+      if (!variantLabel) variantLabel = "Standard Variant";
+
+      let calculatedPrice = v.pricing_infos?.sell_price || v.sell_price || v.price || combDatas.sell_price || combDatas.price;
+      if (!calculatedPrice && Array.isArray(v.batch_infos) && v.batch_infos.length > 0) {
+        const firstBatch = v.batch_infos[0];
+        calculatedPrice = firstBatch.pricing_infos?.sell_price || firstBatch.sell_price;
       }
+      if (!calculatedPrice) calculatedPrice = fullProduct.pricing_infos?.sell_price || fullProduct.sell_price || 0;
 
-      const extractSerialsStr = (obj: any): string[] => {
-        if (!obj) return [];
-        if (Array.isArray(obj)) return obj.filter(x => typeof x === 'string');
-        if (typeof obj === 'object') {
-          for (const k in obj) {
-            if (Array.isArray(obj[k])) return obj[k].filter((x: any) => typeof x === 'string');
-          }
-        }
-        return [];
-      };
-
-      const extractedAvailable = extractSerialsStr(v.serial_numbers).length > 0 ? extractSerialsStr(v.serial_numbers) : extractSerialsStr(v.serial_number).length > 0 ? extractSerialsStr(v.serial_number) : extractSerialsStr(v.batches?.[0]?.serial_numbers).length > 0 ? extractSerialsStr(v.batches?.[0]?.serial_numbers) : extractSerialsStr(combDatas.serial_numbers).length > 0 ? extractSerialsStr(combDatas.serial_numbers) : extractSerialsStr(fullProduct.serial_number).length > 0 ? extractSerialsStr(fullProduct.serial_number) : extractSerialsStr(fullProduct.serials);
-
-      // Resolve variant price — new API stores it inside pricing_infos
-      const varPriceInfos = v.pricing_infos || {};
-      const varPrice = v.sell_price ?? varPriceInfos.sell_price ?? v.price ?? combDatas.sell_price ?? combDatas.price ?? fullProduct.sell_price ?? 0;
-
-      // Resolve variant stock — new API stores it inside stock_infos
-      const varStockInfos = v.stock_infos || v.stocks_infos || {};
-      const varStock = varStockInfos.available_stocks ?? varStockInfos.physical_stocks ?? v.stocks ?? v.stock ?? combDatas.stocks ?? 0;
+      let calculatedStock = v.stock_infos?.available_stocks !== undefined ? v.stock_infos?.available_stocks : (v.stocks !== undefined ? v.stocks : (v.stock !== undefined ? v.stock : (combDatas.stocks !== undefined ? combDatas.stocks : undefined)));
+      if (calculatedStock === undefined && Array.isArray(v.batch_infos) && v.batch_infos.length > 0) {
+        calculatedStock = v.batch_infos.reduce((sum: number, b: any) => sum + (b.stock_infos?.available_stocks || b.stocks || b.stock_infos?.physical_stocks || 0), 0);
+      }
+      if (calculatedStock === undefined) calculatedStock = 0;
 
       return {
         ...v,
         id: v.id || String(Math.random()),
         name: variantLabel,
-        price: varPrice,
-        stock: Number(varStock),
-        serialnoId: v.serial_numbers?.id || v.serial_number?.id || v.batches?.[0]?.serial_numbers?.id || combDatas.serial_numbers?.id || fullProduct.serial_number?.id || fullProduct.serials?.id,
-        availableSerials: extractedAvailable,
-        batchId: v.batches?.[0]?.id || v.batchId || combDatas.batches?.[0]?.id,
+        price: calculatedPrice,
+        stock: calculatedStock,
+        serialnoId: v.serial_numbers?.id || v.serialno_infos?.[0]?.id || v.serial_number?.id || v.batches?.[0]?.serial_numbers?.id || combDatas.serial_numbers?.id || fullProduct.serialno_infos?.[0]?.id || fullProduct.serial_number?.id || fullProduct.serials?.id,
+        availableSerials: getSerialNames(v.serialno_infos || v.serial_numbers || v.serial_number || v.batches?.[0]?.serial_numbers || combDatas.serial_numbers || fullProduct.serialno_infos || fullProduct.serial_number || fullProduct.serials),
+        batchId: v.batch_infos?.[0]?.id || v.batches?.[0]?.id || v.batchId || combDatas.batches?.[0]?.id,
+        batches: (v.batch_infos || v.batches || []).map((b: any) => ({
+          ...b,
+          batchId: b.id,
+          price: b.pricing_infos?.sell_price || b.sell_price || calculatedPrice,
+          stock: b.stock_infos?.available_stocks !== undefined ? b.stock_infos?.available_stocks : (b.stocks !== undefined ? b.stocks : (b.stock !== undefined ? b.stock : 0)),
+        })),
       };
     });
 
-    if (mappedVariants.length === 0 && fullProduct.has_batch && Array.isArray(fullProduct.batches) && fullProduct.batches.length > 0) {
-      mappedVariants = fullProduct.batches.map((b: any) => ({
+    if (mappedVariants.length === 0 && (fullProduct.type_infos?.has_batch || fullProduct.has_batch) && (Array.isArray(fullProduct.batches) && fullProduct.batches.length > 0 || Array.isArray(fullProduct.batch_infos) && fullProduct.batch_infos.length > 0)) {
+      const sourceBatches = Array.isArray(fullProduct.batch_infos) && fullProduct.batch_infos.length > 0 ? fullProduct.batch_infos : fullProduct.batches;
+      mappedVariants = sourceBatches.map((b: any) => ({
         id: b.id,
-        name: `Batch: ${b.batch_no || b.id.slice(0, 8)}`,
-        price: b.pricing_infos?.sell_price ?? b.sell_price ?? fullProduct.sell_price ?? 0,
-        stock: Number(b.stock_infos?.available_stocks ?? b.stock_infos?.physical_stocks ?? b.stocks_infos?.stocks ?? b.stocks ?? 0),
-        serialnoId: b.serial_numbers?.id || fullProduct.serial_number?.id || fullProduct.serials?.id,
-        availableSerials: b.serial_numbers?.serial_numbers || fullProduct.serial_number?.serial_numbers || fullProduct.serials?.serial_numbers || [],
+        isBatchOnly: true,
+        name: b.batch_name || b.name || b.batch || (b.batch_no ? `Batch: ${b.batch_no}` : `Batch: ${b.id.slice(0, 8)}`),
+        price: b.pricing_infos?.sell_price || b.sell_price || fullProduct.pricing_infos?.sell_price || fullProduct.sell_price || 0,
+        stock: b.stock_infos?.available_stocks || b.stocks || 0,
+        serialnoId: b.serial_numbers?.id || b.serialno_infos?.[0]?.id || fullProduct.serialno_infos?.[0]?.id || fullProduct.serial_number?.id || fullProduct.serials?.id,
+        availableSerials: getSerialNames(b.serialno_infos || b.serial_numbers || fullProduct.serialno_infos || fullProduct.serial_number || fullProduct.serials),
         batchId: b.id,
         expiryDate: b.expiry_date,
         manufacturingDate: b.manufacturing_date,
       }));
     }
+
+    let computedStock = Number(fullProduct.stock_infos?.available_stocks ?? fullProduct.stock_infos?.physical_stocks ?? fullProduct.stocks ?? 0);
+    let computedPrice = fullProduct.pricing_infos?.sell_price ?? fullProduct.sell_price ?? 0;
 
     return {
       ...fullProduct,
@@ -1028,12 +1019,13 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
       batchTracking: fullProduct.has_batch || false,
       manufacturingDate: fullProduct.batches?.[0]?.manufacturing_date,
       expiryDate: fullProduct.batches?.[0]?.expiry_date,
-      price: fullProduct.sell_price ?? fullProduct.pricing_infos?.sell_price ?? 0,
-      stocks: Number(fullProduct.stock_infos?.available_stocks ?? fullProduct.stock_infos?.physical_stocks ?? fullProduct.stocks_infos?.stocks ?? fullProduct.stocks ?? 0),
+      price: computedPrice,
+      stocks: computedStock,
       serialnoId: fullProduct.serial_number?.id || fullProduct.serials?.id || fullProduct.batches?.[0]?.serial_numbers?.id,
-      availableSerials: fullProduct.serial_number?.serial_numbers || fullProduct.serials?.serial_numbers || fullProduct.batches?.[0]?.serial_numbers?.serial_numbers || [],
+      availableSerials: getSerialNames(fullProduct.serialno_infos || fullProduct.serial_number || fullProduct.serials || fullProduct.batches?.[0]?.serial_numbers),
       batchId: fullProduct.batches?.[0]?.id,
-      gst: parseInt(String(fullProduct.gst || fullProduct.datas?.gst || "18").replace("%", ""))
+      gst: parseInt(String(fullProduct.gst || fullProduct.datas?.gst || "18").replace("%", "")),
+      type_infos: fullProduct.type_infos || {}
     } as InventoryItem;
   };
 
@@ -1056,8 +1048,8 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
     }
   };
   const handleProductSelectSuccess = (variant: ProductVariant, quantity: number, serials?: string[]) => {
-    if (!activeReplaceId || !pendingProduct) return;
-    m.addExchangeProduct(activeReplaceId, {
+    if (!pendingProduct) return;
+    m.addExchangeProduct("__global__", {
       id: pendingProduct.id,
       inventoryId: pendingProduct.id,
       code: pendingProduct.product_barcode,
@@ -1092,10 +1084,39 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
       setLoadingExch(true);
       // Fetch all active inventory items with a high limit
       inventoryApi.searchInventories("", true).then(res => {
-        // Fetch more pages if needed — try with limit=200 via direct call
-        console.log('[Exchange Catalog] loaded:', res.length, 'active products');
-        setAllExchProducts(res);
-        setExchProducts(res);
+        const mapped = res.map((p: any) => {
+          let computedStock = Number(p.stock_infos?.available_stocks ?? p.stock_infos?.physical_stocks ?? p.stocks ?? 0);
+          let computedPrice = p.pricing_infos?.sell_price ?? p.sell_price ?? 0;
+          const rawVariants = Array.isArray(p.variants) ? p.variants : (typeof p.variants === "object" && p.variants !== null ? Object.values(p.variants) : (Array.isArray(p.variant_infos) ? p.variant_infos : []));
+          const batches = p.batch_infos || p.batches;
+          const hasVariants = !!(p.type_infos?.has_variant) || rawVariants.length > 0;
+          const hasBatches = !!(p.type_infos?.has_batch) || (batches && batches.length > 0);
+          const hasSerials = !!(p.type_infos?.has_serialno);
+          if (hasVariants) {
+            if (computedStock === 0) {
+              computedStock = rawVariants.reduce((acc: number, v: any) => {
+                let vStock = v.stock_infos?.available_stocks !== undefined ? v.stock_infos?.available_stocks : (v.stocks !== undefined ? v.stocks : (v.stock !== undefined ? v.stock : undefined));
+                if (vStock === undefined && Array.isArray(v.batch_infos) && v.batch_infos.length > 0) {
+                  vStock = v.batch_infos.reduce((sum: number, b: any) => sum + Number(b.stock_infos?.available_stocks ?? b.stocks ?? b.stock_infos?.physical_stocks ?? 0), 0);
+                }
+                return acc + Number(vStock ?? 0);
+              }, 0);
+            }
+            if ((computedPrice === 0 || computedPrice === undefined) && rawVariants.length > 0) {
+              const firstV = rawVariants[0];
+              let vPrice = firstV.pricing_infos?.sell_price ?? firstV.sell_price ?? firstV.price;
+              if (!vPrice && Array.isArray(firstV.batch_infos) && firstV.batch_infos.length > 0) vPrice = firstV.batch_infos[0].pricing_infos?.sell_price ?? firstV.batch_infos[0].sell_price;
+              computedPrice = Number(vPrice ?? 0);
+            }
+          } else if (hasBatches && Array.isArray(batches)) {
+            if (computedStock === 0) computedStock = batches.reduce((acc: number, b: any) => acc + Number(b.stock_infos?.available_stocks ?? b.stock_infos?.physical_stocks ?? b.stocks ?? 0), 0);
+            if ((computedPrice === 0 || computedPrice === undefined) && batches.length > 0) computedPrice = batches[0].pricing_infos?.sell_price ?? batches[0].sell_price ?? 0;
+          }
+          return { ...p, name: p.name || "Unknown Product", price: computedPrice, stocks: computedStock, hasVariants, hasBatches, hasSerials, variantCount: rawVariants.length };
+        });
+        console.log('[Exchange Catalog] loaded:', mapped.length, 'active products');
+        setAllExchProducts(mapped);
+        setExchProducts(mapped);
         setLoadingExch(false);
       }).catch(() => {
         setLoadingExch(false);
@@ -1121,9 +1142,7 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
 
 
 
-  useEffect(() => {
-    if (selectedItems.length > 0 && (!activeReplaceId || !selectedItems.some(i => i.id === activeReplaceId))) setActiveReplaceId(selectedItems[0].id);
-  }, [selectedItems, activeReplaceId]);
+  // Removed activeReplaceId useEffect
 
   useEffect(() => { scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" }); }, [state.step]);
   useEffect(() => { const h = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); }; window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h); }, [onClose]);
@@ -1186,53 +1205,28 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                   {state.mode === "exchange" && (
                     <div className="pt-4 border-t border-slate-100">
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Replacement Products</p>
-
-                      {/* Item tabs — only visible once items are selected */}
-                      {selectedItems.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-4">
-                          {selectedItems.map(si => {
-                            const exList = state.exchangeMap[si.id] || [];
-                            const repQty = exList.reduce((sum: number, ex: any) => sum + (ex.quantity || ex.qty || 1), 0);
-                            const hasRep = repQty === si.returnQty;
-                            const isAct = activeReplaceId === si.id;
-                            return (
-                              <button key={si.id} onClick={() => setActiveReplaceId(si.id)}
-                                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-bold border transition-all duration-200 cursor-pointer ${isAct ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-600/20' : 'bg-white border-slate-200 text-slate-600 hover:border-blue-400'
-                                  }`}
-                              >
-                                {si.name}
-                                {hasRep ? <CheckCircle2 size={12} className={isAct ? "text-white" : "text-emerald-500"} /> : (repQty > 0 ? <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[9px]">{repQty}/{si.returnQty}</span> : null)}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-
-                      {/* Catalog — always rendered so products load immediately */}
                       {selectedItems.length === 0 ? (
                         <div className="py-8 text-center bg-slate-50 rounded-lg border border-dashed border-slate-200">
                           <Package size={22} className="mx-auto text-slate-300 mb-2" />
                           <p className="text-[12px] text-slate-400 font-semibold">Select items to return from the list above, then pick their replacements here.</p>
                         </div>
-                      ) : activeReplaceId && (() => {
-                        const ai = selectedItems.find(i => i.id === activeReplaceId);
-                        if (!ai) return null;
-
-                        const exList = state.exchangeMap[activeReplaceId] || [];
+                      ) : (() => {
+                        const totalReturnQty = selectedItems.reduce((acc, i) => acc + i.returnQty, 0);
+                        const exList = state.exchangeMap["__global__"] || [];
                         const usedQty = exList.reduce((sum: number, ex: any) => sum + (ex.quantity || ex.qty || 1), 0);
-                        const remainingQty = ai.returnQty - usedQty;
+                        const remainingQty = totalReturnQty - usedQty;
 
                         return (
                           <>
-                            <p className="text-[12px] font-bold text-slate-600 mb-3 flex items-center gap-2">
-                              <ArrowRight size={12} className="text-blue-500" />
-                              Replacing: <span className="text-slate-900">{ai.name} (Qty: {ai.returnQty})</span>
-                              <span className="font-mono ml-auto text-slate-400 text-[11px] font-medium">{fmt(ai.unitPrice * ai.returnQty)}</span>
-                            </p>
+                            <div className="flex items-center justify-between mb-3">
+                              <p className="text-[12px] font-bold text-slate-600">
+                                Replacing <span className="text-slate-900">{totalReturnQty} item{totalReturnQty > 1 ? 's' : ''}</span>
+                              </p>
+                            </div>
 
                             {exList.length > 0 && (
                               <div className="mb-4 bg-emerald-50/50 border border-emerald-100 rounded-lg p-3">
-                                <p className="text-[10px] font-bold text-emerald-800 uppercase mb-2 flex items-center gap-1.5"><CheckCircle2 size={12} /> Selected Replacements ({usedQty}/{ai.returnQty})</p>
+                                <p className="text-[10px] font-bold text-emerald-800 uppercase mb-2 flex items-center gap-1.5"><CheckCircle2 size={12} /> Selected Replacements ({usedQty}/{totalReturnQty})</p>
                                 <div className="space-y-2">
                                   {exList.map((ex: any) => (
                                     <div key={ex.exchangeId} className="flex items-center justify-between bg-white border border-emerald-100 rounded-md p-2 shadow-sm">
@@ -1242,7 +1236,7 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                                       </div>
                                       <div className="flex items-center gap-3">
                                         <span className="font-mono text-[11px] font-black">{fmt(ex.tprice || (ex.price || ex.sell_price || 0) * (ex.quantity || ex.qty || 1))}</span>
-                                        <button onClick={() => m.removeExchangeProduct(ai.id, ex.exchangeId)} className="w-6 h-6 rounded flex items-center justify-center bg-red-50 text-red-500 hover:bg-red-100 transition-colors">
+                                        <button onClick={() => m.removeExchangeProduct("__global__", ex.exchangeId)} className="w-6 h-6 rounded flex items-center justify-center bg-red-50 text-red-500 hover:bg-red-100 transition-colors">
                                           <X size={14} />
                                         </button>
                                       </div>
@@ -1264,163 +1258,70 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                                     className="w-full h-11 px-4 pl-10 text-[13px] text-slate-800 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-400 font-sans shadow-sm"
                                   />
                                 </div>
-                            {loadingExch ? (
-                              <div className="text-center py-10">
-                                <Loader2 size={28} className="text-blue-500 mx-auto animate-spin" />
-                                <p className="text-[11px] text-slate-400 mt-3 font-bold tracking-wide uppercase">Loading Catalog...</p>
-                              </div>
-                            ) : exchProducts.length === 0 ? (
-                              <div className="py-8 text-center bg-slate-50 rounded-lg border border-slate-100 border-dashed">
-                                <p className="text-[12px] text-slate-400 font-bold">No matching products found</p>
-                              </div>
-                            ) : (
-                              <div className="flex flex-col gap-2 max-h-[300px] overflow-y-scroll pr-1 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-slate-50">
-                                {exchProducts.map(ep => {
-                                  const sel = (state.exchangeMap[activeReplaceId] || []).some((ex: any) => ex.id === ep.id);
-
-                                  // Normalise variants: API returns them as a keyed object {uuid:{...}} — same as parseObjects() in Inventory.tsx
-                                  const variantsArr: any[] = (() => {
-                                    const src = ep.variants;
-                                    if (!src) return [];
-                                    if (Array.isArray(src)) return src;
-                                    if (typeof src === 'object') return Object.values(src) as any[];
-                                    return [];
-                                  })();
-
-                                  const hasVariants = !!(ep.has_variant || ep.has_batch || variantsArr.length > 0);
-
-                                  // Aggregate stock exactly like calculateVariantStock() in Inventory.tsx
-                                  // Each variant: stock_infos.available_stocks ?? stock_infos.physical_stocks ?? stocks
-                                  const resolvedStock: number = (() => {
-                                    if (hasVariants && variantsArr.length > 0) {
-                                      const sum = variantsArr.reduce((acc: number, v: any) => {
-                                        const vStock = Number(
-                                          v.stock_infos?.available_stocks ??
-                                          v.stock_infos?.physical_stocks ??
-                                          v.stocks ??
-                                          v.stock ??
-                                          0
-                                        );
-                                        return acc + vStock;
-                                      }, 0);
-                                      return sum;
-                                    }
-                                    // Non-variant product — use root stock_infos like Inventory.tsx line 202
-                                    return Number(
-                                      ep.stock_infos?.available_stocks ??
-                                      ep.stock_infos?.physical_stocks ??
-                                      ep.stocks ??
-                                      0
-                                    );
-                                  })();
-
-                                  const inStock = hasVariants || resolvedStock > 0;
-
-                                  // Stock label: for variants show count + aggregate; for simple products show exact stock
-                                  const variantCount = variantsArr.length;
-                                  const stockLabel = hasVariants
-                                    ? variantCount > 0
-                                      ? `${variantCount} VARIANT${variantCount > 1 ? 'S' : ''} · ${resolvedStock > 0 ? resolvedStock + ' IN STOCK' : 'OUT OF STOCK'}`
-                                      : 'HAS VARIANTS'
-                                    : resolvedStock > 0 ? `${resolvedStock} IN STOCK` : 'OUT OF STOCK';
-
-                                  // Price: use pricing_infos.sell_price per variant exactly like StockTree.tsx line 488
-                                  // comb.pricing_infos?.sell_price ?? comb.sell_price ?? comb.price ?? baseSellPrice
-                                  const baseRootPrice: number = ep.sell_price ?? ep.pricing_infos?.sell_price ?? 0;
-                                  const exGstRate = parseFloat(String(ep.gst || ep.datas?.gst || "0").replace('%', '')) || 0;
-                                  let rootPrice = baseRootPrice;
-                                  if (gstType === "EXCLUSIVE") {
-                                    rootPrice += baseRootPrice * (exGstRate / 100);
-                                  }
-                                  const variantPrices: number[] = variantsArr
-                                    .map((v: any) => {
-                                      const rawVP = Number(v.pricing_infos?.sell_price ?? v.sell_price ?? v.price ?? baseRootPrice ?? 0);
-                                      let p = rawVP;
-                                      if (gstType === "EXCLUSIVE") {
-                                        p += rawVP * (exGstRate / 100);
+                                {loadingExch ? (
+                                  <div className="text-center py-10">
+                                    <Loader2 size={28} className="text-blue-500 mx-auto animate-spin" />
+                                    <p className="text-[11px] text-slate-400 mt-3 font-bold tracking-wide uppercase">Loading Catalog...</p>
+                                  </div>
+                                ) : exchProducts.length === 0 ? (
+                                  <div className="py-8 text-center bg-slate-50 rounded-lg border border-slate-100 border-dashed">
+                                    <p className="text-[12px] text-slate-400 font-bold">No matching products found</p>
+                                  </div>
+                                ) : (
+                                  <div className="flex flex-col gap-2 max-h-[300px] overflow-y-scroll pr-1 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-slate-50">
+                                    {exchProducts.map(ep => {
+                                      const sel = (state.exchangeMap["__global__"] || []).some((ex: any) => ex.id === ep.id);
+                                      const resolvedStock = ep.stocks || 0;
+                                      const inStock = ep.hasVariants || ep.hasBatches || resolvedStock > 0;
+                                      const parts = [];
+                                      if (ep.hasVariants) parts.push(ep.variantCount > 0 ? `${ep.variantCount} VARIANT${ep.variantCount > 1 ? 'S' : ''}` : 'VARIANTS');
+                                      if (ep.hasBatches) parts.push('BATCHES');
+                                      if (ep.hasSerials) parts.push('SERIALS');
+                                      
+                                      let stockLabel = 'OUT OF STOCK';
+                                      if (inStock) {
+                                        if (parts.length > 0) {
+                                          stockLabel = `${parts.join(' & ')}${resolvedStock > 0 ? ` · ${resolvedStock} IN STOCK` : ''}`;
+                                        } else {
+                                          stockLabel = resolvedStock > 0 ? `${resolvedStock} IN STOCK` : 'IN STOCK';
+                                        }
                                       }
-                                      return p;
-                                    })
-                                    .filter((p: number) => p > 0);
-                                  const minPrice = variantPrices.length > 0 ? Math.min(...variantPrices) : 0;
-                                  const maxPrice = variantPrices.length > 0 ? Math.max(...variantPrices) : 0;
-                                  const displayPrice = rootPrice > 0 ? rootPrice : minPrice;
-                                  // Show price range when variants have different prices
-                                  const hasPriceRange = hasVariants && minPrice > 0 && minPrice !== maxPrice;
-
-                                  return (
-                                    <div
-                                      key={ep.id ?? ep._id ?? ep.name}
-                                      onClick={() => inStock && handleExchangeClick(ep)}
-                                      className={`flex items-center gap-3 p-3 px-4 border rounded-lg transition-all duration-200 cursor-pointer ${sel ? "bg-blue-50 border-blue-500 shadow-md scale-[0.99]" :
-                                        !inStock ? "opacity-50 grayscale cursor-not-allowed border-slate-100" :
-                                          "bg-white border-slate-100 hover:border-blue-400 hover:shadow-lg"
-                                        }`}
-                                    >
-                                      <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center flex-shrink-0 transition-colors">
-                                        <Package size={16} className="text-slate-400" />
-                                      </div>
-                                      <div className="flex-1 min-w-0">
-                                        <p className="text-[13px] font-bold text-slate-800 truncate">{ep.name}</p>
-                                        <div className="flex items-center gap-2.5 mt-0.5 flex-wrap">
-                                          <span className="font-mono text-[10px] text-slate-400 font-medium">{ep.barcode || (ep.id ?? ep._id ?? '').slice(-6)}</span>
-                                          <span className={`text-[10px] font-black uppercase tracking-tight ${inStock ? (hasVariants ? 'text-blue-500' : 'text-emerald-600') : 'text-red-500'
-                                            }`}>{stockLabel}</span>
-                                        </div>
-                                      </div>
-                                      <div className="text-right flex-shrink-0">
-                                        {hasPriceRange ? (
-                                          <div className="flex flex-col items-end gap-0.5">
-                                            <p className="font-mono text-[11px] font-black text-slate-900">{fmt(minPrice)} – {fmt(maxPrice)}</p>
-                                            <span className="text-[9px] text-slate-400 font-medium">price range</span>
+                                      
+                                      const baseRootPrice = ep.price || 0;
+                                      const exGstRate = parseFloat(String(ep.gst || ep.datas?.gst || "0").replace('%', '')) || 0;
+                                      let displayPrice = baseRootPrice;
+                                      if (gstType === "EXCLUSIVE") { displayPrice += baseRootPrice * (exGstRate / 100); }
+                                      return (
+                                        <div key={ep.id ?? ep._id ?? ep.name} onClick={() => inStock && handleExchangeClick(ep)} className={`flex items-center gap-3 p-3 px-4 border rounded-lg transition-all duration-200 cursor-pointer ${sel ? "bg-blue-50 border-blue-500 shadow-md scale-[0.99]" : !inStock ? "opacity-50 grayscale cursor-not-allowed border-slate-100" : "bg-white border-slate-100 hover:border-blue-400 hover:shadow-lg"}`}>
+                                          <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center flex-shrink-0 transition-colors"><Package size={16} className="text-slate-400" /></div>
+                                          <div className="flex-1 min-w-0">
+                                            <p className="text-[13px] font-bold text-slate-800 truncate">{ep.name}</p>
+                                            <div className="flex items-center gap-2.5 mt-0.5 flex-wrap">
+                                              <span className="font-mono text-[10px] text-slate-400 font-medium">{ep.barcode || (ep.id ?? ep._id ?? '').slice(-6)}</span>
+                                              <span className={`text-[10px] font-black uppercase tracking-tight ${inStock ? ((ep.hasVariants || ep.hasBatches) ? 'text-blue-500' : 'text-emerald-600') : 'text-red-500'}`}>{stockLabel}</span>
+                                            </div>
                                           </div>
-                                        ) : (
-                                          <p className="font-mono text-[13px] font-black text-slate-900">
-                                            {displayPrice === 0 && hasVariants
-                                              ? <span className="text-slate-400 font-normal text-[11px]">see variants</span>
-                                              : <>{rootPrice === 0 && displayPrice > 0 && hasVariants && <span className="font-normal text-[11px] text-slate-400">from </span>}{fmt(displayPrice)}</>
-                                            }
-                                          </p>
-                                        )}
-                                        {sel && <div className="mt-1 flex justify-end"><div className="w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/30"><Check size={11} className="text-white" /></div></div>}
-                                      </div>
-                                    </div>
-                                  );
-                                })}
+                                            <div className="text-right flex-shrink-0">
+                                              <p className="font-mono text-[13px] font-black text-slate-900">{displayPrice === 0 && (ep.hasVariants || ep.hasBatches) ? <span className="text-slate-400 font-normal text-[11px]">see details</span> : <>{baseRootPrice === 0 && displayPrice > 0 && (ep.hasVariants || ep.hasBatches) && <span className="font-normal text-[11px] text-slate-400">from </span>}{fmt(displayPrice)}</>}</p>
+                                            {sel && <div className="mt-1 flex justify-end"><div className="w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/30"><Check size={11} className="text-white" /></div></div>}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </>
+                            ) : (
+                              <div className="py-8 text-center bg-slate-50 rounded-lg border border-slate-100 border-dashed">
+                                <CheckCircle2 size={24} className="mx-auto text-emerald-400 mb-2" />
+                                <p className="text-[13px] text-slate-600 font-bold">Full quantity replaced.</p>
+                                <p className="text-[11px] text-slate-400 font-medium">To change items, remove a selection above.</p>
                               </div>
                             )}
                           </>
-                        ) : (
-                          <div className="py-8 text-center bg-slate-50 rounded-lg border border-slate-100 border-dashed">
-                            <CheckCircle2 size={24} className="mx-auto text-emerald-400 mb-2" />
-                            <p className="text-[13px] text-slate-600 font-bold">Full quantity replaced.</p>
-                            <p className="text-[11px] text-slate-400 font-medium">To change items, remove a selection above.</p>
-                          </div>
-                        )}
-                      </>
                         );
                       })()}
 
-                      {/* Progress hint: show which items still need a replacement */}
-                      {selectedItems.length > 0 && selectedItems.some(si => {
-                        const exList = state.exchangeMap[si.id] || [];
-                        const repQty = exList.reduce((sum: number, ex: any) => sum + (ex.quantity || ex.qty || 1), 0);
-                        return repQty < si.returnQty;
-                      }) && (
-                        <div className="mt-3 flex items-center gap-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg">
-                          <AlertCircle size={13} className="text-amber-500 flex-shrink-0" />
-                          <p className="text-[11px] font-semibold text-amber-800">
-                            Select replacements for:{" "}
-                            <span className="font-black">
-                              {selectedItems.filter(si => {
-                                const exList = state.exchangeMap[si.id] || [];
-                                const repQty = exList.reduce((sum: number, ex: any) => sum + (ex.quantity || ex.qty || 1), 0);
-                                return repQty < si.returnQty;
-                              }).map(si => si.name).join(", ")}
-                            </span>
-                          </p>
-                        </div>
-                      )}
                     </div>
                   )}
 
@@ -1569,12 +1470,11 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
             </div>
           </div>
           {(() => {
-            const usedSerials = Object.entries(state.exchangeMap).reduce((acc: string[], [itemId, dataList]) => { if (itemId === activeReplaceId) return acc; return [...acc, ...dataList.flatMap((d: any) => d.serial_numbers || [])]; }, []);
-            const ai = selectedItems.find(i => i.id === activeReplaceId);
-            const exList = ai ? state.exchangeMap[ai.id] || [] : [];
-            const usedQty = exList.reduce((sum: number, ex: any) => sum + (ex.quantity || ex.qty || 1), 0);
-            const remainingQty = ai ? ai.returnQty - usedQty : 1;
-            return <ProductSelectionModal isOpen={isProductModalOpen} product={pendingProduct} onClose={() => setIsProductModalOpen(false)} onSuccess={handleProductSelectSuccess} excludedSerials={usedSerials} initialQuantity={remainingQty} maxAllowedQuantity={remainingQty} />;
+            const usedSerials = (state.exchangeMap["__global__"] || []).flatMap((d: any) => d.serial_numbers || []);
+            const totalReturnQty = selectedItems.reduce((acc, i) => acc + i.returnQty, 0);
+            const usedQty = (state.exchangeMap["__global__"] || []).reduce((sum: number, ex: any) => sum + (ex.quantity || ex.qty || 1), 0);
+            const remainingQty = Math.max(1, totalReturnQty - usedQty);
+            return <ProductSelectionModal isExchange={true} isOpen={isProductModalOpen} product={pendingProduct} onClose={() => setIsProductModalOpen(false)} onSuccess={handleProductSelectSuccess} excludedSerials={usedSerials} initialQuantity={1} maxAllowedQuantity={remainingQty} />;
           })()}
           {state.step < 5 && (
             <div className="flex-shrink-0 p-4 px-6 border-t border-slate-100 bg-white flex items-center gap-3">

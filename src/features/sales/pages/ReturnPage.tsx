@@ -104,7 +104,6 @@ const ReturnPageContent: React.FC<{ sale: SaleRecord; productMap: Record<string,
   const { state, saleItems, selectedItems, totals, customerOutstanding } = m;
 
   const [exchSearch, setExchSearch] = useState("");
-  const [activeReplaceId, setActiveReplaceId] = useState<string | null>(null);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [pendingProduct, setPendingProduct] = useState<InventoryItem | null>(null);
   const [allExchProducts, setAllExchProducts] = useState<any[]>([]);
@@ -116,7 +115,41 @@ const ReturnPageContent: React.FC<{ sale: SaleRecord; productMap: Record<string,
     if (state.step === 2 && state.mode === "exchange") {
       setLoadingExch(true);
       inventoryApi.searchInventories("", true)
-        .then(res => { setAllExchProducts(res); setExchProducts(res); setLoadingExch(false); })
+        .then(res => {
+          const mapped = res.map((p: any) => {
+            let computedStock = Number(p.stock_infos?.available_stocks ?? p.stock_infos?.physical_stocks ?? p.stocks ?? 0);
+            let computedPrice = p.pricing_infos?.sell_price ?? p.sell_price ?? 0;
+            const rawVariants = Array.isArray(p.variants) ? p.variants : (typeof p.variants === "object" && p.variants !== null ? Object.values(p.variants) : (Array.isArray(p.variant_infos) ? p.variant_infos : []));
+            const batches = p.batch_infos || p.batches;
+            const hasVariants = !!(p.type_infos?.has_variant) || rawVariants.length > 0;
+            const hasBatches = !!(p.type_infos?.has_batch) || (batches && batches.length > 0);
+            const hasSerials = !!(p.type_infos?.has_serialno);
+            if (hasVariants) {
+              if (computedStock === 0) {
+                computedStock = rawVariants.reduce((acc: number, v: any) => {
+                  let vStock = v.stock_infos?.available_stocks !== undefined ? v.stock_infos?.available_stocks : (v.stocks !== undefined ? v.stocks : (v.stock !== undefined ? v.stock : undefined));
+                  if (vStock === undefined && Array.isArray(v.batch_infos) && v.batch_infos.length > 0) {
+                    vStock = v.batch_infos.reduce((sum: number, b: any) => sum + Number(b.stock_infos?.available_stocks ?? b.stocks ?? b.stock_infos?.physical_stocks ?? 0), 0);
+                  }
+                  return acc + Number(vStock ?? 0);
+                }, 0);
+              }
+              if ((computedPrice === 0 || computedPrice === undefined) && rawVariants.length > 0) {
+                const firstV = rawVariants[0];
+                let vPrice = firstV.pricing_infos?.sell_price ?? firstV.sell_price ?? firstV.price;
+                if (!vPrice && Array.isArray(firstV.batch_infos) && firstV.batch_infos.length > 0) vPrice = firstV.batch_infos[0].pricing_infos?.sell_price ?? firstV.batch_infos[0].sell_price;
+                computedPrice = Number(vPrice ?? 0);
+              }
+            } else if (hasBatches && Array.isArray(batches)) {
+              if (computedStock === 0) computedStock = batches.reduce((acc: number, b: any) => acc + Number(b.stock_infos?.available_stocks ?? b.stock_infos?.physical_stocks ?? b.stocks ?? 0), 0);
+              if ((computedPrice === 0 || computedPrice === undefined) && batches.length > 0) computedPrice = batches[0].pricing_infos?.sell_price ?? batches[0].sell_price ?? 0;
+            }
+            return { ...p, name: p.name || "Unknown Product", price: computedPrice, stocks: computedStock, hasVariants, hasBatches, hasSerials, variantCount: rawVariants.length };
+          });
+          setAllExchProducts(mapped);
+          setExchProducts(mapped);
+          setLoadingExch(false);
+        })
         .catch(() => setLoadingExch(false));
     }
   }, [state.step, state.mode]);
@@ -130,45 +163,107 @@ const ReturnPageContent: React.FC<{ sale: SaleRecord; productMap: Record<string,
     ));
   }, [exchSearch, allExchProducts]);
 
-  // Sync active replace id
-  useEffect(() => {
-    if (selectedItems.length > 0 && (!activeReplaceId || !selectedItems.some(i => i.id === activeReplaceId)))
-      setActiveReplaceId(selectedItems[0].id);
-  }, [selectedItems, activeReplaceId]);
+  // Removed activeReplaceId sync
 
-  const mapToInventoryItem = (p: any): InventoryItem => {
-    // Normalise variants — API may return them as a keyed object {uuid: {...}} or an array
-    const normaliseVariants = (src: any): any[] => {
-      if (!src) return [];
-      if (Array.isArray(src) && src.length > 0) return src;
-      if (typeof src === 'object' && !Array.isArray(src)) {
-        const vals = Object.values(src);
-        if (vals.length > 0) return vals as any[];
+  const mapToInventoryItem = (fullProduct: any): InventoryItem => {
+    let rawVariants: any[] = [];
+    let variantsSource = fullProduct.variant_infos || fullProduct.variants || fullProduct.varients || fullProduct.combinations;
+    if (variantsSource && typeof variantsSource === 'object' && !Array.isArray(variantsSource)) {
+      variantsSource = Object.values(variantsSource);
+    }
+    if (Array.isArray(variantsSource)) {
+      rawVariants = variantsSource;
+    }
+
+    const getSerialNames = (infos: any): string[] => {
+      if (!infos) return [];
+      if (Array.isArray(infos)) {
+        return infos.map((s: any) => typeof s === 'object' && s !== null ? s.name || s.serial || "" : String(s)).filter(Boolean);
       }
       return [];
     };
-    const candidates = [
-      normaliseVariants(p.variants),
-      normaliseVariants(p.varients),
-      normaliseVariants(p.combinations),
-      normaliseVariants(p.datas?.variants),
-    ].filter((a: any[]) => a.length > 0);
-    let rawVariants: any[] = candidates.length > 0 ? candidates.reduce((max: any, cur: any) => cur.length > max.length ? cur : max, candidates[0]) : [];
+
     let mappedVariants = rawVariants.map((v: any) => {
-      const attrs = v.attributes || v.datas?.attributes || {};
-      const label = Object.keys(attrs).length > 0 ? Object.values(attrs).join(' / ') : (v.name || "Standard Variant");
-      // Resolve price from pricing_infos (new API) or legacy fields
-      const varPriceInfos = v.pricing_infos || {};
-      const varPrice = v.sell_price ?? varPriceInfos.sell_price ?? v.price ?? p.sell_price ?? 0;
-      // Resolve stock from stock_infos (new API) or legacy fields
-      const varStockInfos = v.stock_infos || v.stocks_infos || {};
-      const varStock = varStockInfos.available_stocks ?? varStockInfos.physical_stocks ?? v.stocks ?? v.stock ?? 0;
-      return { ...v, id: v.id || String(Math.random()), name: label, price: varPrice, stock: Number(varStock), serialnoId: v.serial_numbers?.id, availableSerials: [], batchId: v.batches?.[0]?.id };
+      const combDatas = v.datas || {};
+      const attributes = v.attributes || combDatas.attributes || combDatas.datas?.attributes || {};
+      let variantLabel = v.name || combDatas.name;
+      if (variantLabel) {
+        // Keep defined name
+      } else if (attributes && Object.keys(attributes).length > 0) {
+        variantLabel = Object.values(attributes).join(' / ');
+      } else if (v.barcode && combDatas.barcode && v.barcode !== combDatas.barcode) {
+        variantLabel = v.barcode;
+      }
+      if (!variantLabel) variantLabel = "Standard Variant";
+
+      let calculatedPrice = v.pricing_infos?.sell_price || v.sell_price || v.price || combDatas.sell_price || combDatas.price;
+      if (!calculatedPrice && Array.isArray(v.batch_infos) && v.batch_infos.length > 0) {
+        const firstBatch = v.batch_infos[0];
+        calculatedPrice = firstBatch.pricing_infos?.sell_price || firstBatch.sell_price;
+      }
+      if (!calculatedPrice) calculatedPrice = fullProduct.pricing_infos?.sell_price || fullProduct.sell_price || 0;
+
+      let calculatedStock = v.stock_infos?.available_stocks !== undefined ? v.stock_infos?.available_stocks : (v.stocks !== undefined ? v.stocks : (v.stock !== undefined ? v.stock : (combDatas.stocks !== undefined ? combDatas.stocks : undefined)));
+      if (calculatedStock === undefined && Array.isArray(v.batch_infos) && v.batch_infos.length > 0) {
+        calculatedStock = v.batch_infos.reduce((sum: number, b: any) => sum + (b.stock_infos?.available_stocks || b.stocks || b.stock_infos?.physical_stocks || 0), 0);
+      }
+      if (calculatedStock === undefined) calculatedStock = 0;
+
+      return {
+        ...v,
+        id: v.id || String(Math.random()),
+        name: variantLabel,
+        price: calculatedPrice,
+        stock: calculatedStock,
+        serialnoId: v.serial_numbers?.id || v.serialno_infos?.[0]?.id || v.serial_number?.id || v.batches?.[0]?.serial_numbers?.id || combDatas.serial_numbers?.id || fullProduct.serialno_infos?.[0]?.id || fullProduct.serial_number?.id || fullProduct.serials?.id,
+        availableSerials: getSerialNames(v.serialno_infos || v.serial_numbers || v.serial_number || v.batches?.[0]?.serial_numbers || combDatas.serial_numbers || fullProduct.serialno_infos || fullProduct.serial_number || fullProduct.serials),
+        batchId: v.batch_infos?.[0]?.id || v.batches?.[0]?.id || v.batchId || combDatas.batches?.[0]?.id,
+        batches: (v.batch_infos || v.batches || []).map((b: any) => ({
+          ...b,
+          batchId: b.id,
+          price: b.pricing_infos?.sell_price || b.sell_price || calculatedPrice,
+          stock: b.stock_infos?.available_stocks !== undefined ? b.stock_infos?.available_stocks : (b.stocks !== undefined ? b.stocks : (b.stock !== undefined ? b.stock : 0)),
+        })),
+      };
     });
-    if (mappedVariants.length === 0 && p.has_batch && Array.isArray(p.batches)) {
-      mappedVariants = p.batches.map((b: any) => ({ id: b.id, name: `Batch: ${b.batch_no || b.id.slice(0, 8)}`, price: b.pricing_infos?.sell_price ?? b.sell_price ?? p.sell_price ?? 0, stock: Number(b.stock_infos?.available_stocks ?? b.stocks ?? 0), serialnoId: b.serial_numbers?.id, availableSerials: b.serial_numbers?.serial_numbers || [], batchId: b.id, expiryDate: b.expiry_date }));
+
+    if (mappedVariants.length === 0 && (fullProduct.type_infos?.has_batch || fullProduct.has_batch) && (Array.isArray(fullProduct.batches) && fullProduct.batches.length > 0 || Array.isArray(fullProduct.batch_infos) && fullProduct.batch_infos.length > 0)) {
+      const sourceBatches = Array.isArray(fullProduct.batch_infos) && fullProduct.batch_infos.length > 0 ? fullProduct.batch_infos : fullProduct.batches;
+      mappedVariants = sourceBatches.map((b: any) => ({
+        id: b.id,
+        isBatchOnly: true,
+        name: b.batch_name || b.name || b.batch || (b.batch_no ? `Batch: ${b.batch_no}` : `Batch: ${b.id.slice(0, 8)}`),
+        price: b.pricing_infos?.sell_price || b.sell_price || fullProduct.pricing_infos?.sell_price || fullProduct.sell_price || 0,
+        stock: b.stock_infos?.available_stocks || b.stocks || 0,
+        serialnoId: b.serial_numbers?.id || b.serialno_infos?.[0]?.id || fullProduct.serialno_infos?.[0]?.id || fullProduct.serial_number?.id || fullProduct.serials?.id,
+        availableSerials: getSerialNames(b.serialno_infos || b.serial_numbers || fullProduct.serialno_infos || fullProduct.serial_number || fullProduct.serials),
+        batchId: b.id,
+        expiryDate: b.expiry_date,
+        manufacturingDate: b.manufacturing_date,
+      }));
     }
-    return { ...p, product_name: p.name || "Unknown", product_barcode: p.barcode || "N/A", category: p.category || "Other", variants: mappedVariants, requireSerial: p.has_serialno || false, batchTracking: p.has_batch || false, price: p.sell_price ?? p.pricing_infos?.sell_price ?? 0, stocks: Number(p.stock_infos?.available_stocks ?? p.stocks ?? 0), gst: parseInt(String(p.gst || "18").replace("%", "")) } as InventoryItem;
+
+    let computedStock = Number(fullProduct.stock_infos?.available_stocks ?? fullProduct.stock_infos?.physical_stocks ?? fullProduct.stocks ?? 0);
+    let computedPrice = fullProduct.pricing_infos?.sell_price ?? fullProduct.sell_price ?? 0;
+
+    return {
+      ...fullProduct,
+      product_name: fullProduct.name || "Unknown Product",
+      product_barcode: fullProduct.barcode || "N/A",
+      category: fullProduct.category || "Other",
+      variants: mappedVariants,
+      requireSerial: fullProduct.has_serialno || false,
+      batchTracking: fullProduct.has_batch || false,
+      manufacturingDate: fullProduct.batches?.[0]?.manufacturing_date,
+      expiryDate: fullProduct.batches?.[0]?.expiry_date,
+      price: computedPrice,
+      stocks: computedStock,
+      serialnoId: fullProduct.serial_number?.id || fullProduct.serials?.id || fullProduct.batches?.[0]?.serial_numbers?.id,
+      availableSerials: getSerialNames(fullProduct.serialno_infos || fullProduct.serial_number || fullProduct.serials || fullProduct.batches?.[0]?.serial_numbers),
+      batchId: fullProduct.batches?.[0]?.id,
+      gst: parseInt(String(fullProduct.gst || fullProduct.datas?.gst || "18").replace("%", "")),
+      type_infos: fullProduct.type_infos || {}
+    } as InventoryItem;
   };
 
   const handleExchangeClick = async (ep: any) => {
@@ -182,8 +277,8 @@ const ReturnPageContent: React.FC<{ sale: SaleRecord; productMap: Record<string,
   };
 
   const handleProductSelectSuccess = (variant: ProductVariant, quantity: number, serials?: string[]) => {
-    if (!activeReplaceId || !pendingProduct) return;
-    m.addExchangeProduct(activeReplaceId, {
+    if (!pendingProduct) return;
+    m.addExchangeProduct("__global__", {
       id: pendingProduct.id,
       inventoryId: pendingProduct.id,
       code: pendingProduct.product_barcode,
@@ -321,23 +416,6 @@ const ReturnPageContent: React.FC<{ sale: SaleRecord; productMap: Record<string,
             <div className="px-5 py-4 border-b border-slate-100 bg-white flex-shrink-0">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Right — Replacement Products</p>
               <p className="text-[14px] font-black text-slate-800">Choose replacement items</p>
-              {selectedItems.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-3">
-                  {selectedItems.map(si => {
-                    const exList = state.exchangeMap[si.id] || [];
-                    const repQty = exList.reduce((sum: number, ex: any) => sum + (ex.quantity || ex.qty || 1), 0);
-                    const hasRep = repQty === si.returnQty;
-                    const isAct = activeReplaceId === si.id;
-                    return (
-                      <button key={si.id} onClick={() => setActiveReplaceId(si.id)}
-                        className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border transition-all cursor-pointer ${isAct ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-200 text-slate-600 hover:border-blue-400'}`}>
-                        {si.name}
-                        {hasRep ? <CheckCircle2 size={11} className={isAct ? "text-blue-200" : "text-emerald-500"} /> : (repQty > 0 ? <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[9px]">{repQty}/{si.returnQty}</span> : null)}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
             </div>
             {/* Search */}
             <div className="px-4 pt-4 pb-2 bg-white border-b border-slate-100 flex-shrink-0">
@@ -367,17 +445,21 @@ const ReturnPageContent: React.FC<{ sale: SaleRecord; productMap: Record<string,
                 <div className="flex items-center justify-center h-24">
                   <p className="text-[13px] text-slate-400 font-semibold">No products found</p>
                 </div>
-              ) : activeReplaceId && (() => {
-                const ai = selectedItems.find(i => i.id === activeReplaceId);
-                if (!ai) return null;
-                const exList = state.exchangeMap[activeReplaceId] || [];
+              ) : (() => {
+                const totalReturnQty = selectedItems.reduce((acc, i) => acc + i.returnQty, 0);
+                const exList = state.exchangeMap["__global__"] || [];
                 const usedQty = exList.reduce((sum: number, ex: any) => sum + (ex.quantity || ex.qty || 1), 0);
-                const remainingQty = ai.returnQty - usedQty;
+                const remainingQty = totalReturnQty - usedQty;
                 return (
                   <>
+                    <div className="flex items-center justify-between mb-2 mt-1">
+                      <p className="text-[12px] font-bold text-slate-600">
+                        Replacing <span className="text-slate-900">{totalReturnQty} item{totalReturnQty > 1 ? 's' : ''}</span>
+                      </p>
+                    </div>
                     {exList.length > 0 && (
                       <div className="mb-4 bg-emerald-50/50 border border-emerald-100 rounded-lg p-3">
-                        <p className="text-[10px] font-bold text-emerald-800 uppercase mb-2 flex items-center gap-1.5"><CheckCircle2 size={12} /> Selected Replacements ({usedQty}/{ai.returnQty})</p>
+                        <p className="text-[10px] font-bold text-emerald-800 uppercase mb-2 flex items-center gap-1.5"><CheckCircle2 size={12} /> Selected Replacements ({usedQty}/{totalReturnQty})</p>
                         <div className="space-y-2">
                           {exList.map((ex: any) => (
                             <div key={ex.exchangeId} className="flex items-center justify-between bg-white border border-emerald-100 rounded-md p-2 shadow-sm">
@@ -387,7 +469,7 @@ const ReturnPageContent: React.FC<{ sale: SaleRecord; productMap: Record<string,
                               </div>
                               <div className="flex items-center gap-3">
                                 <span className="font-mono text-[11px] font-black">{fmt(ex.tprice || (ex.price || ex.sell_price || 0) * (ex.quantity || ex.qty || 1))}</span>
-                                <button onClick={() => m.removeExchangeProduct(ai.id, ex.exchangeId)} className="w-6 h-6 rounded flex items-center justify-center bg-red-50 text-red-500 hover:bg-red-100 transition-colors">
+                                <button onClick={() => m.removeExchangeProduct("unused", ex.exchangeId)} className="w-6 h-6 rounded flex items-center justify-center bg-red-50 text-red-500 hover:bg-red-100 transition-colors">
                                   <X size={14} />
                                 </button>
                               </div>
@@ -399,110 +481,62 @@ const ReturnPageContent: React.FC<{ sale: SaleRecord; productMap: Record<string,
                     
                     {remainingQty > 0 ? (
                       exchProducts.map(ep => {
-                  if (!activeReplaceId) return null;
-                  const sel = (state.exchangeMap[activeReplaceId] || []).some((ex: any) => ex.id === ep.id);
-
-                  // Normalise variants: API returns them as a keyed object {uuid:{...}} - same as parseObjects() in Inventory.tsx
-                  const variantsArr: any[] = (() => {
-                    const src = ep.variants;
-                    if (!src) return [];
-                    if (Array.isArray(src)) return src;
-                    if (typeof src === 'object') return Object.values(src) as any[];
-                    return [];
-                  })();
-                  const hasVariants = !!(ep.has_variant || ep.has_batch || variantsArr.length > 0);
-
-                  // Aggregate variant stock exactly like calculateVariantStock() in Inventory.tsx
-                  // Each variant: stock_infos.available_stocks ?? stock_infos.physical_stocks ?? stocks
-                  const resolvedStock: number = (() => {
-                    if (hasVariants && variantsArr.length > 0) {
-                      return variantsArr.reduce((acc: number, v: any) => acc + Number(
-                        v.stock_infos?.available_stocks ?? v.stock_infos?.physical_stocks ?? v.stocks ?? v.stock ?? 0
-                      ), 0);
-                    }
-                    return Number(ep.stock_infos?.available_stocks ?? ep.stock_infos?.physical_stocks ?? ep.stocks ?? 0);
-                  })();
-
-                  const inStock = hasVariants || resolvedStock > 0;
-                  const variantCount = variantsArr.length;
-                  const stockLabel = hasVariants
-                    ? variantCount > 0
-                      ? `${variantCount} VARIANT${variantCount > 1 ? 'S' : ''} - ${resolvedStock > 0 ? resolvedStock + ' IN STOCK' : 'OUT OF STOCK'}`
-                      : 'HAS VARIANTS'
-                    : resolvedStock > 0 ? `${resolvedStock} IN STOCK` : 'OUT OF STOCK';
-
-                  // Price: use pricing_infos.sell_price per variant exactly like StockTree.tsx line 488
-                  const rootPrice: number = ep.sell_price ?? ep.pricing_infos?.sell_price ?? 0;
-                  const variantPrices: number[] = variantsArr
-                    .map((v: any) => Number(v.pricing_infos?.sell_price ?? v.sell_price ?? v.price ?? rootPrice ?? 0))
-                    .filter((p: number) => p > 0);
-                  const minPrice = variantPrices.length > 0 ? Math.min(...variantPrices) : 0;
-                  const maxPrice = variantPrices.length > 0 ? Math.max(...variantPrices) : 0;
-                  const displayPrice = rootPrice > 0 ? rootPrice : minPrice;
-                  const hasPriceRange = hasVariants && minPrice > 0 && minPrice !== maxPrice;
-
-                  return (
-                    <div key={ep.id} onClick={() => inStock && handleExchangeClick(ep)}
-                      className={`flex items-center gap-3 p-3 px-4 bg-white border rounded-xl transition-all ${sel ? "border-blue-500 bg-blue-50/60 ring-2 ring-blue-500/10 shadow-sm cursor-pointer" : !inStock ? "opacity-40 grayscale cursor-not-allowed border-slate-100" : "border-slate-100 hover:border-blue-300 hover:shadow-md cursor-pointer"}`}>
-                      <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center flex-shrink-0">
-                        <Package size={16} className="text-slate-400" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-bold text-slate-800 truncate">{ep.name}</p>
-                        <div className="flex items-center gap-2.5 mt-0.5 flex-wrap">
-                          <span className="font-mono text-[10px] text-slate-400">{ep.barcode || ep.id?.slice(-6)}</span>
-                          <span className={`text-[10px] font-black uppercase ${inStock ? (hasVariants ? 'text-blue-500' : 'text-emerald-600') : 'text-red-400'}`}>{stockLabel}</span>
-                        </div>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        {hasPriceRange ? (
-                          <div className="flex flex-col items-end gap-0.5">
-                            <p className="font-mono text-[11px] font-black text-slate-900">{fmt(minPrice)} - {fmt(maxPrice)}</p>
-                            <span className="text-[9px] text-slate-400 font-medium">price range</span>
+                        const sel = (state.exchangeMap["__global__"] || []).some((ex: any) => ex.id === ep.id);
+                        
+                        const resolvedStock = ep.stocks || 0;
+                        const inStock = ep.hasVariants || ep.hasBatches || resolvedStock > 0;
+                        const parts = [];
+                        if (ep.hasVariants) parts.push(ep.variantCount > 0 ? `${ep.variantCount} VARIANT${ep.variantCount > 1 ? 'S' : ''}` : 'VARIANTS');
+                        if (ep.hasBatches) parts.push('BATCHES');
+                        if (ep.hasSerials) parts.push('SERIALS');
+                        
+                        let stockLabel = 'OUT OF STOCK';
+                        if (inStock) {
+                          if (parts.length > 0) {
+                            stockLabel = `${parts.join(' & ')}${resolvedStock > 0 ? ` - ${resolvedStock} IN STOCK` : ''}`;
+                          } else {
+                            stockLabel = resolvedStock > 0 ? `${resolvedStock} IN STOCK` : 'IN STOCK';
+                          }
+                        }
+                          
+                        const displayPrice = ep.price || 0;
+                        
+                        return (
+                          <div key={ep.id} onClick={() => inStock && handleExchangeClick(ep)}
+                            className={`flex items-center gap-3 p-3 px-4 bg-white border rounded-xl transition-all ${sel ? "border-blue-500 bg-blue-50/60 ring-2 ring-blue-500/10 shadow-sm cursor-pointer" : !inStock ? "opacity-40 grayscale cursor-not-allowed border-slate-100" : "border-slate-100 hover:border-blue-300 hover:shadow-md cursor-pointer"}`}>
+                            <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center flex-shrink-0">
+                              <Package size={16} className="text-slate-400" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[13px] font-bold text-slate-800 truncate">{ep.name}</p>
+                              <div className="flex items-center gap-2.5 mt-0.5 flex-wrap">
+                                <span className="font-mono text-[10px] text-slate-400">{ep.barcode || ep.id?.slice(-6)}</span>
+                                <span className={`text-[10px] font-black uppercase ${inStock ? ((ep.hasVariants || ep.hasBatches) ? 'text-blue-500' : 'text-emerald-600') : 'text-red-400'}`}>{stockLabel}</span>
+                              </div>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                                <p className="font-mono text-[13px] font-black text-slate-900">
+                                  {displayPrice === 0 && (ep.hasVariants || ep.hasBatches)
+                                    ? <span className="text-slate-400 font-normal text-[11px]">see details</span>
+                                    : <>{displayPrice > 0 && (ep.hasVariants || ep.hasBatches) && <span className="font-normal text-[11px] text-slate-400">from </span>}{fmt(displayPrice)}</>
+                                  }
+                                </p>
+                              {sel && <CheckCircle2 size={15} className="text-blue-600 ml-auto mt-1" />}
+                            </div>
                           </div>
-                        ) : (
-                          <p className="font-mono text-[13px] font-black text-slate-900">
-                            {displayPrice === 0 && hasVariants
-                              ? <span className="text-slate-400 font-normal text-[11px]">see variants</span>
-                              : <>{rootPrice === 0 && displayPrice > 0 && hasVariants && <span className="font-normal text-[11px] text-slate-400">from </span>}{fmt(displayPrice)}</>
-                            }
-                          </p>
-                        )}
-                        {sel && <CheckCircle2 size={15} className="text-blue-600 ml-auto mt-1" />}
-                      </div>
-                    </div>
-                  );
-                  })
+                        );
+                      })
                     ) : (
                       <div className="py-8 text-center bg-slate-50 rounded-lg border border-slate-100 border-dashed">
                         <CheckCircle2 size={24} className="mx-auto text-emerald-400 mb-2" />
                         <p className="text-[13px] text-slate-600 font-bold">Full quantity replaced.</p>
-                        <p className="text-[11px] text-slate-400 font-medium">To change items, remove a selection above.</p>
+                        <p className="text-[11px] text-slate-400 font-medium">To change items, remove a selection on the left.</p>
                       </div>
                     )}
                   </>
                 );
               })()}
             </div>
-            {/* Pending warning */}
-            {selectedItems.length > 0 && selectedItems.some(si => {
-              const exList = state.exchangeMap[si.id] || [];
-              const repQty = exList.reduce((sum: number, ex: any) => sum + (ex.quantity || ex.qty || 1), 0);
-              return repQty < si.returnQty;
-            }) && (
-              <div className="px-4 pb-3 flex-shrink-0">
-                <div className="flex items-center gap-2 p-2.5 bg-amber-50 border border-amber-200 rounded-xl">
-                  <AlertCircle size={12} className="text-amber-500 flex-shrink-0" />
-                  <p className="text-[11px] font-semibold text-amber-800">Needs replacement: <span className="font-black">
-                    {selectedItems.filter(si => {
-                      const exList = state.exchangeMap[si.id] || [];
-                      const repQty = exList.reduce((sum: number, ex: any) => sum + (ex.quantity || ex.qty || 1), 0);
-                      return repQty < si.returnQty;
-                    }).map(si => si.name).join(", ")}
-                  </span></p>
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
@@ -668,15 +702,11 @@ const ReturnPageContent: React.FC<{ sale: SaleRecord; productMap: Record<string,
 
       {/* ProductSelectionModal for exchange */}
       {(() => {
-        const usedSerials = Object.entries(state.exchangeMap).reduce((acc: string[], [itemId, dataList]) => {
-          if (itemId === activeReplaceId) return acc;
-          return [...acc, ...dataList.flatMap((d: any) => d.serial_numbers || [])];
-        }, []);
-        const ai = selectedItems.find(i => i.id === activeReplaceId);
-        const exList = ai ? state.exchangeMap[ai.id] || [] : [];
-        const usedQty = exList.reduce((sum: number, ex: any) => sum + (ex.quantity || ex.qty || 1), 0);
-        const remainingQty = ai ? ai.returnQty - usedQty : 1;
-        return <ProductSelectionModal isOpen={isProductModalOpen} product={pendingProduct} onClose={() => setIsProductModalOpen(false)} onSuccess={handleProductSelectSuccess} excludedSerials={usedSerials} initialQuantity={remainingQty} maxAllowedQuantity={remainingQty} />;
+        const usedSerials = (state.exchangeMap["__global__"] || []).flatMap((d: any) => d.serial_numbers || []);
+        const totalReturnQty = selectedItems.reduce((acc, i) => acc + i.returnQty, 0);
+        const usedQty = (state.exchangeMap["__global__"] || []).reduce((sum: number, ex: any) => sum + (ex.quantity || ex.qty || 1), 0);
+        const remainingQty = Math.max(1, totalReturnQty - usedQty);
+        return <ProductSelectionModal isExchange={true} isOpen={isProductModalOpen} product={pendingProduct} onClose={() => setIsProductModalOpen(false)} onSuccess={handleProductSelectSuccess} excludedSerials={usedSerials} initialQuantity={1} maxAllowedQuantity={remainingQty} />;
       })()}
     </div>
   );

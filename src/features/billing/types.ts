@@ -42,6 +42,7 @@ export interface InventoryItem {
   batches?: any[];
   gst?: number;
   unitInfos?: any;
+  type_infos?: any;
 }
 
 export interface BillingItem {

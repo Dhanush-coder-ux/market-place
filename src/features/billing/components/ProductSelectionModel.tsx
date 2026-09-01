@@ -20,13 +20,15 @@ interface ProductSelectionModalProps {
   initialBatchId?: string;
   maxAllowedQuantity?: number;
   excludedSerials?: string[];
+  isExchange?: boolean;
 }
 
 const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
   isOpen, product, onClose, onSuccess,
   initialQuantity, initialSerials, initialVariantId, initialBatchId,
   maxAllowedQuantity,
-  excludedSerials = []
+  excludedSerials = [],
+  isExchange = false
 }) => {
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
   const [selectedBatch, setSelectedBatch] = useState<any | null>(null);
@@ -131,9 +133,9 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
   }, [isOpen]);
 
   // Derived properties
-  const hasVariants = normalizedVariants.length > 0 && !(normalizedVariants[0] as any).isBatchOnly && !normalizedVariants[0].name.startsWith("Batch: ");
-  const hasBatches = product?.batchTracking;
-  const isElectronics = product?.requireSerial;
+  const hasVariants = (isExchange && product?.type_infos) ? product.type_infos.has_variant : (normalizedVariants.length > 0 && !(normalizedVariants[0] as any).isBatchOnly && !normalizedVariants[0].name.startsWith("Batch: "));
+  const hasBatches = (isExchange && product?.type_infos) ? product.type_infos.has_batch : product?.batchTracking;
+  const isElectronics = (isExchange && product?.type_infos) ? product.type_infos.has_serialno : product?.requireSerial;
 
   // Determine logical steps
   const steps = useMemo(() => {
@@ -270,6 +272,31 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
     const excludedS = Array.isArray(excludedSerials) ? excludedSerials : [];
     return raw.filter((s: string) => !excludedS.includes(s) || initialS.includes(s));
   }, [selectedVariant, selectedBatch, product, excludedSerials, initialSerials]);
+
+  // Constrain quantity when variant, batch, or maxAllowedQuantity changes
+  useEffect(() => {
+    if (!isOpen || !product) return;
+    let maxAllowed = 9999;
+    if (isElectronics) {
+      maxAllowed = availableSerials.length || 1;
+    } else {
+      if (selectedBatch) {
+        maxAllowed = selectedBatch.stock ?? selectedBatch.stocks ?? 9999;
+      } else if (selectedVariant && selectedVariant.id !== "default") {
+        maxAllowed = selectedVariant.stock ?? 9999;
+      } else {
+        maxAllowed = product.stocks ?? 9999;
+      }
+    }
+    if (maxAllowedQuantity !== undefined) {
+      maxAllowed = Math.min(maxAllowed, maxAllowedQuantity);
+    }
+    setQuantity(prev => {
+      let next = prev;
+      if (next > maxAllowed) next = Math.max(1, maxAllowed);
+      return next;
+    });
+  }, [selectedVariant, selectedBatch, availableSerials.length, isElectronics, product, maxAllowedQuantity, isOpen]);
 
   if (!isOpen || !product) return null;
 
@@ -531,13 +558,15 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                       <input
                         type="number"
                         min="1"
-                        max={availableSerials.length || 1}
+                        max={(() => {
+                          const m = availableSerials.length || 1;
+                          return maxAllowedQuantity !== undefined ? Math.min(maxAllowedQuantity, m) : m;
+                        })()}
                         value={quantity}
                         onChange={(e) => {
                           let val = Math.max(1, Number(e.target.value));
-                          if (maxAllowedQuantity !== undefined) {
-                            val = Math.min(val, maxAllowedQuantity);
-                          }
+                          const limit = maxAllowedQuantity !== undefined ? Math.min(maxAllowedQuantity, availableSerials.length || 1) : (availableSerials.length || 1);
+                          val = Math.min(val, limit);
                           setQuantity(val);
                           const currentSerials = Array.isArray(selectedSerials) ? selectedSerials : [];
                           if (currentSerials.length > val) {
@@ -685,16 +714,16 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                           <input
                             type="number"
                             min="1"
-                            max={maxAllowedQuantity !== undefined ? maxAllowedQuantity : (selectedVariant?.stock ?? product.stocks ?? 9999)}
+                            max={(() => {
+                              const m = selectedBatch?.stock ?? selectedBatch?.stocks ?? selectedVariant?.stock ?? product.stocks ?? 9999;
+                              return maxAllowedQuantity !== undefined ? Math.min(maxAllowedQuantity, m) : m;
+                            })()}
                             value={quantity}
                             onChange={(e) => {
                               let val = Math.max(1, Number(e.target.value));
-                              if (maxAllowedQuantity !== undefined) {
-                                val = Math.min(val, maxAllowedQuantity);
-                              } else {
-                                const maxStock = selectedVariant?.stock ?? product.stocks ?? 9999;
-                                val = Math.min(val, maxStock);
-                              }
+                              const m = selectedBatch?.stock ?? selectedBatch?.stocks ?? selectedVariant?.stock ?? product.stocks ?? 9999;
+                              const limit = maxAllowedQuantity !== undefined ? Math.min(maxAllowedQuantity, m) : m;
+                              val = Math.min(val, limit);
                               setQuantity(val);
                             }}
                             className="w-16 px-2 py-1 text-sm font-bold text-slate-800 bg-white border border-slate-200 rounded outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all text-center"

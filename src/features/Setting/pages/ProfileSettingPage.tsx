@@ -257,7 +257,6 @@ export const ProfileSettingsPage = () => {
                   },
                 ].map((opt) => {
                   const isActive = settings.gstType === opt.value;
-                  const isDangerousChange = opt.value === "non-registered" && settings.gstType === "registered";
                   return (
                     <div
                       key={opt.value}
@@ -274,11 +273,6 @@ export const ProfileSettingsPage = () => {
                           <span className="text-sm font-bold text-slate-800">
                             {opt.label}
                           </span>
-                          {isDangerousChange && (
-                            <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">
-                              <AlertTriangle size={8} />Requires confirmation
-                            </span>
-                          )}
                         </div>
                         <div
                           className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${isActive

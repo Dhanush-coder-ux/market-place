@@ -20,7 +20,7 @@ import Loader from "@/components/common/Loader";
 import type { CustomerRecord } from "@/types/api";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
-import { CustomerPurchasesTable, CustomerCollectionsTable } from "@/components/common/HistoryTables";
+import { CustomerPurchasesTable } from "@/components/common/HistoryTables";
 import { RecordPaymentModal } from "@/features/customer/components/RecordPaymentModal";
 import { customerCustomFieldsApi } from "@/services/api/customer";
 import type { CustomerCustomFieldDefinition, CustomerCustomFieldValue } from "../type";
@@ -375,7 +375,7 @@ export default function CustomerDetail() {
         {/* Tabs Navigation & Quick Stats Grid (pinned) */}
         <div className="flex-none px-1 py-2 space-y-2">
           <div className="flex gap-2 p-1 bg-slate-100/50 w-fit rounded-lg border border-slate-200/50">
-            {["Overview", "Sales", "Collection History"].map((tab, i) => (
+            {["Overview", "Sales", "Payment Ledger"].map((tab, i) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(i)}
@@ -602,7 +602,7 @@ export default function CustomerDetail() {
               />
             )}
 
-            {/* TAB 2 — Collection History */}
+            {/* TAB 2 — Payment Ledger */}
             {activeTab === 2 && (
               <div className="flex flex-col flex-1 min-h-0 h-full gap-3">
                 {/* Action Row */}
@@ -628,10 +628,79 @@ export default function CustomerDetail() {
                   </button>
                 </div>
 
-                <CustomerCollectionsTable
-                  rows={clearingHistory}
-                  loading={clearingLoading}
-                />
+                <div className="space-y-4 animate-in fade-in duration-300 h-full overflow-y-auto">
+                  <SectionCard title="Outstanding Cleared History" className="p-0">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-slate-50 border-b border-slate-200">
+                            <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase whitespace-nowrap tracking-wider">Invoice / Ref No</th>
+                            <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase whitespace-nowrap tracking-wider">Payment Date</th>
+                            <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase whitespace-nowrap tracking-wider">Cleared Amount</th>
+                            <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase whitespace-nowrap tracking-wider">Balance Transition</th>
+                            <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase whitespace-nowrap tracking-wider">Payment Breakdown</th>
+                            <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase whitespace-nowrap tracking-wider">Notes</th>
+                            <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase whitespace-nowrap tracking-wider text-right">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {clearingLoading ? (
+                            <tr><td colSpan={7} className="p-8 text-center text-slate-400 text-sm font-semibold">Loading history...</td></tr>
+                          ) : clearingHistory.length === 0 ? (
+                            <tr><td colSpan={7} className="p-8 text-center text-slate-400 text-sm font-semibold">No cleared records found.</td></tr>
+                          ) : (
+                            clearingHistory.map((h, i) => {
+                              const addInfos = h.additional_infos || {};
+                              const clearedAmount = addInfos.cleared_amount ?? addInfos.paid_amount ?? 0;
+                              const outBefore = addInfos.outstanding_before ?? h.cleared_infos?.outstanding_before ?? 0;
+                              const outAfter = addInfos.outstanding_after ?? h.cleared_infos?.outstanding_after ?? 0;
+                              const paymentInfos = h.payment_infos || [];
+                              const invoiceStr = addInfos.invoice_no || h.invoice_no || "";
+
+                              return (
+                                <tr key={h.id || i} className="hover:bg-slate-50/50 transition-colors">
+                                  <td className="px-4 py-3 text-xs font-black text-indigo-600 whitespace-nowrap font-mono">
+                                    {invoiceStr ? `#${invoiceStr}` : `#${h.entity_id || "—"}`}
+                                  </td>
+                                  <td className="px-4 py-3 text-xs font-bold text-slate-600 whitespace-nowrap">
+                                    {h.created_at || h.date ? new Date(h.created_at || h.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                                  </td>
+                                  <td className="px-4 py-3 text-sm font-black whitespace-nowrap text-slate-800">
+                                    ₹{Number(clearedAmount).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                                  </td>
+                                  <td className="px-4 py-3 text-xs font-black text-slate-700 whitespace-nowrap">
+                                    <div className="flex items-center gap-2">
+                                      <span className="opacity-80">₹{Number(outBefore).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
+                                      <span className="text-slate-400 text-[10px]">➔</span>
+                                      <span className="text-emerald-600">₹{Number(outAfter).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap">
+                                    <div className="flex flex-wrap gap-1">
+                                      {paymentInfos.map((p: any, idx: number) => (
+                                        <span key={idx} className="text-[9px] font-black px-2 py-0.5 rounded text-slate-500 bg-slate-100 border border-slate-200">
+                                          {p.method} ₹{Number(p.amount).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3 text-[10px] font-medium text-slate-500 max-w-[150px] truncate" title={h.notes}>
+                                    {h.notes || "—"}
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap text-right">
+                                    <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100/50">
+                                      Cleared
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </SectionCard>
+                </div>
               </div>
             )}
 

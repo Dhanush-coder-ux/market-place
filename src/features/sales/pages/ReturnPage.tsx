@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import {
   ArrowLeft, Package, AlertCircle, CheckCircle2,
@@ -183,12 +183,30 @@ const ReturnPageContent: React.FC<{ sale: SaleRecord; productMap: Record<string,
 
   const handleProductSelectSuccess = (variant: ProductVariant, quantity: number, serials?: string[]) => {
     if (!activeReplaceId || !pendingProduct) return;
-    m.setExchangeProduct(activeReplaceId, {
+    m.addExchangeProduct(activeReplaceId, {
       id: pendingProduct.id,
+      inventoryId: pendingProduct.id,
+      code: pendingProduct.product_barcode,
       name: variant.id === "default" ? pendingProduct.product_name : `${pendingProduct.product_name} - ${variant.name}`,
-      sell_price: variant.price, variant_id: variant.id === "default" ? null : variant.id,
-      batch_id: variant.batchId || pendingProduct.batchId, serialno_id: variant.serialnoId || pendingProduct.serialnoId,
-      serial_numbers: serials || [], quantity, unit: (pendingProduct as any).unit || ""
+      sell_price: variant.price,
+      price: variant.price,
+      qty: quantity,
+      quantity: quantity,
+      tprice: quantity * variant.price,
+      serialNumbers: serials || [],
+      serial_numbers: serials || [],
+      variant_id: variant.id === "default" || (variant as any).isBatchOnly ? null : variant.id,
+      batch_id: variant.batchId || pendingProduct.batchId,
+      serialno_id: variant.serialnoId || pendingProduct.serialnoId,
+      requireSerial: pendingProduct.requireSerial,
+      batchTracking: pendingProduct.batchTracking,
+      manufacturingDate: variant.manufacturingDate || pendingProduct.manufacturingDate,
+      expiryDate: variant.expiryDate || pendingProduct.expiryDate,
+      maxStock: (pendingProduct as any).isStockTracked !== false ? variant.stock : undefined,
+      gst: pendingProduct.gst,
+      unitInfos: pendingProduct.unitInfos,
+      unit: pendingProduct.unitInfos?.name || (pendingProduct as any).unit || "",
+      _product: pendingProduct
     });
     setIsProductModalOpen(false); setPendingProduct(null);
   };
@@ -306,13 +324,15 @@ const ReturnPageContent: React.FC<{ sale: SaleRecord; productMap: Record<string,
               {selectedItems.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-3">
                   {selectedItems.map(si => {
-                    const hasRep = !!state.exchangeMap[si.id];
+                    const exList = state.exchangeMap[si.id] || [];
+                    const repQty = exList.reduce((sum: number, ex: any) => sum + (ex.quantity || ex.qty || 1), 0);
+                    const hasRep = repQty === si.returnQty;
                     const isAct = activeReplaceId === si.id;
                     return (
                       <button key={si.id} onClick={() => setActiveReplaceId(si.id)}
                         className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border transition-all cursor-pointer ${isAct ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-200 text-slate-600 hover:border-blue-400'}`}>
                         {si.name}
-                        {hasRep && <CheckCircle2 size={11} className={isAct ? "text-blue-200" : "text-emerald-500"} />}
+                        {hasRep ? <CheckCircle2 size={11} className={isAct ? "text-blue-200" : "text-emerald-500"} /> : (repQty > 0 ? <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[9px]">{repQty}/{si.returnQty}</span> : null)}
                       </button>
                     );
                   })}
@@ -347,10 +367,40 @@ const ReturnPageContent: React.FC<{ sale: SaleRecord; productMap: Record<string,
                 <div className="flex items-center justify-center h-24">
                   <p className="text-[13px] text-slate-400 font-semibold">No products found</p>
                 </div>
-              ) : (
-                exchProducts.map(ep => {
+              ) : activeReplaceId && (() => {
+                const ai = selectedItems.find(i => i.id === activeReplaceId);
+                if (!ai) return null;
+                const exList = state.exchangeMap[activeReplaceId] || [];
+                const usedQty = exList.reduce((sum: number, ex: any) => sum + (ex.quantity || ex.qty || 1), 0);
+                const remainingQty = ai.returnQty - usedQty;
+                return (
+                  <>
+                    {exList.length > 0 && (
+                      <div className="mb-4 bg-emerald-50/50 border border-emerald-100 rounded-lg p-3">
+                        <p className="text-[10px] font-bold text-emerald-800 uppercase mb-2 flex items-center gap-1.5"><CheckCircle2 size={12} /> Selected Replacements ({usedQty}/{ai.returnQty})</p>
+                        <div className="space-y-2">
+                          {exList.map((ex: any) => (
+                            <div key={ex.exchangeId} className="flex items-center justify-between bg-white border border-emerald-100 rounded-md p-2 shadow-sm">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[12px] font-bold text-slate-800">{ex.name}</p>
+                                <p className="text-[10px] text-slate-500">Qty: {ex.quantity || ex.qty || 1} {ex.serialNumbers?.length > 0 ? `· Serials: ${ex.serialNumbers.join(", ")}` : ''}</p>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <span className="font-mono text-[11px] font-black">{fmt(ex.tprice || (ex.price || ex.sell_price || 0) * (ex.quantity || ex.qty || 1))}</span>
+                                <button onClick={() => m.removeExchangeProduct(ai.id, ex.exchangeId)} className="w-6 h-6 rounded flex items-center justify-center bg-red-50 text-red-500 hover:bg-red-100 transition-colors">
+                                  <X size={14} />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {remainingQty > 0 ? (
+                      exchProducts.map(ep => {
                   if (!activeReplaceId) return null;
-                  const sel = state.exchangeMap[activeReplaceId]?.id === ep.id;
+                  const sel = (state.exchangeMap[activeReplaceId] || []).some((ex: any) => ex.id === ep.id);
 
                   // Normalise variants: API returns them as a keyed object {uuid:{...}} - same as parseObjects() in Inventory.tsx
                   const variantsArr: any[] = (() => {
@@ -422,15 +472,34 @@ const ReturnPageContent: React.FC<{ sale: SaleRecord; productMap: Record<string,
                       </div>
                     </div>
                   );
-                })
-              )}
+                  })
+                    ) : (
+                      <div className="py-8 text-center bg-slate-50 rounded-lg border border-slate-100 border-dashed">
+                        <CheckCircle2 size={24} className="mx-auto text-emerald-400 mb-2" />
+                        <p className="text-[13px] text-slate-600 font-bold">Full quantity replaced.</p>
+                        <p className="text-[11px] text-slate-400 font-medium">To change items, remove a selection above.</p>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
             {/* Pending warning */}
-            {selectedItems.length > 0 && selectedItems.some(si => !state.exchangeMap[si.id]) && (
+            {selectedItems.length > 0 && selectedItems.some(si => {
+              const exList = state.exchangeMap[si.id] || [];
+              const repQty = exList.reduce((sum: number, ex: any) => sum + (ex.quantity || ex.qty || 1), 0);
+              return repQty < si.returnQty;
+            }) && (
               <div className="px-4 pb-3 flex-shrink-0">
                 <div className="flex items-center gap-2 p-2.5 bg-amber-50 border border-amber-200 rounded-xl">
                   <AlertCircle size={12} className="text-amber-500 flex-shrink-0" />
-                  <p className="text-[11px] font-semibold text-amber-800">Needs replacement: <span className="font-black">{selectedItems.filter(si => !state.exchangeMap[si.id]).map(si => si.name).join(", ")}</span></p>
+                  <p className="text-[11px] font-semibold text-amber-800">Needs replacement: <span className="font-black">
+                    {selectedItems.filter(si => {
+                      const exList = state.exchangeMap[si.id] || [];
+                      const repQty = exList.reduce((sum: number, ex: any) => sum + (ex.quantity || ex.qty || 1), 0);
+                      return repQty < si.returnQty;
+                    }).map(si => si.name).join(", ")}
+                  </span></p>
                 </div>
               </div>
             )}
@@ -553,7 +622,11 @@ const ReturnPageContent: React.FC<{ sale: SaleRecord; productMap: Record<string,
                       <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: ITEM_COLORS[i % ITEM_COLORS.length] }}><Package size={14} className="text-slate-600/60" /></div>
                       <div className="flex-1 min-w-0">
                         <p className="text-[13px] font-bold text-slate-800">{item.name}</p>
-                        {item.exchangeItemId && <p className="text-[11px] text-blue-600 font-black mt-1 flex items-center gap-1"><ArrowRight size={10} /> {(item.exchangeItemId as any).name}</p>}
+                        {item.exchangeItems && item.exchangeItems.map((ex: any) => (
+                          <p key={ex.exchangeId} className="text-[11px] text-blue-600 font-black mt-1 flex items-center gap-1">
+                            <ArrowRight size={10} /> {ex.name} (Qty: {ex.quantity || ex.qty || 1})
+                          </p>
+                        ))}
                       </div>
                       <span className="font-mono text-[13px] font-black text-slate-900">{fmt(item.unitPrice * item.returnQty)}</span>
                     </div>
@@ -595,11 +668,15 @@ const ReturnPageContent: React.FC<{ sale: SaleRecord; productMap: Record<string,
 
       {/* ProductSelectionModal for exchange */}
       {(() => {
-        const usedSerials = Object.entries(state.exchangeMap).reduce((acc: string[], [itemId, data]) => {
+        const usedSerials = Object.entries(state.exchangeMap).reduce((acc: string[], [itemId, dataList]) => {
           if (itemId === activeReplaceId) return acc;
-          return [...acc, ...(data.serial_numbers || [])];
+          return [...acc, ...dataList.flatMap((d: any) => d.serial_numbers || [])];
         }, []);
-        return <ProductSelectionModal isOpen={isProductModalOpen} product={pendingProduct} onClose={() => setIsProductModalOpen(false)} onSuccess={handleProductSelectSuccess} excludedSerials={usedSerials} initialQuantity={selectedItems.find(i => i.id === activeReplaceId)?.returnQty} />;
+        const ai = selectedItems.find(i => i.id === activeReplaceId);
+        const exList = ai ? state.exchangeMap[ai.id] || [] : [];
+        const usedQty = exList.reduce((sum: number, ex: any) => sum + (ex.quantity || ex.qty || 1), 0);
+        const remainingQty = ai ? ai.returnQty - usedQty : 1;
+        return <ProductSelectionModal isOpen={isProductModalOpen} product={pendingProduct} onClose={() => setIsProductModalOpen(false)} onSuccess={handleProductSelectSuccess} excludedSerials={usedSerials} initialQuantity={remainingQty} maxAllowedQuantity={remainingQty} />;
       })()}
     </div>
   );

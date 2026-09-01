@@ -281,20 +281,19 @@ export function InfoRow({ label, value }: InfoRowProps) {
 export interface SectionCardProps {
   children: React.ReactNode;
   className?: string;
+  title?: string;
 }
 
 /**
- * A white card container used for each content section / tab panel.
- *
- * @example
- * <SectionCard>
- *   <h2>General Info</h2>
- * </SectionCard>
+ * Basic wrapper card for sections in the UI.
  */
-export function SectionCard({ children, className = "" }: SectionCardProps) {
+export function SectionCard({ children, className = "", title }: SectionCardProps) {
   return (
-    <div className={`bg-white rounded-lg p-8 shadow-sm border border-slate-100 ${className}`}>
-      {children}
+    <div className={`bg-white rounded-lg shadow-sm border border-slate-100 ${className}`}>
+      {title && <h3 className="text-sm font-bold text-slate-800 px-6 py-4 border-b border-slate-100">{title}</h3>}
+      <div className="p-8">
+        {children}
+      </div>
     </div>
   );
 }

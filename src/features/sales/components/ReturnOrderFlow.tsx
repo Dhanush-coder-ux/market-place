@@ -30,12 +30,12 @@ export interface SaleItem {
   unit: string; entered_unit: string; entered_qty: number; unit_infos?: any;
   gst?: string | number;
 }
-export interface SelectedReturnItem extends SaleItem { returnQty: number; exchangeItemId?: string; selectedSerials?: any[]; }
+export interface SelectedReturnItem extends SaleItem { returnQty: number; exchangeItems?: any[]; selectedSerials?: any[]; }
 interface ReturnErrors { reason?: string; items?: string; settlement?: string; serials?: string; }
 export type ReturnStep = 1 | 2 | 3 | 4 | 5;
 interface ReturnState {
   step: ReturnStep; mode: ReturnMode;
-  returnItems: Record<string, number>; exchangeMap: Record<string, any>;
+  returnItems: Record<string, number>; exchangeMap: Record<string, any[]>;
   serialReturnMap: Record<string, string[]>;
   itemReasons: Record<string, ReturnReason>;
   itemUnits: Record<string, string>;
@@ -53,10 +53,25 @@ const ITEM_COLORS = ["#dbeafe", "#dcfce7", "#fef3c7", "#fce7f3", "#ede9fe", "#ff
 /* ═══════════════════════════════════════════════════════════════
    UTILS
 ═══════════════════════════════════════════════════════════════ */
-const generateItems = (sale: SaleRecord, productMap: Record<string, string> = {}): SaleItem[] =>
-  (sale.items || []).map((item, i) => {
+const generateItems = (sale: SaleRecord, productMap: Record<string, string> = {}): SaleItem[] => {
+  const calcInfos = (sale as any)?.calculation_infos || (sale as any)?.calculations || {};
+  const isExclusive = calcInfos?.include_gst === true || String(calcInfos?.gst_type || (sale as any)?.gst_infos?.type || "EXCLUSIVE").toUpperCase() === "EXCLUSIVE";
+  const gstType = isExclusive ? "EXCLUSIVE" : "INCLUSIVE";
+  
+  return (sale.items || []).map((item, i) => {
     const rawName = (item as any).inventory_name || (item as any).name || (item as any).product_name || (item as any).product?.name || (item as any).inventory_infos?.name || (item as any).datas?.product_name || (item as any).datas?.name || productMap[item.inventory_id || (item as any).product_id] || item.barcode || `Item ${i + 1}`;
     const productName = rawName;
+    const gstRate = parseFloat(String(item.gst || "0").replace('%', '')) || 0;
+
+    // Check calculation_infos for the true base price, because item.sell_price may be incorrectly divided by 1+GST by the backend
+    const calcItem = calcInfos?.items?.find((ci: any) => ci.product_id === (item.inventory_id || (item as any).product_id));
+    let basePrice = calcItem ? calcItem.price : item.sell_price;
+
+    let finalUnitPrice = basePrice;
+    if (gstType === "EXCLUSIVE") {
+      finalUnitPrice = finalUnitPrice + (finalUnitPrice * gstRate / 100);
+    }
+
     return {
       id: item.id,
       inventory_id: item.inventory_id || (item as any).product_id || "",
@@ -64,7 +79,7 @@ const generateItems = (sale: SaleRecord, productMap: Record<string, string> = {}
       sku: item.barcode?.trim() || (item.inventory_id || (item as any).product_id || "").slice(-6),
       category: "General", quantity: item.quantity,
       returned_quantity: Number((item as any).returned_quantity ?? 0),
-      unitPrice: item.sell_price, buyPrice: item.buy_price,
+      unitPrice: finalUnitPrice, buyPrice: item.buy_price,
       gst: item.gst || "0%",
       imageColor: ITEM_COLORS[i % ITEM_COLORS.length],
       status: item.status, variant_id: item.variant_id,
@@ -77,6 +92,7 @@ const generateItems = (sale: SaleRecord, productMap: Record<string, string> = {}
       unit_infos: (item as any).unit_infos || null
     } as any;
   });
+};
 
 const fmt = (n: number) => `₹${n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -555,15 +571,24 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
     setState(s => ({ ...s, returnItems: { ...s.returnItems, [itemId]: Math.min(Math.max(1, v), maxReturnableInSelectedUnit) } }));
   }, [saleItems]);
 
-  const setExchangeProduct = useCallback((itemId: string, product: any) => setState(s => ({ ...s, exchangeMap: { ...s.exchangeMap, [itemId]: product } })), []);
+  const addExchangeProduct = useCallback((itemId: string, product: any) => setState(s => {
+    const current = s.exchangeMap[itemId] || [];
+    return { ...s, exchangeMap: { ...s.exchangeMap, [itemId]: [...current, { ...product, exchangeId: crypto.randomUUID() }] } };
+  }), []);
+
+  const removeExchangeProduct = useCallback((itemId: string, exchangeId: string) => setState(s => {
+    const current = s.exchangeMap[itemId] || [];
+    return { ...s, exchangeMap: { ...s.exchangeMap, [itemId]: current.filter((x: any) => x.exchangeId !== exchangeId) } };
+  }), []);
 
   const selectedItems = useMemo<SelectedReturnItem[]>(() =>
     saleItems.filter(i => state.returnItems[i.id] !== undefined)
-      .map(i => ({ ...i, returnQty: state.returnItems[i.id], exchangeItemId: state.exchangeMap[i.id], selectedSerials: state.serialReturnMap[i.id] })),
+      .map(i => ({ ...i, returnQty: state.returnItems[i.id], exchangeItems: state.exchangeMap[i.id], selectedSerials: state.serialReturnMap[i.id] })),
     [saleItems, state.returnItems, state.exchangeMap, state.serialReturnMap]);
 
   const totals = useMemo(() => {
-    const gstType = String(sale?.calculations?.gst_type || sale?.gst_infos?.type || "EXCLUSIVE").toUpperCase();
+    const isExclusive = sale?.calculations?.include_gst === true || String(sale?.calculations?.gst_type || sale?.gst_infos?.type || "EXCLUSIVE").toUpperCase() === "EXCLUSIVE";
+    const gstType = isExclusive ? "EXCLUSIVE" : "INCLUSIVE";
 
     const returnValue = selectedItems.reduce((s, i) => {
       let factor = 1.0;
@@ -574,23 +599,23 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
         }
       }
       const itemBase = i.unitPrice * i.returnQty * factor;
-      let itemTotal = itemBase;
-      const gstRate = parseFloat(String(i.gst || "0").replace('%', '')) || 0;
-      if (gstType === "EXCLUSIVE") {
-         itemTotal += itemBase * (gstRate / 100);
+      return s + itemBase;
+    }, 0);
+    const exchangeValue = state.mode === "exchange" ? selectedItems.reduce((s, i) => {
+      if (!i.exchangeItems || i.exchangeItems.length === 0) return s;
+      let itemTotal = 0;
+      for (const ep of i.exchangeItems) {
+        const qty = ep?.quantity || ep?.qty || 1;
+        const price = ep?.price ?? ep?.sell_price ?? 0;
+        const exBase = price * qty;
+        let exTotal = exBase;
+        const gstRate = parseFloat(String(ep?.gst || "0").replace('%', '')) || 0;
+        if (gstType === "EXCLUSIVE") {
+          exTotal += exBase * (gstRate / 100);
+        }
+        itemTotal += exTotal;
       }
       return s + itemTotal;
-    }, 0);
-    const exchangeValue = state.mode === "exchange" ? selectedItems.reduce((s, i) => { 
-      if (!i.exchangeItemId) return s; 
-      const ep = i.exchangeItemId as any; 
-      const exBase = (ep?.sell_price ?? 0) * i.returnQty;
-      let exTotal = exBase;
-      const gstRate = parseFloat(String(ep?.gst || "0").replace('%', '')) || 0;
-      if (gstType === "EXCLUSIVE") {
-         exTotal += exBase * (gstRate / 100);
-      }
-      return s + exTotal; 
     }, 0) : 0;
 
     return {
@@ -697,10 +722,10 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
             if (su && su.factor) factor = su.factor;
           }
           const itemAmount = origItem.unitPrice * origItem.returnQty * factor;
-          
+
           const itemPaymentsDict: Record<string, number> = {};
           let amountNeeded = itemAmount;
-          
+
           for (const key of Object.keys(remainingPayments)) {
             if (amountNeeded <= 0.001) break;
             if (remainingPayments[key] > 0) {
@@ -710,7 +735,7 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
               amountNeeded -= toAllocate;
             }
           }
-          
+
           if (amountNeeded > 0.001) {
             const fallbackKey = sale?.payment_method ? mapPaymentMode(sale.payment_method) : "CASH";
             itemPaymentsDict[fallbackKey] = (itemPaymentsDict[fallbackKey] || 0) + amountNeeded;
@@ -729,8 +754,8 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
         const exchangeItems: any[] = [];
 
         selectedItems.forEach(item => {
-          const replacement = state.exchangeMap[item.id];
-          if (!replacement) return;
+          const replacements = state.exchangeMap[item.id] || [];
+          if (replacements.length === 0) return;
 
           exchangeItems.push({
             order_item_id: item.id,
@@ -747,27 +772,29 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
               : []
           });
 
-          const key = `${replacement.id}-${replacement.variant_id || "none"}-${replacement.batch_id || "none"}`;
-          if (replacementItemsMap.has(key)) {
-            const ex = replacementItemsMap.get(key);
-            ex.quantity += replacement.quantity || item.returnQty;
-          } else {
-            replacementItemsMap.set(key, {
-              product_id: replacement.id,
-              variant_id: replacement.variant_id || null,
-              batch_id: replacement.batch_id || null,
-              quantity: replacement.quantity || item.returnQty,
-              unit: replacement.unit !== undefined ? replacement.unit : "",
-              serialno_infos: replacement.serial_numbers?.length
-                ? replacement.serial_numbers.map((s: any) => {
-                  if (typeof s === 'object' && s !== null) {
-                    return { id: s.id || "", name: s.name || s.serial_number || "" };
-                  }
-                  return { id: "", name: String(s) };
-                })
-                : []
-            });
-          }
+          replacements.forEach((replacement: any) => {
+            const key = `${replacement.id}-${replacement.variant_id || "none"}-${replacement.batch_id || "none"}`;
+            if (replacementItemsMap.has(key)) {
+              const ex = replacementItemsMap.get(key);
+              ex.quantity += replacement.quantity || 1;
+            } else {
+              replacementItemsMap.set(key, {
+                product_id: replacement.id,
+                variant_id: replacement.variant_id || null,
+                batch_id: replacement.batch_id || null,
+                quantity: replacement.quantity || 1,
+                unit: replacement.unit !== undefined ? replacement.unit : "",
+                serialno_infos: replacement.serial_numbers?.length
+                  ? replacement.serial_numbers.map((s: any) => {
+                    if (typeof s === 'object' && s !== null) {
+                      return { id: s.id || "", name: s.name || s.serial_number || "" };
+                    }
+                    return { id: "", name: String(s) };
+                  })
+                  : []
+              });
+            }
+          });
         });
 
         const paymentArray = state.payments.filter(p => p.amount > 0).map(p => ({
@@ -804,7 +831,23 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
       const reasonsOk = selectedItems.every(i => !!state.itemReasons[i.id]);
       if (!reasonsOk) return false;
       // only require replacement items for exchange mode
-      return state.mode === "refund" || selectedItems.every(i => !!state.exchangeMap[i.id]);
+      if (state.mode === "exchange") {
+        return selectedItems.every(i => {
+          const exItems = state.exchangeMap[i.id];
+          if (!exItems || exItems.length === 0) return false;
+          let totalQty = 0;
+          for (const ex of exItems) {
+            const qty = ex.quantity || ex.qty || 1;
+            totalQty += qty;
+            if (ex.requireSerial && (!ex.serialNumbers && !ex.serial_numbers || (ex.serialNumbers || ex.serial_numbers).length !== qty)) return false;
+            if (ex.batchTracking && !ex.batch_id && !ex.batchId) return false;
+            if (ex.maxStock !== undefined && qty > ex.maxStock) return false;
+          }
+          if (totalQty !== i.returnQty) return false;
+          return true;
+        });
+      }
+      return state.mode === "refund";
     }
     if (state.step === 3) {
       if (totals.diff !== 0 && state.mode === "exchange") {
@@ -816,7 +859,7 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
     return true;
   }, [state.step, state.mode, state.itemReasons, state.exchangeMap, selectedItems, totals.diff, state.payments]);
 
-  return { state, saleItems, selectedItems, totals, reset, setMode, setReason, setNotes, updatePayment, addPayment, removePayment, toggleItem, selectAll, updateQty, setExchangeProduct, setSerialReturns, goNext, goBack, confirm, canProceed, customerOutstanding };
+  return { state, saleItems, selectedItems, totals, reset, setMode, setReason, setNotes, updatePayment, addPayment, removePayment, toggleItem, selectAll, updateQty, addExchangeProduct, removeExchangeProduct, setSerialReturns, goNext, goBack, confirm, canProceed, customerOutstanding };
 };
 
 // Export the hook for use in ReturnPage full-page component
@@ -878,7 +921,8 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
   const [allExchProducts, setAllExchProducts] = useState<any[]>([]);  // full catalog
   const [exchProducts, setExchProducts] = useState<any[]>([]);         // filtered view
   const [loadingExch, setLoadingExch] = useState(false);
-
+  const isExclusive = sale?.calculations?.include_gst === true || String(sale?.calculations?.gst_type || sale?.gst_infos?.type || "EXCLUSIVE").toUpperCase() === "EXCLUSIVE";
+  const gstType = isExclusive ? "EXCLUSIVE" : "INCLUSIVE";
 
   // Body scroll lock (only for modal)
   useEffect(() => {
@@ -1013,7 +1057,31 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
   };
   const handleProductSelectSuccess = (variant: ProductVariant, quantity: number, serials?: string[]) => {
     if (!activeReplaceId || !pendingProduct) return;
-    m.setExchangeProduct(activeReplaceId, { id: pendingProduct.id, name: variant.id === "default" ? pendingProduct.product_name : `${pendingProduct.product_name} - ${variant.name}`, sell_price: variant.price, variant_id: variant.id === "default" ? null : variant.id, batch_id: variant.batchId || pendingProduct.batchId, serialno_id: variant.serialnoId || pendingProduct.serialnoId, serial_numbers: serials || [], quantity, unit: (pendingProduct as any).unit || (pendingProduct as any).unit_infos?.name || "" });
+    m.addExchangeProduct(activeReplaceId, {
+      id: pendingProduct.id,
+      inventoryId: pendingProduct.id,
+      code: pendingProduct.product_barcode,
+      name: variant.id === "default" ? pendingProduct.product_name : `${pendingProduct.product_name} - ${variant.name}`,
+      sell_price: variant.price,
+      price: variant.price,
+      qty: quantity,
+      quantity: quantity,
+      tprice: quantity * variant.price,
+      serialNumbers: serials || [],
+      serial_numbers: serials || [],
+      variant_id: variant.id === "default" || (variant as any).isBatchOnly ? null : variant.id,
+      batch_id: variant.batchId || pendingProduct.batchId,
+      serialno_id: variant.serialnoId || pendingProduct.serialnoId,
+      requireSerial: pendingProduct.requireSerial,
+      batchTracking: pendingProduct.batchTracking,
+      manufacturingDate: variant.manufacturingDate || pendingProduct.manufacturingDate,
+      expiryDate: variant.expiryDate || pendingProduct.expiryDate,
+      maxStock: (pendingProduct as any).isStockTracked !== false ? variant.stock : undefined,
+      gst: pendingProduct.gst,
+      unitInfos: pendingProduct.unitInfos,
+      unit: pendingProduct.unitInfos?.name || (pendingProduct as any).unit || "",
+      _product: pendingProduct
+    });
     setIsProductModalOpen(false); setPendingProduct(null);
   };
 
@@ -1123,7 +1191,9 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                       {selectedItems.length > 0 && (
                         <div className="flex flex-wrap gap-2 mb-4">
                           {selectedItems.map(si => {
-                            const hasRep = !!state.exchangeMap[si.id];
+                            const exList = state.exchangeMap[si.id] || [];
+                            const repQty = exList.reduce((sum: number, ex: any) => sum + (ex.quantity || ex.qty || 1), 0);
+                            const hasRep = repQty === si.returnQty;
                             const isAct = activeReplaceId === si.id;
                             return (
                               <button key={si.id} onClick={() => setActiveReplaceId(si.id)}
@@ -1131,25 +1201,12 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                                   }`}
                               >
                                 {si.name}
-                                {hasRep && <CheckCircle2 size={12} className={isAct ? "text-white" : "text-emerald-500"} />}
+                                {hasRep ? <CheckCircle2 size={12} className={isAct ? "text-white" : "text-emerald-500"} /> : (repQty > 0 ? <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[9px]">{repQty}/{si.returnQty}</span> : null)}
                               </button>
                             );
                           })}
                         </div>
                       )}
-
-                      {/* Search bar always visible */}
-                      <div className="relative mb-4">
-                        <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                        <input
-                          type="text"
-                          placeholder={selectedItems.length === 0 ? "Select items above first, then search replacement catalog..." : "Search replacement catalog..."}
-                          value={exchSearch}
-                          onChange={e => setExchSearch(e.target.value)}
-                          disabled={selectedItems.length === 0}
-                          className="w-full h-11 px-4 pl-10 text-[13px] text-slate-800 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-400 font-sans shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                        />
-                      </div>
 
                       {/* Catalog — always rendered so products load immediately */}
                       {selectedItems.length === 0 ? (
@@ -1160,13 +1217,53 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                       ) : activeReplaceId && (() => {
                         const ai = selectedItems.find(i => i.id === activeReplaceId);
                         if (!ai) return null;
+
+                        const exList = state.exchangeMap[activeReplaceId] || [];
+                        const usedQty = exList.reduce((sum: number, ex: any) => sum + (ex.quantity || ex.qty || 1), 0);
+                        const remainingQty = ai.returnQty - usedQty;
+
                         return (
                           <>
                             <p className="text-[12px] font-bold text-slate-600 mb-3 flex items-center gap-2">
                               <ArrowRight size={12} className="text-blue-500" />
-                              Replacing: <span className="text-slate-900">{ai.name}</span>
+                              Replacing: <span className="text-slate-900">{ai.name} (Qty: {ai.returnQty})</span>
                               <span className="font-mono ml-auto text-slate-400 text-[11px] font-medium">{fmt(ai.unitPrice * ai.returnQty)}</span>
                             </p>
+
+                            {exList.length > 0 && (
+                              <div className="mb-4 bg-emerald-50/50 border border-emerald-100 rounded-lg p-3">
+                                <p className="text-[10px] font-bold text-emerald-800 uppercase mb-2 flex items-center gap-1.5"><CheckCircle2 size={12} /> Selected Replacements ({usedQty}/{ai.returnQty})</p>
+                                <div className="space-y-2">
+                                  {exList.map((ex: any) => (
+                                    <div key={ex.exchangeId} className="flex items-center justify-between bg-white border border-emerald-100 rounded-md p-2 shadow-sm">
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-[12px] font-bold text-slate-800">{ex.name}</p>
+                                        <p className="text-[10px] text-slate-500">Qty: {ex.quantity || ex.qty || 1} {ex.serialNumbers?.length > 0 ? `· Serials: ${ex.serialNumbers.join(", ")}` : ''}</p>
+                                      </div>
+                                      <div className="flex items-center gap-3">
+                                        <span className="font-mono text-[11px] font-black">{fmt(ex.tprice || (ex.price || ex.sell_price || 0) * (ex.quantity || ex.qty || 1))}</span>
+                                        <button onClick={() => m.removeExchangeProduct(ai.id, ex.exchangeId)} className="w-6 h-6 rounded flex items-center justify-center bg-red-50 text-red-500 hover:bg-red-100 transition-colors">
+                                          <X size={14} />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {remainingQty > 0 ? (
+                              <>
+                                <div className="relative mb-4">
+                                  <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                                  <input
+                                    type="text"
+                                    placeholder={`Search catalog to select remaining ${remainingQty} item${remainingQty > 1 ? 's' : ''}...`}
+                                    value={exchSearch}
+                                    onChange={e => setExchSearch(e.target.value)}
+                                    className="w-full h-11 px-4 pl-10 text-[13px] text-slate-800 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-400 font-sans shadow-sm"
+                                  />
+                                </div>
                             {loadingExch ? (
                               <div className="text-center py-10">
                                 <Loader2 size={28} className="text-blue-500 mx-auto animate-spin" />
@@ -1179,7 +1276,7 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                             ) : (
                               <div className="flex flex-col gap-2 max-h-[300px] overflow-y-scroll pr-1 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-slate-50">
                                 {exchProducts.map(ep => {
-                                  const sel = state.exchangeMap[activeReplaceId]?.id === ep.id;
+                                  const sel = (state.exchangeMap[activeReplaceId] || []).some((ex: any) => ex.id === ep.id);
 
                                   // Normalise variants: API returns them as a keyed object {uuid:{...}} — same as parseObjects() in Inventory.tsx
                                   const variantsArr: any[] = (() => {
@@ -1229,9 +1326,21 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
 
                                   // Price: use pricing_infos.sell_price per variant exactly like StockTree.tsx line 488
                                   // comb.pricing_infos?.sell_price ?? comb.sell_price ?? comb.price ?? baseSellPrice
-                                  const rootPrice: number = ep.sell_price ?? ep.pricing_infos?.sell_price ?? 0;
+                                  const baseRootPrice: number = ep.sell_price ?? ep.pricing_infos?.sell_price ?? 0;
+                                  const exGstRate = parseFloat(String(ep.gst || ep.datas?.gst || "0").replace('%', '')) || 0;
+                                  let rootPrice = baseRootPrice;
+                                  if (gstType === "EXCLUSIVE") {
+                                    rootPrice += baseRootPrice * (exGstRate / 100);
+                                  }
                                   const variantPrices: number[] = variantsArr
-                                    .map((v: any) => Number(v.pricing_infos?.sell_price ?? v.sell_price ?? v.price ?? rootPrice ?? 0))
+                                    .map((v: any) => {
+                                      const rawVP = Number(v.pricing_infos?.sell_price ?? v.sell_price ?? v.price ?? baseRootPrice ?? 0);
+                                      let p = rawVP;
+                                      if (gstType === "EXCLUSIVE") {
+                                        p += rawVP * (exGstRate / 100);
+                                      }
+                                      return p;
+                                    })
                                     .filter((p: number) => p > 0);
                                   const minPrice = variantPrices.length > 0 ? Math.min(...variantPrices) : 0;
                                   const maxPrice = variantPrices.length > 0 ? Math.max(...variantPrices) : 0;
@@ -1255,9 +1364,8 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                                         <p className="text-[13px] font-bold text-slate-800 truncate">{ep.name}</p>
                                         <div className="flex items-center gap-2.5 mt-0.5 flex-wrap">
                                           <span className="font-mono text-[10px] text-slate-400 font-medium">{ep.barcode || (ep.id ?? ep._id ?? '').slice(-6)}</span>
-                                          <span className={`text-[10px] font-black uppercase tracking-tight ${
-                                            inStock ? (hasVariants ? 'text-blue-500' : 'text-emerald-600') : 'text-red-500'
-                                          }`}>{stockLabel}</span>
+                                          <span className={`text-[10px] font-black uppercase tracking-tight ${inStock ? (hasVariants ? 'text-blue-500' : 'text-emerald-600') : 'text-red-500'
+                                            }`}>{stockLabel}</span>
                                         </div>
                                       </div>
                                       <div className="text-right flex-shrink-0">
@@ -1282,17 +1390,33 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                               </div>
                             )}
                           </>
+                        ) : (
+                          <div className="py-8 text-center bg-slate-50 rounded-lg border border-slate-100 border-dashed">
+                            <CheckCircle2 size={24} className="mx-auto text-emerald-400 mb-2" />
+                            <p className="text-[13px] text-slate-600 font-bold">Full quantity replaced.</p>
+                            <p className="text-[11px] text-slate-400 font-medium">To change items, remove a selection above.</p>
+                          </div>
+                        )}
+                      </>
                         );
                       })()}
 
                       {/* Progress hint: show which items still need a replacement */}
-                      {selectedItems.length > 0 && selectedItems.some(si => !state.exchangeMap[si.id]) && (
+                      {selectedItems.length > 0 && selectedItems.some(si => {
+                        const exList = state.exchangeMap[si.id] || [];
+                        const repQty = exList.reduce((sum: number, ex: any) => sum + (ex.quantity || ex.qty || 1), 0);
+                        return repQty < si.returnQty;
+                      }) && (
                         <div className="mt-3 flex items-center gap-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg">
                           <AlertCircle size={13} className="text-amber-500 flex-shrink-0" />
                           <p className="text-[11px] font-semibold text-amber-800">
-                            Select a replacement for:{" "}
+                            Select replacements for:{" "}
                             <span className="font-black">
-                              {selectedItems.filter(si => !state.exchangeMap[si.id]).map(si => si.name).join(", ")}
+                              {selectedItems.filter(si => {
+                                const exList = state.exchangeMap[si.id] || [];
+                                const repQty = exList.reduce((sum: number, ex: any) => sum + (ex.quantity || ex.qty || 1), 0);
+                                return repQty < si.returnQty;
+                              }).map(si => si.name).join(", ")}
                             </span>
                           </p>
                         </div>
@@ -1395,7 +1519,11 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                           <div className="flex-1 min-w-0">
                             <p className="text-[13px] font-bold text-slate-800">{item.name}</p>
                             <p className="font-mono text-[10px] text-slate-400 uppercase tracking-wider font-bold mt-0.5">{item.sku} · qty {item.returnQty}</p>
-                            {item.exchangeItemId && <p className="text-[11px] text-blue-600 font-black mt-1 flex items-center gap-1.5"><ArrowRight size={10} /> {(item.exchangeItemId as any).name}</p>}
+                            {item.exchangeItems && item.exchangeItems.map((ex: any) => (
+                              <p key={ex.exchangeId} className="text-[11px] text-blue-600 font-black mt-1 flex items-center gap-1.5">
+                                <ArrowRight size={10} /> {ex.name} (Qty: {ex.quantity || ex.qty || 1})
+                              </p>
+                            ))}
                           </div>
                           <span className="font-mono text-[13px] font-black text-slate-900">{fmt(item.unitPrice * item.returnQty)}</span>
                         </div>
@@ -1441,8 +1569,12 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
             </div>
           </div>
           {(() => {
-            const usedSerials = Object.entries(state.exchangeMap).reduce((acc: string[], [itemId, data]) => { if (itemId === activeReplaceId) return acc; return [...acc, ...(data.serial_numbers || [])]; }, []);
-            return <ProductSelectionModal isOpen={isProductModalOpen} product={pendingProduct} onClose={() => setIsProductModalOpen(false)} onSuccess={handleProductSelectSuccess} excludedSerials={usedSerials} initialQuantity={selectedItems.find(i => i.id === activeReplaceId)?.returnQty} />;
+            const usedSerials = Object.entries(state.exchangeMap).reduce((acc: string[], [itemId, dataList]) => { if (itemId === activeReplaceId) return acc; return [...acc, ...dataList.flatMap((d: any) => d.serial_numbers || [])]; }, []);
+            const ai = selectedItems.find(i => i.id === activeReplaceId);
+            const exList = ai ? state.exchangeMap[ai.id] || [] : [];
+            const usedQty = exList.reduce((sum: number, ex: any) => sum + (ex.quantity || ex.qty || 1), 0);
+            const remainingQty = ai ? ai.returnQty - usedQty : 1;
+            return <ProductSelectionModal isOpen={isProductModalOpen} product={pendingProduct} onClose={() => setIsProductModalOpen(false)} onSuccess={handleProductSelectSuccess} excludedSerials={usedSerials} initialQuantity={remainingQty} maxAllowedQuantity={remainingQty} />;
           })()}
           {state.step < 5 && (
             <div className="flex-shrink-0 p-4 px-6 border-t border-slate-100 bg-white flex items-center gap-3">
@@ -1492,15 +1624,15 @@ export const ReturnModal: React.FC<ReturnFlowProps> = (props) => {
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[1000] overflow-hidden">
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 sm:p-6 overflow-hidden">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200"
         onClick={props.onClose}
       />
 
-      {/* Right-side drawer — full height, edge-to-edge, no border-radius on sides */}
-      <div className="absolute inset-y-0 right-0 w-full max-w-[520px] flex flex-col animate-in slide-in-from-right duration-300 ease-out shadow-2xl">
+      {/* Centered Popup */}
+      <div className="relative w-full max-w-[550px] max-h-[90vh] flex flex-col bg-white rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 ease-out z-[1001]">
         <ReturnFlow {...props} isInline={false} onExpand={handleExpand} />
       </div>
     </div>,

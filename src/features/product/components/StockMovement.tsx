@@ -239,9 +239,9 @@ const StockMovementTab = ({ inventoryId, product }: StockMovementTabProps) => {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 h-full flex flex-col gap-4">
-      <StockMovementsTable 
-        rows={movements} 
-        loading={loading} 
+      <StockMovementsTable
+        rows={movements}
+        loading={loading}
         onViewDetails={(id) => navigate(`/stock-movement/${id}`)}
       />
     </div>

@@ -31,7 +31,7 @@ import { useQuickCreate } from "@/features/common/QuickCreate/QuickCreateContext
 import PurchaseSuccessModal from "../components/purchaseSuccessModal";
 import { parseGst } from "./PurchaseHistory";
 import { NavigationBlocker } from "@/components/common/NavigationBlocker";
-type PaymentMethod = "CASH" | "UPI" | "CARD" | "BANK";
+type PaymentMethod = "NONE" | "CASH" | "UPI" | "CARD" | "BANK";
 
 export interface ProductItem {
   id: string;
@@ -116,7 +116,7 @@ const PurchaseForm = () => {
     const type = searchParams.get("type");
     return (type as any) || "DIRECT";
   });
-  const [payment, setPayment] = useState({ method: "CASH" as PaymentMethod, amountPaid: "" as number | string });
+  const [payment, setPayment] = useState({ method: "NONE" as PaymentMethod, amountPaid: "" as number | string, referenceNo: "" as string });
   const [costMethod, setCostMethod] = useState("None");
   const [supplierDetails, setSupplierDetails] = useState<any>(null);
   const [isGstExpanded, setIsGstExpanded] = useState(false);
@@ -243,8 +243,9 @@ const PurchaseForm = () => {
           // Populate payment info
           const firstPayment = data.payment_infos?.[0];
           setPayment({
-            method: firstPayment?.method || "CASH",
-            amountPaid: firstPayment?.amount ?? ""
+            method: firstPayment?.method || "NONE",
+            amountPaid: firstPayment?.amount ?? "",
+            referenceNo: firstPayment?.reference_no ?? ""
           });
 
           // Populate cost method
@@ -450,8 +451,9 @@ const PurchaseForm = () => {
     });
 
     setPayment({
-      method: "CASH",
-      amountPaid: ""
+      method: "NONE",
+      amountPaid: "",
+      referenceNo: ""
     });
 
     setCostMethod("None");
@@ -468,6 +470,11 @@ const PurchaseForm = () => {
 
     if (products.length === 0 || !products[0].name) {
       showToast("Please add at least one product.", "error");
+      return;
+    }
+
+    if (payment.method !== "NONE" && (!payment.amountPaid || Number(payment.amountPaid) <= 0)) {
+      showToast("Paid amount is mandatory when a payment method is selected.", "error");
       return;
     }
 
@@ -573,11 +580,12 @@ const PurchaseForm = () => {
       };
 
       const hasPaidAmount = payment.amountPaid !== "" && payment.amountPaid !== null && payment.amountPaid !== undefined && Number(payment.amountPaid) > 0;
-      const paymentInfosPayload = hasPaidAmount
+      const paymentInfosPayload = payment.method !== "NONE" && hasPaidAmount
         ? [
           {
             method: payment.method,
-            amount: Number(payment.amountPaid)
+            amount: Number(payment.amountPaid),
+            reference_no: payment.referenceNo || undefined
           }
         ]
         : [];
@@ -1112,8 +1120,15 @@ const PurchaseForm = () => {
                     </label>
                     <ReusableSelect
                       value={payment.method}
-                      onValueChange={(val) => setPayment({ ...payment, method: val as PaymentMethod })}
+                      onValueChange={(val) => {
+                        if (val === "NONE") {
+                          setPayment({ ...payment, method: "NONE", amountPaid: "", referenceNo: "" });
+                        } else {
+                          setPayment({ ...payment, method: val as PaymentMethod });
+                        }
+                      }}
                       options={[
+                        { value: "NONE", label: "None" },
                         { value: "CASH", label: "Cash" },
                         { value: "UPI", label: "UPI" },
                         { value: "CARD", label: "Credit/Debit Card" },
@@ -1123,28 +1138,49 @@ const PurchaseForm = () => {
                     />
                   </div>
 
-                  {/* Paid Amount */}
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center justify-between">
-                      <span>Paid Amount</span>
-                      <span className="text-emerald-500 font-bold uppercase tracking-wider">{payment.method}</span>
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-600 text-sm font-bold">₹</span>
-                      <input
-                        type="number"
-                        placeholder="0"
-                        className="w-full h-11 pl-8 pr-3 bg-white border border-emerald-200 rounded-lg text-sm font-medium text-emerald-700 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 transition-all tabular-nums shadow-sm"
-                        value={payment.amountPaid === 0 || payment.amountPaid === "0" ? "" : payment.amountPaid}
-                        onFocus={() => {
-                          if (payment.amountPaid === 0 || payment.amountPaid === "0") {
-                            setPayment({ ...payment, amountPaid: "" });
-                          }
-                        }}
-                        onChange={(e) => setPayment({ ...payment, amountPaid: e.target.value })}
-                      />
-                    </div>
-                  </div>
+                  {payment.method !== "NONE" && (
+                    <>
+                      {/* Paid Amount */}
+                      <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center justify-between">
+                          <span>Paid Amount <span className="text-rose-500">*</span></span>
+                          <span className="text-emerald-500 font-bold uppercase tracking-wider">{payment.method}</span>
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-600 text-sm font-bold">₹</span>
+                          <input
+                            type="number"
+                            placeholder="0"
+                            className="w-full h-11 pl-8 pr-3 bg-white border border-emerald-200 rounded-lg text-sm font-medium text-emerald-700 outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/20 transition-all tabular-nums shadow-sm"
+                            value={payment.amountPaid === 0 || payment.amountPaid === "0" ? "" : payment.amountPaid}
+                            onFocus={() => {
+                              if (payment.amountPaid === 0 || payment.amountPaid === "0") {
+                                setPayment({ ...payment, amountPaid: "" });
+                              }
+                            }}
+                            onChange={(e) => setPayment({ ...payment, amountPaid: e.target.value })}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Reference Number */}
+                      <div className="flex flex-col gap-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center justify-between">
+                          <span>Reference / Txn No.</span>
+                          <span className="text-slate-400 font-bold uppercase tracking-wider text-[8px]">(Optional)</span>
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            placeholder="Enter Ref No..."
+                            className="w-full h-11 px-3 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-sm"
+                            value={payment.referenceNo || ""}
+                            onChange={(e) => setPayment({ ...payment, referenceNo: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
 
                   {/* Outstanding Amount */}
                   <div className="flex flex-col gap-2">

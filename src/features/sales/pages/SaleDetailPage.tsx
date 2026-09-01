@@ -40,17 +40,28 @@ type SaleItem = {
 };
 
 const generateItems = (sale: OrderResponse, productMap: Record<string, string> = {}): SaleItem[] => {
-  const calcItems = (sale as any)?.calculation_infos?.items || [];
+  const calcInfos = (sale as any)?.calculation_infos || (sale as any)?.calculations || {};
+  const calcItems = calcInfos.items || [];
+  const includeGst = calcInfos.include_gst === true;
+
   return (sale?.items || []).map((i: any) => {
     // Attempt to find matching calc item for subunit pricing/qty details
     const calc = calcItems.find((ci: any) => ci.product_id === i.product_id || ci.product_id === i.inventory_id);
+    let basePrice = calc?.price ?? i.sell_price ?? 0;
+    
+    let unitPrice = basePrice;
+    if (includeGst) {
+      const gstRate = parseFloat(String(i.gst || i.datas?.gst || "0").replace("%", "")) || 0;
+      unitPrice = unitPrice + (unitPrice * (gstRate / 100));
+    }
+
     return {
       id: i.id,
       name: i.name || i.product_name || i.datas?.product_name || i.datas?.name || productMap[i.inventory_id] || "Unknown Item",
       sku: i.barcode?.trim() || i.inventory_id?.slice(-6) || "N/A",
       quantity: calc?.qty ?? i.quantity ?? 0,
       returnedQty: i.returned_quantity || 0,
-      unitPrice: calc?.price ?? i.sell_price ?? 0,
+      unitPrice,
       buyPrice: i.buy_price || 0,
       status: i.status || "COMPLETED",
       reason: i.reason,

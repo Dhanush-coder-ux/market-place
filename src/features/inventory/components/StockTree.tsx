@@ -72,13 +72,13 @@ export const BatchBadge = ({ expDate, qty }: { expDate?: string; qty: number }) 
   if (days <= 90) {
     return (
       <AntBadge variant="at-batch" type="tag" icon={<Clock size={10} />}>
-        {days}d left
+        {days} {days === 1 ? 'day' : 'days'} left
       </AntBadge>
     );
   }
   return (
     <AntBadge variant="ps-completed" type="tag" dot>
-      {days}d left
+      {days} {days === 1 ? 'day' : 'days'} left
     </AntBadge>
   );
 };
@@ -320,7 +320,7 @@ export const BatchCards = ({ batches }: { batches: any | any[] }) => {
                 )}
                 {daysToExpiry !== null && (
                   <AntBadge variant={daysToExpiry <= 0 ? 'ps-cancelled' : daysToExpiry <= 7 ? 'at-batch' : 'ps-completed'} type="tag">
-                    {daysToExpiry < 0 ? `EXP ${Math.abs(daysToExpiry)}D AGO` : daysToExpiry === 0 ? 'EXPIRES TODAY' : `EXP IN ${daysToExpiry}D`}
+                    {daysToExpiry < 0 ? `EXP ${Math.abs(daysToExpiry)} DAYS AGO` : daysToExpiry === 0 ? 'EXPIRES TODAY' : `EXP IN ${daysToExpiry} DAYS`}
                   </AntBadge>
                 )}
               </div>

@@ -94,12 +94,12 @@ export interface DirectPurchaseData {
   id: string;
   poNumber: string;
   systemId?: string;
-  totoalItems:number;
+  totoalItems: number;
   date: string;
   time: string;
   vendor: string;
   products: ProductItem[];
-  
+
   total_cost: number;
   purchaseType: PurchaseType;
   paymentMethod?: string;
@@ -193,7 +193,7 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
   const additionalChargesTotal = otherCharge + transportCharge;
   const grandTotal = totalCost + additionalChargesTotal;
 
-  const totoalItems= (p as any).item_infos?.total_pur_items ?? (p as any).total_items;
+  const totoalItems = (p as any).item_infos?.total_pur_items ?? (p as any).total_items;
 
   const paymentInfoObj = Array.isArray((p as any).payment_infos) ? (p as any).payment_infos[0] : null;
   const paidAmount = Number(paymentInfoObj?.amount ?? (p as any).paid_amount ?? d2?.payment?.amountPaid ?? d2?.payment_info?.amountPaid ?? d2?.paid_amount ?? 0);
@@ -209,41 +209,58 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
     date: d.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }),
     time: d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }),
     vendor: String(vendorName),
-    totoalItems:totoalItems,
+    totoalItems: totoalItems,
     version: (p as any).version || d2?.version || "v1",
     products: (products ?? []).map((pr: any) => {
       const pBuyPrice = pr.pricing_infos?.[0]?.buy_price ?? pr.buy_price;
       const pSellPrice = pr.pricing_infos?.[0]?.sell_price ?? pr.sell_price;
       const pStorage = pr.storage_location_infos?.name ?? pr.storage_locations?.[0]?.name ?? pr.storage_location ?? pr.datas?.storage_location;
-      
+
       return {
-      id: pr.id || pr.purchase_item_id || "",
-      name: String(pr.name ?? pr.product_name ?? pr.product_id ?? "Item"),
-      quantity: Number(pr.stocks_infos?.stocks ?? pr.stocks ?? pr.received_stocks ?? pr.received_qty ?? pr.quantity ?? pr.qty ?? pr.stocks_added ?? 1),
-      stocks: Number(pr.stocks_infos?.stocks ?? pr.stocks ?? 0),
-      stocks_before: pr.stocks_infos?.stocks_before ?? pr.stocks_before,
-      buy_price: pBuyPrice,
-      sell_price: pSellPrice,
-      barcode: pr.barcode,
-      category: pr.category,
-      gst: parseGst(pr.gst || pr.datas?.gst || pr.taxGst || pr.tax_gst || 0),
-      storage_location: pStorage,
-      has_batch: pr.has_batch,
-      has_serialno: pr.has_serialno,
-      has_variant: pr.has_variant,
-      variant: pr.variant || (pr.variant_infos ? { variant_name: pr.variant_infos.name, id: pr.variant_infos.id } : null),
-      batch: pr.batch || (pr.batch_infos ? { batch_name: pr.batch_infos.name || pr.batch_infos.batch_name, mfg_date: pr.batch_infos.mfg_date, exp_date: pr.batch_infos.exp_date } : null),
-      serial_info: pr.serial_info || (pr.serial_numbers ? { serial_numbers: pr.serial_numbers } : null),
-      stocks_added: pr.stocks_added ?? pr.stocks_infos?.stocks ?? pr.stocks ?? 0,
-      received_stocks: pr.received_stocks ?? pr.stocks_infos?.stocks ?? pr.stocks ?? 0,
-      variants: Array.isArray(pr.variants) ? pr.variants.map((v: any) => ({
-        id: v.id,
-        name: v.name,
-        buy_price: v.buy_price,
-        sell_price: v.sell_price,
-        stocks: v.stocks,
-        stocks_before: v.stocks_before,
-        batches: Array.isArray(v.batches) ? v.batches.map((b: any) => {
+        id: pr.id || pr.purchase_item_id || "",
+        name: String(pr.name ?? pr.product_name ?? pr.product_id ?? "Item"),
+        quantity: Number(pr.stocks_infos?.stocks ?? pr.stocks ?? pr.received_stocks ?? pr.received_qty ?? pr.quantity ?? pr.qty ?? pr.stocks_added ?? 1),
+        stocks: Number(pr.stocks_infos?.stocks ?? pr.stocks ?? 0),
+        stocks_before: pr.stocks_infos?.stocks_before ?? pr.stocks_before,
+        buy_price: pBuyPrice,
+        sell_price: pSellPrice,
+        barcode: pr.barcode,
+        category: pr.category,
+        gst: parseGst(pr.gst || pr.datas?.gst || pr.taxGst || pr.tax_gst || 0),
+        storage_location: pStorage,
+        has_batch: pr.has_batch,
+        has_serialno: pr.has_serialno,
+        has_variant: pr.has_variant,
+        variant: pr.variant || (pr.variant_infos ? { variant_name: pr.variant_infos.name, id: pr.variant_infos.id } : null),
+        batch: pr.batch || (pr.batch_infos ? { batch_name: pr.batch_infos.name || pr.batch_infos.batch_name, mfg_date: pr.batch_infos.mfg_date, exp_date: pr.batch_infos.exp_date } : null),
+        serial_info: pr.serial_info || (pr.serial_numbers ? { serial_numbers: pr.serial_numbers } : null),
+        stocks_added: pr.stocks_added ?? pr.stocks_infos?.stocks ?? pr.stocks ?? 0,
+        received_stocks: pr.received_stocks ?? pr.stocks_infos?.stocks ?? pr.stocks ?? 0,
+        variants: Array.isArray(pr.variants) ? pr.variants.map((v: any) => ({
+          id: v.id,
+          name: v.name,
+          buy_price: v.buy_price,
+          sell_price: v.sell_price,
+          stocks: v.stocks,
+          stocks_before: v.stocks_before,
+          batches: Array.isArray(v.batches) ? v.batches.map((b: any) => {
+            const serialsArr = Array.isArray(b.serials)
+              ? b.serials.flatMap((s: any) => s.serial_numbers || [])
+              : (b.serial_numbers?.serial_numbers || b.serial_number?.serial_numbers || (Array.isArray(b.serial_numbers) ? b.serial_numbers : null));
+            return {
+              name: b.name,
+              stocks: b.stocks ?? b.quantity ?? 1,
+              expiry_date: b.expiry_date,
+              manufacturing_date: b.manufacturing_date,
+              serial_numbers: serialsArr && serialsArr.length > 0 ? serialsArr : null,
+            };
+          }) : [],
+          serials: Array.isArray(v.serials) ? v.serials.map((s: any) => ({
+            id: s.id,
+            serial_numbers: s.serial_numbers || []
+          })) : undefined
+        })) : undefined,
+        batches: Array.isArray(pr.batches) ? pr.batches.map((b: any) => {
           const serialsArr = Array.isArray(b.serials)
             ? b.serials.flatMap((s: any) => s.serial_numbers || [])
             : (b.serial_numbers?.serial_numbers || b.serial_number?.serial_numbers || (Array.isArray(b.serial_numbers) ? b.serial_numbers : null));
@@ -254,29 +271,13 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
             manufacturing_date: b.manufacturing_date,
             serial_numbers: serialsArr && serialsArr.length > 0 ? serialsArr : null,
           };
-        }) : [],
-        serials: Array.isArray(v.serials) ? v.serials.map((s: any) => ({
+        }) : undefined,
+        serials: Array.isArray(pr.serials) ? pr.serials.map((s: any) => ({
           id: s.id,
           serial_numbers: s.serial_numbers || []
         })) : undefined
-      })) : undefined,
-      batches: Array.isArray(pr.batches) ? pr.batches.map((b: any) => {
-        const serialsArr = Array.isArray(b.serials)
-          ? b.serials.flatMap((s: any) => s.serial_numbers || [])
-          : (b.serial_numbers?.serial_numbers || b.serial_number?.serial_numbers || (Array.isArray(b.serial_numbers) ? b.serial_numbers : null));
-        return {
-          name: b.name,
-          stocks: b.stocks ?? b.quantity ?? 1,
-          expiry_date: b.expiry_date,
-          manufacturing_date: b.manufacturing_date,
-          serial_numbers: serialsArr && serialsArr.length > 0 ? serialsArr : null,
-        };
-      }) : undefined,
-      serials: Array.isArray(pr.serials) ? pr.serials.map((s: any) => ({
-        id: s.id,
-        serial_numbers: s.serial_numbers || []
-      })) : undefined
-    }; }),
+      };
+    }),
     total_cost: totalCost,
     paid_amount: paidAmount,
     outstanding: outstanding,
@@ -342,7 +343,7 @@ const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 
 const PaymentStatusBadge = ({ status, outstanding, grandTotal }: { status?: string; outstanding?: number; grandTotal?: number }) => {
   let displayStatus = (status || "UNPAID").toUpperCase();
-  
+
   if (outstanding !== undefined && grandTotal !== undefined && grandTotal > 0) {
     if (outstanding <= 0) {
       displayStatus = "PAID";
@@ -400,18 +401,18 @@ const GridCard = ({ po, selected, onClick }: { po: DirectPurchaseData; selected?
           </div>
           <PurchaseStatusBadge status={po.status} />
           <PaymentStatusBadge status={po.payment_status} outstanding={po.outstanding} grandTotal={po.grand_total || po.total_cost} />
-                          {po.purchaseType === "Purchase Return" && (
-                            <AntBadge variant="tag-returned" type="tag">Returned</AntBadge>
-                          )}
-                          {po.storage_location && (
-                            <span className="text-[9px] font-bold text-zinc-500 bg-zinc-50 border border-zinc-200 px-1.5 py-0.5 rounded-xl uppercase tracking-wider shrink-0">
-                              {po.storage_location}
-                            </span>
-                          )}
-                          {po.version && (
-                            <AntBadge variant="meta-version" type="tag">{po.version}</AntBadge>
-                          )}
-                        </div>
+          {po.purchaseType === "Purchase Return" && (
+            <AntBadge variant="tag-returned" type="tag">Returned</AntBadge>
+          )}
+          {po.storage_location && (
+            <span className="text-[9px] font-bold text-zinc-500 bg-zinc-50 border border-zinc-200 px-1.5 py-0.5 rounded-xl uppercase tracking-wider shrink-0">
+              {po.storage_location}
+            </span>
+          )}
+          {po.version && (
+            <AntBadge variant="meta-version" type="tag">{po.version}</AntBadge>
+          )}
+        </div>
         <span className="shrink-0 text-xs font-medium text-zinc-400 bg-white border border-zinc-200 px-2.5 py-0.5 rounded-full">
           {po.products.length} item{po.products.length !== 1 ? "s" : ""}
         </span>
@@ -553,11 +554,11 @@ const AmountWithReturnHover = ({ total, returns, refundAmount }: { total: number
       <span className="font-mono text-xs font-bold text-slate-900 tabular-nums">
         {fmt(netAmount)}
       </span>
-      
+
       <div className="w-3.5 h-3.5 rounded-full bg-rose-50 text-rose-500 border border-rose-200 flex items-center justify-center shrink-0">
         <RotateCw size={8} />
       </div>
-      
+
       {/* Dark Tooltip */}
       <div className="absolute right-0 top-full mt-2 w-48 bg-slate-900 rounded-lg shadow-xl border border-slate-800 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[100] text-left flex flex-col p-3 pointer-events-none">
         <div className="flex justify-between items-center text-xs font-medium text-slate-400 mb-1">
@@ -581,7 +582,7 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
   const navigate = useNavigate();
   const { purchase } = useBusinessApi();
   const [drawerRecord, setDrawerRecord] = useState<any | null>(null);
-  
+
   return (
     <div className="bg-white border border-slate-100 rounded-lg shadow-sm overflow-hidden flex flex-col flex-1 min-h-0">
       <div className="overflow-x-auto overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-slate-200">
@@ -743,11 +744,10 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
                             }
                             navigate(`/purchase/edit/${po.id}`);
                           }}
-                          className={`p-1 transition-colors ${
-                            ((po.returns?.length || 0) > 0 || ((po as any).purchase_returns?.length || 0) > 0)
+                          className={`p-1 transition-colors ${((po.returns?.length || 0) > 0 || ((po as any).purchase_returns?.length || 0) > 0)
                               ? 'text-slate-300 cursor-not-allowed'
                               : 'text-amber-400 hover:text-amber-500'
-                          }`}
+                            }`}
                           title={
                             ((po.returns?.length || 0) > 0 || ((po as any).purchase_returns?.length || 0) > 0)
                               ? "Cannot edit because items have been returned"
@@ -917,7 +917,7 @@ const PurchaseHistory = () => {
           setAnalyticsStats({ overview: { purchase: data } });
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [getData]);
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
@@ -1015,7 +1015,7 @@ const PurchaseHistory = () => {
     if (filters.payment_method) params.payment_method = filters.payment_method;
 
     const res = await purchase.getPurchasesByShop(SHOP_ID, params);
-    
+
     const itemsRaw = res ? (Array.isArray(res?.data) ? res.data : (res?.data?.purchases ?? res?.data?.datas ?? [])) : [];
     const parsedItems = itemsRaw.map(toDisplayData);
 
@@ -1045,15 +1045,15 @@ const PurchaseHistory = () => {
 
   const filtered = useMemo(() => {
     let result = items as DirectPurchaseData[];
-    
+
     if (filterStatus) {
       result = result.filter(po => po.payment_status?.toUpperCase() === filterStatus.toUpperCase());
     }
-    
+
     if (filterPaymentMethod) {
       result = result.filter(po => po.paymentMethod?.toUpperCase() === filterPaymentMethod.toUpperCase());
     }
-    
+
     return result;
   }, [items, filterStatus, filterPaymentMethod]);
 
@@ -1117,8 +1117,8 @@ const PurchaseHistory = () => {
             type="button"
             onClick={() => setIsFilterOpen(true)}
             className={`h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0 ${activeFiltersCount > 0
-                ? "border-blue-200 text-blue-600 bg-blue-50/50"
-                : "border-slate-200 text-slate-650 bg-white hover:bg-slate-50"
+              ? "border-blue-200 text-blue-600 bg-blue-50/50"
+              : "border-slate-200 text-slate-650 bg-white hover:bg-slate-50"
               }`}
             title="Filters"
           >
@@ -1150,25 +1150,25 @@ const PurchaseHistory = () => {
             <div className="space-y-1.5">
               <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Payment Status</label>
               <div className="flex gap-2">
-                <button 
+                <button
                   onClick={() => setFilterStatus("")}
                   className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${!filterStatus ? "border-slate-800 bg-slate-800 text-white" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
                 >
                   All
                 </button>
-                <button 
+                <button
                   onClick={() => setFilterStatus("COMPLETED")}
                   className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${filterStatus === "COMPLETED" ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
                 >
                   Completed
                 </button>
-                <button 
+                <button
                   onClick={() => setFilterStatus("PARTIALY-PAID")}
                   className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${filterStatus === "PARTIALY-PAID" ? "border-amber-500 bg-amber-50 text-amber-700" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
                 >
                   Partial
                 </button>
-                <button 
+                <button
                   onClick={() => setFilterStatus("PENDING")}
                   className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${filterStatus === "PENDING" ? "border-rose-500 bg-rose-50 text-rose-700" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
                 >

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   Printer, Building2, Calendar, Package,
-  ReceiptText, ArrowLeft, User, FileText, CheckCircle2, Clock, Banknote, AlertCircle,
+  ReceiptText, ArrowLeft, FileText, CheckCircle2, Clock, Banknote, AlertCircle,
   RotateCcw, X, ChevronRight, Info, Minus, Plus, CornerDownLeft
 } from "lucide-react";
 import { toDisplayData } from "./PurchaseHistory";
@@ -661,8 +661,8 @@ const PurchaseDetail = () => {
           subText={po.systemId && po.systemId !== po.poNumber ? `Invoice No: ${po.poNumber}` : ""}
           badges={[
             {
-              text: po.version && po.version.toLowerCase() !== 'v1' ? 'Purchase Update' : po.purchaseType,
-              variant: po.purchaseType === "Purchase Return" ? "tx-sales-return" : "vendor",
+              text: (po.status || "Completed").toUpperCase(),
+              variant: (po.status || "Completed").toLowerCase() === 'draft' ? "draft" : "vendor",
               dotColor: "bg-[var(--mv-purchase-dot)]"
             },
             po.outstanding && po.outstanding > 0
@@ -755,7 +755,7 @@ const PurchaseDetail = () => {
                       )}
                       <DetailItem icon={Calendar} label="Date" value={po.date} />
                       <DetailItem icon={Clock} label="Time" value={po.time} />
-                      <DetailItem icon={User} label="Purchase Type" value={po.purchaseType} />
+                      <DetailItem icon={CheckCircle2} label="Status" value={(po.status || "Completed").toUpperCase()} />
                       {po.storage_location && (
                         <DetailItem icon={Building2} label="Storage Location" value={po.storage_location} />
                       )}

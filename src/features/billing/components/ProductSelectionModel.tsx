@@ -18,12 +18,14 @@ interface ProductSelectionModalProps {
   initialSerials?: string[];
   initialVariantId?: string;
   initialBatchId?: string;
+  maxAllowedQuantity?: number;
   excludedSerials?: string[];
 }
 
 const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
   isOpen, product, onClose, onSuccess,
   initialQuantity, initialSerials, initialVariantId, initialBatchId,
+  maxAllowedQuantity,
   excludedSerials = []
 }) => {
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
@@ -129,7 +131,7 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
   }, [isOpen]);
 
   // Derived properties
-  const hasVariants = normalizedVariants.length > 0 && !normalizedVariants[0].name.startsWith("Batch: ");
+  const hasVariants = normalizedVariants.length > 0 && !(normalizedVariants[0] as any).isBatchOnly && !normalizedVariants[0].name.startsWith("Batch: ");
   const hasBatches = product?.batchTracking;
   const isElectronics = product?.requireSerial;
 
@@ -151,7 +153,7 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
       return selectedVariant.batches || [];
     }
     // If variants are actually batches:
-    if (normalizedVariants.length > 0 && normalizedVariants[0].name.startsWith("Batch: ")) {
+    if (normalizedVariants.length > 0 && ((normalizedVariants[0] as any).isBatchOnly || normalizedVariants[0].name.startsWith("Batch: "))) {
       return normalizedVariants;
     }
     return product.batches || [];
@@ -167,7 +169,7 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
         return !!initialVariantId || !!initialBatchId || !!initialSerials?.length || !!initialQuantity;
       })();
 
-      if (normalizedVariants.length > 0 && !normalizedVariants[0].name.startsWith("Batch: ")) {
+      if (normalizedVariants.length > 0 && !((normalizedVariants[0] as any).isBatchOnly || normalizedVariants[0].name.startsWith("Batch: "))) {
         if (initialVariantId) {
           const v = normalizedVariants.find(x => x.id === initialVariantId);
           setSelectedVariant(v || null);
@@ -445,7 +447,7 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                       .map((batch: any) => {
                         const isSelected = selectedBatch?.id === batch.id;
                         const isOutOfStock = (product as any).isStockTracked !== false && (batch.stocks !== undefined ? batch.stocks : batch.stock) === 0;
-                        const batchName = batch.name || (batch.batch_no ? `Batch: ${batch.batch_no}` : `Batch: ${batch.id.slice(0, 8)}`);
+                        const batchName = batch.batch_name || batch.name || batch.batch || (batch.batch_no ? `Batch: ${batch.batch_no}` : `Batch: ${batch.id.slice(0, 8)}`);
                         const batchStock = batch.stocks !== undefined ? batch.stocks : batch.stock;
                         const batchPrice = batch.sell_price || batch.price || product.price || 0;
 
@@ -532,7 +534,10 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                         max={availableSerials.length || 1}
                         value={quantity}
                         onChange={(e) => {
-                          const val = Math.max(1, Number(e.target.value));
+                          let val = Math.max(1, Number(e.target.value));
+                          if (maxAllowedQuantity !== undefined) {
+                            val = Math.min(val, maxAllowedQuantity);
+                          }
                           setQuantity(val);
                           const currentSerials = Array.isArray(selectedSerials) ? selectedSerials : [];
                           if (currentSerials.length > val) {
@@ -672,8 +677,31 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
 
                   <div className="p-4 bg-slate-50 rounded-lg border border-slate-100 flex items-center justify-between">
                     <div>
-                      <p className="text-[10px] font-bold text-slate-400 mb-0.5">Quantity</p>
-                      <p className="text-sm font-bold text-slate-800">{quantity} Units</p>
+                      <p className="text-[10px] font-bold text-slate-400 mb-1">Quantity</p>
+                      {isElectronics ? (
+                        <p className="text-sm font-bold text-slate-800">{quantity} Units</p>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min="1"
+                            max={maxAllowedQuantity !== undefined ? maxAllowedQuantity : (selectedVariant?.stock ?? product.stocks ?? 9999)}
+                            value={quantity}
+                            onChange={(e) => {
+                              let val = Math.max(1, Number(e.target.value));
+                              if (maxAllowedQuantity !== undefined) {
+                                val = Math.min(val, maxAllowedQuantity);
+                              } else {
+                                const maxStock = selectedVariant?.stock ?? product.stocks ?? 9999;
+                                val = Math.min(val, maxStock);
+                              }
+                              setQuantity(val);
+                            }}
+                            className="w-16 px-2 py-1 text-sm font-bold text-slate-800 bg-white border border-slate-200 rounded outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all text-center"
+                          />
+                          <span className="text-xs font-bold text-slate-600">Units</span>
+                        </div>
+                      )}
                     </div>
                     <div className="text-right">
                       <p className="text-[10px] font-bold text-slate-400 mb-0.5">Total</p>
@@ -689,7 +717,7 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                       <div className="flex-1 min-w-0">
                         <p className="text-[10px] font-bold text-indigo-400 mb-0.5 tracking-wider uppercase">Active Batch Selected</p>
                         <p className="text-xs font-black text-indigo-900 truncate">
-                          {selectedBatch.name || (selectedBatch.batch_no ? `Batch: ${selectedBatch.batch_no}` : `Batch: ${selectedBatch.id.slice(0, 8)}`)}
+                          {selectedBatch.batch_name || selectedBatch.name || selectedBatch.batch || (selectedBatch.batch_no ? `Batch: ${selectedBatch.batch_no}` : `Batch: ${selectedBatch.id.slice(0, 8)}`)}
                         </p>
                         <p className="text-[10px] font-mono font-medium text-indigo-500/80 mt-1 select-all">
                           ID: {selectedBatch.id || selectedBatch.batchId}

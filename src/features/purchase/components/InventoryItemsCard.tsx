@@ -266,7 +266,7 @@ export const InventoryItemsCard = ({
         serialno_id: serialnoId,
         batch_id: variantData?.batch_id || variantData?.datas?.batch_id || baseOpt.batch_id || d.batch_id,
         reorderPoint: getVal("reorder_point") !== "" ? getVal("reorder_point") : undefined,
-        storageLoc: getVal("storage_location") || getVal("location") || "",
+        storageLoc: variantData?.storage_locations?.[0]?.name ?? variantData?.storage_locations?.[0]?.storage_location ?? variantData?.storage_location_infos?.name ?? variantData?.storage_location_infos?.storage_location ?? variantData?.datas?.storage_location_infos?.name ?? variantData?.datas?.storage_location_infos?.storage_location ?? baseOpt.storage_locations?.[0]?.name ?? baseOpt.storage_locations?.[0]?.storage_location ?? baseOpt.storage_location_infos?.name ?? baseOpt.storage_location_infos?.storage_location ?? getVal("storage_location") ?? getVal("location") ?? "",
         brand: getVal("brand"),
         gstInfo: getVal("gst") !== undefined && getVal("gst") !== null && getVal("gst") !== "" ? getVal("gst") + "%" : "18%"
       };
@@ -338,194 +338,194 @@ export const InventoryItemsCard = ({
   const typeText = type === "PURCHASE" ? "Purchase" : "Production";
 
 
-const executeProductSelect = async (targetIndex: number, val: any, initialOpt: any) => {
-                              if (initialOpt) {
-                                let opt = initialOpt;
-                                // Always fetch full details if ID exists, because search API only returns a partial object
-                                // and maps missing properties (like has_variant) to false.
-                                if (opt.id) {
-                                  try {
-                                    const fullRes = await inventoryApi.getInventoryById(SHOP_ID, opt.id);
-                                    if (fullRes && fullRes.data) {
-                                      const prodData = Array.isArray(fullRes.data) ? fullRes.data[0] : fullRes.data;
-                                      if (prodData) {
-                                        opt = { ...opt, ...prodData };
-                                      }
-                                    }
-                                  } catch (err) {
-                                    console.error("Failed to fetch full inventory details", err);
-                                  }
-                                }
+  const executeProductSelect = async (targetIndex: number, val: any, initialOpt: any) => {
+    if (initialOpt) {
+      let opt = initialOpt;
+      // Always fetch full details if ID exists, because search API only returns a partial object
+      // and maps missing properties (like has_variant) to false.
+      if (opt.id) {
+        try {
+          const fullRes = await inventoryApi.getInventoryById(SHOP_ID, opt.id);
+          if (fullRes && fullRes.data) {
+            const prodData = Array.isArray(fullRes.data) ? fullRes.data[0] : fullRes.data;
+            if (prodData) {
+              opt = { ...opt, ...prodData };
+            }
+          }
+        } catch (err) {
+          console.error("Failed to fetch full inventory details", err);
+        }
+      }
 
-                                const d = opt.datas || {};
-                                const get = (key: string, fallback: any = "") => opt[key] ?? d[key] ?? fallback;
+      const d = opt.datas || {};
+      const get = (key: string, fallback: any = "") => opt[key] ?? d[key] ?? fallback;
 
-                                const hasBatchTracking = !!(get("batch_tracking") || get("has_batch_tracking") || get("has_batch") || opt.type_infos?.has_batch);
-                                const hasSerialTracking = !!(get("serial_tracking") || get("has_serialno_tracking") || get("has_serialno") || opt.type_infos?.has_serialno);
-                                const rawCombinations = opt.variants || opt.varients || d.combinations || d.varients || d.variants || [];
-                                const combinations = Array.isArray(rawCombinations) ? rawCombinations : Object.values(rawCombinations);
-                                const hasVariants = !!(get("has_variants", get("has_variant")) || combinations.length > 0 || opt.is_variant || opt.type_infos?.has_variant);
+      const hasBatchTracking = !!(get("batch_tracking") || get("has_batch_tracking") || get("has_batch") || opt.type_infos?.has_batch);
+      const hasSerialTracking = !!(get("serial_tracking") || get("has_serialno_tracking") || get("has_serialno") || opt.type_infos?.has_serialno);
+      const rawCombinations = opt.variants || opt.varients || d.combinations || d.varients || d.variants || [];
+      const combinations = Array.isArray(rawCombinations) ? rawCombinations : Object.values(rawCombinations);
+      const hasVariants = !!(get("has_variants", get("has_variant")) || combinations.length > 0 || opt.is_variant || opt.type_infos?.has_variant);
 
-                                // 💡 Prevent selecting same product already in another row, UNLESS it has variant, batch or serial tracking
-                                if (!hasVariants && !hasBatchTracking && !hasSerialTracking) {
-                                  const isDuplicate = products.some((p, i) => i !== targetIndex && p.inventory_id === opt.id);
-                                  if (isDuplicate) {
-                                    showToast(`${opt.name} is already added to the list.`, "error");
-                                    return;
-                                  }
-                                }
+      // 💡 Prevent selecting same product already in another row, UNLESS it has variant, batch or serial tracking
+      if (!hasVariants && !hasBatchTracking && !hasSerialTracking) {
+        const isDuplicate = products.some((p, i) => i !== targetIndex && p.inventory_id === opt.id);
+        if (isDuplicate) {
+          showToast(`${opt.name} is already added to the list.`, "error");
+          return;
+        }
+      }
 
-                                const rawSerials = opt.serials || opt.serial_numbers || opt.serial_number || d.serials || d.serial_numbers || d.serial_number;
-                                const existingSerials = Array.isArray(rawSerials) ? rawSerials : (rawSerials?.serial_numbers || rawSerials?.serial_number || []);
-                                const serialnoId = opt.serialno_id || d.serialno_id || rawSerials?.id || opt.serials?.id || opt.serial_number?.id || d.serial_number?.id || opt.serial_numbers?.id || d.serial_numbers?.id;
+      const rawSerials = opt.serials || opt.serial_numbers || opt.serial_number || d.serials || d.serial_numbers || d.serial_number;
+      const existingSerials = Array.isArray(rawSerials) ? rawSerials : (rawSerials?.serial_numbers || rawSerials?.serial_number || []);
+      const serialnoId = opt.serialno_id || d.serialno_id || rawSerials?.id || opt.serials?.id || opt.serial_number?.id || d.serial_number?.id || opt.serial_numbers?.id || d.serial_numbers?.id;
 
-                                if (opt.is_variant) {
-                                  if (!hasBatchTracking && !hasSerialTracking) {
-                                    const isDuplicate = products.some((p, i) => i !== targetIndex && p.inventory_id === opt.id && p.variant_id === opt.variant_id);
-                                    if (isDuplicate) {
-                                      showToast(`${opt.name} is already added to the list.`, "error");
-                                      return;
-                                    }
-                                  }
+      if (opt.is_variant) {
+        if (!hasBatchTracking && !hasSerialTracking) {
+          const isDuplicate = products.some((p, i) => i !== targetIndex && p.inventory_id === opt.id && p.variant_id === opt.variant_id);
+          if (isDuplicate) {
+            showToast(`${opt.name} is already added to the list.`, "error");
+            return;
+          }
+        }
 
-                                  updateProductFields(targetIndex, {
-                                    inventory_id: opt.id,
-                                    variant_id: opt.variant_id,
-                                    name: (opt.name || "").split(" (")[0],
-                                    variant: opt.variant_name || (opt.attributes ? Object.values(opt.attributes).join(' - ') : (d.attributes ? Object.values(d.attributes).join(' - ') : opt.name?.split(" - ")[1])),
-                                    costPrice: get("buy_price"),
-                                    sellingPrice: get("sell_price"),
-                                    taxGst: get("gst") !== undefined && get("gst") !== null && get("gst") !== "" ? parseInt(get("gst")) : 18,
-                                    sku: get("ui_id", get("barcode", get("sku"))),
-                                    unit: opt.unit_infos?.name || get("unit", "pc"),
-                                    unit_infos: opt.unit_infos || null,
-                                    selectedUnit: opt.unit_infos?.name || get("unit", "pc"),
-                                    category: opt.category_infos?.name || d?.category_infos?.name || get("category", opt.category_id),
-                                    batchTracking: hasBatchTracking,
-                                    serialTracking: hasSerialTracking,
-                                    existingSerials: existingSerials,
-                                    serialno_id: serialnoId,
-                                    batch_id: opt.batch_id || d.batch_id || opt.id,
-                                    baseVariants: combinations,
-                                    reorderPoint: get("reorder_point") !== "" ? get("reorder_point") : undefined,
-                                    storageLoc: get("storage_location") || get("location") || "",
-                                    brand: get("brand"),
-                                    gstInfo: get("gst") !== undefined && get("gst") !== null && get("gst") !== "" ? get("gst") + "%" : "18%"
-                                  });
+        updateProductFields(targetIndex, {
+          inventory_id: opt.id,
+          variant_id: opt.variant_id,
+          name: (opt.name || "").split(" (")[0],
+          variant: opt.variant_name || (opt.attributes ? Object.values(opt.attributes).join(' - ') : (d.attributes ? Object.values(d.attributes).join(' - ') : opt.name?.split(" - ")[1])),
+          costPrice: get("buy_price"),
+          sellingPrice: get("sell_price"),
+          taxGst: get("gst") !== undefined && get("gst") !== null && get("gst") !== "" ? parseInt(get("gst")) : 18,
+          sku: get("ui_id", get("barcode", get("sku"))),
+          unit: opt.unit_infos?.name || get("unit", "pc"),
+          unit_infos: opt.unit_infos || null,
+          selectedUnit: opt.unit_infos?.name || get("unit", "pc"),
+          category: opt.category_infos?.name || d?.category_infos?.name || get("category", opt.category_id),
+          batchTracking: hasBatchTracking,
+          serialTracking: hasSerialTracking,
+          existingSerials: existingSerials,
+          serialno_id: serialnoId,
+          batch_id: opt.batch_id || d.batch_id || opt.id,
+          baseVariants: combinations,
+          reorderPoint: get("reorder_point") !== "" ? get("reorder_point") : undefined,
+          storageLoc: opt.storage_locations?.[0]?.name ?? opt.storage_locations?.[0]?.storage_location ?? opt.storage_location_infos?.name ?? opt.storage_location_infos?.storage_location ?? d?.storage_location_infos?.name ?? d?.storage_location_infos?.storage_location ?? get("storage_location") ?? get("location") ?? "",
+          brand: get("brand"),
+          gstInfo: get("gst") !== undefined && get("gst") !== null && get("gst") !== "" ? get("gst") + "%" : "18%"
+        });
 
-                                  if (hasBatchTracking && (type !== "PURCHASE" || purchaseType !== "PO_CREATE")) {
-                                    const batches = opt.batch_infos || opt.batches || d.batch_infos || d.batches || [];
-                                    setBatchModal({
-                                      isOpen: true,
-                                      rowIndex: targetIndex,
-                                      batches: Array.isArray(batches) ? batches : (typeof batches === 'string' ? JSON.parse(batches || "[]") : []),
-                                      productName: opt.name.split(" (")[0],
-                                      variantName: opt.variant_name,
-                                      existingSerials: existingSerials,
-                                      allowNewBatch: purchaseType !== 'PO_CREATE'
-                                    });
-                                  }
-                                  return;
-                                }
+        if (hasBatchTracking && (type !== "PURCHASE" || purchaseType !== "PO_CREATE")) {
+          const batches = opt.batch_infos || opt.batches || d.batch_infos || d.batches || [];
+          setBatchModal({
+            isOpen: true,
+            rowIndex: targetIndex,
+            batches: Array.isArray(batches) ? batches : (typeof batches === 'string' ? JSON.parse(batches || "[]") : []),
+            productName: opt.name.split(" (")[0],
+            variantName: opt.variant_name,
+            existingSerials: existingSerials,
+            allowNewBatch: purchaseType !== 'PO_CREATE'
+          });
+        }
+        return;
+      }
 
-                                if (purchaseType === 'PO_CREATE') {
-                                  if (hasVariants && combinations.length === 0) {
-                                    showToast("This product is marked as having variants, but no variants have been generated yet. Please generate variants in the Inventory module before purchasing.", "error");
-                                    return;
-                                  }
+      if (purchaseType === 'PO_CREATE') {
+        if (hasVariants && combinations.length === 0) {
+          showToast("This product is marked as having variants, but no variants have been generated yet. Please generate variants in the Inventory module before purchasing.", "error");
+          return;
+        }
 
-                                  if (hasVariants && combinations.length > 0) {
-                                    const mappedVariants = combinations.map((c: any) => ({
-                                      id: c.id,
-                                      name: c.name || Object.values(c.attributes || c.datas?.attributes || {}).join(" - ") || c.barcode || "Variant",
-                                      sku: c.barcode || opt.barcode,
-                                      stock: c.stock_infos?.available_stocks ?? c.stocks ?? c.stock ?? opt.stocks ?? 0,
-                                      batchCount: Array.isArray(c.batch_infos) ? c.batch_infos.length : Array.isArray(c.batches) ? c.batches.length : 0,
-                                    }));
-                                    setVariantModal({ isOpen: true, baseProduct: opt.name || String(val), targetRowIndex: targetIndex, variants: mappedVariants, baseData: opt });
-                                    setSelectedVariants(null);
-                                  } else {
-                                    updateProductFields(targetIndex, {
-                                      inventory_id: opt.id,
-                                      name: opt.name || d.name || String(val),
-                                      costPrice: get("buy_price", get("costPrice")),
-                                      sellingPrice: get("sell_price", get("sellingPrice")),
-                                      taxGst: get("gst") !== undefined && get("gst") !== null && get("gst") !== "" ? parseInt(get("gst")) : 18,
-                                      sku: get("ui_id", get("barcode", get("sku"))),
-                                      unit: opt.unit_infos?.name || get("unit", "pc"),
-                                      unit_infos: opt.unit_infos || null,
-                                      selectedUnit: opt.unit_infos?.name || get("unit", "pc"),
-                                      category: opt.category_infos?.name || d?.category_infos?.name || get("category", opt.category_id),
-                                      batchTracking: hasBatchTracking,
-                                      serialTracking: false,
-                                      serialno_id: serialnoId,
-                                      batch_id: opt.batch_id || d.batch_id || opt.id,
-                                      reorderPoint: get("reorder_point") !== "" ? get("reorder_point") : undefined,
-                                      storageLoc: get("storage_location") || get("location") || "",
-                                      brand: get("brand"),
-                                      gstInfo: get("gst") !== undefined && get("gst") !== null && get("gst") !== "" ? get("gst") + "%" : "18%"
-                                    });
-                                  }
-                                  return;
-                                }
+        if (hasVariants && combinations.length > 0) {
+          const mappedVariants = combinations.map((c: any) => ({
+            id: c.id,
+            name: c.name || Object.values(c.attributes || c.datas?.attributes || {}).join(" - ") || c.barcode || "Variant",
+            sku: c.barcode || opt.barcode,
+            stock: c.stock_infos?.available_stocks ?? c.stocks ?? c.stock ?? opt.stocks ?? 0,
+            batchCount: Array.isArray(c.batch_infos) ? c.batch_infos.length : Array.isArray(c.batches) ? c.batches.length : 0,
+          }));
+          setVariantModal({ isOpen: true, baseProduct: opt.name || String(val), targetRowIndex: targetIndex, variants: mappedVariants, baseData: opt });
+          setSelectedVariants(null);
+        } else {
+          updateProductFields(targetIndex, {
+            inventory_id: opt.id,
+            name: opt.name || d.name || String(val),
+            costPrice: get("buy_price", get("costPrice")),
+            sellingPrice: get("sell_price", get("sellingPrice")),
+            taxGst: get("gst") !== undefined && get("gst") !== null && get("gst") !== "" ? parseInt(get("gst")) : 18,
+            sku: get("ui_id", get("barcode", get("sku"))),
+            unit: opt.unit_infos?.name || get("unit", "pc"),
+            unit_infos: opt.unit_infos || null,
+            selectedUnit: opt.unit_infos?.name || get("unit", "pc"),
+            category: opt.category_infos?.name || d?.category_infos?.name || get("category", opt.category_id),
+            batchTracking: hasBatchTracking,
+            serialTracking: false,
+            serialno_id: serialnoId,
+            batch_id: opt.batch_id || d.batch_id || opt.id,
+            reorderPoint: get("reorder_point") !== "" ? get("reorder_point") : undefined,
+            storageLoc: opt.storage_locations?.[0]?.name ?? opt.storage_locations?.[0]?.storage_location ?? opt.storage_location_infos?.name ?? opt.storage_location_infos?.storage_location ?? d?.storage_location_infos?.name ?? d?.storage_location_infos?.storage_location ?? get("storage_location") ?? get("location") ?? "",
+            brand: get("brand"),
+            gstInfo: get("gst") !== undefined && get("gst") !== null && get("gst") !== "" ? get("gst") + "%" : "18%"
+          });
+        }
+        return;
+      }
 
-                                if (hasVariants && combinations.length === 0) {
-                                  showToast("This product is marked as having variants, but no variants have been generated yet. Please generate variants in the Inventory module before purchasing.", "error");
-                                  return;
-                                }
+      if (hasVariants && combinations.length === 0) {
+        showToast("This product is marked as having variants, but no variants have been generated yet. Please generate variants in the Inventory module before purchasing.", "error");
+        return;
+      }
 
-                                if (hasVariants && combinations.length > 0) {
-                                  const mappedVariants = combinations.map((c: any) => ({
-                                    id: c.id,
-                                    name: c.name || Object.values(c.attributes || c.datas?.attributes || {}).join(" - ") || c.barcode || "Variant",
-                                    sku: c.barcode || opt.barcode,
-                                    stock: c.stock_infos?.available_stocks ?? c.stocks ?? c.stock ?? opt.stocks ?? 0,
-                                    batchCount: Array.isArray(c.batch_infos) ? c.batch_infos.length : Array.isArray(c.batches) ? c.batches.length : (c.batches ? (typeof c.batches === 'string' ? JSON.parse(c.batches).length : 0) : 0),
-                                  }));
-                                  setVariantModal({ isOpen: true, baseProduct: opt.name || String(val), targetRowIndex: targetIndex, variants: mappedVariants, baseData: opt });
-                                  setSelectedVariants(null);
-                                } else {
-                                  updateProductFields(targetIndex, {
-                                    inventory_id: opt.id,
-                                    variant_id: undefined,
-                                    name: opt.name || d.name || String(val),
-                                    costPrice: get("buy_price", get("costPrice")),
-                                    sellingPrice: get("sell_price", get("sellingPrice")),
-                                    taxGst: get("gst") !== undefined && get("gst") !== null && get("gst") !== "" ? parseInt(get("gst")) : 18,
-                                    sku: get("barcode", get("sku")),
-                                    unit: opt.unit_infos?.name || get("unit", "pc"),
-                                    unit_infos: opt.unit_infos || null,
-                                    selectedUnit: opt.unit_infos?.name || get("unit", "pc"),
-                                    category: opt.category_infos?.name || d?.category_infos?.name || get("category", opt.category_id),
-                                    batchTracking: hasBatchTracking,
-                                    serialTracking: hasSerialTracking,
-                                    existingSerials: existingSerials,
-                                    serialno_id: serialnoId,
-                                    hasVariants: false,
-                                    baseVariants: combinations,
-                                    reorderPoint: get("reorder_point") !== "" ? get("reorder_point") : undefined,
-                                    storageLoc: get("storage_location") || get("location") || "",
-                                    brand: get("brand"),
-                                    gstInfo: get("gst") !== undefined && get("gst") !== null && get("gst") !== "" ? get("gst") + "%" : "18%"
-                                  });
+      if (hasVariants && combinations.length > 0) {
+        const mappedVariants = combinations.map((c: any) => ({
+          id: c.id,
+          name: c.name || Object.values(c.attributes || c.datas?.attributes || {}).join(" - ") || c.barcode || "Variant",
+          sku: c.barcode || opt.barcode,
+          stock: c.stock_infos?.available_stocks ?? c.stocks ?? c.stock ?? opt.stocks ?? 0,
+          batchCount: Array.isArray(c.batch_infos) ? c.batch_infos.length : Array.isArray(c.batches) ? c.batches.length : (c.batches ? (typeof c.batches === 'string' ? JSON.parse(c.batches).length : 0) : 0),
+        }));
+        setVariantModal({ isOpen: true, baseProduct: opt.name || String(val), targetRowIndex: targetIndex, variants: mappedVariants, baseData: opt });
+        setSelectedVariants(null);
+      } else {
+        updateProductFields(targetIndex, {
+          inventory_id: opt.id,
+          variant_id: undefined,
+          name: opt.name || d.name || String(val),
+          costPrice: get("buy_price", get("costPrice")),
+          sellingPrice: get("sell_price", get("sellingPrice")),
+          taxGst: get("gst") !== undefined && get("gst") !== null && get("gst") !== "" ? parseInt(get("gst")) : 18,
+          sku: get("barcode", get("sku")),
+          unit: opt.unit_infos?.name || get("unit", "pc"),
+          unit_infos: opt.unit_infos || null,
+          selectedUnit: opt.unit_infos?.name || get("unit", "pc"),
+          category: opt.category_infos?.name || d?.category_infos?.name || get("category", opt.category_id),
+          batchTracking: hasBatchTracking,
+          serialTracking: hasSerialTracking,
+          existingSerials: existingSerials,
+          serialno_id: serialnoId,
+          hasVariants: false,
+          baseVariants: combinations,
+          reorderPoint: get("reorder_point") !== "" ? get("reorder_point") : undefined,
+          storageLoc: opt.storage_locations?.[0]?.name ?? opt.storage_locations?.[0]?.storage_location ?? opt.storage_location_infos?.name ?? opt.storage_location_infos?.storage_location ?? d?.storage_location_infos?.name ?? d?.storage_location_infos?.storage_location ?? get("storage_location") ?? get("location") ?? "",
+          brand: get("brand"),
+          gstInfo: get("gst") !== undefined && get("gst") !== null && get("gst") !== "" ? get("gst") + "%" : "18%"
+        });
 
-                                  if (hasBatchTracking && (type !== "PURCHASE" || purchaseType !== "PO_CREATE")) {
-                                    const batches = opt.batch_infos || opt.batches || d.batch_infos || d.batches || [];
-                                    setBatchModal({
-                                      isOpen: true,
-                                      rowIndex: targetIndex,
-                                      batches: Array.isArray(batches) ? batches : (typeof batches === 'string' ? JSON.parse(batches || "[]") : []),
-                                      productName: (opt.name || d.name || String(val || "")).split(" (")[0],
-                                      variantName: "",
-                                      existingSerials: existingSerials,
-                                      allowNewBatch: purchaseType !== 'PO_CREATE'
-                                    });
-                                  }
-                                }
-                              } else {
-                                handleProductChange(targetIndex, "name", String(val));
-                              }
-                            }
+        if (hasBatchTracking && (type !== "PURCHASE" || purchaseType !== "PO_CREATE")) {
+          const batches = opt.batch_infos || opt.batches || d.batch_infos || d.batches || [];
+          setBatchModal({
+            isOpen: true,
+            rowIndex: targetIndex,
+            batches: Array.isArray(batches) ? batches : (typeof batches === 'string' ? JSON.parse(batches || "[]") : []),
+            productName: (opt.name || d.name || String(val || "")).split(" (")[0],
+            variantName: "",
+            existingSerials: existingSerials,
+            allowNewBatch: purchaseType !== 'PO_CREATE'
+          });
+        }
+      }
+    } else {
+      handleProductChange(targetIndex, "name", String(val));
+    }
+  }
 
   return (
     <>
@@ -704,8 +704,8 @@ const executeProductSelect = async (targetIndex: number, val: any, initialOpt: a
                     type="button"
                     onClick={() => setGstMode("inclusive")}
                     className={`px-3 py-1 flex items-center justify-center rounded-md text-[10px] font-black uppercase tracking-wider transition-all duration-200 cursor-pointer h-7 ${gstMode === "inclusive"
-                        ? "bg-white text-blue-600 shadow-sm border border-slate-200/40"
-                        : "text-slate-500 hover:text-slate-700"
+                      ? "bg-white text-blue-600 shadow-sm border border-slate-200/40"
+                      : "text-slate-500 hover:text-slate-700"
                       }`}
                   >
                     Inclusive GST
@@ -714,8 +714,8 @@ const executeProductSelect = async (targetIndex: number, val: any, initialOpt: a
                     type="button"
                     onClick={() => setGstMode("exclusive")}
                     className={`px-3 py-1 flex items-center justify-center rounded-md text-[10px] font-black uppercase tracking-wider transition-all duration-200 cursor-pointer h-7 ${gstMode === "exclusive"
-                        ? "bg-white text-blue-600 shadow-sm border border-slate-200/40"
-                        : "text-slate-500 hover:text-slate-700"
+                      ? "bg-white text-blue-600 shadow-sm border border-slate-200/40"
+                      : "text-slate-500 hover:text-slate-700"
                       }`}
                   >
                     Exclusive GST
@@ -1045,6 +1045,11 @@ const executeProductSelect = async (targetIndex: number, val: any, initialOpt: a
                                   }
                                   handleProductChange(index, product.marginType === "percent" ? "marginPercent" : product.marginType === "amount" ? "marginAmount" : "sellingPrice", val);
                                 }}
+                                onBlur={(e) => {
+                                  if (isUpdate && e.target.value) {
+                                    showToast("New selling price applies to all existing stock", "info");
+                                  }
+                                }}
                                 className="!h-7 !text-[11px] !font-bold !w-full"
                                 placeholder={product.marginType === "sellingPrice" ? "Price" : "Margin"}
                               />
@@ -1164,18 +1169,11 @@ const executeProductSelect = async (targetIndex: number, val: any, initialOpt: a
                                     <Settings size={14} className="text-slate-500" />
                                     <span className="text-xs font-bold text-slate-800">Additional Settings</span>
                                   </div>
-                                  <div className="grid grid-cols-2 gap-3">
+                                  <div className="grid grid-cols-1 gap-3">
                                     <Input
                                       label="Storage Location"
                                       value={product.storageLoc}
                                       onChange={(e) => handleProductChange(index, "storageLoc", e.target.value)}
-                                      className="!h-9 !text-xs"
-                                    />
-                                    <Input
-                                      label="Reorder Threshold"
-                                      type="number"
-                                      value={product.reorderPoint as any}
-                                      onChange={(e) => handleProductChange(index, "reorderPoint", e.target.value ? Number(e.target.value) : "")}
                                       className="!h-9 !text-xs"
                                     />
                                   </div>

@@ -363,7 +363,7 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
                 : "text-blue-500 border-blue-400 border-2 hover:bg-blue-500 hover:text-white shadow-md shadow-slate-900/10 active:scale-97"
               }`}
           >
-            {isSubmitting ? "..." : "Generate Bill"}
+            {isSubmitting ? "..." : "Complete Bill"}
           </button>
 
           <button
@@ -374,7 +374,7 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
                 : "text-blue-500 border-blue-400 border-2 hover:bg-blue-500 hover:text-white shadow-lg shadow-blue-500/20 active:scale-97"
               }`}
           >
-            Generate Invoice
+            Complete Invoice
           </button>
         </div>
 
@@ -401,9 +401,9 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
         isOpen={showConfirmDialog}
         onClose={() => setShowConfirmDialog(false)}
         onConfirm={handleConfirmCheckout}
-        title="Generate Bill"
-        description={`Are you sure you want to generate a bill of ₹${formatPrice(finalAmount)}? This will complete and record the order.`}
-        confirmText="Generate"
+        title="Complete Bill"
+        description={`Are you sure you want to complete a bill of ₹${formatPrice(finalAmount)}? This will complete and record the order.`}
+        confirmText="Complete"
         cancelText="Cancel"
         loading={isSubmitting}
         type="info"

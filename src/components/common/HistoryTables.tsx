@@ -2,6 +2,7 @@ import { ArrowUp, ArrowDown, ShoppingCart, TrendingUp, RefreshCcw, FileText, Arr
 import { TypeBadge } from "@/components/common/SuperUI";
 import { useState, Fragment } from "react";
 import { createPortal } from "react-dom";
+import { AntBadge } from "@/components/ui/AntBadge";
 
 export function GroupedItemsDrawer({
   record,
@@ -71,16 +72,14 @@ export function GroupedItemsDrawer({
                   {(p.variant || p.batch || (p.serials && p.serials.length > 0)) && (
                     <div className="flex flex-wrap gap-1.5 pt-3 border-t border-slate-100">
                       {p.variant && (
-                        <div className="flex items-center gap-1 px-2 py-0.5 rounded border bg-violet-50 text-violet-700 border-violet-100">
-                          <Layers size={10} />
-                          <span className="text-[9px] font-bold">{getVariantName(p.variant)}</span>
-                        </div>
+                        <AntBadge variant="at-variant" type="tag" icon={<Layers size={10} />}>
+                          {getVariantName(p.variant)}
+                        </AntBadge>
                       )}
                       {p.batch && (
-                        <div className="flex items-center gap-1 px-2 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-100">
-                          <Hash size={10} />
-                          <span className="text-[9px] font-bold">{getBatchName(p.batch)}</span>
-                        </div>
+                        <AntBadge variant="at-batch" type="tag" icon={<Hash size={10} />}>
+                          {getBatchName(p.batch)}
+                        </AntBadge>
                       )}
                       {p.serials && p.serials.length > 0 && (
                         <div className="flex items-center gap-1 px-2 py-0.5 rounded border bg-emerald-50 text-emerald-700 border-emerald-100">
@@ -152,16 +151,16 @@ const RichProductDetails = ({ p }: { p: any }) => {
   return (
     <div className="flex flex-col mt-1 w-full max-w-sm">
       {p.variant_details && (
-        <div className="mt-1 pl-3 border-l-2 border-indigo-100 space-y-2.5">
-          <p className="text-[10px] font-extrabold text-indigo-750 bg-indigo-50/50 px-1.5 py-0.5 rounded w-fit">• {getVariantName(p.variant_details?.variant_name || p.variant)}</p>
+        <div className="mt-1 space-y-2.5">
+          <AntBadge variant="at-variant" type="tag">V: {getVariantName(p.variant_details?.variant_name || p.variant)}</AntBadge>
         </div>
       )}
       
       {p.batch_details && (
-        <div className="mt-1 pl-3 border-l-2 border-indigo-150 space-y-1.5">
+        <div className="mt-1 space-y-1.5">
           <div className="bg-slate-50 p-2 rounded border border-slate-100 w-full text-[10px] text-slate-650 shadow-sm">
             <div className="flex justify-between items-center font-bold">
-              <span className="text-slate-800">Batch: {p.batch_details.batch_name || p.batch || "Default"}</span>
+              <AntBadge variant="at-batch" type="tag">B: {p.batch_details.batch_name || p.batch || "Default"}</AntBadge>
               <span className="text-indigo-600">Qty: {p.receivedStocks ?? 0}</span>
             </div>
             {(p.batch_details.mfg_date || p.batch_details.exp_date) && (
@@ -304,8 +303,8 @@ export function StockMovementsTable({ rows, loading, onViewDetails }: StockMovem
                               </span>
                             )}
                             <div className="flex flex-wrap gap-1 mt-0.5 items-center">
-                              {(firstProd?.variant || r.variant) && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-violet-50 text-violet-700 border border-violet-100 truncate">V: {getVariantName(firstProd?.variant || r.variant)}</span>}
-                              {(firstProd?.batch || r.batch) && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-100 truncate">B: {getBatchName(firstProd?.batch || r.batch)}</span>}
+                              {(firstProd?.variant || r.variant) && <AntBadge variant="at-variant" type="tag">V: {getVariantName(firstProd?.variant || r.variant)}</AntBadge>}
+                              {(firstProd?.batch || r.batch) && <AntBadge variant="at-batch" type="tag">B: {getBatchName(firstProd?.batch || r.batch)}</AntBadge>}
                               {((firstProd?.serials || r.serials) && (firstProd?.serials || r.serials)!.length > 0) && (
                                 <div className="flex flex-wrap gap-1">
                                   <span className="text-[9px] text-slate-400 font-bold">SN: </span>
@@ -409,7 +408,6 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
                   <th className="px-5 py-3.5 text-center">Stock After</th>
                   <th className="px-5 py-3.5">Buy Price</th>
                   <th className="px-5 py-3.5">Sell Price</th>
-                  <th className="px-5 py-3.5">Type</th>
                   <th className="px-5 py-3.5">Payment</th>
                   <th className="px-5 py-3.5 w-12"></th>
                 </tr>
@@ -447,9 +445,9 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="text-[10px] font-black text-slate-400 font-mono">#{r.uiId}</span>
                             {(r.version || (r.datas && r.datas.version)) && (
-                              <span className="text-[9px] font-bold text-[var(--at-version-tx)] bg-[var(--at-version-bg)] border border-[var(--at-version-bd)] px-1.5 py-0.5 rounded-xl uppercase tracking-wider shrink-0">
+                              <AntBadge variant="meta-version" type="tag">
                                 {r.version || r.datas?.version}
-                              </span>
+                              </AntBadge>
                             )}
                           </div>
                         </td>
@@ -466,8 +464,8 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
                                 <RichProductDetails p={firstProd} />
                               ) : (
                                 <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
-                                  {(firstProd.variant || r.variant) && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-violet-50 text-violet-700 border border-violet-100 truncate">V: {getVariantName(firstProd.variant || r.variant)}</span>}
-                                  {(firstProd.batch || r.batch) && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-100 truncate">B: {getBatchName(firstProd.batch || r.batch)}</span>}
+                                  {(firstProd.variant || r.variant) && <AntBadge variant="at-variant" type="tag">V: {getVariantName(firstProd.variant || r.variant)}</AntBadge>}
+                                  {(firstProd.batch || r.batch) && <AntBadge variant="at-batch" type="tag">B: {getBatchName(firstProd.batch || r.batch)}</AntBadge>}
                                 </div>
                               )}
                               <button
@@ -488,8 +486,8 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
                                 <RichProductDetails p={firstProd} />
                               ) : (
                                 <>
-                                  {(firstProd.variant || r.variant) && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-violet-50 text-violet-700 border border-violet-100 truncate">V: {getVariantName(firstProd.variant || r.variant)}</span>}
-                                  {(firstProd.batch || r.batch) && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-100 truncate">B: {getBatchName(firstProd.batch || r.batch)}</span>}
+                                  {(firstProd.variant || r.variant) && <AntBadge variant="at-variant" type="tag">V: {getVariantName(firstProd.variant || r.variant)}</AntBadge>}
+                                  {(firstProd.batch || r.batch) && <AntBadge variant="at-batch" type="tag">B: {getBatchName(firstProd.batch || r.batch)}</AntBadge>}
                                   {!firstProd.variant && !r.variant && !firstProd.batch && !r.batch && <span className="text-slate-300">—</span>}
                                   {((firstProd.serials || r.serials) && (firstProd.serials || r.serials)!.length > 0) && (
                                     <div className="flex flex-wrap gap-1 mt-0.5">
@@ -514,16 +512,10 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
                           {totalStockAfterProd !== null ? totalStockAfterProd : '—'}
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap text-xs font-bold text-slate-700">
-                          {hasList ? '—' : `₹${firstProd.buyPrice ?? r.buyPrice ?? '—'}`}
+                          {hasList ? '—' : (firstProd.buyPrice ?? r.buyPrice) !== undefined ? `₹${Number(firstProd.buyPrice ?? r.buyPrice).toFixed(2).replace(/\.00$/, '')}` : '—'}
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap text-xs font-bold text-emerald-700">
-                          {hasList ? '—' : `₹${firstProd.sellPrice ?? r.sellPrice ?? '—'}`}
-                        </td>
-                        <td className="px-5 py-4 whitespace-nowrap">
-                          <TypeBadge 
-                            type={r.displayType} 
-                            icon={ArrowUp} 
-                          />
+                          {hasList ? '—' : (firstProd.sellPrice ?? r.sellPrice) !== undefined ? `₹${Number(firstProd.sellPrice ?? r.sellPrice).toFixed(2).replace(/\.00$/, '')}` : '—'}
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap">
                           <div className="flex flex-col gap-0.5">
@@ -644,9 +636,9 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="text-[10px] font-black text-slate-400 font-mono">#{r.uiId}</span>
                             {(r.version || (r.datas && r.datas.version)) && (
-                              <span className="text-[9px] font-bold text-[var(--at-version-tx)] bg-[var(--at-version-bg)] border border-[var(--at-version-bd)] px-1.5 py-0.5 rounded-xl uppercase tracking-wider shrink-0">
+                              <AntBadge variant="meta-version" type="tag">
                                 {r.version || r.datas?.version}
-                              </span>
+                              </AntBadge>
                             )}
                           </div>
                         </td>
@@ -663,8 +655,8 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                                 <RichProductDetails p={firstProd} />
                               ) : (
                                 <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
-                                  {(firstProd.variant || r.variant) && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-violet-50 text-violet-700 border border-violet-100 truncate">V: {getVariantName(firstProd.variant || r.variant)}</span>}
-                                  {(firstProd.batch || r.batch) && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-100 truncate">B: {getBatchName(firstProd.batch || r.batch)}</span>}
+                                  {(firstProd.variant || r.variant) && <AntBadge variant="at-variant" type="tag">V: {getVariantName(firstProd.variant || r.variant)}</AntBadge>}
+                                  {(firstProd.batch || r.batch) && <AntBadge variant="at-batch" type="tag">B: {getBatchName(firstProd.batch || r.batch)}</AntBadge>}
                                 </div>
                               )}
                               <button
@@ -688,8 +680,8 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                                 <RichProductDetails p={firstProd} />
                               ) : (
                                 <>
-                                  {(firstProd.variant || r.variant) && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-violet-50 text-violet-700 border border-violet-100 truncate">V: {getVariantName(firstProd.variant || r.variant)}</span>}
-                                  {(firstProd.batch || r.batch) && <span className="w-fit px-2 py-0.5 rounded-md text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-100 truncate">B: {getBatchName(firstProd.batch || r.batch)}</span>}
+                                  {(firstProd.variant || r.variant) && <AntBadge variant="at-variant" type="tag">V: {getVariantName(firstProd.variant || r.variant)}</AntBadge>}
+                                  {(firstProd.batch || r.batch) && <AntBadge variant="at-batch" type="tag">B: {getBatchName(firstProd.batch || r.batch)}</AntBadge>}
                                   {((firstProd.serials || r.serials) && (firstProd.serials || r.serials)!.length > 0) && (
                                     <div className="flex flex-wrap gap-1 mt-0.5">
                                       <span className="text-[9px] text-slate-400 font-bold">SN: </span>

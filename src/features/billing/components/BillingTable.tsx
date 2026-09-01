@@ -302,7 +302,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
         mappedVariants = sourceBatches.map((b: any) => ({
           id: b.id,
           isBatchOnly: true,
-          name: `Batch: ${b.batch_no || b.id.slice(0, 8)}`,
+          name: b.batch_name || b.name || b.batch || (b.batch_no ? `Batch: ${b.batch_no}` : `Batch: ${b.id.slice(0, 8)}`),
           price: b.pricing_infos?.sell_price || b.sell_price || fullProduct.pricing_infos?.sell_price || fullProduct.sell_price || 0,
           stock: b.stock_infos?.available_stocks || b.stocks || 0,
           serialnoId: b.serial_numbers?.id || b.serialno_infos?.[0]?.id || fullProduct.serialno_infos?.[0]?.id || fullProduct.serial_number?.id || fullProduct.serials?.id,

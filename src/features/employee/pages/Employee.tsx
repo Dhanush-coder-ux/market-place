@@ -356,7 +356,6 @@ export default function Employee() {
                     className="rounded border-slate-350 text-blue-605 focus:ring-blue-500/20 cursor-pointer"
                   />
                 </th>
-                <th className="px-4 py-3 text-[10px] font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">ID</th>
                 <th className="px-4 py-3 text-[10px] font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap min-w-[200px]">Employee Name</th>
                 <th className="px-4 py-3 text-[10px] font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">Status</th>
                 {selectedKeys.map(key => (
@@ -375,8 +374,6 @@ export default function Employee() {
                   const empId = String(emp.employee_id || emp.id);
                   const isSelected = selectedEmployees.has(empId);
 
-                  const displayId = emp.ui_id || (emp.employee_id ? String(emp.employee_id).slice(0, 8) : '') || (emp.id ? String(emp.id).slice(0, 8) : '');
-
                   return (
                     <tr
                       key={empId}
@@ -389,9 +386,6 @@ export default function Employee() {
                           onChange={() => toggleSelectEmployee(empId)}
                           className="rounded border-slate-350 text-blue-600 focus:ring-blue-500/20 cursor-pointer"
                         />
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-[11px] font-mono font-semibold text-slate-700">{displayId}</span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-3">

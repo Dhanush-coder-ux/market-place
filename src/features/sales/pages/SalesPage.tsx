@@ -170,7 +170,7 @@ const SalesListPage: React.FC = () => {
               <Receipt size={14} />
             </div>
             <div>
-              <p className="text-[12px] font-bold text-slate-800 leading-tight">#{selectedSale.ui_id}</p>
+              <p className="text-[12px] font-bold text-slate-800 leading-tight">{selectedSale.ui_id}</p>
               <p className="text-[10px] font-semibold text-slate-400 font-mono">
                 {selectedSale.customer?.customer_name || (selectedSale.customer_id ? (customerMap[selectedSale.customer_id] || selectedSale.customer_id) : "Walk in Customer")}
               </p>
@@ -612,7 +612,7 @@ const SalesListPage: React.FC = () => {
                   >
                     <td className="px-4 py-4 border-b border-slate-50">
                       <div>
-                        <span className="font-mono text-[11px] font-semibold text-slate-800 block">#{sale.ui_id}</span>
+                        <span className="font-mono text-[11px] font-semibold text-slate-800 block">{sale.ui_id}</span>
                         <div className="flex gap-1 mt-1 flex-wrap">
                           {sale.origin === "Offline Return" && <AntBadge variant="tx-sales-return" type="tag">Return</AntBadge>}
                           {hasReturns && <AntBadge variant="tx-sales-return" type="tag">Returned</AntBadge>}
@@ -776,7 +776,7 @@ const ReturnSearchPortal: React.FC<ReturnSearchPortalProps> = ({ isOpen, onClose
                   <div className="w-10 h-10 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-50 group-hover:border-blue-200 transition-colors"><Receipt size={18} className="text-slate-400 group-hover:text-blue-500" /></div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-0.5">
-                      <p className="text-[14px] font-black text-slate-900 group-hover:text-blue-600 transition-colors tracking-tight">Order #{sale.ui_id}</p>
+                      <p className="text-[14px] font-black text-slate-900 group-hover:text-blue-600 transition-colors tracking-tight">Order {sale.ui_id}</p>
                       <span className="font-mono text-[13px] font-black text-slate-900 group-hover:text-blue-700">{fmt(sale.total_sellprice)}</span>
                     </div>
                     <p className="text-[11px] text-slate-500 truncate font-bold uppercase tracking-tight opacity-70 group-hover:opacity-100">{sale.customer?.customer_name || customerMap[sale.customer_id] || sale.customer_id} {sale.customer?.customer_mobile_number ? `· ${sale.customer.customer_mobile_number}` : ''} · {sale.created_at.split('T')[0]}</p>

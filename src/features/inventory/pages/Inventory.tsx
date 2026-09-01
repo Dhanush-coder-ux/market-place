@@ -259,9 +259,8 @@ const CopySKUButton = ({ val }: { val: string }) => {
     <button
       type="button"
       onClick={handleCopy}
-      className={`inline-flex items-center justify-center p-0.5 rounded transition-all duration-205 ${
-        copied ? "text-emerald-500 bg-emerald-50" : "text-slate-350 hover:text-blue-600 hover:bg-slate-100/80"
-      }`}
+      className={`inline-flex items-center justify-center p-0.5 rounded transition-all duration-205 ${copied ? "text-emerald-500 bg-emerald-50" : "text-slate-350 hover:text-blue-600 hover:bg-slate-100/80"
+        }`}
       title="Copy SKU"
     >
       {copied ? (
@@ -334,7 +333,7 @@ const ProductRow = React.memo(
     const isExpandable = hasVariants || hasBatches || hasSerials;
 
     let stockNumber = calculateProductStock(item);
-    
+
     let sellPrice = (item as any).pricing_infos?.sell_price ?? item.sell_price;
     if (!hasVariants && hasBatches && (sellPrice === undefined || sellPrice === null)) {
       const firstBatch = batches[0];
@@ -357,8 +356,8 @@ const ProductRow = React.memo(
           const cDatas = c.datas || {};
           const cSerials = parseSerials(
             cDatas.serial_numbers ||
-              c.serial_numbers ||
-              (cDatas.datas && cDatas.datas.serial_numbers)
+            c.serial_numbers ||
+            (cDatas.datas && cDatas.datas.serial_numbers)
           );
           ts += cSerials.length;
           const cBatches = parseObjects(c.batches || c.batch_infos);
@@ -376,7 +375,7 @@ const ProductRow = React.memo(
 
     const badges: React.ReactNode[] = [];
 
-    
+
     if (hasVariants) {
       badges.push(
         <AntBadge key="var" variant="at-variant" type="tag" icon={<Layers size={9} />}>
@@ -384,7 +383,7 @@ const ProductRow = React.memo(
         </AntBadge>
       );
     }
-    
+
     const trackingInfo: any[] = [];
     if (!hasVariants) {
       if (totalBatches > 0) trackingInfo.push({ label: `${totalBatches} batches`, icon: Calendar, color: "coral", bg: "bg-[var(--at-batch-bg)]", text: "text-[var(--at-batch-tx)] border-[var(--at-batch-bd)]" });
@@ -402,9 +401,8 @@ const ProductRow = React.memo(
         <tr
           ref={innerRef}
           onClick={() => toggleExpand(item.id)}
-          className={`group border-b border-slate-200 transition-colors cursor-pointer ${
-            isSelected ? "bg-blue-50 border-l-2 border-l-blue-500" : isExpanded ? "bg-slate-50/70" : "hover:bg-slate-50/60"
-          }`}
+          className={`group border-b border-slate-200 transition-colors cursor-pointer ${isSelected ? "bg-blue-50 border-l-2 border-l-blue-500" : isExpanded ? "bg-slate-50/70" : "hover:bg-slate-50/60"
+            }`}
         >
           {/* Checkbox */}
           <td className="px-4 py-4 w-10 text-center" onClick={(e) => e.stopPropagation()}>
@@ -424,11 +422,10 @@ const ProductRow = React.memo(
                   e.stopPropagation();
                   toggleExpand(item.id);
                 }}
-                className={`w-5 h-5 mx-auto rounded flex items-center justify-center transition-colors ${
-                  isExpanded
+                className={`w-5 h-5 mx-auto rounded flex items-center justify-center transition-colors ${isExpanded
                     ? "bg-blue-600 text-white"
                     : "text-blue-300 hover:text-blue-500"
-                }`}
+                  }`}
               >
                 {isExpanded ? (
                   <ChevronDown size={12} />
@@ -502,11 +499,10 @@ const ProductRow = React.memo(
                       e.stopPropagation();
                       toggleExpand(item.id);
                     }}
-                    className={`mt-1 flex items-center gap-2 w-fit px-2 py-1.5 rounded-xl border transition-all ${
-                      isExpanded
+                    className={`mt-1 flex items-center gap-2 w-fit px-2 py-1.5 rounded-xl border transition-all ${isExpanded
                         ? "bg-slate-50 border-slate-200"
                         : "bg-white border-slate-200 hover:border-blue-300 shadow-sm"
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-1.5">
                       <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Tracking:</span>
@@ -603,7 +599,7 @@ const ProductRow = React.memo(
             </span>
           </td>
 
-          
+
 
           {/* Sell price */}
           <td className="px-4 py-4 text-right">
@@ -626,7 +622,7 @@ const ProductRow = React.memo(
             </AntBadge>
           </td>
 
-          
+
 
           {/* Reorder point */}
           <td className="px-4 py-4 text-center">
@@ -641,9 +637,9 @@ const ProductRow = React.memo(
               const sl = (item as any).storage_location_infos || (datas as any).storage_location_infos;
               let displayText = "—";
               if (sl && typeof sl === 'object' && Object.keys(sl).length > 0) {
-                 displayText = sl.name || sl.storage_location || sl.location || "—";
+                displayText = sl.name || sl.storage_location || sl.location || "—";
               } else if ((item as any).storage_location || (datas as any).storage_location) {
-                 displayText = (item as any).storage_location || (datas as any).storage_location;
+                displayText = (item as any).storage_location || (datas as any).storage_location;
               }
               return (
                 <span className="text-[12px] font-medium text-slate-700">
@@ -698,12 +694,12 @@ const ProductRow = React.memo(
                   <ActionMenuItem icon={<History size={13} />} onClick={() => { setIsMenuOpen(false); navigate(`/stock-movement`, { state: { product: item } }); }}>
                     Stock Movements
                   </ActionMenuItem>
-                  <ActionMenuItem icon={<Plus size={13} />} onClick={() => { 
-                    setIsMenuOpen(false); 
+                  <ActionMenuItem icon={<Plus size={13} />} onClick={() => {
+                    setIsMenuOpen(false);
                     if (hasVariants) {
                       setShowVariantModal(true);
                     } else {
-                      navigate(`/purchase/add`, { state: { product: item } }); 
+                      navigate(`/purchase/add`, { state: { product: item } });
                     }
                   }}>
                     Add Purchase
@@ -901,7 +897,7 @@ const InventoryPage = () => {
           setAnalyticsStats({ overview: { inventory: data } });
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [getData]);
 
   const handleBulkDelete = async () => {
@@ -958,14 +954,14 @@ const InventoryPage = () => {
       setBottomActions(null);
     }
   }, [selectedItems, setBottomActions, navigate]);
-  
+
   const activeFiltersCount = [
-    fromDate, 
-    toDate, 
+    fromDate,
+    toDate,
     stockStatus,
     Object.values(filtersState).some(v => v !== "All") ? "true" : ""
   ].filter(Boolean).length;
-  
+
   const resetFilters = () => {
     setFromDate("");
     setToDate("");
@@ -991,11 +987,11 @@ const InventoryPage = () => {
     if (filters.stockStatus) params.stock_status = filters.stockStatus;
 
     const res = await getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}`, params);
-    
+
     let itemsRaw: any[] = [];
     let fetchedStats = null;
     let total = 0;
-    
+
     if (res && res.data) {
       itemsRaw = Array.isArray(res.data) ? res.data : (res.data.inventories || res.data.datas || []);
       if (res.data.overall_stats) {
@@ -1027,7 +1023,7 @@ const InventoryPage = () => {
     filters,
     limit: 50
   });
-  
+
   const categories = useMemo(() => {
     const s = new Set(inventory.map((item: any) => item.category_infos?.name || item.datas?.category || item.category).filter(Boolean));
     return ["All", ...Array.from(s)];
@@ -1190,14 +1186,14 @@ const InventoryPage = () => {
             className="w-full h-8 pl-8 pr-3 text-[12px] font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-md placeholder:text-slate-400 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
           />
         </div>
-        <button 
+        <button
           onClick={() => setIsFilterOpen(true)}
           className={`h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0 ${activeFiltersCount > 0 ? "border-blue-200 text-blue-600 bg-blue-50/50" : "border-slate-200 text-slate-650 bg-white hover:bg-slate-50"}`}
         >
           <Filter size={13} />
           {activeFiltersCount > 0 && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />}
         </button>
-        
+
 
         {searchQuery && (
           <span className="text-[11px] text-slate-400 font-medium ml-1 shrink-0">
@@ -1206,11 +1202,11 @@ const InventoryPage = () => {
           </span>
         )}
       </div>
-      
+
       <RightSidebarFilter
         isOpen={isFilterOpen}
         onClose={() => setIsFilterOpen(false)}
-        onApply={() => {}}
+        onApply={() => { }}
         onClear={resetFilters}
         title="Inventory Filters"
       >
@@ -1235,23 +1231,23 @@ const InventoryPage = () => {
               />
             </div>
           </div>
-          
+
           <div className="space-y-1.5 pt-2">
             <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Stock Status</label>
             <div className="flex gap-2">
-              <button 
+              <button
                 onClick={() => setStockStatus("")}
                 className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${stockStatus === "" ? "border-slate-800 bg-slate-800 text-white" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
               >
                 All
               </button>
-              <button 
+              <button
                 onClick={() => setStockStatus("low")}
                 className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${stockStatus === "low" ? "border-amber-500 bg-amber-50 text-amber-700" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
               >
                 Low Stock
               </button>
-              <button 
+              <button
                 onClick={() => setStockStatus("out_of_stock")}
                 className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${stockStatus === "out_of_stock" ? "border-red-500 bg-red-50 text-red-700" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
               >
@@ -1299,19 +1295,19 @@ const InventoryPage = () => {
           <div className="space-y-1.5 pt-2">
             <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Visibility</label>
             <div className="flex gap-2">
-              <button 
+              <button
                 onClick={() => setFiltersState(prev => ({ ...prev, visibility: "All" }))}
                 className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${filtersState.visibility === "All" ? "border-slate-800 bg-slate-800 text-white" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
               >
                 All
               </button>
-              <button 
+              <button
                 onClick={() => setFiltersState(prev => ({ ...prev, visibility: "Online" }))}
                 className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${filtersState.visibility === "Online" ? "border-blue-500 bg-blue-50 text-blue-700" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
               >
                 Online
               </button>
-              <button 
+              <button
                 onClick={() => setFiltersState(prev => ({ ...prev, visibility: "Offline" }))}
                 className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${filtersState.visibility === "Offline" ? "border-slate-400 bg-slate-100 text-slate-700" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
               >

@@ -20,6 +20,7 @@ import { GradientButton } from "@/components/ui/GradientButton";
 import { useToast } from "@/context/ToastContext";
 import { InlineSerialManager } from "@/components/common/InlineSerialManager";
 import { useQuickCreate } from "@/features/common/QuickCreate/QuickCreateContext";
+import { AntBadge } from "@/components/ui/AntBadge";
 
 // ─── Inline Unit Selector ──────────────────────────────────────────────────────
 const UnitDropdown = ({
@@ -133,29 +134,9 @@ export const InventoryItemsCard = ({
 }: InventoryItemsCardProps) => {
   const [expandedBreakdown, setExpandedBreakdown] = useState<Set<number>>(new Set());
   const [expandedSettings, setExpandedSettings] = useState<Set<number>>(new Set());
-  const [autoExpanded, setAutoExpanded] = useState<Set<string>>(new Set());
 
   const { showToast } = useToast();
   const { openQuickCreate } = useQuickCreate();
-
-  useEffect(() => {
-    products.forEach((p, idx) => {
-      if (!p.id) return;
-      const needsDetails = p.batchTracking || p.serialTracking || !!p.storageLoc || p.reorderPoint !== undefined;
-      if (needsDetails && !autoExpanded.has(p.id)) {
-        setExpandedSettings(prev => {
-          const next = new Set(prev);
-          next.add(idx);
-          return next;
-        });
-        setAutoExpanded(prev => {
-          const next = new Set(prev);
-          next.add(p.id);
-          return next;
-        });
-      }
-    });
-  }, [products, autoExpanded]);
 
   const [variantModal, setVariantModal] = useState<{
     isOpen: boolean;
@@ -686,24 +667,24 @@ export const InventoryItemsCard = ({
 
       <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
         {/* Card Header */}
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className={`w-9 h-9 rounded-lg bg-${themeColor}-50 flex items-center justify-center text-${themeColor}-600 border border-${themeColor}-100`}>
-              <Package size={17} />
+        <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className={`w-8 h-8 rounded-lg bg-${themeColor}-50 flex items-center justify-center text-${themeColor}-600 border border-${themeColor}-100`}>
+              <Package size={16} />
             </div>
             <div>
               <h2 className="text-sm font-semibold text-slate-800">Inventory Items</h2>
-              <p className="text-[11px] text-slate-400 mt-0.5">Add products to this {typeText.toLowerCase()}</p>
+              <p className="text-[11px] text-slate-400">Add products to this {typeText.toLowerCase()}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
             {type === "PURCHASE" && gstMode && setGstMode && (
               <div className="flex flex-col items-end gap-1">
-                <div className="flex bg-slate-100 rounded-lg p-0.5 shrink-0 border border-slate-200/55 shadow-inner h-9 items-center select-none">
+                <div className="flex bg-slate-100 rounded-lg p-0.5 shrink-0 border border-slate-200/55 shadow-inner h-8 items-center select-none">
                   <button
                     type="button"
                     onClick={() => setGstMode("inclusive")}
-                    className={`px-3 py-1 flex items-center justify-center rounded-md text-[10px] font-black uppercase tracking-wider transition-all duration-200 cursor-pointer h-7 ${gstMode === "inclusive"
+                    className={`px-2.5 py-0.5 flex items-center justify-center rounded-md text-[10px] font-black uppercase tracking-wider transition-all duration-200 cursor-pointer h-6 ${gstMode === "inclusive"
                       ? "bg-white text-blue-600 shadow-sm border border-slate-200/40"
                       : "text-slate-500 hover:text-slate-700"
                       }`}
@@ -713,7 +694,7 @@ export const InventoryItemsCard = ({
                   <button
                     type="button"
                     onClick={() => setGstMode("exclusive")}
-                    className={`px-3 py-1 flex items-center justify-center rounded-md text-[10px] font-black uppercase tracking-wider transition-all duration-200 cursor-pointer h-7 ${gstMode === "exclusive"
+                    className={`px-2.5 py-0.5 flex items-center justify-center rounded-md text-[10px] font-black uppercase tracking-wider transition-all duration-200 cursor-pointer h-6 ${gstMode === "exclusive"
                       ? "bg-white text-blue-600 shadow-sm border border-slate-200/40"
                       : "text-slate-500 hover:text-slate-700"
                       }`}
@@ -737,7 +718,7 @@ export const InventoryItemsCard = ({
 
             <button
               onClick={addProduct}
-              className={`flex items-center gap-1.5 px-3.5 h-9 rounded-lg bg-${themeColor}-600 text-white text-[11px] font-medium shadow-sm hover:bg-${themeColor}-700 transition-all active:scale-95`}
+              className={`flex items-center gap-1.5 px-3 h-8 rounded-lg bg-${themeColor}-600 text-white text-[11px] font-medium shadow-sm hover:bg-${themeColor}-700 transition-all active:scale-95`}
             >
               <Plus size={14} />
               Add Item
@@ -746,19 +727,19 @@ export const InventoryItemsCard = ({
         </div>
 
         {/* Product Table */}
-        <div className="overflow-x-auto custom-scrollbar w-full" style={{ position: 'relative', minHeight: '300px' }}>
-          <table className="min-w-[1360px] w-full border-collapse whitespace-nowrap" style={{ tableLayout: 'fixed' }}>
+        <div className="overflow-x-auto custom-scrollbar w-full" style={{ position: 'relative' }}>
+          <table className="min-w-[1120px] w-full border-collapse whitespace-nowrap" style={{ tableLayout: 'fixed' }}>
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-200 sticky top-0 z-10">
-                <th className="py-4 px-6 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '60px' }}>#</th>
-                <th className="py-4 px-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '300px' }}>Item Description</th>
-                <th className="py-4 px-2 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '130px' }}>Qty / Unit</th>
-                <th className="py-4 px-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '180px' }}>{type === "PURCHASE" ? "Buy Price / Unit" : "Material Cost"}</th>
-                <th className="py-4 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '120px' }}>Subtotal</th>
-                <th className="py-4 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '110px' }}>Allocated</th>
-                <th className="py-4 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '110px' }}>Tax (GST)</th>
-                <th className="py-4 px-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '280px' }}>Pricing & Margin / Unit</th>
-                <th className="py-4 px-6 text-right text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '120px' }}>Actions</th>
+                <th className="py-2.5 px-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '45px' }}>#</th>
+                <th className="py-2.5 px-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '270px' }}>Item Description</th>
+                <th className="py-2.5 px-2 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '110px' }}>Qty / Unit</th>
+                <th className="py-2.5 px-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '160px' }}>{type === "PURCHASE" ? "Buy Price / Unit" : "Material Cost"}</th>
+                <th className="py-2.5 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '100px' }}>Subtotal</th>
+                <th className="py-2.5 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '90px' }}>Allocated</th>
+                <th className="py-2.5 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '85px' }}>Tax (GST)</th>
+                <th className="py-2.5 px-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '240px' }}>Pricing & Margin / Unit</th>
+                <th className="py-2.5 px-3 text-right text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '90px' }}>Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
@@ -796,7 +777,7 @@ export const InventoryItemsCard = ({
                   ? (((computedSellPrice - netCostForSp) / netCostForSp) * 100).toFixed(1)
                   : null;
 
-                const isExpanded = expandedSettings.has(index) || expandedBreakdown.has(index) || product.batchTracking || product.serialTracking || !!product.storageLoc || product.reorderPoint !== undefined;
+                const isExpanded = expandedSettings.has(index) || expandedBreakdown.has(index);
 
                 return (
                   <Fragment key={product.id}>
@@ -804,14 +785,14 @@ export const InventoryItemsCard = ({
                       className={`group transition-all hover:bg-slate-50/50 ${!hasProduct ? 'bg-slate-50/10' : ''}`}
                     >
                       {/* Index */}
-                      <td className="py-3 px-6 align-top">
+                      <td className="py-2.5 px-3 align-top">
                         <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-black ${hasProduct ? `bg-${themeColor}-600 text-white shadow-sm shadow-${themeColor}-200` : 'bg-slate-100 text-slate-400'}`}>
                           {index + 1}
                         </div>
                       </td>
 
                       {/* Product search */}
-                      <td className="py-3 px-2 align-top">
+                      <td className="py-2.5 px-2 align-top">
                         <div className="flex flex-col gap-1.5">
                           {(() => {
                             const handleProductSelect = (val: any, opt: any) => executeProductSelect(index, val, opt);;
@@ -843,14 +824,14 @@ export const InventoryItemsCard = ({
                           {hasProduct && (
                             <div className="flex flex-wrap items-center gap-1.5 px-1">
                               {product.variant && (
-                                <span className={`inline-flex items-center px-2 py-0.5 rounded bg-${themeColor}-50 text-${themeColor}-600 text-[9px] font-black border border-${themeColor}-100`}>
+                                <AntBadge variant="at-variant" type="tag" className="!text-[9px] !px-2 !py-0.5 !font-bold">
                                   {typeof product.variant === 'object' && product.variant !== null ? (product.variant.variant_name || product.variant.name) : product.variant}
-                                </span>
+                                </AntBadge>
                               )}
                               {product.sku && (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded bg-slate-100 text-slate-500 text-[9px] font-mono border border-slate-200">
+                                <AntBadge variant="lb-brand" type="tag" className="!text-[9px] !px-2 !py-0.5 !font-mono">
                                   {product.sku}
-                                </span>
+                                </AntBadge>
                               )}
                               {product.batchTracking && (
                                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-black border transition-all ${product.batchNum
@@ -873,24 +854,29 @@ export const InventoryItemsCard = ({
                                 </span>
                               )}
                               {product.taxGst !== undefined && product.taxGst !== null && (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded bg-pink-50 text-pink-700 text-[9px] font-black border border-pink-100">
+                                <AntBadge variant="lb-gst" type="tag" className="!text-[9px] !px-2 !py-0.5 !font-bold">
                                   GST: {product.taxGst}%
-                                </span>
+                                </AntBadge>
                               )}
                               {(product.reorderPoint !== undefined && product.reorderPoint !== null && product.reorderPoint !== "") && (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded bg-orange-50 text-orange-700 text-[9px] font-black border border-orange-100">
+                                <AntBadge variant="at-batch" type="tag" className="!text-[9px] !px-2 !py-0.5 !font-bold">
                                   Reorder: {product.reorderPoint}
-                                </span>
+                                </AntBadge>
+                              )}
+                              {product.storageLoc && (
+                                <AntBadge variant="at-variant" type="tag" className="!text-[9px] !px-2 !py-0.5 !font-bold">
+                                  Loc: {product.storageLoc}
+                                </AntBadge>
                               )}
                               {product.brand && (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded bg-teal-50 text-teal-700 text-[9px] font-black border border-teal-100">
+                                <AntBadge variant="lb-brand" type="tag" className="!text-[9px] !px-2 !py-0.5 !font-bold">
                                   Brand: {product.brand}
-                                </span>
+                                </AntBadge>
                               )}
                               {product.category && (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded bg-sky-50 text-sky-700 text-[9px] font-black border border-sky-100">
+                                <AntBadge variant="lb-store-online" type="tag" className="!text-[9px] !px-2 !py-0.5 !font-bold">
                                   Category: {product.category}
-                                </span>
+                                </AntBadge>
                               )}
                             </div>
                           )}
@@ -898,7 +884,7 @@ export const InventoryItemsCard = ({
                       </td>
 
                       {/* Qty / Unit */}
-                      <td className="py-3 px-2 align-top">
+                      <td className="py-2.5 px-2 align-top">
                         <div className="flex flex-col items-center justify-center gap-1.5">
                           <Input
                             type="number"
@@ -931,7 +917,7 @@ export const InventoryItemsCard = ({
                       </td>
 
                       {/* Buy Price */}
-                      <td className="py-3 px-2 align-top">
+                      <td className="py-2.5 px-2 align-top">
                         <div className="flex flex-col">
                           <div className="flex items-center gap-1.5">
                             <Input
@@ -967,7 +953,7 @@ export const InventoryItemsCard = ({
                       </td>
 
                       {/* Subtotal */}
-                      <td className="py-3 px-2 align-top">
+                      <td className="py-2.5 px-2 align-top">
                         <div className="flex flex-col">
                           <span className="text-xs font-black text-slate-800 tabular-nums">₹{rowTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                           {q > 0 && (
@@ -979,7 +965,7 @@ export const InventoryItemsCard = ({
                       </td>
 
                       {/* Allocated */}
-                      <td className="py-3 px-2 align-top">
+                      <td className="py-2.5 px-2 align-top">
                         <div className="h-9 flex items-center gap-1.5 flex-wrap">
                           <span className="text-xs font-black text-slate-800 tabular-nums">
                             ₹{allocTotal > 0 ? allocTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
@@ -993,7 +979,7 @@ export const InventoryItemsCard = ({
                       </td>
 
                       {/* Tax */}
-                      <td className="py-3 px-2 align-top">
+                      <td className="py-2.5 px-2 align-top">
                         <div className="flex flex-col">
                           <div className="relative flex items-center w-full w-20">
                             <input
@@ -1017,7 +1003,7 @@ export const InventoryItemsCard = ({
                       </td>
 
                       {/* Pricing & Margin */}
-                      <td className="py-3 px-2 align-top">
+                      <td className="py-2.5 px-2 align-top">
                         <div className="flex flex-col gap-1.5">
                           <div className="flex items-center gap-2">
                             <div className="flex bg-slate-100 rounded-lg p-0.5 shrink-0">
@@ -1071,7 +1057,7 @@ export const InventoryItemsCard = ({
                       </td>
 
                       {/* Actions */}
-                      <td className="py-3 px-6 align-top text-right">
+                      <td className="py-2.5 px-3 align-top text-right">
                         <div className="h-9 w-full flex items-center justify-end gap-1">
                           <button
                             onClick={() => toggleBreakdown(index)}
@@ -1164,7 +1150,7 @@ export const InventoryItemsCard = ({
                             {/* Row 2: Settings & Breakdown */}
                             <div className="flex gap-4">
                               {expandedSettings.has(index) && (
-                                <div className="flex-1 bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+                                <div className="w-64 max-w-xs bg-white p-4 rounded-lg border border-slate-200 shadow-sm shrink-0">
                                   <div className="flex items-center gap-2 mb-3">
                                     <Settings size={14} className="text-slate-500" />
                                     <span className="text-xs font-bold text-slate-800">Additional Settings</span>
@@ -1174,6 +1160,7 @@ export const InventoryItemsCard = ({
                                       label="Storage Location"
                                       value={product.storageLoc}
                                       onChange={(e) => handleProductChange(index, "storageLoc", e.target.value)}
+                                      placeholder="e.g. Rack A1"
                                       className="!h-9 !text-xs"
                                     />
                                   </div>
@@ -1269,12 +1256,12 @@ export const InventoryItemsCard = ({
         </div>
 
         {/* Add another row */}
-        <div className="p-4 bg-slate-50/50 border-t border-slate-100">
+        <div className="p-2.5 bg-slate-50/50 border-t border-slate-100">
           <button
             onClick={addProduct}
-            className="w-full group flex items-center justify-center gap-2 px-6 py-3 rounded-lg border-2 border-dashed border-slate-200 text-slate-400 hover:border-slate-300 hover:text-slate-600 hover:bg-white transition-all duration-200"
+            className="w-full group flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-dashed border-slate-200 text-slate-400 hover:border-slate-300 hover:text-slate-600 hover:bg-white transition-all duration-200"
           >
-            <Plus size={15} className="group-hover:rotate-90 transition-transform duration-200" />
+            <Plus size={14} className="group-hover:rotate-90 transition-transform duration-200" />
             <span className="text-xs font-bold">Add Another Item</span>
           </button>
         </div>

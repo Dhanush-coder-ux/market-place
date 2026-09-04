@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Mail, Pencil, User, MapPin, Phone, Trash2,
-  Store, Database, AlertCircle, Layers, Check, X as XIcon, ArrowUp, ArrowDown
+  Store, Database, AlertCircle, Layers, Check, X as XIcon, ArrowUp, ArrowDown, Search
 } from "lucide-react";
 import {
   SectionCard, DetailItem, InfoRow, Modal,
@@ -95,6 +95,7 @@ export default function SupplierDetail() {
   // Cleared History state
   const [clearedHistory, setClearedHistory] = useState<any[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [ledgerSearch, setLedgerSearch] = useState("");
 
   // Clear Outstanding Purchases state
   const [showClearModal, setShowClearModal] = useState(false);
@@ -674,28 +675,65 @@ export default function SupplierDetail() {
           })()}
         </div>
 
-          {activeTab === 2 && (
-            <div className="space-y-4 animate-in fade-in duration-300 h-full overflow-y-auto">
-              <SectionCard title="Outstanding Cleared History" className="p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200">
-                        <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Date</th>
-                        <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Ref / Invoice No</th>
-                        <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Cleared Amount</th>
-                        <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Invoice Outstanding</th>
-                        <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Payment Mode</th>
-                        <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Notes</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {historyLoading ? (
-                        <tr><td colSpan={6} className="p-8 text-center text-slate-400 text-sm font-semibold">Loading history...</td></tr>
-                      ) : clearedHistory.length === 0 ? (
-                        <tr><td colSpan={6} className="p-8 text-center text-slate-400 text-sm font-semibold">No cleared records found.</td></tr>
-                      ) : (
-                        clearedHistory.map((h, i) => {
+          {activeTab === 2 && (() => {
+            const filteredHistory = clearedHistory.filter((h) => {
+              if (!ledgerSearch.trim()) return true;
+              const q = ledgerSearch.toLowerCase();
+              const refOrInvoice = String(h.reference_no || h.invoice_no || h.ref_no || h.entity_id || "").toLowerCase();
+              const notes = String(h.notes || "").toLowerCase();
+              const method = String(h.payment_method || h.method || "").toLowerCase();
+              const amount = String(h.cleared_amount ?? h.amount ?? "").toLowerCase();
+              return refOrInvoice.includes(q) || notes.includes(q) || method.includes(q) || amount.includes(q);
+            });
+
+            return (
+              <div className="space-y-4 animate-in fade-in duration-300 h-full overflow-y-auto">
+                <div className="flex items-center justify-between gap-3 bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
+                  <div className="relative flex-1 max-w-sm">
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      value={ledgerSearch}
+                      onChange={(e) => setLedgerSearch(e.target.value)}
+                      placeholder="Search invoice no., ref no., payment mode..."
+                      className="w-full pl-9 pr-8 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
+                    />
+                    {ledgerSearch && (
+                      <button
+                        onClick={() => setLedgerSearch("")}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        <XIcon size={12} />
+                      </button>
+                    )}
+                  </div>
+                  <span className="text-[11px] font-bold text-slate-500 bg-slate-50 border border-slate-100 px-2.5 py-1 rounded-md">
+                    {filteredHistory.length} Recorded Payment{filteredHistory.length !== 1 ? 's' : ''}
+                  </span>
+                </div>
+
+                <SectionCard title="Outstanding Cleared History" className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-slate-200">
+                          <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Date</th>
+                          <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Ref / Invoice No</th>
+                          <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Cleared Amount</th>
+                          <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Invoice Outstanding</th>
+                          <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Payment Mode</th>
+                          <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Notes</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {historyLoading ? (
+                          <tr><td colSpan={6} className="p-8 text-center text-slate-400 text-sm font-semibold">Loading history...</td></tr>
+                        ) : filteredHistory.length === 0 ? (
+                          <tr><td colSpan={6} className="p-8 text-center text-slate-400 text-sm font-semibold">
+                            {ledgerSearch ? `No records found matching "${ledgerSearch}".` : "No cleared records found."}
+                          </td></tr>
+                        ) : (
+                          filteredHistory.map((h, i) => {
                           const isRefund = h.type === 'PURCHASE_RETURN' || h.type === 'REFUND' || h.notes?.toLowerCase().includes('refund');
                           return (
                             <tr key={h.id || i} className="hover:bg-slate-50/50 transition-colors">
@@ -731,7 +769,8 @@ export default function SupplierDetail() {
                 </div>
               </SectionCard>
             </div>
-          )}
+          );
+        })()}
 
         {/* Modal: View Full Value */}
         <Modal

@@ -9,6 +9,28 @@ const formatDate = (dateStr?: string) => {
   return new Date(dateStr).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
+const getDaysDiff = (dateStr?: string) => {
+  if (!dateStr) return null;
+  const expDate = new Date(dateStr);
+  if (isNaN(expDate.getTime())) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  expDate.setHours(0, 0, 0, 0);
+  const diffTime = expDate.getTime() - today.getTime();
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+};
+
+const formatExpiryBadgeInfo = (dateStr?: string) => {
+  if (!dateStr) return { text: '—', variant: 'ps-draft' };
+  const formatted = formatDate(dateStr);
+  const days = getDaysDiff(dateStr);
+  if (days === null) return { text: `Exp: ${formatted}`, variant: 'ps-completed' };
+  if (days < 0) return { text: `Expired (${Math.abs(days)}d ago)`, variant: 'ps-cancelled' };
+  if (days === 0) return { text: `Exp: Today (${formatted})`, variant: 'stk-low-stock' };
+  if (days <= 30) return { text: `Exp: ${formatted} (${days}d left)`, variant: 'stk-low-stock' };
+  return { text: `Exp: ${formatted} (${days}d left)`, variant: 'ps-completed' };
+};
+
 interface ProductSelectionModalProps {
   isOpen: boolean;
   product: InventoryItem | null;
@@ -509,9 +531,14 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                                 <span className="text-xs font-medium text-slate-400">Stock: {batchStock} units</span>
                                 {(batch.expiry_date || batch.expiryDate) && (
                                   <div className="flex items-center">
-                                    <AntBadge variant="ps-completed" type="tag">
-                                      Exp: {formatDate(batch.expiry_date || batch.expiryDate)}
-                                    </AntBadge>
+                                    {(() => {
+                                      const info = formatExpiryBadgeInfo(batch.expiry_date || batch.expiryDate);
+                                      return (
+                                        <AntBadge variant={info.variant} type="tag">
+                                          {info.text}
+                                        </AntBadge>
+                                      );
+                                    })()}
                                   </div>
                                 )}
                               </div>
@@ -761,9 +788,14 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                           )}
                           {(selectedBatch.expiry_date || selectedBatch.expiryDate) && (
                             <div className="flex items-center">
-                              <AntBadge variant="ps-completed" type="tag">
-                                Exp: {formatDate(selectedBatch.expiry_date || selectedBatch.expiryDate)}
-                              </AntBadge>
+                              {(() => {
+                                const info = formatExpiryBadgeInfo(selectedBatch.expiry_date || selectedBatch.expiryDate);
+                                return (
+                                  <AntBadge variant={info.variant} type="tag">
+                                    {info.text}
+                                  </AntBadge>
+                                );
+                              })()}
                             </div>
                           )}
                         </div>

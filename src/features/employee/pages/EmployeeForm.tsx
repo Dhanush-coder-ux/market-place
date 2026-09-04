@@ -170,6 +170,7 @@ const EmployeeForm = () => {
       role: formData.role,
       mobile_number: formData.mobile_number,
       joined_date: formData.joinDate,
+      department: "STAFF",
     };
     
     const nestedData = {

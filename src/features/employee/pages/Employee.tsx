@@ -108,7 +108,6 @@ export default function Employee() {
               }
             });
           }
-          keys.add("department");
           keys.add("joined_date");
         });
         const sortedKeys = Array.from(keys).sort();
@@ -188,15 +187,12 @@ export default function Employee() {
         const email = emp.email || "";
         const mobile = emp.mobile_number || "";
         const role = emp.role || "";
-        const dept = emp.department || "";
-        const id = emp.ui_id || emp.id || "";
-        
+        const empId = emp.ui_id || emp.id || "";
         return name.toLowerCase().includes(q) ||
                email.toLowerCase().includes(q) ||
                mobile.toLowerCase().includes(q) ||
                role.toLowerCase().includes(q) ||
-               dept.toLowerCase().includes(q) ||
-               id.toLowerCase().includes(q) ||
+               empId.toLowerCase().includes(q) ||
                (emp.employee_id || "").toLowerCase().includes(q);
       });
     }
@@ -279,7 +275,7 @@ export default function Employee() {
           <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
           <input
             type="text"
-            placeholder="Search employee name, department…"
+            placeholder="Search employee name, role…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full h-8 pl-8 pr-3 text-[12px] font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-md placeholder:text-slate-400 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"

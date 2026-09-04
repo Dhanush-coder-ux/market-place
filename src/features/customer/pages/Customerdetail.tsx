@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import {
   Mail, Pencil, User, Phone, Trash2,
   CreditCard, Database, MapPin, Tag, FileText, Banknote,
-  Layers, Check, X as XIcon
+  Layers, Check, X as XIcon, Search
 } from "lucide-react";
 import {
   fmt, SectionCard, FormInput, FormTextarea
@@ -110,6 +110,7 @@ export default function CustomerDetail() {
   const [viewValue, setViewValue] = useState<{ label: string, value: string } | null>(null);
   const [clearingHistory, setClearingHistory] = useState<any[]>([]);
   const [clearingLoading, setClearingLoading] = useState(false);
+  const [ledgerSearch, setLedgerSearch] = useState("");
   const [customerOrders, setCustomerOrders] = useState<any[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [, setStats] = useState<any>(null);
@@ -603,106 +604,141 @@ export default function CustomerDetail() {
             )}
 
             {/* TAB 2 — Payment Ledger */}
-            {activeTab === 2 && (
-              <div className="flex flex-col flex-1 min-h-0 h-full gap-3">
-                {/* Action Row */}
-                <div className="flex justify-between items-center bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
-                  <div className="flex items-center gap-2">
-                    <span className="px-2.5 py-1 bg-slate-50 border border-slate-100 rounded-md text-[10px] font-black text-slate-500">
-                      {clearingHistory.length} Recorded Payments
-                    </span>
-                  </div>
-                  <button 
-                    disabled={Number(customer.outstanding_infos?.amount ?? customer.outstanding ?? datas.outstanding_balance ?? 0) <= 0}
-                    onClick={() => {
-                      setShowPayment(true);
-                    }}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black transition-all shadow-md active:scale-95 ${
-                      Number(customer.outstanding_infos?.amount ?? customer.outstanding ?? datas.outstanding_balance ?? 0) > 0
-                        ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-100"
-                        : "bg-slate-50 text-slate-400 cursor-not-allowed border border-slate-200 shadow-none"
-                    }`}
-                  >
-                    <Banknote size={12} />
-                    RECORD PAYMENT
-                  </button>
-                </div>
+            {activeTab === 2 && (() => {
+              const filteredClearingHistory = clearingHistory.filter((h) => {
+                if (!ledgerSearch.trim()) return true;
+                const q = ledgerSearch.toLowerCase();
+                const addInfos = h.additional_infos || {};
+                const invoiceStr = String(addInfos.invoice_no || h.invoice_no || h.entity_id || "").toLowerCase();
+                const notes = String(h.notes || "").toLowerCase();
+                const paymentInfos = h.payment_infos || [];
+                const methods = paymentInfos.map((p: any) => String(p.method || "").toLowerCase()).join(" ");
+                const amounts = paymentInfos.map((p: any) => String(p.amount || "").toLowerCase()).join(" ");
+                const clearedAmt = String(addInfos.cleared_amount ?? addInfos.paid_amount ?? 0).toLowerCase();
+                return invoiceStr.includes(q) || notes.includes(q) || methods.includes(q) || amounts.includes(q) || clearedAmt.includes(q);
+              });
 
-                <div className="space-y-4 animate-in fade-in duration-300 h-full overflow-y-auto">
-                  <SectionCard title="Outstanding Cleared History" className="p-0">
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left border-collapse">
-                        <thead>
-                          <tr className="bg-slate-50 border-b border-slate-200">
-                            <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase whitespace-nowrap tracking-wider">Invoice / Ref No</th>
-                            <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase whitespace-nowrap tracking-wider">Payment Date</th>
-                            <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase whitespace-nowrap tracking-wider">Cleared Amount</th>
-                            <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase whitespace-nowrap tracking-wider">Balance Transition</th>
-                            <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase whitespace-nowrap tracking-wider">Payment Breakdown</th>
-                            <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase whitespace-nowrap tracking-wider">Notes</th>
-                            <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase whitespace-nowrap tracking-wider text-right">Status</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {clearingLoading ? (
-                            <tr><td colSpan={7} className="p-8 text-center text-slate-400 text-sm font-semibold">Loading history...</td></tr>
-                          ) : clearingHistory.length === 0 ? (
-                            <tr><td colSpan={7} className="p-8 text-center text-slate-400 text-sm font-semibold">No cleared records found.</td></tr>
-                          ) : (
-                            clearingHistory.map((h, i) => {
-                              const addInfos = h.additional_infos || {};
-                              const clearedAmount = addInfos.cleared_amount ?? addInfos.paid_amount ?? 0;
-                              const outBefore = addInfos.outstanding_before ?? h.cleared_infos?.outstanding_before ?? 0;
-                              const outAfter = addInfos.outstanding_after ?? h.cleared_infos?.outstanding_after ?? 0;
-                              const paymentInfos = h.payment_infos || [];
-                              const invoiceStr = addInfos.invoice_no || h.invoice_no || "";
-
-                              return (
-                                <tr key={h.id || i} className="hover:bg-slate-50/50 transition-colors">
-                                  <td className="px-4 py-3 text-xs font-black text-indigo-600 whitespace-nowrap font-mono">
-                                    {invoiceStr ? `#${invoiceStr}` : `#${h.entity_id || "—"}`}
-                                  </td>
-                                  <td className="px-4 py-3 text-xs font-bold text-slate-600 whitespace-nowrap">
-                                    {h.created_at || h.date ? new Date(h.created_at || h.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
-                                  </td>
-                                  <td className="px-4 py-3 text-sm font-black whitespace-nowrap text-slate-800">
-                                    ₹{Number(clearedAmount).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-                                  </td>
-                                  <td className="px-4 py-3 text-xs font-black text-slate-700 whitespace-nowrap">
-                                    <div className="flex items-center gap-2">
-                                      <span className="opacity-80">₹{Number(outBefore).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
-                                      <span className="text-slate-400 text-[10px]">➔</span>
-                                      <span className="text-emerald-600">₹{Number(outAfter).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
-                                    </div>
-                                  </td>
-                                  <td className="px-4 py-3 whitespace-nowrap">
-                                    <div className="flex flex-wrap gap-1">
-                                      {paymentInfos.map((p: any, idx: number) => (
-                                        <span key={idx} className="text-[9px] font-black px-2 py-0.5 rounded text-slate-500 bg-slate-100 border border-slate-200">
-                                          {p.method} ₹{Number(p.amount).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  </td>
-                                  <td className="px-4 py-3 text-[10px] font-medium text-slate-500 max-w-[150px] truncate" title={h.notes}>
-                                    {h.notes || "—"}
-                                  </td>
-                                  <td className="px-4 py-3 whitespace-nowrap text-right">
-                                    <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100/50">
-                                      Cleared
-                                    </span>
-                                  </td>
-                                </tr>
-                              );
-                            })
-                          )}
-                        </tbody>
-                      </table>
+              return (
+                <div className="flex flex-col flex-1 min-h-0 h-full gap-3">
+                  {/* Action Row with Search */}
+                  <div className="flex justify-between items-center bg-white p-3 rounded-lg border border-slate-100 shadow-sm gap-3">
+                    <div className="flex items-center gap-3 flex-1">
+                      <span className="px-2.5 py-1 bg-slate-50 border border-slate-100 rounded-md text-[10px] font-black text-slate-500 shrink-0">
+                        {filteredClearingHistory.length} Recorded Payment{filteredClearingHistory.length !== 1 ? 's' : ''}
+                      </span>
+                      <div className="relative flex-1 max-w-sm">
+                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input
+                          type="text"
+                          value={ledgerSearch}
+                          onChange={(e) => setLedgerSearch(e.target.value)}
+                          placeholder="Search invoice no, order/ref ID, payment mode..."
+                          className="w-full pl-9 pr-8 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
+                        />
+                        {ledgerSearch && (
+                          <button
+                            onClick={() => setLedgerSearch("")}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                          >
+                            <XIcon size={12} />
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </SectionCard>
+                    <button 
+                      disabled={Number(customer.outstanding_infos?.amount ?? customer.outstanding ?? datas.outstanding_balance ?? 0) <= 0}
+                      onClick={() => {
+                        setShowPayment(true);
+                      }}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black transition-all shadow-md active:scale-95 shrink-0 ${
+                        Number(customer.outstanding_infos?.amount ?? customer.outstanding ?? datas.outstanding_balance ?? 0) > 0
+                          ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-100"
+                          : "bg-slate-50 text-slate-400 cursor-not-allowed border border-slate-200 shadow-none"
+                      }`}
+                    >
+                      <Banknote size={12} />
+                      RECORD PAYMENT
+                    </button>
+                  </div>
+
+                  <div className="space-y-4 animate-in fade-in duration-300 h-full overflow-y-auto">
+                    <SectionCard title="Outstanding Cleared History" className="p-0">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="bg-slate-50 border-b border-slate-200">
+                              <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase whitespace-nowrap tracking-wider">Invoice / Ref No</th>
+                              <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase whitespace-nowrap tracking-wider">Payment Date</th>
+                              <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase whitespace-nowrap tracking-wider">Cleared Amount</th>
+                              <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase whitespace-nowrap tracking-wider">Balance Transition</th>
+                              <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase whitespace-nowrap tracking-wider">Payment Breakdown</th>
+                              <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase whitespace-nowrap tracking-wider">Notes</th>
+                              <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase whitespace-nowrap tracking-wider text-right">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {clearingLoading ? (
+                              <tr><td colSpan={7} className="p-8 text-center text-slate-400 text-sm font-semibold">Loading history...</td></tr>
+                            ) : filteredClearingHistory.length === 0 ? (
+                              <tr><td colSpan={7} className="p-8 text-center text-slate-400 text-sm font-semibold">
+                                {ledgerSearch ? `No records found matching "${ledgerSearch}".` : "No cleared records found."}
+                              </td></tr>
+                            ) : (
+                              filteredClearingHistory.map((h, i) => {
+                                const addInfos = h.additional_infos || {};
+                                const clearedAmount = addInfos.cleared_amount ?? addInfos.paid_amount ?? 0;
+                                const outBefore = addInfos.outstanding_before ?? h.cleared_infos?.outstanding_before ?? 0;
+                                const outAfter = addInfos.outstanding_after ?? h.cleared_infos?.outstanding_after ?? 0;
+                                const paymentInfos = h.payment_infos || [];
+                                const invoiceStr = addInfos.invoice_no || h.invoice_no || "";
+
+                                return (
+                                  <tr key={h.id || i} className="hover:bg-slate-50/50 transition-colors">
+                                    <td className="px-4 py-3 text-xs font-black text-indigo-600 whitespace-nowrap font-mono">
+                                      {invoiceStr ? `#${invoiceStr}` : `#${h.entity_id || "—"}`}
+                                    </td>
+                                    <td className="px-4 py-3 text-xs font-bold text-slate-600 whitespace-nowrap">
+                                      {h.created_at || h.date ? new Date(h.created_at || h.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                                    </td>
+                                    <td className="px-4 py-3 text-sm font-black whitespace-nowrap text-slate-800">
+                                      ₹{Number(clearedAmount).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                                    </td>
+                                    <td className="px-4 py-3 text-xs font-black text-slate-700 whitespace-nowrap">
+                                      <div className="flex items-center gap-2">
+                                        <span className="opacity-80">₹{Number(outBefore).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
+                                        <span className="text-slate-400 text-[10px]">➔</span>
+                                        <span className="text-emerald-600">₹{Number(outAfter).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span>
+                                      </div>
+                                    </td>
+                                    <td className="px-4 py-3 whitespace-nowrap">
+                                      <div className="flex flex-wrap gap-1">
+                                        {paymentInfos.map((p: any, idx: number) => (
+                                          <span key={idx} className="text-[9px] font-black px-2 py-0.5 rounded text-slate-500 bg-slate-100 border border-slate-200">
+                                            {p.method} ₹{Number(p.amount).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </td>
+                                    <td className="px-4 py-3 text-[10px] font-medium text-slate-500 max-w-[150px] truncate" title={h.notes}>
+                                      {h.notes || "—"}
+                                    </td>
+                                    <td className="px-4 py-3 whitespace-nowrap text-right">
+                                      <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100/50">
+                                        Cleared
+                                      </span>
+                                    </td>
+                                  </tr>
+                                );
+                              })
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </SectionCard>
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
 
 

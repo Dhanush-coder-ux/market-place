@@ -35,6 +35,28 @@ const formatDate = (dateStr?: string) => {
   if (!dateStr) return '—';
   return new Date(dateStr).toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
 };
+
+const getDaysDiff = (dateStr?: string) => {
+  if (!dateStr) return null;
+  const expDate = new Date(dateStr);
+  if (isNaN(expDate.getTime())) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  expDate.setHours(0, 0, 0, 0);
+  const diffTime = expDate.getTime() - today.getTime();
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+};
+
+const formatExpiryBadgeInfo = (dateStr?: string) => {
+  if (!dateStr) return { text: '—', variant: 'ps-draft' };
+  const formatted = formatDate(dateStr);
+  const days = getDaysDiff(dateStr);
+  if (days === null) return { text: `EXP: ${formatted}`, variant: 'ps-completed' };
+  if (days < 0) return { text: `Expired (${Math.abs(days)}d ago)`, variant: 'ps-cancelled' };
+  if (days === 0) return { text: `EXP: Today (${formatted})`, variant: 'stk-low-stock' };
+  if (days <= 30) return { text: `EXP: ${formatted} (${days}d left)`, variant: 'stk-low-stock' };
+  return { text: `EXP: ${formatted} (${days}d left)`, variant: 'ps-completed' };
+};
 // Smart price formatter: shows enough decimal places so tiny sub-unit prices never round to 0
 const formatPrice = (amount: number) => {
   if (amount === 0) return "0.00";
@@ -857,9 +879,14 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                         )}
                         {item.batchTracking && item.expiryDate && (
                           <div className="flex items-center">
-                            <AntBadge variant="ps-completed" type="tag">
-                              EXP: {formatDate(item.expiryDate)}
-                            </AntBadge>
+                            {(() => {
+                              const info = formatExpiryBadgeInfo(item.expiryDate);
+                              return (
+                                <AntBadge variant={info.variant} type="tag">
+                                  {info.text}
+                                </AntBadge>
+                              );
+                            })()}
                           </div>
                         )}
                       </div>

@@ -13,7 +13,7 @@ export const SCHEMAS = {
   stock_adjustment_create: ['shop_id', 'products'],
   stock_adjustment_update: ['id', 'shop_id', 'type'],
   
-  employee_create: ['shop_id', 'name', 'role', 'joined_date', 'mobile_number', 'email', 'department'],
+  employee_create: ['shop_id', 'name', 'role', 'joined_date', 'mobile_number', 'email'],
   employee_update: ['id', 'shop_id'],
   employee_delete: ['id', 'shop_id'],
   

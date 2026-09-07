@@ -320,6 +320,44 @@ export const InventoryItemsCard = ({
 
 
   const executeProductSelect = async (targetIndex: number, val: any, initialOpt: any) => {
+    // When product selection is cleared / cancelled (X button clicked on SearchSelect)
+    if (!val && !initialOpt) {
+      updateProductFields(targetIndex, {
+        inventory_id: undefined,
+        variant_id: undefined,
+        name: "",
+        variant: undefined,
+        costPrice: "",
+        sellingPrice: "",
+        marginPercent: "",
+        marginAmount: "",
+        marginType: "percent",
+        taxGst: 18,
+        sku: "",
+        unit: "pc",
+        unit_infos: null,
+        selectedUnit: "pc",
+        category: "",
+        batchTracking: false,
+        serialTracking: false,
+        existingSerials: [],
+        serialno_id: undefined,
+        batch_id: undefined,
+        batchNum: "",
+        batchNumReadOnly: false,
+        reorderPoint: undefined,
+        storageLoc: "",
+        brand: "",
+        gstInfo: "18%",
+        hasVariants: false,
+        baseVariants: [],
+        serialNumbers: "",
+        manufacturingDate: "",
+        expiryDate: "",
+      });
+      return;
+    }
+
     if (initialOpt) {
       let opt = initialOpt;
       // Always fetch full details if ID exists, because search API only returns a partial object
@@ -503,8 +541,40 @@ export const InventoryItemsCard = ({
           });
         }
       }
-    } else {
-      handleProductChange(targetIndex, "name", String(val));
+    } else if (val) {
+      updateProductFields(targetIndex, {
+        inventory_id: undefined,
+        variant_id: undefined,
+        name: String(val),
+        variant: undefined,
+        costPrice: "",
+        sellingPrice: "",
+        marginPercent: "",
+        marginAmount: "",
+        marginType: "percent",
+        taxGst: 18,
+        sku: "",
+        unit: "pc",
+        unit_infos: null,
+        selectedUnit: "pc",
+        category: "",
+        batchTracking: false,
+        serialTracking: false,
+        existingSerials: [],
+        serialno_id: undefined,
+        batch_id: undefined,
+        batchNum: "",
+        batchNumReadOnly: false,
+        reorderPoint: undefined,
+        storageLoc: "",
+        brand: "",
+        gstInfo: "18%",
+        hasVariants: false,
+        baseVariants: [],
+        serialNumbers: "",
+        manufacturingDate: "",
+        expiryDate: "",
+      });
     }
   }
 

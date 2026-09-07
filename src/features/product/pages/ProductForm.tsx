@@ -959,7 +959,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
           uploadFormData.append("files", file);
         });
         try {
-          await apiClient.postFormData("/inventories/inventories/upload/images", uploadFormData);
+          await apiClient.postFormData("/inventories/upload/images", uploadFormData);
           showToast("Images uploaded successfully", "success");
         } catch (uploadErr) {
           console.error("Failed to upload images:", uploadErr);

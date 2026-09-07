@@ -6,6 +6,7 @@ import {
   CheckCircle2, XCircle, LayoutGrid, List,
   Tag, Loader2,
   MoreVertical, ChevronDown, Sliders, GripVertical, Trash2,
+  ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { inventoryApi, inventoryCustomFieldsApi } from "../../../services/api/inventory";
 import { SHOP_ID } from "../../../services/endpoints";
@@ -454,6 +455,11 @@ const ProductDashboard = () => {
   const [statusFilter, setStatusFilter] = useState<"All" | "Visible" | "Hidden">("All");
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
 
+  // Pagination State
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(20);
+  const [hasMore, setHasMore] = useState(true);
+
   // Custom Field / Edit Modal State
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [customValues, setCustomValues] = useState<Record<string, string>>({});
@@ -480,10 +486,14 @@ const ProductDashboard = () => {
   const { showToast } = useToast();
 
   // Load Products
-  const loadProducts = async () => {
+  const loadProducts = async (currentPage = 1, currentLimit = limit) => {
     try {
       setLoading(true);
-      const res = await inventoryApi.getInventoriesByShop(SHOP_ID, { active: "true" });
+      const res = await inventoryApi.getInventoriesByShop(SHOP_ID, { 
+        active: "true",
+        limit: currentLimit.toString(),
+        offset: currentPage.toString()
+      });
       const rawList = Array.isArray(res?.data)
         ? res.data
         : (res?.data?.inventories ?? (Array.isArray(res?.datas) ? res.datas : (res?.datas?.inventories ?? [])));
@@ -557,6 +567,13 @@ const ProductDashboard = () => {
           raw: p,
         };
       });
+      
+      if (rawList.length < currentLimit) {
+        setHasMore(false);
+      } else {
+        setHasMore(true);
+      }
+
       setProducts(mapped);
     } catch (err: any) {
       console.error(err);
@@ -566,7 +583,27 @@ const ProductDashboard = () => {
     }
   };
 
-  useEffect(() => { loadProducts(); }, []);
+  useEffect(() => { loadProducts(1, limit); }, []);
+
+  const handlePrevPage = () => {
+    if (page <= 1 || loading) return;
+    const prevPage = page - 1;
+    setPage(prevPage);
+    loadProducts(prevPage, limit);
+  };
+
+  const handleNextPage = () => {
+    if (!hasMore || loading) return;
+    const nextPage = page + 1;
+    setPage(nextPage);
+    loadProducts(nextPage, limit);
+  };
+
+  const handleLimitChange = (newLimit: number) => {
+    setLimit(newLimit);
+    setPage(1);
+    loadProducts(1, newLimit);
+  };
 
   const categoriesList = useMemo(() => {
     const cats = new Set<string>();
@@ -896,6 +933,46 @@ const ProductDashboard = () => {
               </div>
             </div>
           )}
+
+          {/* ── Pagination Controls ── */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 px-4 py-3 bg-white rounded-xl border border-slate-200 shadow-sm">
+            <div className="flex items-center gap-3 text-xs text-slate-500">
+              <span>Rows per page:</span>
+              <select
+                value={limit}
+                onChange={(e) => handleLimitChange(Number(e.target.value))}
+                className="px-2.5 py-1 border border-slate-200 rounded-lg font-semibold text-slate-700 bg-white hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+              <span className="text-slate-400 border-l border-slate-200 pl-3">
+                Showing {products.length} products on Page {page}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handlePrevPage}
+                disabled={page <= 1 || loading}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+              >
+                <ChevronLeft size={14} /> Previous
+              </button>
+              <span className="text-xs font-bold text-slate-700 px-2.5 py-1 bg-slate-100 rounded-md min-w-[32px] text-center">
+                {page}
+              </span>
+              <button
+                onClick={handleNextPage}
+                disabled={!hasMore || loading}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
+              >
+                Next <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
         </>
       )}
 

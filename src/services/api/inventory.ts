@@ -7,18 +7,18 @@
  * Custom fields: /inventory-fields (gateway rewrites → /custom-fields on port 8000)
  *
  * ── Product + Inventory CRUD ─────────────────────────────────────────────────
- *   POST   /inventories/inventories              — Create product+inventory
- *   PUT    /inventories/inventories              — Update product+inventory
- *   DELETE /inventories/inventories/{shop_id}/{id} — Delete product+inventory
- *   GET    /inventories/inventories              — Get all (admin)
- *   GET    /inventories/inventories/by/shop/{shop_id} — Get by shop
- *   GET    /inventories/inventories/by/id/{shop_id}/{id} — Get by id
+ *   POST   /inventories              — Create product+inventory
+ *   PUT    /inventories              — Update product+inventory
+ *   DELETE /inventories/{shop_id}/{id} — Delete product+inventory
+ *   GET    /inventories              — Get all (admin)
+ *   GET    /inventories/by/shop/{shop_id} — Get by shop
+ *   GET    /inventories/by/id/{shop_id}/{id} — Get by id
  *
  * ── Stock Reservations ───────────────────────────────────────────────────────
- *   POST   /inventories/inventories/reservations/reserve       — Reserve stock
- *   POST   /inventories/inventories/reservations/release       — Release all
- *   POST   /inventories/inventories/reservations/release-item  — Release one item
- *   POST   /inventories/inventories/reservations/commit        — Commit
+ *   POST   /inventories/reservations/reserve       — Reserve stock
+ *   POST   /inventories/reservations/release       — Release all
+ *   POST   /inventories/reservations/release-item  — Release one item
+ *   POST   /inventories/reservations/commit        — Commit
  *
  * ── Custom Fields (via gateway rewrite) ──────────────────────────────────────
  *   POST   /inventory-fields              → /custom-fields       — Create field def
@@ -46,7 +46,7 @@ import type {
   InventoryCustomFieldValue,
 } from '../../features/inventory/types';
 
-const INV = ENDPOINTS.INVENTORIES;       // "/inventories/inventories"
+const INV = ENDPOINTS.INVENTORIES;       // "/inventories"
 const CF = ENDPOINTS.INVENTORY_CUSTOM_FIELDS; // "/inventory-fields"
 
 // ─── Custom Field Interface Re-exports (for convenience) ─────────────────────
@@ -59,7 +59,7 @@ export const inventoryApi = {
 
   /**
    * Create a new product with inventory.
-   * Backend: POST /inventories/inventories
+   * Backend: POST /inventories
    * Payload: CreateProdInvSchema — requires shop_id, category_id, unit_id,
    *          name, description, type_infos, have_tracking.
    *          Optional: barcode, buy_price, sell_price, gst, reorder_point,
@@ -73,7 +73,7 @@ export const inventoryApi = {
 
   /**
    * Update an existing product+inventory.
-   * Backend: PUT /inventories/inventories
+   * Backend: PUT /inventories
    * Payload: UpdateProdInvSchema — requires id + shop_id; all others optional.
    */
   updateInventory: async (data: UpdateInventoryPayload) => {
@@ -84,7 +84,7 @@ export const inventoryApi = {
 
   /**
    * Delete a product+inventory.
-   * Backend: DELETE /inventories/inventories/{shop_id}/{id}
+   * Backend: DELETE /inventories/{shop_id}/{id}
    */
   deleteInventory: async (shopId: string, id: string) => {
     console.log('Delete Inventory:', shopId, id);
@@ -95,7 +95,7 @@ export const inventoryApi = {
 
   /**
    * Get all inventories (admin, not shop-scoped).
-   * Backend: GET /inventories/inventories
+   * Backend: GET /inventories
    * Params: query, limit, offset, active, include_serialno
    */
   getAllInventories: async (params?: {
@@ -110,7 +110,7 @@ export const inventoryApi = {
 
   /**
    * Get inventories for a specific shop — main list endpoint.
-   * Backend: GET /inventories/inventories/by/shop/{shop_id}
+   * Backend: GET /inventories/by/shop/{shop_id}
    * Params: query, limit, offset, active, include_serialno
    */
   getInventoriesByShop: async (shopId: string, params?: {
@@ -125,7 +125,7 @@ export const inventoryApi = {
 
   /**
    * Get a single product+inventory by id.
-   * Backend: GET /inventories/inventories/by/id/{shop_id}/{id}
+   * Backend: GET /inventories/by/id/{shop_id}/{id}
    * Params: include_serialno, active
    */
   getInventoryById: async (shopId: string, id: string, params?: {
@@ -198,7 +198,7 @@ export const inventoryApi = {
 
   /**
    * Reserve stock for a product (called internally during cart workflow).
-   * Backend: POST /inventories/inventories/reservations/reserve
+   * Backend: POST /inventories/reservations/reserve
    */
   reserveStock: async (data: ReserveStockPayload) => {
     return await apiClient.post(`${INV}/reservations/reserve`, data);
@@ -206,7 +206,7 @@ export const inventoryApi = {
 
   /**
    * Release ALL reservations for a session.
-   * Backend: POST /inventories/inventories/reservations/release
+   * Backend: POST /inventories/reservations/release
    */
   releaseReservations: async (data: ReleaseReservationsPayload) => {
     return await apiClient.post(`${INV}/reservations/release`, data);
@@ -214,7 +214,7 @@ export const inventoryApi = {
 
   /**
    * Release a single item's reservation from a session.
-   * Backend: POST /inventories/inventories/reservations/release-item
+   * Backend: POST /inventories/reservations/release-item
    */
   releaseReservationItem: async (data: ReleaseReservationItemPayload) => {
     return await apiClient.post(`${INV}/reservations/release-item`, data);
@@ -222,7 +222,7 @@ export const inventoryApi = {
 
   /**
    * Commit all reservations for a session (finalizes stock changes).
-   * Backend: POST /inventories/inventories/reservations/commit
+   * Backend: POST /inventories/reservations/commit
    */
   commitReservations: async (data: CommitReservationsPayload) => {
     return await apiClient.post(`${INV}/reservations/commit`, data);

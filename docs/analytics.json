@@ -2629,6 +2629,48 @@
         }
       }
     },
+    "/analytics-dashboard/resync": {
+      "get": {
+        "tags": [
+          "Unified Analytics Dashboard"
+        ],
+        "summary": "Resync Shop",
+        "operationId": "resync_shop_analytics_dashboard_resync_get",
+        "parameters": [
+          {
+            "name": "shop_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Shop Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/analytics-dashboard/sync": {
       "post": {
         "tags": [
@@ -2831,6 +2873,18 @@
             ],
             "title": "Is Active"
           },
+          "have_tracking": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Have Tracking",
+            "default": true
+          },
           "stocks": {
             "anyOf": [
               {
@@ -2866,6 +2920,17 @@
             ],
             "title": "No Stocks",
             "default": 0
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
           }
         },
         "type": "object",
@@ -3085,6 +3150,30 @@
               }
             ],
             "title": "Sales Amounts",
+            "default": 0
+          },
+          "cost_amounts": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Amounts",
+            "default": 0
+          },
+          "profit_amounts": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profit Amounts",
             "default": 0
           },
           "sales_type": {

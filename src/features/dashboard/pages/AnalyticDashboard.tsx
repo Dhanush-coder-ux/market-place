@@ -15,6 +15,51 @@ import { useBusinessApi } from "../../../context/BusinessApiContext";
 import { ENDPOINTS, SHOP_ID } from "../../../services/endpoints";
 import { ReusableSelect } from "../../../components/ui/ReusableSelect";
 
+// ── TYPES ────────────────────────────────────────────────────────────────────
+
+interface UnifiedDashboardResponse {
+  product?: any;
+  supplier?: any;
+  customer?: any;
+  overview?: {
+    supplier?: any;
+    customer?: any;
+    purchase?: {
+      total_purchase?: number;
+      total_purchase_amounts?: number;
+      total_purchase_stocks?: number;
+      total_outstanding_amounts?: number;
+    };
+    inventory?: any;
+    stock_adjustment?: any;
+    sales?: {
+      total_sales?: number;
+      total_sales_amounts?: number;
+      total_cost?: number;
+      total_profit?: number;
+      total_sales_stocks?: number;
+      total_online_sales?: number;
+      total_online_sales_amount?: number;
+      total_offline_sales?: number;
+      total_offline_sales_amount?: number;
+    };
+  };
+  dashboard?: any;
+  trends?: {
+    suppliers?: any[];
+    customers?: any[];
+    purchases?: any[];
+    stock_adjustments?: any[];
+    sales?: any[];
+  };
+  inventory?: any;
+  top?: {
+    top_suppliers?: any[];
+    top_customers?: any[];
+    top_products?: any[];
+  };
+}
+
 // ── HELPERS ──────────────────────────────────────────────────────────────────
 
 const fmt = (n: number | undefined | null) => {
@@ -71,6 +116,8 @@ const PAYMENT_COLORS: Record<string, string> = {
   CARD: "#8b5cf6",
   CREDIT: "#f59e0b",
   ONLINE: "#06b6d4",
+  Online: "#3b82f6",
+  Offline: "#10b981",
 };
 const DEFAULT_COLOR = "#94a3b8";
 
@@ -83,7 +130,7 @@ const AnalyticsDashboard = () => {
   const [activeRange, setActiveRange] = useState<RangeKey>("month");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<UnifiedDashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -180,23 +227,24 @@ const AnalyticsDashboard = () => {
   }, [fetchStats, activeRange, customStart, customEnd, selectedSupplier, selectedCategory]);
 
   // ── Derived metrics ──
-  const salesOverall = stats?.dashboard?.sales?.overall ?? stats?.overview?.sales ?? stats?.sales ?? {};
-  const purchaseOverall = stats?.purchase ?? stats?.dashboard?.purchase?.overall ?? stats?.overview?.purchase ?? {};
+  const salesOverall = stats?.overview?.sales ?? {};
+  const purchaseOverall = stats?.overview?.purchase ?? {};
 
   const totalOrders = salesOverall.total_sales ?? 0;
   const netRevenue = salesOverall.total_sales_amounts ?? 0;
 
   const totalCost = selectedSupplier && stats?.supplier
     ? (stats.supplier.total_purchase_amounts ?? 0)
-    : (purchaseOverall.total_purchase_amounts ?? 0);
+    : (salesOverall.total_cost ?? purchaseOverall.total_purchase_amounts ?? 0);
 
   const totalPurchaseCount = purchaseOverall.total_purchase ?? 0;
   const totalPurchaseStocks = purchaseOverall.total_purchase_stocks ?? 0;
   const totalPurchaseOutstanding = purchaseOverall.total_outstanding_amounts ?? 0;
 
-  const totalProfit = Math.max(0, netRevenue - totalCost);
+  const totalProfit = salesOverall.total_profit ?? Math.max(0, netRevenue - totalCost);
   const aov = totalOrders > 0 ? netRevenue / totalOrders : 0;
   const grossMargin = netRevenue > 0 ? (totalProfit / netRevenue) * 100 : 0;
+  
   const totalReturnsValue = 0;
   const totalReturnsCount = 0;
   const totalExchangesCount = 0;
@@ -230,22 +278,24 @@ const AnalyticsDashboard = () => {
 
   // Format daily trend for chart
   const dailyTrend = useMemo(() => {
-    const salesTrend = stats?.dashboard?.sales?.trend || stats?.trends?.sales || [];
-    const purchaseTrend = stats?.dashboard?.purchase?.trend || stats?.trends?.purchases || [];
+    const salesTrend = stats?.trends?.sales || [];
+    const purchaseTrend = stats?.trends?.purchases || [];
     const map: Record<string, any> = {};
 
     salesTrend.forEach((s: any) => {
       const date = s._id || s.date || "";
+      if (!date) return;
       map[date] = {
         date,
         revenue: s.total_sales_amounts || 0,
         orders: s.total_sales || 0,
-        profit: s.total_sales_amounts || 0,
+        profit: s.total_profit || (s.total_sales_amounts || 0) - (s.total_cost || 0),
       };
     });
 
     purchaseTrend.forEach((p: any) => {
       const date = p._id || p.date || "";
+      if (!date) return;
       if (!map[date]) {
         map[date] = {
           date,
@@ -254,8 +304,10 @@ const AnalyticsDashboard = () => {
           profit: 0,
         };
       }
-      const cost = p.total_purchase_amounts || 0;
-      map[date].profit = Math.max(0, map[date].revenue - cost);
+      if (map[date].revenue === 0) {
+        const cost = p.total_purchase_amounts || 0;
+        map[date].profit = Math.max(0, map[date].revenue - cost);
+      }
     });
 
     return Object.values(map).sort((a: any, b: any) => a.date.localeCompare(b.date));
@@ -269,16 +321,27 @@ const AnalyticsDashboard = () => {
   }));
 
   const paymentBreakdown = useMemo(() => {
+    const onlineAmount = stats?.overview?.sales?.total_online_sales_amount ?? 0;
+    const offlineAmount = stats?.overview?.sales?.total_offline_sales_amount ?? 0;
+    const onlineCount = stats?.overview?.sales?.total_online_sales ?? 0;
+    const offlineCount = stats?.overview?.sales?.total_offline_sales ?? 0;
+
+    if (onlineAmount === 0 && offlineAmount === 0) {
+      return [
+        { method: "Offline", total: 0, count: 0 },
+        { method: "Online", total: 0, count: 0 }
+      ];
+    }
+
     return [
-      { method: "UPI", total: netRevenue * 0.6, count: Math.ceil(totalOrders * 0.6) },
-      { method: "CASH", total: netRevenue * 0.3, count: Math.ceil(totalOrders * 0.3) },
-      { method: "CARD", total: netRevenue * 0.1, count: Math.ceil(totalOrders * 0.1) }
+      { method: "Offline", total: offlineAmount, count: offlineCount },
+      { method: "Online", total: onlineAmount, count: onlineCount }
     ];
-  }, [netRevenue, totalOrders]);
+  }, [stats]);
 
   const salesByCategory = useMemo(() => {
     const categoriesMap: Record<string, number> = {};
-    const products = stats?.dashboard?.inventory?.top_products || stats?.top?.top_products || [];
+    const products = stats?.top?.top_products || [];
     products.forEach((p: any) => {
       const prodDetail = productsList.find((item: any) => item.id === p.product_id);
       const cat = prodDetail?.category_infos?.name || prodDetail?.datas?.category_infos?.name || "General";
@@ -288,18 +351,18 @@ const AnalyticsDashboard = () => {
   }, [stats, productsList]);
 
   const topProducts = useMemo(() => {
-    const products = stats?.dashboard?.inventory?.top_products || stats?.top?.top_products || [];
+    const products = stats?.top?.top_products || [];
     return products.map((p: any) => ({
       inventory_id: p.product_id,
       name: productNameMap[p.product_id] || p.product_name || "Unknown Product",
       total_revenue: p.total_sales_amounts || 0,
       total_qty: p.total_sales_stocks || 0,
-      total_profit: (p.total_sales_amounts || 0) * 0.2, // estimated 20% profit margin
+      total_profit: null,
     }));
   }, [stats, productNameMap]);
 
   const topSuppliers = useMemo(() => {
-    const supps = stats?.dashboard?.supplier?.top_suppliers || stats?.top?.top_suppliers || [];
+    const supps = stats?.top?.top_suppliers || [];
     return supps.map((s: any) => ({
       supplier_id: s.supplier_id,
       id: s.supplier_id,

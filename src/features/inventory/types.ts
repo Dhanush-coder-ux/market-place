@@ -89,7 +89,7 @@ export interface UpdateProdInvVariant {
 // ─── Create / Update Request Payloads ────────────────────────────────────────
 
 /**
- * CreateProdInvSchema — payload for POST /inventories/inventories
+ * CreateProdInvSchema — payload for POST /inventories
  * All fields except shop_id, category_id, unit_id, name, description, type_infos, have_tracking are optional.
  */
 export interface CreateInventoryPayload {
@@ -116,7 +116,7 @@ export interface CreateInventoryPayload {
 }
 
 /**
- * UpdateProdInvSchema — payload for PUT /inventories/inventories
+ * UpdateProdInvSchema — payload for PUT /inventories
  * id + shop_id are required; all other fields are optional.
  */
 export interface UpdateInventoryPayload {

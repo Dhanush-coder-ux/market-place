@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { Package, Trash2, Barcode, Search, Plus, Minus, RotateCcw } from "lucide-react";
+import { Package, Trash2, Barcode, Search, Plus, Minus, RotateCcw, Layers, Hash, Zap, Tag } from "lucide-react";
 import { AntBadge } from "@/components/ui/AntBadge";
 import { v4 as uuidv4 } from "uuid";
 import { BillingItem, ProductVariant } from "../types";
@@ -860,14 +860,14 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-[13px] font-bold text-slate-800 truncate leading-snug">{baseName}</p>
                         {variantName && (
-                          <span className="text-[8px] font-extrabold text-indigo-650 bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-100 uppercase tracking-wide leading-none">
+                          <AntBadge variant="lb-variant" type="tag" icon={<Layers size={10} className="mr-1 inline" />}>
                             {variantName}
-                          </span>
+                          </AntBadge>
                         )}
                         {item.gst !== undefined && (
-                          <span className="text-[8px] font-extrabold text-blue-650 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-100 uppercase tracking-wide leading-none">
+                          <AntBadge variant="lb-gst" type="tag" icon={<Tag size={10} className="mr-1 inline" />}>
                             GST {item.gst}%
-                          </span>
+                          </AntBadge>
                         )}
                       </div>
 
@@ -876,6 +876,11 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                           <span className="text-[9px] font-mono font-bold text-slate-400 bg-slate-50 border border-slate-100 px-1.5 py-0.5 rounded leading-none">
                             {item.code}
                           </span>
+                        )}
+                        {item.batchId && (
+                          <AntBadge variant="lb-batch" type="tag" icon={<Hash size={10} className="mr-1 inline" />}>
+                            {item.batchId}
+                          </AntBadge>
                         )}
                         {item.batchTracking && item.expiryDate && (
                           <div className="flex items-center">
@@ -895,9 +900,9 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                       {item.serialNumbers && item.serialNumbers.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1.5">
                           {item.serialNumbers.map((s, idx) => (
-                            <span key={idx} className="text-[9px] font-bold text-blue-650 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded">
+                            <AntBadge key={idx} variant="lb-serial" type="tag" icon={<Zap size={10} className="mr-1 inline" />}>
                               SN: {s}
-                            </span>
+                            </AntBadge>
                           ))}
                         </div>
                       )}

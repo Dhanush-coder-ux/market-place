@@ -1344,7 +1344,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                   <div className="pf-section-enter space-y-4">
                     <div className="grid grid-cols-3 gap-4">
                       <InputField
-                        label="MRP"
+                        label="Sell price"
                         name="mrp"
                         hint="optional"
                         type="number"
@@ -1414,7 +1414,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         tooltip="Your estimated recipe / production cost."
                       />
                       <InputField
-                        label="MRP"
+                        label="Sell price"
                         name="mrp"
                         hint="optional"
                         type="number"

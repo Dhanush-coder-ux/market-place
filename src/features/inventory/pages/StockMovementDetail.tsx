@@ -22,6 +22,13 @@ function fmtShortDate(dateStr: string) {
   return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
 }
 
+const formatStockValue = (val: number | null | undefined) => {
+  if (val === null || val === undefined || isNaN(Number(val))) return '—';
+  const n = Number(val);
+  if (Math.abs(n % 1) < 0.0001) return Math.round(n).toString();
+  return Number(n.toFixed(2)).toString();
+};
+
 function ProductDetailsList({ prod }: { prod: any }) {
   const variantObj = prod.variant_infos || prod.variant;
   const batchObj = prod.batch_infos || prod.batch;
@@ -48,7 +55,7 @@ function ProductDetailsList({ prod }: { prod: any }) {
           <div className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md text-[10px] text-slate-650 shadow-sm">
             <div className="flex justify-between items-center font-bold">
               <span className="text-slate-800 flex items-center gap-1"><Tag size={10} /> Batch: {batchObj.batch_name || batchObj.name || "Default"}</span>
-              <span className="text-blue-600">Qty: {Math.abs(Number(prod.stocks_adjusted || prod.stock_infos?.stocks || 0))}</span>
+              <span className="text-blue-600">Qty: {formatStockValue(Math.abs(Number(prod.stocks_adjusted || prod.stock_infos?.stocks || 0)))}</span>
             </div>
             {(batchObj.mfg_date || batchObj.exp_date || batchObj.manufacturing_date || batchObj.expiry_date) && (
               <div className="flex gap-3 text-[9px] text-slate-400 mt-1 font-medium">
@@ -254,11 +261,11 @@ const StockMovementDetail = () => {
                           </td>
                           <td className="px-4 py-4 font-black text-xl tabular-nums text-center align-top pt-3 border-x border-slate-50 bg-slate-50/20">
                             <span className={isDec ? "text-rose-600" : "text-emerald-600"}>
-                              {isDec ? "-" : "+"}{qty}
+                              {isDec ? "-" : "+"}{formatStockValue(qty)}
                             </span>
                           </td>
                           <td className="px-4 py-4 font-bold text-blue-600 text-center align-top pt-4 tabular-nums">
-                            {sAfter !== null ? sAfter : "—"}
+                            {sAfter !== null ? formatStockValue(sAfter) : "—"}
                           </td>
                         </tr>
                       );

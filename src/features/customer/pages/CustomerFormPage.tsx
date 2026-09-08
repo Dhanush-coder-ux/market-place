@@ -6,7 +6,6 @@ import {
   Mail,
   Phone,
   MapPin,
-  Tag,
   CreditCard,
   DollarSign,
   Bookmark,
@@ -391,33 +390,8 @@ const CustomerFormPage = () => {
             </div>
           </div>
 
-          {/* BOX 2: STATUS & TYPE (Spans 2 cols) */}
-          <div className="lg:col-span-2 bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md h-full">
-            <div className="px-6 py-4 bg-gradient-to-r from-amber-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600">
-                <Tag size={18} />
-              </div>
-              <h2 className="text-xs font-bold text-slate-800  ">Classification</h2>
-            </div>
-            <div className="p-8 space-y-6">
-
-              <ReusableSelect
-                key={`type-${id || searchParams.get("draftId") || "new"}-${formData.customer_type}`}
-                label="Customer Category"
-                value={formData.customer_type}
-                onValueChange={(val) => handleSelectChange("customer_type", val)}
-                options={[
-                  { label: "Normal", value: "Normal" },
-                  { label: "Premium", value: "Premium" },
-                  { label: "Wholesale", value: "Wholesale" },
-                ]}
-                placeholder="Category"
-              />
-            </div>
-          </div>
-
-          {/* BOX 6: BILLING ADDRESS (Spans 2 cols) */}
-          <div className="lg:col-span-2 bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md h-full">
+          {/* BOX 6: BILLING ADDRESS (Spans 3 cols) */}
+          <div className="lg:col-span-3 bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md h-full">
             <div className="px-6 py-4 bg-gradient-to-r from-emerald-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600">
                 <MapPin size={18} />
@@ -459,8 +433,8 @@ const CustomerFormPage = () => {
             </div>
           </div>
 
-          {/* BOX 7: CREDIT & NOTES (Spans 2 cols) */}
-          <div className="lg:col-span-2 bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md h-full flex flex-col">
+          {/* BOX 7: CREDIT & NOTES (Spans 3 cols) */}
+          <div className="lg:col-span-3 bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md h-full flex flex-col">
             <div className="px-6 py-4 bg-gradient-to-r from-rose-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center text-rose-600">
                 <CreditCard size={18} />

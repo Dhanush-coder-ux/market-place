@@ -823,7 +823,7 @@ const ProductDetail = () => {
 
               const dateStr = isNewFormat ? p.purchase_date : (pd.date || p.created_at);
               const supplierName = isNewFormat ? p.supplier?.supplier_name : d.supplier_name;
-              const uiId = isNewFormat ? p.purchase_id.split('-')[0].toUpperCase() : p.ui_id;
+              const uiId = p.ui_id || d.ui_id || (isNewFormat ? p.purchase_id : p.id);
 
               const productsList: any[] = [];
               (p.items ?? p.products ?? []).forEach((prod: any) => {
@@ -933,7 +933,7 @@ const ProductDetail = () => {
                   paymentMethod: p.payment_infos?.[0]?.method ?? (isNewFormat ? p.payment_status : (payment.method || "—")),
                   amountPaid: p.paid_amount ?? p.payment_infos?.[0]?.amount ?? (isNewFormat ? 0 : (payment.amountPaid || 0)),
                   totalCost: p.total_cost ?? p.item_infos?.total_pur_cost ?? (isNewFormat ? 0 : (pd.totalCost || 0)),
-                  invoiceNo: p.invoice_no ?? (isNewFormat ? "" : (pd.invoiceNo || "—")),
+                  invoiceNo: p.invoice_no || p.invoice_number || p.invoiceNo || pd.invoice_no || pd.invoiceNo || d.invoice_no || d.invoiceNo || "—",
                   referenceNo: p.reference_no ?? (isNewFormat ? "" : (pd.referenceNo || "—")),
                   storageLocation: isNewFormat ? productsList[0].storage_location || '—' : (d.storage_location || p.storage_location || '—'),
                   version: p.version || d?.version || p.datas?.version || "v1",

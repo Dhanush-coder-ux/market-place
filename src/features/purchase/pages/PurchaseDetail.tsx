@@ -50,6 +50,8 @@ interface ReturnItem {
   reason: string;
   gst_rate: number;
   gst_type: string;
+  variant?: string | null;
+  batch?: string | null;
 }
 
 interface PurchaseReturnDialogProps {
@@ -60,6 +62,20 @@ interface PurchaseReturnDialogProps {
   shopId: string;
   outstanding: number;
 }
+
+const getVariantName = (v: any) => {
+  if (!v) return null;
+  const target = v.variant_infos || v.variant;
+  if (!target) return typeof v === 'string' ? v : null;
+  return typeof target === 'object' ? (target.variant_name || target.name) : target;
+};
+
+const getBatchName = (b: any) => {
+  if (!b) return null;
+  const target = b.batch_infos || b.batch;
+  if (!target) return typeof b === 'string' ? b : null;
+  return typeof target === 'object' ? (target.batch_name || target.name) : target;
+};
 
 const PurchaseReturnDialog = ({
   isOpen,
@@ -100,6 +116,8 @@ const PurchaseReturnDialog = ({
             })
             .map((p: any) => {
               const gstRate = parseFloat(String(p.gst || "0").replace('%', '')) || 0;
+              const vName = getVariantName(p) || p.variant_name;
+              const bName = getBatchName(p) || p.batch_name;
               return {
                 purchase_item_id: p.id || p.purchase_item_id || "",
                 name: String(p.name || p.product_name || p.product_id || "Unknown"),
@@ -110,6 +128,8 @@ const PurchaseReturnDialog = ({
                 reason: "",
                 gst_rate: gstRate,
                 gst_type: gstType,
+                variant: vName,
+                batch: bName,
               };
             })
         );
@@ -273,7 +293,15 @@ const PurchaseReturnDialog = ({
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-bold text-slate-800 truncate">{item.name}</p>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="text-sm font-bold text-slate-800 truncate">{item.name}</p>
+                            {item.variant && (
+                              <AntBadge variant="at-variant" type="tag">V: {item.variant}</AntBadge>
+                            )}
+                            {item.batch && (
+                              <AntBadge variant="at-batch" type="tag">B: {item.batch}</AntBadge>
+                            )}
+                          </div>
                           <div className="flex items-center gap-2 mt-1">
                             <span className="text-[10px] text-slate-400 font-medium">
                               Purchased: {item.maxQuantity}
@@ -377,9 +405,16 @@ const PurchaseReturnDialog = ({
                   const itemTotal = item.gst_type === "EXCLUSIVE" ? itemBase + (itemBase * (item.gst_rate / 100)) : itemBase;
                   return (
                     <div key={idx} className="flex justify-between items-center text-xs">
-                      <span className="text-slate-700 font-medium">
-                        {item.name} × {item.returnQty}
-                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-slate-700 font-medium">{item.name}</span>
+                        {item.variant && (
+                          <AntBadge variant="at-variant" type="tag">V: {item.variant}</AntBadge>
+                        )}
+                        {item.batch && (
+                          <AntBadge variant="at-batch" type="tag">B: {item.batch}</AntBadge>
+                        )}
+                        <span className="text-slate-500 font-bold">× {item.returnQty}</span>
+                      </div>
                       <span className="font-black text-slate-800">{fmt(itemTotal)}</span>
                     </div>
                   );
@@ -633,6 +668,7 @@ const PurchaseDetail = () => {
 
   const transportCharge = po.charges?.transport || 0;
   const otherCharge = po.charges?.other || 0;
+  const totalAdditional = transportCharge + otherCharge;
 
   const grandTotal =
     subtotal +
@@ -779,24 +815,6 @@ const PurchaseDetail = () => {
                         }
                       />
 
-                      <InfoRow
-                        label="Transport Charges"
-                        value={
-                          <span className="text-slate-600">
-                            +{fmt(transportCharge)}
-                          </span>
-                        }
-                      />
-
-                      <InfoRow
-                        label="Other Charges"
-                        value={
-                          <span className="text-slate-600">
-                            +{fmt(otherCharge)}
-                          </span>
-                        }
-                      />
-
                       <div className="mt-4 pt-4 border-t-2 border-slate-800 flex justify-between">
                         <span className="font-black">
                           Grand Total
@@ -807,18 +825,21 @@ const PurchaseDetail = () => {
                         </span>
                       </div>
 
-                      {(transportCharge > 0 || otherCharge > 0) && (
+                      {(transportCharge > 0 || otherCharge > 0 || (po.additional_charges_total && po.additional_charges_total > 0)) && (
                         <div className="mt-4 pt-4 border-t border-slate-100 space-y-1">
                           <p className="text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-widest">Additional Charges</p>
-                          {transportCharge > 0 && <InfoRow label="Transport Charges" value={<span className="text-slate-600">+{fmt(transportCharge)}</span>} />}
-                          {otherCharge > 0 && <InfoRow label="Other Charges" value={<span className="text-slate-600">+{fmt(otherCharge)}</span>} />}
+                          {transportCharge > 0 && (
+                            <InfoRow label="Transport Charges" value={<span className="text-slate-600">+{fmt(transportCharge)}</span>} />
+                          )}
+                          {otherCharge > 0 && (
+                            <InfoRow label="Other Charges" value={<span className="text-slate-600">+{fmt(otherCharge)}</span>} />
+                          )}
                           <div className="mt-2 pt-2 border-t border-slate-50 flex justify-between items-center">
                             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total Additional</span>
-                            <span className="text-sm font-black text-slate-700 tabular-nums">+{fmt(po.additional_charges_total || 0)}</span>
+                            <span className="text-sm font-black text-slate-700 tabular-nums">+{fmt(totalAdditional || po.additional_charges_total || 0)}</span>
                           </div>
                         </div>
                       )}
-
                     </div>
                   </SectionCard>
                 </div>
@@ -866,20 +887,16 @@ const PurchaseDetail = () => {
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[var(--pay-paid-bg)] text-[var(--pay-paid-tx)] border border-[var(--pay-paid-bd)]">Paid</span>
                         )}
                       </div>
-                      {po.paid_amount !== undefined && (
-                        <div className="flex justify-between items-center text-sm font-semibold text-slate-600 pt-1">
-                          <span>Paid Amount</span>
-                          <span className="tabular-nums text-slate-800">{fmt(po.paid_amount)}</span>
-                        </div>
-                      )}
-                      {po.outstanding !== undefined && (
-                        <div className="flex justify-between items-center text-sm font-bold pt-2 border-t border-slate-100">
-                          <span className="text-slate-600">Outstanding</span>
-                          <span className={`tabular-nums ${po.outstanding > 0 ? "text-amber-600" : "text-emerald-600"}`}>
-                            {fmt(outstanding)}
-                          </span>
-                        </div>
-                      )}
+                      <div className="flex justify-between items-center text-sm font-semibold text-slate-600 pt-1">
+                        <span>Paid Amount</span>
+                        <span className="tabular-nums text-slate-800">{fmt(po.paid_amount || 0)}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm font-bold pt-2 border-t border-slate-100">
+                        <span className="text-slate-600">Outstanding</span>
+                        <span className={`tabular-nums ${outstanding > 0 ? "text-amber-600" : "text-emerald-600"}`}>
+                          {fmt(outstanding)}
+                        </span>
+                      </div>
                     </div>
                   </SectionCard>
                 </div>
@@ -1181,8 +1198,19 @@ const PurchaseDetail = () => {
                             ? new Date(retDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
                             : "—";
                           const payInfo = ret.payment_infos || {};
+                          const calculatedGst = Array.isArray(ret.items)
+                            ? ret.items.reduce((sum: number, item: any) => {
+                                if (item.gst_amount !== undefined && item.gst_amount !== null && !isNaN(Number(item.gst_amount))) {
+                                  return sum + Number(item.gst_amount);
+                                }
+                                const qty = Number(item.entered_qty ?? item.quantity ?? item.returned_qty ?? 0);
+                                const price = Number(item.buy_price ?? item.price ?? item.unit_price ?? 0);
+                                const gstRate = Number(typeof item.gst === 'number' ? item.gst : (parseFloat(String((item.gst_rate ?? item.gst) || "0").replace('%', '')) || 0));
+                                return sum + (qty * price * (gstRate / 100));
+                              }, 0)
+                            : 0;
                           const returnValue = Number(payInfo.return_value ?? ret.total_refund_amount ?? ret.return_value ?? 0);
-                          const gstAmount = Number(ret.total_gst_amount ?? 0);
+                          const gstAmount = Number(ret.total_gst_amount ?? ret.gst_amount ?? ret.gst_total ?? payInfo.gst_amount ?? calculatedGst ?? 0);
                           const adjusted = Number(payInfo.adjusted_against_outstanding ?? ret.adjusted_amount ?? 0);
                           const cashRefund = Number(payInfo.cash_refund ?? ret.cash_refund ?? ret.total_refund_amount ?? 0);
                           const reason = payInfo.reason || ret.reason || "—";
@@ -1208,12 +1236,23 @@ const PurchaseDetail = () => {
                               <td className="px-5 py-4">
                                 <span className="text-xs font-bold text-slate-700">{itemCount} item(s)</span>
                                 {Array.isArray(ret.items) && ret.items.length > 0 && (
-                                  <div className="mt-0.5 space-y-0.5">
-                                    {ret.items.slice(0, 3).map((item: any, iIdx: number) => (
-                                      <p key={iIdx} className="text-[10px] text-slate-400 font-medium">
-                                        {item.inventory_name || item.name || "Item"} × {item.entered_qty || item.quantity || item.returned_qty || "?"} {item.entered_unit || ""}
-                                      </p>
-                                    ))}
+                                  <div className="mt-0.5 space-y-1">
+                                    {ret.items.slice(0, 3).map((item: any, iIdx: number) => {
+                                      const vName = getVariantName(item) || item.variant_name;
+                                      const bName = getBatchName(item) || item.batch_name;
+                                      return (
+                                        <div key={iIdx} className="text-[10px] text-slate-500 font-medium flex items-center gap-1 flex-wrap">
+                                          <span>{item.inventory_name || item.product_name || item.name || "Item"}</span>
+                                          {vName && (
+                                            <AntBadge variant="at-variant" type="tag">V: {vName}</AntBadge>
+                                          )}
+                                          {bName && (
+                                            <AntBadge variant="at-batch" type="tag">B: {bName}</AntBadge>
+                                          )}
+                                          <span className="text-slate-400 font-bold">× {item.entered_qty || item.quantity || item.returned_qty || "?"} {item.entered_unit || ""}</span>
+                                        </div>
+                                      );
+                                    })}
                                     {ret.items.length > 3 && (
                                       <p className="text-[10px] text-slate-300">+{ret.items.length - 3} more</p>
                                     )}

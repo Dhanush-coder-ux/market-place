@@ -443,6 +443,7 @@ export const VariantRows = ({
               <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-left">Variant</th>
               <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-left">SKU / Barcode</th>
               <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Stock</th>
+              <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Reorder Point</th>
               <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Sell Price</th>
               <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-left">Batch Count</th>
               <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-left">Location</th>
@@ -509,16 +510,6 @@ export const VariantRows = ({
                         )}
                         <div className="flex flex-col">
                           <span className="text-[13px] font-bold text-slate-800 tracking-tight">{variantLabel}</span>
-                          {(storageLoc || reorderPoint !== null) && (
-                            <div className="flex flex-wrap gap-1.5 mt-1">
-                              {storageLoc && (
-                                <AntBadge variant="at-variant" type="tag">LOC: {storageLoc}</AntBadge>
-                              )}
-                              {reorderPoint !== null && (
-                                <AntBadge variant="at-batch" type="tag">REORDER: {reorderPoint}</AntBadge>
-                              )}
-                            </div>
-                          )}
                         </div>
                       </div>
                     </td>
@@ -562,6 +553,13 @@ export const VariantRows = ({
                       </span>
                     </td>
 
+                    {/* Reorder Point */}
+                    <td className="px-4 py-2 align-middle text-center">
+                      <span className="text-[12px] font-bold text-slate-700 tabular-nums">
+                        {reorderPoint !== null ? reorderPoint : "—"}
+                      </span>
+                    </td>
+
                     {/* Sell Price */}
                     <td className="px-4 py-2 align-middle text-right">
                       <span className="text-[13px] font-bold text-slate-800 tabular-nums">
@@ -601,7 +599,7 @@ export const VariantRows = ({
                   {/* Serials Area */}
                   {hasSerials && (
                     <tr className="bg-indigo-50/10">
-                      <td colSpan={7} className="p-0 border-t border-slate-50/50">
+                      <td colSpan={8} className="p-0 border-t border-slate-50/50">
                         <div className="px-4 pb-2 pt-1.5 flex flex-col">
                           <p className="text-[10px] font-bold text-slate-500 mb-1 flex items-center gap-1 uppercase">
                             <Hash size={10} className="text-indigo-400" /> Serial Numbers ({serials.length})
@@ -615,7 +613,7 @@ export const VariantRows = ({
                   {/* Nested Batches Area */}
                   {isVarExpanded && hasBatches && (
                     <tr className="bg-slate-50/50">
-                      <td colSpan={7} className="p-0 border-t border-slate-100">
+                      <td colSpan={8} className="p-0 border-t border-slate-100">
                         <div className="p-3 md:pl-10 pl-6 border-l-2 border-slate-200 ml-4 my-2">
                           <BatchCards batches={batches} />
                         </div>

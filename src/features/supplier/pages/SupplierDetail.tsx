@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Mail, Pencil, User, MapPin, Phone, Trash2,
-  Store, Database, AlertCircle, Layers, Check, X as XIcon, ArrowUp, ArrowDown, Search
+  Store, Database, AlertCircle, Layers, Check, X as XIcon, Search
 } from "lucide-react";
 import {
   SectionCard, DetailItem, InfoRow, Modal,
@@ -485,7 +485,6 @@ export default function SupplierDetail() {
                     />
                     <DetailItem
                       icon={AlertCircle} label="Outstanding Balance" value={`₹${currentOutstandingVal.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                      onClick={() => setShowOutstandingModal(true)}
                     />
 
                     {/* Dynamically render all other fields from additionalInfos */}
@@ -520,18 +519,9 @@ export default function SupplierDetail() {
                     <InfoRow
                       label="Outstanding Balance"
                       value={
-                        <div className="flex items-center gap-2">
-                          <span className={`text-[12px] font-bold px-2 py-0.5 rounded-md ${currentOutstandingVal > 0 ? 'text-rose-600 bg-rose-50' : 'text-slate-600 bg-slate-50'}`}>
-                            ₹{currentOutstandingVal.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => setShowOutstandingModal(true)}
-                            className="text-[11px] font-bold text-blue-600 hover:text-blue-700 hover:underline transition-colors"
-                          >
-                            Edit
-                          </button>
-                        </div>
+                        <span className={`text-[12px] font-bold px-2 py-0.5 rounded-md ${currentOutstandingVal > 0 ? 'text-rose-600 bg-rose-50' : 'text-slate-600 bg-slate-50'}`}>
+                          ₹{currentOutstandingVal.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
                       }
                     />
                   </div>
@@ -652,12 +642,12 @@ export default function SupplierDetail() {
                   referenceNo: pd.referenceNo || '—',
                   purchaseDate: p.purchase_date || pd.date || p.created_at,
                   paymentMethod: p.payment_infos?.[0]?.method ?? ((p.payment_status && p.payment_status.toLowerCase() === "outstanding") ? "Outstanding" : (payment.method || p.payment_status || '—')),
-                   amountPaid: p.paid_amount ?? p.payment_infos?.[0]?.amount ?? payment.amountPaid ?? 0,
-                  outstandingAmount: p.outstanding_amount ?? 0,
+                  amountPaid: p.paid_amount ?? p.payment_infos?.[0]?.amount ?? payment.amountPaid ?? 0,
+                  outstandingAmount: p.outstanding_amount ?? p.outstanding ?? Math.max(0, (p.total_cost ?? p.item_infos?.total_pur_cost ?? pd.totalAmount ?? 0) - (p.paid_amount ?? p.payment_infos?.[0]?.amount ?? payment.amountPaid ?? 0)),
                   totalCost: p.total_cost ?? p.item_infos?.total_pur_cost ?? pd.totalAmount ?? 0,
                   deliveryCharge: p.transport_charge ?? p.charges_infos?.transport_charge ?? charges.delivery_charge ?? 0,
                   otherCharge: p.other_charges ?? p.charges_infos?.other_charge ?? charges.other_charge ?? 0,
-                  uiId: p.ui_id || p.purchase_id?.split('-')[0].toUpperCase() || p.id?.slice(-6),
+                  uiId: p.ui_id || d.ui_id || (p.purchase_id ? p.purchase_id.split('-')[0].toUpperCase() : p.id?.slice(-6)),
                   storageLocation: d.storage_location || p.storage_location || '—',
                   version: p.version || d?.version || p.datas?.version || "v1",
                   productsList: productsList
@@ -719,7 +709,7 @@ export default function SupplierDetail() {
                         <tr className="bg-slate-50 border-b border-slate-200">
                           <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Date</th>
                           <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Ref / Invoice No</th>
-                          <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Cleared Amount</th>
+                          <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Amount</th>
                           <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Invoice Outstanding</th>
                           <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Payment Mode</th>
                           <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase whitespace-nowrap">Notes</th>
@@ -744,8 +734,7 @@ export default function SupplierDetail() {
                                 {h.reference_no || h.invoice_no || h.ref_no || h.entity_id || "—"}
                               </td>
                               <td className="px-4 py-3 text-sm font-black whitespace-nowrap">
-                                <span className={`flex items-center gap-1 ${isRefund ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                  {isRefund ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
+                                <span className={isRefund ? 'text-emerald-600' : 'text-rose-600'}>
                                   ₹{Number(h.cleared_amount ?? h.amount ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </span>
                               </td>

@@ -4,6 +4,13 @@ import { useState, Fragment } from "react";
 import { createPortal } from "react-dom";
 import { AntBadge } from "@/components/ui/AntBadge";
 
+const formatStockValue = (val: number | null | undefined) => {
+  if (val === null || val === undefined || isNaN(Number(val))) return '—';
+  const n = Number(val);
+  if (Math.abs(n % 1) < 0.0001) return Math.round(n).toString();
+  return Number(n.toFixed(2)).toString();
+};
+
 export function GroupedItemsDrawer({
   record,
   onClose,
@@ -61,10 +68,10 @@ export function GroupedItemsDrawer({
                     </div>
                     <div className="flex flex-col items-end shrink-0">
                       <span className={`text-[13px] font-black tabular-nums ${isDec ? 'text-rose-600' : 'text-emerald-600'}`}>
-                        {isDec ? '-' : '+'}{p.receivedStocks}
+                        {isDec ? '-' : '+'}{formatStockValue(p.receivedStocks)}
                       </span>
                       {stockVal !== null && (
-                        <span className="text-[10px] font-bold text-blue-600 mt-0.5 tabular-nums">Stock: {stockVal}</span>
+                        <span className="text-[10px] font-bold text-blue-600 mt-0.5 tabular-nums">Stock: {formatStockValue(stockVal)}</span>
                       )}
                     </div>
                   </div>
@@ -161,7 +168,7 @@ const RichProductDetails = ({ p }: { p: any }) => {
           <div className="bg-slate-50 p-2 rounded border border-slate-100 w-full text-[10px] text-slate-650 shadow-sm">
             <div className="flex justify-between items-center font-bold">
               <AntBadge variant="at-batch" type="tag">B: {p.batch_details.batch_name || p.batch || "Default"}</AntBadge>
-              <span className="text-indigo-600">Qty: {p.receivedStocks ?? 0}</span>
+              <span className="text-indigo-600">Qty: {formatStockValue(p.receivedStocks)}</span>
             </div>
             {(p.batch_details.mfg_date || p.batch_details.exp_date) && (
               <div className="flex gap-3 text-[9px] text-slate-400 mt-1 font-medium">
@@ -332,11 +339,11 @@ export function StockMovementsTable({ rows, loading, onViewDetails }: StockMovem
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap font-black text-sm tabular-nums text-center bg-slate-50/40">
                           <span className={r.isInc ? 'text-emerald-600' : 'text-rose-600'}>
-                            {r.isInc ? '+' : '-'}{totalStocksIn}
+                            {r.isInc ? '+' : '-'}{formatStockValue(totalStocksIn)}
                           </span>
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap text-center font-bold text-blue-600 tabular-nums">
-                          {currentStockVal !== null ? currentStockVal : '—'}
+                          {currentStockVal !== null ? formatStockValue(currentStockVal) : '—'}
                         </td>
                         <td className="px-5 py-4 text-xs text-slate-500 max-w-[220px] truncate" title={r.description}>
                           {r.description}
@@ -400,7 +407,8 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="sticky top-0 bg-slate-50/90 backdrop-blur-sm z-10 text-[9px] font-black text-slate-400 tracking-wider uppercase border-b border-slate-100 shadow-[0_1px_0_rgba(0,0,0,0.05)]">
-                  <th className="px-5 py-3.5">#</th>
+                  <th className="px-5 py-3.5">Purchase ID</th>
+                  <th className="px-5 py-3.5">Invoice No</th>
                   <th className="px-5 py-3.5">Supplier</th>
                   <th className="px-5 py-3.5">Date</th>
                   <th className="px-5 py-3.5">Variant / Batch</th>
@@ -443,13 +451,16 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
                       <tr className="hover:bg-indigo-50/20 transition-colors border-l-[3px] border-l-indigo-400">
                         <td className="px-5 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-[10px] font-black text-slate-400 font-mono">#{r.uiId}</span>
+                            <span className="text-[10px] font-black text-indigo-600 font-mono">#{r.uiId || r.id}</span>
                             {(r.version || (r.datas && r.datas.version)) && (
                               <AntBadge variant="meta-version" type="tag">
                                 {r.version || r.datas?.version}
                               </AntBadge>
                             )}
                           </div>
+                        </td>
+                        <td className="px-5 py-4 whitespace-nowrap text-xs font-mono font-semibold text-slate-600">
+                          {r.invoiceNo && r.invoiceNo !== '—' ? r.invoiceNo : '—'}
                         </td>
                         <td className="px-5 py-4 text-xs font-bold text-slate-700 max-w-[150px] truncate" title={r.description}>
                           {r.description.replace('Supplier: ', '')}
@@ -505,11 +516,11 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap font-black text-sm tabular-nums text-center bg-slate-50/40">
                           <span className={r.type === 'RETURN' ? 'text-rose-600' : 'text-emerald-600'}>
-                            {r.type === 'RETURN' ? '-' : '+'}{totalStocksIn}
+                            {r.type === 'RETURN' ? '-' : '+'}{formatStockValue(totalStocksIn)}
                           </span>
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap text-center font-bold text-blue-600 tabular-nums">
-                          {totalStockAfterProd !== null ? totalStockAfterProd : '—'}
+                          {totalStockAfterProd !== null ? formatStockValue(totalStockAfterProd) : '—'}
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap text-xs font-bold text-slate-700">
                           {hasList ? '—' : (firstProd.buyPrice ?? r.buyPrice) !== undefined ? `₹${Number(firstProd.buyPrice ?? r.buyPrice).toFixed(2).replace(/\.00$/, '')}` : '—'}
@@ -525,11 +536,6 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
                                 r.paymentMethod === 'UPI' ? 'bg-violet-50 text-violet-700' :
                                 'bg-slate-50 text-slate-600'
                               }`}>{r.paymentMethod}</span>
-                            {r.paymentMethod?.toLowerCase() === 'outstanding' ? (
-                              <span className="text-[9px] text-rose-500 font-bold">Left: ₹{r.totalCost - r.amountPaid}</span>
-                            ) : r.amountPaid > 0 ? (
-                              <span className="text-[9px] text-slate-400 font-bold">Paid: ₹{r.amountPaid}</span>
-                            ) : null}
                           </div>
                         </td>
                         <td className="px-5 py-4">
@@ -589,8 +595,7 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="sticky top-0 bg-slate-50/90 backdrop-blur-sm z-10 text-[9px] font-black text-slate-400 tracking-wider uppercase border-b border-slate-100 shadow-[0_1px_0_rgba(0,0,0,0.05)]">
-                  <th className="px-5 py-3.5">#</th>
-                  <th className="px-5 py-3.5">Type</th>
+                  <th className="px-5 py-3.5">Purchase ID</th>
                   <th className="px-5 py-3.5">Product</th>
                   <th className="px-5 py-3.5 text-center">Stock In/Out</th>
                   <th className="px-5 py-3.5 text-center">Stock After</th>
@@ -629,21 +634,20 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                     return total;
                   })();
 
+                  const currentOutstanding = r.outstandingAmount ?? Math.max(0, (r.totalCost || 0) - (r.amountPaid || 0));
+
                   return (
                     <Fragment key={rowKey}>
                       <tr className="hover:bg-indigo-50/20 transition-colors border-l-[3px] border-l-indigo-400">
                         <td className="px-5 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-[10px] font-black text-slate-400 font-mono">#{r.uiId}</span>
+                            <span className="text-[10px] font-black text-indigo-600 font-mono">{r.uiId}</span>
                             {(r.version || (r.datas && r.datas.version)) && (
                               <AntBadge variant="meta-version" type="tag">
                                 {r.version || r.datas?.version}
                               </AntBadge>
                             )}
                           </div>
-                        </td>
-                        <td className="px-5 py-4 whitespace-nowrap">
-                          <TypeBadge type={r.type || "PURCHASE"} labelOverride={r.type === 'DIRECT' ? 'Purchase' : (r.type || '').replace(/_/g, ' ')} />
                         </td>
                         <td className="px-5 py-4">
                           {hasList ? (
@@ -705,13 +709,13 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                           {totalStockAfterSupp !== null ? totalStockAfterSupp : '—'}
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap text-xs font-bold text-slate-700">
-                          ₹{r.totalCost || 0}
+                          ₹{Number(r.totalCost || 0).toLocaleString("en-IN")}
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap text-xs font-bold text-emerald-600">
-                          ₹{r.amountPaid || 0}
+                          ₹{Number(r.amountPaid || 0).toLocaleString("en-IN")}
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap text-xs font-bold text-rose-600">
-                          ₹{r.outstandingAmount || 0}
+                          ₹{Number(currentOutstanding).toLocaleString("en-IN")}
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap">
                           <div className="flex flex-col gap-0.5">
@@ -721,9 +725,6 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                                 r.paymentMethod === 'UPI' ? 'bg-violet-50 text-violet-700' :
                                 'bg-slate-50 text-slate-600'
                               }`}>{r.paymentMethod}</span>
-                            {(r.totalCost || 0) - (r.amountPaid || 0) > 0 ? (
-                              <span className="text-[9px] text-rose-500 font-bold">Left: ₹{(r.totalCost || 0) - (r.amountPaid || 0)}</span>
-                            ) : null}
                           </div>
                         </td>
                         <td className="px-5 py-4 text-xs font-mono text-slate-500 whitespace-nowrap">

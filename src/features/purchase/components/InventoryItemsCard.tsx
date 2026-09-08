@@ -169,6 +169,15 @@ export const InventoryItemsCard = ({
     };
   }, [variantModal.isOpen, batchModal.isOpen]);
 
+  // Automatically open batch / serial details section when selecting a product with batch or serial tracking
+  useEffect(() => {
+    products.forEach((product, index) => {
+      if ((product?.batchTracking || product?.serialTracking) && !expandedSettings.has(index)) {
+        setExpandedSettings(prev => new Set(prev).add(index));
+      }
+    });
+  }, [products]);
+
   const toggleBreakdown = (index: number) => {
     const next = new Set(expandedBreakdown);
     if (next.has(index)) next.delete(index);
@@ -904,7 +913,9 @@ export const InventoryItemsCard = ({
                                 </AntBadge>
                               )}
                               {product.batchTracking && (
-                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-black border transition-all ${product.batchNum
+                                <span
+                                  onClick={() => toggleSettings(index)}
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-black border transition-all cursor-pointer ${product.batchNum
                                   ? "bg-amber-50 text-amber-700 border-amber-200"
                                   : "bg-rose-50/50 text-rose-600 border-rose-100/60 animate-pulse"
                                   }`}>
@@ -912,7 +923,9 @@ export const InventoryItemsCard = ({
                                 </span>
                               )}
                               {product.serialTracking && (
-                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-black border transition-all ${(product.serialNumbers?.split(",").filter(Boolean).length || 0) >= (Number(product.quantity) || 0)
+                                <span
+                                  onClick={() => toggleSettings(index)}
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-black border transition-all cursor-pointer ${(product.serialNumbers?.split(",").filter(Boolean).length || 0) >= (Number(product.quantity) || 0)
                                   ? "bg-blue-50 text-blue-700 border-blue-200"
                                   : "bg-rose-50/50 text-rose-600 border-rose-100/60 animate-pulse"
                                   }`}>

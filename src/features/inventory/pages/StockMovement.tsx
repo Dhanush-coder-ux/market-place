@@ -70,6 +70,13 @@ function fmtDate(dateStr: string) {
   return dateStr.slice(0, 10);
 }
 
+const formatStockValue = (val: number | null | undefined) => {
+  if (val === null || val === undefined || isNaN(Number(val))) return '—';
+  const n = Number(val);
+  if (Math.abs(n % 1) < 0.0001) return Math.round(n).toString();
+  return Number(n.toFixed(2)).toString();
+};
+
 // Fixed styling helper to accommodate all MovementTypes
 
 interface DetailDrawerProps {
@@ -121,13 +128,13 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
               <p className="text-[10px] font-black text-slate-400  tracking-[0.2em]">Net Stock Impact</p>
               <div className="flex items-center justify-center gap-3">
                 <span className={`text-4xl font-black tabular-nums ${isPositive ? 'text-[var(--ps-completed-tx)]' : 'text-[var(--ps-cancel-tx)]'}`}>
-                  {isPositive ? `+${movement.qty}` : movement.qty}
+                  {isPositive ? `+${formatStockValue(movement.qty)}` : formatStockValue(movement.qty)}
                 </span>
                 <span className="text-slate-400 font-bold text-sm">Units</span>
               </div>
               {movement.current_stock !== undefined && (
                 <p className="text-xs font-bold text-slate-500 mt-2">
-                  Current Available Stock: <span className="text-slate-700">{movement.current_stock} units</span>
+                  Current Available Stock: <span className="text-slate-700">{formatStockValue(movement.current_stock)} units</span>
                 </p>
               )}
             </div>
@@ -136,19 +143,19 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
               <div className="grid grid-cols-3 gap-2 bg-white/80 p-3 rounded-lg border border-white shadow-sm">
                 <div className="flex flex-col items-center">
                   <span className="text-[8px] font-black text-slate-400  tracking-tighter">Opening Stock</span>
-                  <span className="text-xs font-bold text-slate-700">{movement.stocks_before}</span>
+                  <span className="text-xs font-bold text-slate-700">{formatStockValue(movement.stocks_before)}</span>
                 </div>
                 <div className="flex flex-col items-center border-x border-slate-100">
                   <span className={`text-[8px] font-black  tracking-tighter ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
                     {isPositive ? "Stock In" : "Stock Out"}
                   </span>
                   <span className={`text-xs font-bold ${isPositive ? 'text-[var(--ps-completed-tx)]' : 'text-[var(--ps-cancel-tx)]'}`}>
-                    {isPositive ? `+${movement.qty}` : movement.qty}
+                    {isPositive ? `+${formatStockValue(movement.qty)}` : formatStockValue(movement.qty)}
                   </span>
                 </div>
                 <div className="flex flex-col items-center">
                   <span className="text-[8px] font-black text-blue-400  tracking-tighter">Closing Stock</span>
-                  <span className="text-xs font-bold text-[var(--mv-sales-tx)]">{(movement.stocks_before ?? 0) + movement.qty}</span>
+                  <span className="text-xs font-bold text-[var(--mv-sales-tx)]">{formatStockValue((movement.stocks_before ?? 0) + movement.qty)}</span>
                 </div>
               </div>
             )}
@@ -174,7 +181,7 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
                             <span className="text-[9px] font-mono text-slate-400 mt-0.5 block">{p.skuLabel}: {p.skuValue}</span>
                           </div>
                           <span className={`text-xs font-black tabular-nums ${p.qty > 0 ? 'text-emerald-650' : 'text-rose-655'}`}>
-                            {p.qty > 0 ? `+${p.qty}` : p.qty}
+                            {p.qty > 0 ? `+${formatStockValue(p.qty)}` : formatStockValue(p.qty)}
                           </span>
                         </div>
                         {hasSpec && (
@@ -191,7 +198,7 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
                                 <div className="bg-white border border-slate-100 rounded p-2 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
                                   <div className="flex justify-between items-center">
                                     <span className="text-[10px] font-bold text-slate-800">Batch: {p.batch}</span>
-                                    <span className={`text-[10px] font-black ${p.qty > 0 ? 'text-[var(--ps-completed-tx)]' : 'text-[var(--ps-cancel-tx)]'}`}>Qty: {p.qty}</span>
+                                    <span className={`text-[10px] font-black ${p.qty > 0 ? 'text-[var(--ps-completed-tx)]' : 'text-[var(--ps-cancel-tx)]'}`}>Qty: {formatStockValue(p.qty)}</span>
                                   </div>
                                   {(p.expiry_date || p.manufacturing_date) && (
                                     <div className="flex gap-3 text-[9px] text-slate-400 mt-1 font-medium">
@@ -972,6 +979,20 @@ export default function StockMovementPage() {
                   return id.length > 10 ? `${id.slice(0, 6)}...` : id;
                 };
 
+                const formatVariantBrief = (v?: string | null) => {
+                  if (!v) return "—";
+                  let str = String(v).trim();
+                  if (!str) return "—";
+                  if (str.includes(" : ")) {
+                    str = str
+                      .split("/")
+                      .map((part: string) => part.split(":")[1]?.trim() || part.trim())
+                      .filter(Boolean)
+                      .join(" / ");
+                  }
+                  return str.length > 30 ? `${str.slice(0, 27)}...` : str;
+                };
+
                 return (
                   <React.Fragment key={rowKey}>
                     <tr
@@ -1009,7 +1030,7 @@ export default function StockMovementPage() {
                                   onClick={(e) => copyToClipboard(e, (hasList ? firstProd.variant : m.variant) || "")}
                                   className="group flex items-center gap-0.5 text-[9px] font-extrabold text-[var(--at-variant-tx)] bg-[var(--at-variant-bg)] px-1.5 py-0.5 rounded-xl border border-[var(--at-variant-bd)] hover:bg-[var(--at-variant-bg)] transition-all leading-none"
                                 >
-                                  <Layers size={8} /> {truncateId(hasList ? firstProd.variant : m.variant)}
+                                  <Layers size={8} /> {formatVariantBrief(hasList ? firstProd.variant : m.variant)}
                                   <Copy size={7} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </button>
                               )}
@@ -1022,7 +1043,7 @@ export default function StockMovementPage() {
                                   <Copy size={7} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </button>
                               )}
-                              {hasList ? (
+                              {hasList && (
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -1034,19 +1055,6 @@ export default function StockMovementPage() {
                                   <ChevronRight size={10} strokeWidth={3} />
                                   <span>+ {m.productsList!.length - 1} more</span>
                                 </button>
-                              ) : (
-                                <>
-                                  {m.serial_numbers && m.serial_numbers.length > 0 && (
-                                    <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold text-[var(--ps-completed-tx)] bg-[var(--ps-completed-bg)] px-1.5 py-0.5 rounded-xl border border-[var(--ps-completed-bd)] leading-none">
-                                      <Zap size={8} fill="currentColor" /> {m.serial_numbers.length} Serials
-                                    </span>
-                                  )}
-                                  {m.current_stock !== undefined && (
-                                    <span className="inline-flex items-center gap-0.5 text-[9px] font-extrabold text-[var(--mv-sales-tx)] bg-[var(--mv-sales-bg)] px-1.5 py-0.5 rounded-xl border border-[var(--mv-sales-bd)] leading-none" title="Current Available Stock">
-                                      Stock: {m.current_stock}
-                                    </span>
-                                  )}
-                                </>
                               )}
                             </div>
                           </div>
@@ -1057,12 +1065,12 @@ export default function StockMovementPage() {
                       </td>
                       <td className="px-4 py-3 text-center align-middle border-r border-slate-100 last:border-r-0 bg-slate-50/30">
                         <span className={`text-[13px] font-black tabular-nums ${totalQty > 0 ? "text-[var(--ps-completed-tx)]" : "text-[var(--ps-cancel-tx)]"}`}>
-                          {totalQty > 0 ? `+${totalQty}` : totalQty}
+                          {totalQty > 0 ? `+${formatStockValue(totalQty)}` : formatStockValue(totalQty)}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-center align-middle border-r border-slate-100 last:border-r-0">
                         <span className="text-[12px] font-bold text-[var(--mv-sales-tx)] tabular-nums">
-                          {currentStockVal !== null ? currentStockVal : '—'}
+                          {currentStockVal !== null ? formatStockValue(currentStockVal) : '—'}
                         </span>
                       </td>
                       {selectedKeys.map(key => {

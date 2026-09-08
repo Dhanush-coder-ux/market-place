@@ -21,6 +21,24 @@ import SkeletonLoader from "@/components/common/SkeletonLoader";
 /* ── helpers ── */
 const fmt = (n?: number) => `₹${(n || 0).toLocaleString("en-IN")}`;
 
+const formatStockValue = (val: number | null | undefined) => {
+  if (val === null || val === undefined || isNaN(Number(val))) return '—';
+  const n = Number(val);
+  if (Math.abs(n % 1) < 0.0001) return Math.round(n).toString();
+  return Number(n.toFixed(2)).toString();
+};
+
+const getItemDisplayQty = (item: any) => {
+  if (item.entered_qty !== undefined && item.entered_qty !== null && !isNaN(Number(item.entered_qty))) {
+    return formatStockValue(item.entered_qty);
+  }
+  const u = String(item.entered_unit || item.unit || "").toLowerCase();
+  if ((u === 'gm' || u === 'g' || u === 'ml' || u === 'm') && item.quantity > 0 && item.quantity < 10) {
+    return formatStockValue(item.quantity * 1000);
+  }
+  return formatStockValue(item.quantity || 0);
+};
+
 type SaleItem = {
   id: string; name: string; sku: string; quantity: number; returnedQty?: number; reason?: string;
   unitPrice: number; buyPrice: number;
@@ -455,7 +473,7 @@ const SaleDetailPage: React.FC = () => {
                             </div>
                           </td>
                           <td className="px-6 py-4 text-center">
-                            <span className="text-xs font-black text-slate-600">{Number(((item as any).entered_qty !== undefined ? (item as any).entered_qty : (item.quantity || 0)).toFixed(2))}</span>
+                            <span className="text-xs font-black text-slate-600">{getItemDisplayQty(item)}</span>
                           </td>
                           <td className="px-6 py-4 text-center">
                             <span className="text-[10px] font-black text-slate-500 uppercase px-2 py-0.5 rounded bg-slate-100">{(item as any).entered_unit || item.unit}</span>
@@ -560,7 +578,7 @@ const SaleDetailPage: React.FC = () => {
                                 </div>
                               </td>
                               <td className="px-6 py-4 text-center">
-                                <span className="text-xs font-black text-slate-600">{Number(((item as any).entered_qty !== undefined ? (item as any).entered_qty : (item.quantity || 0)).toFixed(2))}</span>
+                                <span className="text-xs font-black text-slate-600">{getItemDisplayQty(item)}</span>
                               </td>
                               <td className="px-6 py-4 text-center">
                                 <span className="text-[10px] font-black text-blue-500 uppercase px-2 py-0.5 rounded bg-blue-50 border border-blue-100">{(item as any).entered_unit || item.unit}</span>

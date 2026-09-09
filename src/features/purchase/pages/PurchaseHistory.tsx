@@ -33,6 +33,7 @@ import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import SkeletonLoader from "@/components/common/SkeletonLoader";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 
 /* ================= TYPES ================= */
@@ -582,6 +583,7 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
   const navigate = useNavigate();
   const { purchase } = useBusinessApi();
   const [drawerRecord, setDrawerRecord] = useState<any | null>(null);
+  const [poToCancel, setPoToCancel] = useState<DirectPurchaseData | null>(null);
 
   return (
     <div className="bg-white border border-slate-100 rounded-lg shadow-sm overflow-hidden flex flex-col flex-1 min-h-0">
@@ -786,20 +788,7 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
                             <>
                               <DropdownMenuSeparator className="border-t border-slate-100 my-1 h-0 bg-transparent" />
                               <DropdownMenuItem
-                                onClick={async () => {
-                                  if (window.confirm("Are you sure you want to cancel this purchase? This action will reverse stock and cost changes.")) {
-                                    try {
-                                      await purchase.cancelPurchase(SHOP_ID, po.id);
-                                      alert("Purchase cancelled successfully.");
-                                      if (onRefresh) onRefresh();
-                                      else window.location.reload();
-                                    } catch (err: any) {
-                                      console.error("Failed to cancel purchase:", err);
-                                      const msg = err?.response?.data?.detail?.msg || err?.response?.data?.detail || "Failed to cancel purchase.";
-                                      alert(typeof msg === 'string' ? msg : "Failed to cancel purchase.");
-                                    }
-                                  }
-                                }}
+                                onClick={() => setPoToCancel(po)}
                                 className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-red-650 hover:bg-red-50 cursor-pointer outline-none"
                               >
                                 <XCircle size={13} />
@@ -826,6 +815,28 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
         </span>
       </div>
       <GroupedItemsDrawer record={drawerRecord} onClose={() => setDrawerRecord(null)} type="purchase" />
+      <ConfirmDialog
+        isOpen={!!poToCancel}
+        onClose={() => setPoToCancel(null)}
+        onConfirm={async () => {
+          if (!poToCancel) return;
+          try {
+            await purchase.cancelPurchase(SHOP_ID, poToCancel.id);
+            alert("Purchase cancelled successfully.");
+            if (onRefresh) onRefresh();
+            else window.location.reload();
+          } catch (err: any) {
+            console.error("Failed to cancel purchase:", err);
+            const msg = err?.response?.data?.detail?.msg || err?.response?.data?.detail || "Failed to cancel purchase.";
+            alert(typeof msg === 'string' ? msg : "Failed to cancel purchase.");
+          }
+        }}
+        title="Cancel Purchase"
+        message="Are you sure you want to cancel this purchase? This action will reverse stock and cost changes."
+        confirmText="Cancel Purchase"
+        cancelText="Keep Purchase"
+        variant="danger"
+      />
     </div>
   );
 };
@@ -946,9 +957,14 @@ const PurchaseHistory = () => {
     });
   };
 
-  const handleBulkCancel = async () => {
+  const [showBulkCancelConfirm, setShowBulkCancelConfirm] = useState(false);
+
+  const handleBulkCancel = () => {
     if (selectedPurchases.size === 0) return;
-    if (!window.confirm(`Are you sure you want to cancel these ${selectedPurchases.size} purchases? This action will reverse stock and cost changes.`)) return;
+    setShowBulkCancelConfirm(true);
+  };
+
+  const performBulkCancel = async () => {
     try {
       for (const id of Array.from(selectedPurchases)) {
         await purchase.cancelPurchase(SHOP_ID, id);
@@ -1258,6 +1274,16 @@ const PurchaseHistory = () => {
           <VerticalTable data={filtered} selectedIds={selectedPurchases} onSelect={(po) => toggleSelectPurchase(po.id)} totalCount={totalCount || filtered.length} lastElementRef={lastElementRef} loadingMore={loadingMore} onRefresh={() => setRefreshKey(prev => prev + 1)} />
         )}
       </div>
+      <ConfirmDialog
+        isOpen={showBulkCancelConfirm}
+        onClose={() => setShowBulkCancelConfirm(false)}
+        onConfirm={performBulkCancel}
+        title="Cancel Purchases"
+        message={`Are you sure you want to cancel these ${selectedPurchases.size} purchases? This action will reverse stock and cost changes.`}
+        confirmText="Cancel Purchases"
+        cancelText="Keep Purchases"
+        variant="danger"
+      />
     </>
   );
 };

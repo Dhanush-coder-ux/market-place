@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { createPortal } from "react-dom";
-import { User, Clock, Check, Printer, Send, Plus } from "lucide-react";
+import { User, Clock, Check, Printer, Plus } from "lucide-react";
 
 interface BillingSuccessModalProps {
   isOpen: boolean;
@@ -17,7 +17,6 @@ interface BillingSuccessModalProps {
   onClose: () => void;
   onNextBill: () => void;
   onPrint?: () => void;
-  onSend?: () => void;
 }
 
 const payIconMap: Record<string, any> = {
@@ -37,8 +36,7 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
   details,
   onClose,
   onNextBill,
-  onPrint,
-  onSend
+  onPrint
 }) => {
   useEffect(() => {
     if (isOpen) document.body.classList.add("no-scroll");
@@ -54,7 +52,7 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
         onNextBill();
       } else if (e.key.toLowerCase() === "p") {
         e.preventDefault();
-        onPrint && onPrint();
+        onPrint ? onPrint() : window.print();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -196,20 +194,12 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
 
         {/* Footer Actions */}
         <div className="p-[16px_20px_20px] mt-2 bg-[#F5F7FA] border-t border-[#E6EAF1]">
-          <div className="grid grid-cols-2 gap-2 mb-2">
-            <button 
-              onClick={() => onPrint && onPrint()}
-              className="h-10 rounded-[8px] font-bold text-[12.5px] inline-flex items-center justify-center gap-2 border border-blue-200 bg-white text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all shadow-sm"
-            >
-              <Printer size={15} /> Print
-            </button>
-            <button 
-              onClick={() => onSend && onSend()}
-              className="h-10 rounded-[8px] font-bold text-[12.5px] inline-flex items-center justify-center gap-2 border border-blue-200 bg-white text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all shadow-sm"
-            >
-              <Send size={15} /> Send bill
-            </button>
-          </div>
+          <button 
+            onClick={() => onPrint ? onPrint() : window.print()}
+            className="w-full h-10 mb-2 rounded-[8px] font-bold text-[12.5px] inline-flex items-center justify-center gap-2 border border-blue-200 bg-white text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all shadow-sm"
+          >
+            <Printer size={15} /> Print
+          </button>
           <button 
             onClick={onNextBill}
             className="w-full h-11 bg-blue-600 hover:bg-blue-700 border border-blue-600 text-white rounded-[8px] font-bold text-[13.5px] inline-flex items-center justify-center gap-2 transition-all shadow-sm"

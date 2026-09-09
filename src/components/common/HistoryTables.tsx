@@ -451,7 +451,7 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
                       <tr className="hover:bg-indigo-50/20 transition-colors border-l-[3px] border-l-indigo-400">
                         <td className="px-5 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-[10px] font-black text-indigo-600 font-mono">#{r.uiId || r.id}</span>
+                            <span className="text-[10px] font-black text-indigo-600 font-mono">{r.uiId || r.id}</span>
                             {(r.version || (r.datas && r.datas.version)) && (
                               <AntBadge variant="meta-version" type="tag">
                                 {r.version || r.datas?.version}
@@ -596,6 +596,7 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
               <thead>
                 <tr className="sticky top-0 bg-slate-50/90 backdrop-blur-sm z-10 text-[9px] font-black text-slate-400 tracking-wider uppercase border-b border-slate-100 shadow-[0_1px_0_rgba(0,0,0,0.05)]">
                   <th className="px-5 py-3.5">Purchase ID</th>
+                  <th className="px-5 py-3.5">Invoice</th>
                   <th className="px-5 py-3.5">Product</th>
                   <th className="px-5 py-3.5 text-center">Stock In/Out</th>
                   <th className="px-5 py-3.5 text-center">Stock After</th>
@@ -603,7 +604,6 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                   <th className="px-5 py-3.5">Paid</th>
                   <th className="px-5 py-3.5">Outstanding</th>
                   <th className="px-5 py-3.5">Payment</th>
-                  <th className="px-5 py-3.5">Invoice</th>
                   <th className="px-5 py-3.5">Date</th>
                   <th className="px-5 py-3.5 w-12"></th>
                 </tr>
@@ -648,6 +648,9 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                               </AntBadge>
                             )}
                           </div>
+                        </td>
+                        <td className="px-5 py-4 text-xs font-mono text-slate-500 whitespace-nowrap">
+                          {r.invoiceNo}
                         </td>
                         <td className="px-5 py-4">
                           {hasList ? (
@@ -726,9 +729,6 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                                 'bg-slate-50 text-slate-600'
                               }`}>{r.paymentMethod}</span>
                           </div>
-                        </td>
-                        <td className="px-5 py-4 text-xs font-mono text-slate-500 whitespace-nowrap">
-                          {r.invoiceNo}
                         </td>
                         <td className="px-5 py-4 text-xs text-slate-500 font-medium whitespace-nowrap">
                           {r.purchaseDate ? new Date(r.purchaseDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}

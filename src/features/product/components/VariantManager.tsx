@@ -314,7 +314,6 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                   </th>
                 ))}
                 <th className="px-5 py-4 text-[10px] font-black uppercase text-slate-400 whitespace-nowrap">Barcode</th>
-                <th className="px-5 py-4 text-center text-[10px] font-black uppercase text-slate-400">Cost Price</th>
                 <th className="px-5 py-4 text-center text-[10px] font-black uppercase text-slate-400">Sell Price</th>
                 <th className="px-5 py-4 text-[10px] font-black uppercase text-slate-400 whitespace-nowrap">Storage Location</th>
                 <th className="px-5 py-4 text-center text-[10px] font-black uppercase text-slate-400">Reorder Pt</th>
@@ -339,15 +338,6 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                           placeholder="SKU-001"
                           value={combo.barcode}
                           onChange={e => update(combo.id, "barcode", e.target.value)}
-                        />
-                      </td>
-                      <td className="px-5 py-4">
-                        <input
-                          className="h-9 px-3 text-xs border border-slate-200 rounded-lg w-24 text-center font-mono focus:ring-2 focus:ring-blue-100 outline-none"
-                          placeholder="0.00"
-                          type="number"
-                          value={combo.buy_price}
-                          onChange={e => update(combo.id, "buy_price", e.target.value)}
                         />
                       </td>
                       <td className="px-5 py-4">

@@ -41,7 +41,7 @@ const getItemDisplayQty = (item: any) => {
 
 type SaleItem = {
   id: string; name: string; sku: string; quantity: number; returnedQty?: number; reason?: string;
-  unitPrice: number; buyPrice: number;
+  unitPrice: number; buyPrice: number; basePrice: number;
   status?: string; serial_numbers?: string[];
   unit: string;
   variantName?: string;
@@ -81,6 +81,7 @@ const generateItems = (sale: OrderResponse, productMap: Record<string, string> =
       returnedQty: i.returned_quantity || 0,
       unitPrice,
       buyPrice: i.buy_price || 0,
+      basePrice,
       status: i.status || "COMPLETED",
       reason: i.reason,
       serial_numbers: Array.isArray(i.serialno_infos) ? i.serialno_infos.map((sn: any) => sn.name || sn) : (i.serialno_info?.serial_numbers || i.serial_info?.serial_numbers || i.serial_numbers || []),
@@ -197,7 +198,7 @@ const SaleDetailPage: React.FC = () => {
   );
 
   const items = generateItems(sale, productMap);
-  const subtotal = items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
+  const subtotal = items.reduce((s, i) => s + i.basePrice * i.quantity, 0);
   const canReturn = sale.status === "Completed" && sale.origin !== "Sales Return";
   const customerName = (sale as any).additional_infos?.customer_name || (sale as any).datas?.customer_name || sale.customer?.customer_name || customerMap[sale.customer_id] || "Walk-in Customer";
   const customerMobile = (sale as any).additional_infos?.customer_phone || sale.customer?.customer_mobile_number || "";

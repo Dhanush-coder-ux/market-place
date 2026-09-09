@@ -96,6 +96,13 @@ const generateItems = (sale: SaleRecord, productMap: Record<string, string> = {}
 
 const fmt = (n: number) => `₹${n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+export const getUnitConversionFactor = (item: any, selectedUnit: string): number => {
+  if (!item || !selectedUnit || !item.unit_infos?.sub_units) return 1.0;
+  if (selectedUnit === item.unit_infos.name) return 1.0;
+  const su = item.unit_infos.sub_units.find((s: any) => s.name === selectedUnit);
+  return su && su.factor && Number(su.factor) > 0 ? Number(su.factor) : 1.0;
+};
+
 /* ═══════════════════════════════════════════════════════════════
    HELPER COMPONENTS
 ═══════════════════════════════════════════════════════════════ */
@@ -258,7 +265,7 @@ const SerialReturnPicker: React.FC<{ allSerials: any[]; selected: any[]; require
   );
 };
 
-const ItemSelector: React.FC<{ items: SaleItem[]; returnItems: Record<string, number>; serialReturnMap: Record<string, string[]>; itemReasons: Record<string, ReturnReason>; onToggle: (id: string) => void; onQtyChange: (id: string, v: number) => void; onSerialChange: (id: string, serials: string[]) => void; onReasonChange: (id: string, reason: ReturnReason) => void; onSelectAll: (all: boolean) => void; error?: string; }> = ({ items, returnItems, serialReturnMap, itemReasons, onToggle, onQtyChange, onSerialChange, onReasonChange, onSelectAll, error }) => {
+const ItemSelector: React.FC<{ items: SaleItem[]; returnItems: Record<string, number>; serialReturnMap: Record<string, string[]>; itemReasons: Record<string, ReturnReason>; itemUnits: Record<string, string>; onToggle: (id: string) => void; onQtyChange: (id: string, v: number) => void; onUnitChange: (id: string, unit: string) => void; onSerialChange: (id: string, serials: string[]) => void; onReasonChange: (id: string, reason: ReturnReason) => void; onSelectAll: (all: boolean) => void; error?: string; }> = ({ items, returnItems, serialReturnMap, itemReasons, itemUnits, onToggle, onQtyChange, onUnitChange, onSerialChange, onReasonChange, onSelectAll, error }) => {
   const [q, setQ] = useState("");
   const filtered = items.filter(i => i.name.toLowerCase().includes(q.toLowerCase()) || i.sku.toLowerCase().includes(q.toLowerCase()));
   // Items that still have returnable quantity (not fully returned, not exchanged/refunded)
@@ -333,38 +340,31 @@ const ItemSelector: React.FC<{ items: SaleItem[]; returnItems: Record<string, nu
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] text-slate-400">Qty</span>
                           {(() => {
-                            let factor = 1.0;
-                            if (item.entered_unit !== item.unit_infos?.name && item.unit_infos?.sub_units) {
-                              const su = item.unit_infos.sub_units.find((s: any) => s.name === item.entered_unit);
-                              if (su && su.factor) {
-                                factor = su.factor;
-                              }
-                            }
+                            const selectedUnit = itemUnits[item.id] || item.entered_unit || item.unit;
+                            const factor = getUnitConversionFactor(item, selectedUnit);
                             const baseMax = Math.max(0, item.quantity - item.returned_quantity);
                             const maxLimit = factor > 0 ? baseMax / factor : baseMax;
                             return (
                               <>
                                 <QuantityStepper value={qty} max={maxLimit} onChange={v => onQtyChange(item.id, v)} />
                                 <span className="text-[10px] text-slate-400 whitespace-nowrap">
-                                  of {maxLimit} {item.entered_unit || item.unit}
+                                  of {maxLimit} {selectedUnit}
                                 </span>
                               </>
                             );
                           })()}
                           <span className="font-mono ml-auto text-[10px] font-bold text-blue-600">
-                            {fmt(item.unitPrice * qty * (item.entered_unit !== item.unit_infos?.name && item.unit_infos?.sub_units?.find((su: any) => su.name === item.entered_unit)?.factor ? item.unit_infos.sub_units.find((su: any) => su.name === item.entered_unit).factor : 1))}
+                            {fmt(item.unitPrice * qty * getUnitConversionFactor(item, itemUnits[item.id] || item.entered_unit || item.unit))}
                           </span>
                         </div>
                         {item.unit_infos?.sub_units?.length > 0 && (
                           <div className="flex items-center gap-2 mt-1">
                             <span className="text-[10px] text-slate-400">Unit</span>
                             <select
-                              value={item.entered_unit || item.unit}
+                              value={itemUnits[item.id] || item.entered_unit || item.unit}
                               onChange={e => {
                                 const selectedUnit = e.target.value;
-                                // Automatically update unit in local state map or directly update the item property
-                                item.entered_unit = selectedUnit;
-                                onQtyChange(item.id, qty); // trigger rerender/update
+                                onUnitChange(item.id, selectedUnit);
                               }}
                               className="h-7 px-2 text-[10px] border border-slate-200 roundedbg-white text-slate-700 outline-none focus:border-blue-500 font-semibold"
                             >
@@ -518,11 +518,8 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
       else {
         const item = saleItems.find(i => i.id === itemId);
         if (!item) return s;
-        let factor = 1.0;
-        if (item.entered_unit !== item.unit_infos?.name && item.unit_infos?.sub_units) {
-          const su = item.unit_infos.sub_units.find((suObj: any) => suObj.name === item.entered_unit);
-          if (su && su.factor) factor = su.factor;
-        }
+        const selectedUnit = s.itemUnits[item.id] || item.entered_unit || item.unit;
+        const factor = getUnitConversionFactor(item, selectedUnit);
         const maxReturnable = Math.max(0, (item?.quantity ?? 1) - (item?.returned_quantity ?? 0));
         const maxReturnableInSelectedUnit = factor > 0 ? maxReturnable / factor : maxReturnable;
         if (maxReturnableInSelectedUnit <= 0) return s; // already fully returned — ignore
@@ -533,6 +530,24 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
     });
   }, [saleItems]);
 
+  const setUnit = useCallback((itemId: string, unit: string) => {
+    const item = saleItems.find(i => i.id === itemId);
+    if (!item) return;
+    setState(s => {
+      const nextUnits = { ...s.itemUnits, [itemId]: unit };
+      
+      const factor = getUnitConversionFactor(item, unit);
+      const baseMaxReturnable = Math.max(0, item.quantity - item.returned_quantity);
+      const maxReturnableInSelectedUnit = factor > 0 ? baseMaxReturnable / factor : baseMaxReturnable;
+      
+      const nextReturnItems = { ...s.returnItems };
+      if (nextReturnItems[itemId] !== undefined) {
+         nextReturnItems[itemId] = Math.min(Math.max(1, nextReturnItems[itemId]), maxReturnableInSelectedUnit);
+      }
+      return { ...s, itemUnits: nextUnits, returnItems: nextReturnItems };
+    });
+  }, [saleItems]);
+
   const setSerialReturns = useCallback((itemId: string, serials: string[]) => setState(s => ({ ...s, serialReturnMap: { ...s.serialReturnMap, [itemId]: serials } })), []);
   const selectAll = useCallback((all: boolean) => {
     setState(s => {
@@ -540,11 +555,8 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
       const next: Record<string, number> = {};
       saleItems.forEach(i => {
         if (i.status !== "REFUNDED" && i.status !== "EXCHANGED") {
-          let factor = 1.0;
-          if (i.entered_unit !== i.unit_infos?.name && i.unit_infos?.sub_units) {
-            const su = i.unit_infos.sub_units.find((suObj: any) => suObj.name === i.entered_unit);
-            if (su && su.factor) factor = su.factor;
-          }
+          const selectedUnit = s.itemUnits[i.id] || i.entered_unit || i.unit;
+          const factor = getUnitConversionFactor(i, selectedUnit);
           const maxReturnable = Math.max(0, i.quantity - i.returned_quantity);
           const maxReturnableInSelectedUnit = factor > 0 ? maxReturnable / factor : maxReturnable;
           if (maxReturnableInSelectedUnit > 0) next[i.id] = maxReturnableInSelectedUnit;
@@ -557,18 +569,16 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
   const updateQty = useCallback((itemId: string, v: number) => {
     const item = saleItems.find(i => i.id === itemId);
     if (!item) return;
-    let factor = 1.0;
-    if (item.entered_unit !== item.unit_infos?.name && item.unit_infos?.sub_units) {
-      const su = item.unit_infos.sub_units.find((s: any) => s.name === item.entered_unit);
-      if (su && su.factor) {
-        factor = su.factor;
-      }
-    }
-    // Calculate max allowed quantity in the selected unit
-    const baseMaxReturnable = Math.max(0, item.quantity - item.returned_quantity);
-    const maxReturnableInSelectedUnit = factor > 0 ? baseMaxReturnable / factor : baseMaxReturnable;
+    
+    setState(s => {
+      const selectedUnit = s.itemUnits[itemId] || item.entered_unit || item.unit;
+      const factor = getUnitConversionFactor(item, selectedUnit);
+      // Calculate max allowed quantity in the selected unit
+      const baseMaxReturnable = Math.max(0, item.quantity - item.returned_quantity);
+      const maxReturnableInSelectedUnit = factor > 0 ? baseMaxReturnable / factor : baseMaxReturnable;
 
-    setState(s => ({ ...s, returnItems: { ...s.returnItems, [itemId]: Math.min(Math.max(1, v), maxReturnableInSelectedUnit) } }));
+      return { ...s, returnItems: { ...s.returnItems, [itemId]: Math.min(Math.max(1, v), maxReturnableInSelectedUnit) } };
+    });
   }, [saleItems]);
 
   const addExchangeProduct = useCallback((_itemId: string, product: any) => setState(s => {
@@ -591,13 +601,8 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
     const gstType = isExclusive ? "EXCLUSIVE" : "INCLUSIVE";
 
     const returnValue = selectedItems.reduce((s, i) => {
-      let factor = 1.0;
-      if (i.entered_unit !== i.unit_infos?.name && i.unit_infos?.sub_units) {
-        const su = i.unit_infos.sub_units.find((suObj: any) => suObj.name === i.entered_unit);
-        if (su && su.factor) {
-          factor = su.factor;
-        }
-      }
+      const selectedUnit = state.itemUnits[i.id] || i.entered_unit || i.unit;
+      const factor = getUnitConversionFactor(i, selectedUnit);
       const itemBase = i.unitPrice * i.returnQty * factor;
       return s + itemBase;
     }, 0);
@@ -674,7 +679,7 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
       const itemsPayload = selectedItems.map(i => ({
         order_item_id: i.id,
         quantity: i.returnQty,
-        unit: i.entered_unit || i.unit,
+        unit: state.itemUnits[i.id] || i.entered_unit || i.unit,
         reason: state.itemReasons[i.id] || "Customer Request",
         serialno_infos: i.selectedSerials?.length
           ? i.selectedSerials.map(s => {
@@ -712,11 +717,8 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
           const origItem = selectedItems.find(i => i.id === itemPayload.order_item_id);
           if (!origItem) continue;
 
-          let factor = 1.0;
-          if (origItem.entered_unit !== origItem.unit_infos?.name && origItem.unit_infos?.sub_units) {
-            const su = origItem.unit_infos.sub_units.find((suObj: any) => suObj.name === origItem.entered_unit);
-            if (su && su.factor) factor = su.factor;
-          }
+          const selectedUnit = state.itemUnits[origItem.id] || origItem.entered_unit || origItem.unit;
+          const factor = getUnitConversionFactor(origItem, selectedUnit);
           const itemAmount = origItem.unitPrice * origItem.returnQty * factor;
 
           const itemPaymentsDict: Record<string, number> = {};
@@ -856,7 +858,7 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
     return true;
   }, [state.step, state.mode, state.itemReasons, state.exchangeMap, selectedItems, totals.diff, state.payments]);
 
-  return { state, saleItems, selectedItems, totals, reset, setMode, setReason, setNotes, updatePayment, addPayment, removePayment, toggleItem, selectAll, updateQty, addExchangeProduct, removeExchangeProduct, setSerialReturns, goNext, goBack, confirm, canProceed, customerOutstanding };
+  return { state, saleItems, selectedItems, totals, reset, setMode, setReason, setNotes, updatePayment, addPayment, removePayment, toggleItem, selectAll, updateQty, setUnit, addExchangeProduct, removeExchangeProduct, setSerialReturns, goNext, goBack, confirm, canProceed, customerOutstanding };
 };
 
 // Export the hook for use in ReturnPage full-page component
@@ -1201,7 +1203,7 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
               )}
               {state.step === 2 && (
                 <>
-                  <ItemSelector items={saleItems} returnItems={state.returnItems} serialReturnMap={state.serialReturnMap} itemReasons={state.itemReasons} onToggle={m.toggleItem} onQtyChange={m.updateQty} onSerialChange={m.setSerialReturns} onReasonChange={m.setReason} onSelectAll={m.selectAll} error={state.errors.items} />
+                  <ItemSelector items={saleItems} returnItems={state.returnItems} serialReturnMap={state.serialReturnMap} itemReasons={state.itemReasons} itemUnits={state.itemUnits} onToggle={m.toggleItem} onQtyChange={m.updateQty} onUnitChange={m.setUnit} onSerialChange={m.setSerialReturns} onReasonChange={m.setReason} onSelectAll={m.selectAll} error={state.errors.items} />
                   {state.mode === "exchange" && (
                     <div className="pt-4 border-t border-slate-100">
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Replacement Products</p>

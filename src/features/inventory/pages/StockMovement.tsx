@@ -11,6 +11,7 @@ import {
 import { GradientButton } from "@/components/ui/GradientButton";
 import { StatCard } from "@/components/common/StatsCard";
 import { TypeBadge } from "@/components/common/SuperUI";
+import { AntBadge } from "@/components/ui/AntBadge";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { useHeader } from "@/context/HeaderContext";
@@ -188,16 +189,14 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
                           <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-slate-200/50">
                             {p.variant && (
                               <div className="pl-2.5 border-l-2 border-violet-200">
-                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-xl bg-[var(--at-variant-bg)] text-[var(--at-variant-tx)] border-[var(--at-variant-bd)] text-[9px] font-black">
-                                  Variant: {p.variant}
-                                </span>
+                                <AntBadge variant="at-variant" type="tag">V: {p.variant}</AntBadge>
                               </div>
                             )}
                             {p.batch && (
                               <div className="pl-2.5 border-l-2 border-amber-200">
                                 <div className="bg-white border border-slate-100 rounded p-2 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
                                   <div className="flex justify-between items-center">
-                                    <span className="text-[10px] font-bold text-slate-800">Batch: {p.batch}</span>
+                                    <AntBadge variant="at-batch" type="tag">B: {p.batch}</AntBadge>
                                     <span className={`text-[10px] font-black ${p.qty > 0 ? 'text-[var(--ps-completed-tx)]' : 'text-[var(--ps-cancel-tx)]'}`}>Qty: {formatStockValue(p.qty)}</span>
                                   </div>
                                   {(p.expiry_date || p.manufacturing_date) && (
@@ -1026,22 +1025,14 @@ export default function StockMovementPage() {
                               </button>
                               <span className="text-[9px] font-medium text-slate-400 font-mono">{hasList ? firstProd.skuLabel : m.skuLabel}: {hasList ? firstProd.skuValue : m.skuValue}</span>
                               {(hasList ? firstProd.variant : m.variant) && (
-                                <button
-                                  onClick={(e) => copyToClipboard(e, (hasList ? firstProd.variant : m.variant) || "")}
-                                  className="group flex items-center gap-0.5 text-[9px] font-extrabold text-[var(--at-variant-tx)] bg-[var(--at-variant-bg)] px-1.5 py-0.5 rounded-xl border border-[var(--at-variant-bd)] hover:bg-[var(--at-variant-bg)] transition-all leading-none"
-                                >
-                                  <Layers size={8} /> {formatVariantBrief(hasList ? firstProd.variant : m.variant)}
-                                  <Copy size={7} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                                </button>
+                                <span onClick={(e) => copyToClipboard(e, (hasList ? firstProd.variant : m.variant) || "")} className="cursor-pointer" title="Click to copy">
+                                  <AntBadge variant="at-variant" type="tag">V: {formatVariantBrief(hasList ? firstProd.variant : m.variant)}</AntBadge>
+                                </span>
                               )}
                               {(hasList ? firstProd.batch : m.batch) && (
-                                <button
-                                  onClick={(e) => copyToClipboard(e, (hasList ? firstProd.batch : m.batch) || "")}
-                                  className="group flex items-center gap-0.5 text-[9px] font-extrabold text-[var(--at-batch-tx)] bg-[var(--at-batch-bg)] px-1.5 py-0.5 rounded-xl border border-[var(--at-batch-bd)] hover:bg-[var(--at-batch-bg)] transition-all leading-none"
-                                >
-                                  <Hash size={8} /> {truncateId(hasList ? firstProd.batch : m.batch)}
-                                  <Copy size={7} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                                </button>
+                                <span onClick={(e) => copyToClipboard(e, (hasList ? firstProd.batch : m.batch) || "")} className="cursor-pointer" title="Click to copy">
+                                  <AntBadge variant="at-batch" type="tag">B: {truncateId(hasList ? firstProd.batch : m.batch)}</AntBadge>
+                                </span>
                               )}
                               {hasList && (
                                 <button

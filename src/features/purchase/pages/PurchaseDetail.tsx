@@ -703,7 +703,7 @@ const PurchaseDetail = () => {
             },
             po.outstanding && po.outstanding > 0
               ? (po.paid_amount === 0
-                ? { text: "Pending", variant: "pay-pending", dotColor: "bg-[var(--pay-pending-dot)]" }
+                ? { text: "Unpaid", variant: "pay-pending", dotColor: "bg-[var(--pay-pending-dot)]" }
                 : { text: "Partially paid", variant: "pay-partial", dotColor: "bg-[var(--pay-partial-dot)]" })
               : { text: "Paid", variant: "pay-paid", dotColor: "bg-[var(--pay-paid-dot)]" },
             ...(((po.returns?.length || 0) > 0 || ((po as any).purchase_returns?.length || 0) > 0)

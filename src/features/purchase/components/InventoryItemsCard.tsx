@@ -916,9 +916,9 @@ export const InventoryItemsCard = ({
                                 <span
                                   onClick={() => toggleSettings(index)}
                                   className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-black border transition-all cursor-pointer ${product.batchNum
-                                  ? "bg-amber-50 text-amber-700 border-amber-200"
-                                  : "bg-rose-50/50 text-rose-600 border-rose-100/60 animate-pulse"
-                                  }`}>
+                                    ? "bg-amber-50 text-amber-700 border-amber-200"
+                                    : "bg-rose-50/50 text-rose-600 border-rose-100/60 animate-pulse"
+                                    }`}>
                                   <Package size={9} /> {product.batchNum ? `Batch: ${typeof product.batchNum === 'object' && product.batchNum !== null ? (product.batchNum.batch_name || product.batchNum.name) : product.batchNum}` : "Batch Details Required"}
                                 </span>
                               )}
@@ -926,9 +926,9 @@ export const InventoryItemsCard = ({
                                 <span
                                   onClick={() => toggleSettings(index)}
                                   className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-black border transition-all cursor-pointer ${(product.serialNumbers?.split(",").filter(Boolean).length || 0) >= (Number(product.quantity) || 0)
-                                  ? "bg-blue-50 text-blue-700 border-blue-200"
-                                  : "bg-rose-50/50 text-rose-600 border-rose-100/60 animate-pulse"
-                                  }`}>
+                                    ? "bg-blue-50 text-blue-700 border-blue-200"
+                                    : "bg-rose-50/50 text-rose-600 border-rose-100/60 animate-pulse"
+                                    }`}>
                                   <Check size={9} /> {
                                     (product.serialNumbers?.split(",").filter(Boolean).length || 0) >= (Number(product.quantity) || 0)
                                       ? `${product.serialNumbers?.split(",").filter(Boolean).length} Serials Set`

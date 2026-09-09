@@ -879,7 +879,25 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                         )}
                         {item.batchId && (
                           <AntBadge variant="lb-batch" type="tag" icon={<Hash size={10} className="mr-1 inline" />}>
-                            {item.batchId}
+                            {(() => {
+                              const prod = item._product || {};
+                              let batchName = item.batchId;
+                              const allBatches = [...(prod.batch_infos || []), ...(prod.batches || [])];
+                              const foundRoot = allBatches.find(b => b.id === item.batchId);
+                              if (foundRoot) {
+                                batchName = foundRoot.batch_name || foundRoot.name || foundRoot.batch || foundRoot.batch_no || item.batchId.slice(0, 8);
+                              } else if (item.variantId) {
+                                const variant = (prod.variants || []).find((v: any) => v.id === item.variantId);
+                                if (variant) {
+                                  const vBatches = [...(variant.batch_infos || []), ...(variant.batches || [])];
+                                  const foundVar = vBatches.find((b: any) => b.id === item.batchId || b.batchId === item.batchId);
+                                  if (foundVar) {
+                                    batchName = foundVar.batch_name || foundVar.name || foundVar.batch || foundVar.batch_no || item.batchId.slice(0, 8);
+                                  }
+                                }
+                              }
+                              return String(batchName).length > 20 ? String(batchName).slice(0, 8) : batchName;
+                            })()}
                           </AntBadge>
                         )}
                         {item.batchTracking && item.expiryDate && (

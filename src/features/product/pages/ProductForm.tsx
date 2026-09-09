@@ -1094,6 +1094,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                           onScrollEnd={fetchMoreCategories}
                           footer={
                             <button
+                              type="button"
                               onClick={() => setModalState({ type: "Category", query: "" })}
                               className="w-full flex items-center justify-center gap-2 py-2 text-xs font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors"
                             >
@@ -1115,6 +1116,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                           onScrollEnd={fetchMoreUnits}
                           footer={
                             <button
+                              type="button"
                               onClick={() => setModalState({ type: "Unit", query: "" })}
                               className="w-full flex items-center justify-center gap-2 py-2 text-xs font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors"
                             >
@@ -1390,7 +1392,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         <strong>Made-to-order item.</strong> Since this isn't purchased as stock, set its prices here so it can be billed. We'll use these to calculate your profit.
                       </p>
                     </div>
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-2 gap-4">
                       <InputField
                         label="Sell price"
                         name="selling_price"
@@ -1401,17 +1403,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         placeholder="0.00"
                         leftEl={<IndianRupee size={13} />}
                         tooltip="The price you charge the customer."
-                      />
-                      <InputField
-                        label="Cost price"
-                        name="cost_to_make"
-                        required
-                        type="number"
-                        value={form.cost_to_make}
-                        onChange={handleChange}
-                        placeholder="0.00"
-                        leftEl={<IndianRupee size={13} />}
-                        tooltip="Your estimated recipe / production cost."
                       />
                       <InputField
                         label="Sell price"

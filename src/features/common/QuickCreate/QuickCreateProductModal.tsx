@@ -403,14 +403,12 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
                         />
             </div>
             <div className="space-y-1.5">
-              <Input
-                label="GST Rate"
-                name="gst"
+              <label className="text-[10px] font-black text-slate-400 ml-1">GST Rate</label>
+              <ReusableSelect
                 value={form.gst}
-                onChange={handleChange}
-                placeholder="e.g. 18"
-                rightIcon="%"
-                required
+                onValueChange={(val) => setForm(p => ({ ...p, gst: val }))}
+                options={["0", "5", "12", "18", "28"].map(r => ({ value: r, label: `${r}%` }))}
+                placeholder="18%"
               />
             </div>
           </div>

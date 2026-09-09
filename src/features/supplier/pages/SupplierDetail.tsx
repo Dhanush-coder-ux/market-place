@@ -384,12 +384,7 @@ export default function SupplierDetail() {
           initials={initials}
           subText={`Supplier ID: ${supplier.ui_id || supplier.id?.slice(0, 8).toUpperCase()}`}
           badges={[
-            { text: String(supplierType), variant: "primary" },
-            {
-              text: "Active",
-              variant: "success",
-              showPulse: true
-            }
+            { text: String(supplierType), variant: "primary" }
           ]}
           infoItems={[
             { icon: Mail, text: String(supplierEmail) },

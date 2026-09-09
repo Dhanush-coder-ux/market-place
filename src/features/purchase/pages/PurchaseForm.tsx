@@ -14,6 +14,7 @@ import {
   FileText,
   MapPin,
 } from "lucide-react";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 
 import Input from "@/components/ui/Input";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
@@ -94,6 +95,9 @@ const PurchaseForm = () => {
 
   const { openQuickCreate } = useQuickCreate();
   const [soldStockWarnings, setSoldStockWarnings] = useState<string[]>([]);
+  const [originalSupplierId, setOriginalSupplierId] = useState<string | null>(null);
+  const [pendingSupplier, setPendingSupplier] = useState<any>(null);
+  const [showSupplierChangeInfo, setShowSupplierChangeInfo] = useState(false);
 
   // --- State Management ---
   const [purchaseDetails, setPurchaseDetails] = useState({
@@ -194,6 +198,7 @@ const PurchaseForm = () => {
           const data = res.data ? (Array.isArray(res.data) ? res.data[0] : res.data) : res;
           const loadedSupplierId = data.supplier?.supplier_id || data.supplier?.id || data.supplier_id || "";
           const loadedSupplierName = data.supplier?.supplier_name || data.supplier?.name || data.supplier_name || "";
+          setOriginalSupplierId(loadedSupplierId);
 
           setPurchaseDetails(data.purchaseDetails || {
             supplier: loadedSupplierId,
@@ -808,8 +813,13 @@ const PurchaseForm = () => {
                     options={supplierDetails ? [supplierDetails] : []}
                     value={supplierDetails?.id || purchaseDetails.supplier}
                     onChange={(val, opt: any) => {
-                      setPurchaseDetails({ ...purchaseDetails, supplier: val ? String(val) : "" });
-                      setSupplierDetails(opt || null);
+                      if (id && originalSupplierId && val && String(val) !== originalSupplierId) {
+                        setPendingSupplier({ val: String(val), opt: opt || null });
+                        setShowSupplierChangeInfo(true);
+                      } else {
+                        setPurchaseDetails({ ...purchaseDetails, supplier: val ? String(val) : "" });
+                        setSupplierDetails(opt || null);
+                      }
                     }}
                     // 💡 Triggers the On-The-Fly Supplier Modal
                     onCreateNew={(query) => openQuickCreate("SUPPLIER", (newSupplier: any) => {
@@ -1204,6 +1214,27 @@ const PurchaseForm = () => {
       {/* Sidebar Filter for Custom Field Creation — REMOVED */}
 
       <NavigationBlocker shouldBlock={!showSuccessModal ? undefined : false} data={{ purchaseDetails, products, charges, payment, supplierDetails }} isLoading={loadingData} isSubmitting={submitting} />
+      <ConfirmDialog
+        isOpen={showSupplierChangeInfo}
+        onClose={() => {
+          setShowSupplierChangeInfo(false);
+          setPendingSupplier(null);
+        }}
+        onConfirm={() => {
+          if (pendingSupplier) {
+            setPurchaseDetails({ ...purchaseDetails, supplier: pendingSupplier.val });
+            setSupplierDetails(pendingSupplier.opt);
+          }
+          setShowSupplierChangeInfo(false);
+          setPendingSupplier(null);
+        }}
+        title="Supplier Changed"
+        description="The purchase data will now be shown for this supplier."
+        confirmText="Proceed"
+        cancelText="Cancel"
+        type="info"
+        icon={Info}
+      />
     </>
   );
 };

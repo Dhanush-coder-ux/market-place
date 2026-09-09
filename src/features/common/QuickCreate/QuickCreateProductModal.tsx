@@ -61,14 +61,16 @@ const QuickCreateDropdownModal: React.FC<QuickCreateDropdownModalProps> = ({ isO
     try {
       if (type === "Category") {
         const res = await utilityApi.createShopCategory({ shop_id: SHOP_ID, name: value.trim() });
-        if (res?.data) onSuccess({ id: res.data.id, name: res.data.name });
+        const data = res.data || res;
+        if (data && data.id) onSuccess({ id: data.id, name: data.name });
       } else {
         const res = await utilityApi.createShopUnit({
           shop_id: SHOP_ID,
           name: value.trim(),
           short_name: value.trim().substring(0, 3).toUpperCase()
         });
-        if (res?.data) onSuccess({ id: res.data.id, name: res.data.name });
+        const data = res.data || res;
+        if (data && data.id) onSuccess({ id: data.id, name: data.name });
       }
       setValue("");
       onClose();
@@ -193,25 +195,26 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
     }
   };
 
-  useEffect(() => {
-    const fetchDropdowns = async () => {
-      try {
-        const [catRes, unitRes] = await Promise.all([
-          utilityApi.getShopCategories(SHOP_ID, { limit: "100", offset: "1" }),
-          utilityApi.getShopUnits(SHOP_ID, { limit: "100", offset: "1" })
-        ]);
-        if (catRes?.data && catRes.data.length > 0) {
-          setCategories(catRes.data);
-          setForm(p => ({ ...p, category: p.category && catRes.data.some((c: any) => c.id === p.category) ? p.category : catRes.data[0].id }));
-        }
-        if (unitRes?.data && unitRes.data.length > 0) {
-          setUnits(unitRes.data);
-          setForm(p => ({ ...p, unit: p.unit && unitRes.data.some((u: any) => u.id === p.unit) ? p.unit : unitRes.data[0].id }));
-        }
-      } catch (e) {
-        console.error("Failed to fetch shop categories/units", e);
+  const fetchDropdowns = async () => {
+    try {
+      const [catRes, unitRes] = await Promise.all([
+        utilityApi.getShopCategories(SHOP_ID, { limit: "100", offset: "1" }),
+        utilityApi.getShopUnits(SHOP_ID, { limit: "100", offset: "1" })
+      ]);
+      if (catRes?.data && catRes.data.length > 0) {
+        setCategories(catRes.data);
+        setForm(p => ({ ...p, category: p.category && catRes.data.some((c: any) => c.id === p.category) ? p.category : catRes.data[0].id }));
       }
-    };
+      if (unitRes?.data && unitRes.data.length > 0) {
+        setUnits(unitRes.data);
+        setForm(p => ({ ...p, unit: p.unit && unitRes.data.some((u: any) => u.id === p.unit) ? p.unit : unitRes.data[0].id }));
+      }
+    } catch (e) {
+      console.error("Failed to fetch shop categories/units", e);
+    }
+  };
+
+  useEffect(() => {
     if (isOpen) {
       fetchDropdowns();
     }
@@ -363,44 +366,44 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-slate-400 ml-1">Category</label>
-             <ReusableSelect
-                          key={`cat-${categories.length}`}
-                          value={form.category}
-                          onValueChange={(val) => { setForm(p => ({ ...p, category: val })); setVariantTypes([]); setCombinations([]); }}
-                          options={categories.map(c => ({ value: c.id, label: c.name }))}
-                          placeholder="Select category"
-                          onScrollEnd={fetchMoreCategories}
-                          footer={
-                            <button
-                              onClick={() => setModalState({ type: "Category", query: "" })}
-                              className="w-full flex items-center justify-center gap-2 py-2 text-xs font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors"
-                            >
-                              <Plus size={14} />
-                              Create New Category
-                            </button>
-                          }
-                        />
+              <label className="text-[10px] font-black text-slate-400 ml-1">Category <span className="text-red-500 ml-0.5">*</span></label>
+              <ReusableSelect
+                key={`cat-${categories.length}`}
+                value={form.category}
+                onValueChange={(val) => { setForm(p => ({ ...p, category: val })); setVariantTypes([]); setCombinations([]); }}
+                options={categories.map(c => ({ value: c.id, label: c.name }))}
+                placeholder="Select category"
+                onScrollEnd={fetchMoreCategories}
+                footer={
+                  <button
+                    onClick={() => setModalState({ type: "Category", query: "" })}
+                    className="w-full flex items-center justify-center gap-2 py-2 text-xs font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors"
+                  >
+                    <Plus size={14} />
+                    Create New Category
+                  </button>
+                }
+              />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-slate-400 ml-1">Unit</label>
-               <ReusableSelect
-                          key={`unit-${units.length}`}
-                          value={form.unit}
-                          onValueChange={(val) => setForm(p => ({ ...p, unit: val }))}
-                          options={units.map(u => ({ value: u.id, label: u.name }))}
-                          placeholder="Select unit"
-                          onScrollEnd={fetchMoreUnits}
-                          footer={
-                            <button
-                              onClick={() => setModalState({ type: "Unit", query: "" })}
-                              className="w-full flex items-center justify-center gap-2 py-2 text-xs font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors"
-                            >
-                              <Plus size={14} />
-                              Create New Unit
-                            </button>
-                          }
-                        />
+              <label className="text-[10px] font-black text-slate-400 ml-1">Unit <span className="text-red-500 ml-0.5">*</span></label>
+              <ReusableSelect
+                key={`unit-${units.length}`}
+                value={form.unit}
+                onValueChange={(val) => setForm(p => ({ ...p, unit: val }))}
+                options={units.map(u => ({ value: u.id, label: u.name }))}
+                placeholder="Select unit"
+                onScrollEnd={fetchMoreUnits}
+                footer={
+                  <button
+                    onClick={() => setModalState({ type: "Unit", query: "" })}
+                    className="w-full flex items-center justify-center gap-2 py-2 text-xs font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors"
+                  >
+                    <Plus size={14} />
+                    Create New Unit
+                  </button>
+                }
+              />
             </div>
             <div className="space-y-1.5">
               <label className="text-[10px] font-black text-slate-400 ml-1">GST Rate</label>
@@ -695,12 +698,11 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
         isOpen={modalState.type !== null}
         onClose={() => setModalState({ type: null, query: "" })}
         type={modalState.type as "Category" | "Unit"}
-        onSuccess={(newItem) => {
+        onSuccess={async (newItem) => {
+          await fetchDropdowns();
           if (modalState.type === "Category") {
-            setCategories((prev) => [newItem, ...prev]);
             setForm((prev) => ({ ...prev, category: newItem.id }));
           } else if (modalState.type === "Unit") {
-            setUnits((prev) => [newItem, ...prev]);
             setForm((prev) => ({ ...prev, unit: newItem.id }));
           }
           setModalState({ type: null, query: "" });

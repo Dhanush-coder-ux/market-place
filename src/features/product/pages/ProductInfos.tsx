@@ -44,7 +44,6 @@ const columnLabels: Record<string, string> = {
   unit: "Unit",
   supplier: "Supplier",
   serial_number: "Serials",
-  reorder_point: "Reorder Point",
   storage_location: "Storage Location",
 };
 
@@ -56,7 +55,6 @@ const columnOrder = [
   "sell_price",
   "stocks",
   "status",
-  "reorder_point",
   "storage_location",
   "barcode",
   "serial_number"
@@ -470,7 +468,7 @@ const ProductRow = React.memo(
             if (key === "buy_price") value = computedBuyPrice;
             if (key === "sell_price") value = computedSellPrice;
             if (key === "stocks") value = computedStock;
-            if (key === "reorder_point" && p.reorder_point_infos) value = p.reorder_point_infos.reorder_point;
+
             if (key === "category") value = (p as any).category_infos?.name || datas.category || p.category || p.category_id;
             if (key === "unit") value = (p as any).unit_infos?.name || datas.unit || p.unit || (p as any).unit_id;
 
@@ -499,15 +497,7 @@ const ProductRow = React.memo(
               );
             }
 
-            if (key === "reorder_point") {
-              return (
-                <td key={key} className="px-3 py-2.5 whitespace-nowrap">
-                  <span className="text-[13px] font-semibold text-slate-700 tabular-nums">
-                    {hasVariants ? "—" : (value !== undefined && value !== null ? value : "—")}
-                  </span>
-                </td>
-              );
-            }
+
 
             if (key === "storage_location") {
               const sl = (p as any).storage_location_infos || (datas as any).storage_location_infos;
@@ -744,6 +734,7 @@ const ProductRow = React.memo(
                       baseSellPrice={p.pricing_infos?.sell_price || datas.sell_price || (p as any).sell_price}
                       parentStorageLocation={(p as any).storage_location_infos?.storage_location ?? (p as any).storage_location_infos?.name ?? (p as any).storage_location ?? (p as any).location ?? datas.storage_location ?? null}
                       parentReorderPoint={p.reorder_point_infos?.reorder_point ?? (p as any).reorder_point ?? datas.reorder_point ?? null}
+                      hideReorderPoint={true}
                     />
                   )}
                   {!hasVariants && hasBatches && (
@@ -990,7 +981,7 @@ const ProductInfos = () => {
                   keys.add(k);
               });
             }
-            ["category", "sell_price", "buy_price", "stocks", "reorder_point", "status", "barcode", "serial_number"].forEach((k) =>
+            ["category", "sell_price", "buy_price", "stocks", "status", "barcode", "serial_number"].forEach((k) =>
               keys.add(k)
             );
           });

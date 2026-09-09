@@ -233,14 +233,16 @@ const QuickCreateDropdownModal: React.FC<QuickCreateDropdownModalProps> = ({ isO
     try {
       if (type === "categories") {
         const res = await utilityApi.createShopCategory({ shop_id: SHOP_ID, name: value.trim() });
-        if (res?.data) onSuccess({ id: res.data.id, name: res.data.name });
+        const data = res.data || res;
+        if (data && data.id) onSuccess({ id: data.id, name: data.name });
       } else {
         const res = await utilityApi.createShopUnit({
           shop_id: SHOP_ID,
           name: value.trim(),
           short_name: value.trim().substring(0, 3).toUpperCase()
         });
-        if (res?.data) onSuccess({ id: res.data.id, name: res.data.name });
+        const data = res.data || res;
+        if (data && data.id) onSuccess({ id: data.id, name: data.name });
       }
       setValue("");
       onClose();
@@ -426,25 +428,26 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     }
   };
 
-  useEffect(() => {
-    const fetchDropdowns = async () => {
-      try {
-        const [catRes, unitRes] = await Promise.all([
-          utilityApi.getShopCategories(SHOP_ID, { limit: "100", offset: "1" }),
-          utilityApi.getShopUnits(SHOP_ID, { limit: "100", offset: "1" })
-        ]);
-        if (catRes?.data) {
-          setCategories(catRes.data);
-          if (catRes.data.length < 100) setHasMoreCategories(false);
-        }
-        if (unitRes?.data) {
-          setUnits(unitRes.data);
-          if (unitRes.data.length < 100) setHasMoreUnits(false);
-        }
-      } catch (e) {
-        console.error("Failed to fetch custom dropdowns", e);
+  const fetchDropdowns = async () => {
+    try {
+      const [catRes, unitRes] = await Promise.all([
+        utilityApi.getShopCategories(SHOP_ID, { limit: "100", offset: "1" }),
+        utilityApi.getShopUnits(SHOP_ID, { limit: "100", offset: "1" })
+      ]);
+      if (catRes?.data) {
+        setCategories(catRes.data);
+        if (catRes.data.length < 100) setHasMoreCategories(false);
       }
-    };
+      if (unitRes?.data) {
+        setUnits(unitRes.data);
+        if (unitRes.data.length < 100) setHasMoreUnits(false);
+      }
+    } catch (e) {
+      console.error("Failed to fetch custom dropdowns", e);
+    }
+  };
+
+  useEffect(() => {
     fetchDropdowns();
   }, []);
 
@@ -1602,8 +1605,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         isOpen={modalState.type === "Category"}
         onClose={() => setModalState({ type: null, query: "" })}
         type="categories"
-        onSuccess={(val) => {
-          setCategories(prev => [...prev, val]);
+        onSuccess={async (val) => {
+          await fetchDropdowns();
           setForm(p => ({ ...p, category: val.id }));
         }}
       />
@@ -1612,8 +1615,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         isOpen={modalState.type === "Unit"}
         onClose={() => setModalState({ type: null, query: "" })}
         type="units"
-        onSuccess={(val) => {
-          setUnits(prev => [...prev, val]);
+        onSuccess={async (val) => {
+          await fetchDropdowns();
           setForm(p => ({ ...p, unit: val.id }));
         }}
       />

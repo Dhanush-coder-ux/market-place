@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Mail, Pencil, User, MapPin, Phone, Trash2,
-  Store, Database, AlertCircle, Layers, Check, X as XIcon, Search
+  Store, Database, AlertCircle, Layers, Check, X as XIcon, Search,
+  Banknote, CreditCard, QrCode, Building2
 } from "lucide-react";
 import {
   SectionCard, DetailItem, InfoRow, Modal,
@@ -104,6 +105,8 @@ export default function SupplierDetail() {
   const [clearSearch, setClearSearch] = useState("");
   const [selectedPurchase, setSelectedPurchase] = useState<any>(null);
   const [clearAmount, setClearAmount] = useState<string>('');
+  const [clearPaymentMethod, setClearPaymentMethod] = useState<'CASH' | 'CARD' | 'UPI' | 'BANK'>('CASH');
+  const [clearReferenceNo, setClearReferenceNo] = useState<string>('');
   const [clearSaving, setClearSaving] = useState(false);
 
   const fetchOutstandingPurchases = useCallback(async () => {
@@ -130,7 +133,12 @@ export default function SupplierDetail() {
       const pData = fullRes?.data?.datas?.[0] || fullRes?.data || selectedPurchase;
       
       const amountToPay = Number(clearAmount);
-      const newPayment = { method: "CASH", amount: amountToPay, date: new Date().toISOString() };
+      const newPayment = {
+        method: clearPaymentMethod,
+        amount: amountToPay,
+        date: new Date().toISOString(),
+        ...(clearReferenceNo.trim() ? { reference_no: clearReferenceNo.trim() } : {})
+      };
       const updatedPaymentInfos = [...(pData.payment_infos || []), newPayment];
 
       const updatePayload = {
@@ -173,7 +181,7 @@ export default function SupplierDetail() {
       refreshSupplierData();
 
       if (activeTab === 1) {
-        getData(`${ENDPOINTS.PURCHASES}/by/supplier/${SHOP_ID}/${id}`).then((r: any) => {
+        getData(`${ENDPOINTS.PURCHASES}/by/supplier/${SHOP_ID}/${id}`, { exclude_cancel: "true" }).then((r: any) => {
            setPurchases(r?.data ? (Array.isArray(r.data) ? r.data : [r.data]) : []);
         });
       } else if (activeTab === 2) {
@@ -221,6 +229,8 @@ export default function SupplierDetail() {
             fetchOutstandingPurchases();
             setSelectedPurchase(null);
             setClearAmount('');
+            setClearPaymentMethod('CASH');
+            setClearReferenceNo('');
             setClearSearch('');
           }}
           className="px-6 h-8 border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-xs font-bold transition-colors shadow-sm"
@@ -269,7 +279,7 @@ export default function SupplierDetail() {
   useEffect(() => {
     if (!id || activeTab !== 1) return;
     setPurLoading(true);
-    getData(`${ENDPOINTS.PURCHASES}/by/supplier/${SHOP_ID}/${id}`).then((res: any) => {
+    getData(`${ENDPOINTS.PURCHASES}/by/supplier/${SHOP_ID}/${id}`, { exclude_cancel: "true" }).then((res: any) => {
       setPurchases(res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : []);
       setPurLoading(false);
     }).catch(() => setPurLoading(false));
@@ -637,6 +647,7 @@ export default function SupplierDetail() {
                   referenceNo: pd.referenceNo || '—',
                   purchaseDate: p.purchase_date || pd.date || p.created_at,
                   paymentMethod: p.payment_infos?.[0]?.method ?? ((p.payment_status && p.payment_status.toLowerCase() === "outstanding") ? "Outstanding" : (payment.method || p.payment_status || '—')),
+                  paymentStatus: p.payment_status || pd.payment_status || pd.paymentStatus || p.datas?.payment_status,
                   amountPaid: p.paid_amount ?? p.payment_infos?.[0]?.amount ?? payment.amountPaid ?? 0,
                   outstandingAmount: p.outstanding_amount ?? p.outstanding ?? Math.max(0, (p.total_cost ?? p.item_infos?.total_pur_cost ?? pd.totalAmount ?? 0) - (p.paid_amount ?? p.payment_infos?.[0]?.amount ?? payment.amountPaid ?? 0)),
                   totalCost: p.total_cost ?? p.item_infos?.total_pur_cost ?? pd.totalAmount ?? 0,
@@ -895,32 +906,82 @@ export default function SupplierDetail() {
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Selected Purchase</p>
                     <p className="text-sm font-bold text-slate-800 mt-0.5">{selectedPurchase.invoice_no || selectedPurchase.ui_id}</p>
                   </div>
-                  <button onClick={() => { setSelectedPurchase(null); setClearAmount(''); }} className="text-xs text-blue-600 font-bold hover:underline">Change</button>
+                  <button onClick={() => { setSelectedPurchase(null); setClearAmount(''); setClearPaymentMethod('CASH'); setClearReferenceNo(''); }} className="text-xs text-blue-600 font-bold hover:underline">Change</button>
                 </div>
-                
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                    Payment Method
+                  </label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {[
+                      { id: 'CASH', label: 'Cash', icon: Banknote, activeClass: 'bg-emerald-50 border-emerald-300 text-emerald-700 ring-2 ring-emerald-500/20' },
+                      { id: 'CARD', label: 'Card', icon: CreditCard, activeClass: 'bg-blue-50 border-blue-300 text-blue-700 ring-2 ring-blue-500/20' },
+                      { id: 'UPI', label: 'UPI', icon: QrCode, activeClass: 'bg-purple-50 border-purple-300 text-purple-700 ring-2 ring-purple-500/20' },
+                      { id: 'BANK', label: 'Bank', icon: Building2, activeClass: 'bg-amber-50 border-amber-300 text-amber-700 ring-2 ring-amber-500/20' }
+                    ].map((m) => {
+                      const Icon = m.icon;
+                      const isActive = clearPaymentMethod === m.id;
+                      return (
+                        <button
+                          key={m.id}
+                          type="button"
+                          onClick={() => setClearPaymentMethod(m.id as any)}
+                          className={`py-2 px-2 rounded-lg border text-xs font-bold transition-all flex flex-col items-center justify-center gap-1 ${
+                            isActive ? m.activeClass : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                          }`}
+                        >
+                          <Icon size={16} />
+                          <span>{m.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 {(() => {
                    const balance = selectedPurchase.outstanding_amount || 0;
                    return (
-                     <div>
-                       <label className="block text-xs font-semibold text-slate-600 mb-1.5 flex justify-between items-end">
-                         Payment Amount
-                         <span className="text-[10px] font-bold text-rose-600">Max: ₹{balance.toLocaleString('en-IN')}</span>
-                       </label>
-                       <input
-                         type="number"
-                         value={clearAmount}
-                         onChange={(e) => setClearAmount(e.target.value)}
-                         max={balance}
-                         className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm"
-                         placeholder="0.00"
-                       />
+                     <div className="space-y-3">
+                       <div>
+                         <label className="block text-xs font-semibold text-slate-600 mb-1.5 flex justify-between items-end">
+                           Payment Amount
+                           <span className="text-[10px] font-bold text-rose-600">Max: ₹{balance.toLocaleString('en-IN')}</span>
+                         </label>
+                         <div className="relative">
+                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold">₹</span>
+                           <input
+                             type="number"
+                             value={clearAmount}
+                             onChange={(e) => setClearAmount(e.target.value)}
+                             max={balance}
+                             className="w-full h-10 pl-7 pr-3 bg-white border border-slate-200 rounded-lg text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm"
+                             placeholder="0.00"
+                           />
+                         </div>
+                       </div>
+
+                       {clearPaymentMethod !== 'CASH' && (
+                         <div>
+                           <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                             Reference / Txn No. <span className="text-slate-400 text-[10px] font-normal">(Optional)</span>
+                           </label>
+                           <input
+                             type="text"
+                             value={clearReferenceNo}
+                             onChange={(e) => setClearReferenceNo(e.target.value)}
+                             className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm"
+                             placeholder={`Enter ${clearPaymentMethod} reference or transaction ID`}
+                           />
+                         </div>
+                       )}
                      </div>
                    );
                 })()}
 
                 <div className="pt-4 flex justify-end gap-2 border-t border-slate-200">
                   <button
-                    onClick={() => { setSelectedPurchase(null); setClearAmount(''); }}
+                    onClick={() => { setSelectedPurchase(null); setClearAmount(''); setClearPaymentMethod('CASH'); setClearReferenceNo(''); }}
                     className="h-9 px-4 text-xs font-bold text-slate-600 hover:bg-slate-200 bg-slate-100 rounded-lg transition-colors border border-slate-200"
                   >
                     Back

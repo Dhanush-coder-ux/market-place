@@ -27,7 +27,7 @@ import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { StatCard } from "@/components/common/StatsCard";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { AntBadge } from "@/components/ui/AntBadge";
+import { AntBadge, PaymentStatusBadge } from "@/components/ui/AntBadge";
 import type { PurchaseRecord } from "@/types/api";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
@@ -342,32 +342,7 @@ const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 
 
 
-const PaymentStatusBadge = ({ status, outstanding, grandTotal }: { status?: string; outstanding?: number; grandTotal?: number }) => {
-  let displayStatus = (status || "UNPAID").toUpperCase();
 
-  if (outstanding !== undefined && grandTotal !== undefined && grandTotal > 0) {
-    if (outstanding <= 0) {
-      displayStatus = "PAID";
-    } else if (outstanding > 0 && grandTotal > outstanding) {
-      displayStatus = "PARTIAL";
-    } else if (outstanding >= grandTotal) {
-      displayStatus = "UNPAID";
-    }
-  }
-
-  let variant: any = "pay-pending";
-  if (displayStatus === "PAID" || displayStatus === "COMPLETED") {
-    variant = "pay-paid";
-  } else if (displayStatus === "PARTIAL" || displayStatus === "PARTIALLY_PAID" || displayStatus === "PARTIALLY PAID") {
-    variant = "pay-partial";
-  } else if (displayStatus === "UNPAID" || displayStatus === "DUE" || displayStatus === "PENDING") {
-    variant = "pay-pending";
-  }
-
-  const label = displayStatus === "PARTIALLY_PAID" || displayStatus === "PARTIALLY PAID" ? "PARTIAL" : displayStatus;
-
-  return <AntBadge variant={variant} type="pill" dot>{label}</AntBadge>;
-};
 
 const PurchaseStatusBadge = ({ status }: { status?: string }) => {
   const st = (status || "COMPLETED").toUpperCase();

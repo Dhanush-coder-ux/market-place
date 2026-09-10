@@ -145,7 +145,7 @@ const ProductDetail = () => {
     if (dynamicTabs[activeTab] !== PUR_TAB_LABEL) return;
 
     setPurLoading(true);
-    getData(`${ENDPOINTS.PURCHASES}/by/product/${SHOP_ID}/${id}`).then((res: any) => {
+    getData(`${ENDPOINTS.PURCHASES}/by/product/${SHOP_ID}/${id}`, { exclude_cancel: "true" }).then((res: any) => {
       setPurchases(res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : []);
       setPurLoading(false);
     }).catch(() => setPurLoading(false));

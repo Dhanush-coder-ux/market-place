@@ -2,7 +2,7 @@ import { ArrowUp, ArrowDown, ShoppingCart, TrendingUp, RefreshCcw, FileText, Arr
 import { TypeBadge } from "@/components/common/SuperUI";
 import { useState, Fragment } from "react";
 import { createPortal } from "react-dom";
-import { AntBadge } from "@/components/ui/AntBadge";
+import { AntBadge, PaymentStatusBadge } from "@/components/ui/AntBadge";
 
 const formatStockValue = (val: number | null | undefined) => {
   if (val === null || val === undefined || isNaN(Number(val))) return '—';
@@ -721,14 +721,11 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                           ₹{Number(currentOutstanding).toLocaleString("en-IN")}
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap">
-                          <div className="flex flex-col gap-0.5">
-                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md w-fit ${
-                                r.paymentMethod?.toLowerCase() === 'outstanding' ? 'bg-rose-50 text-rose-700' :
-                                r.paymentMethod === 'Cash' ? 'bg-emerald-50 text-emerald-700' :
-                                r.paymentMethod === 'UPI' ? 'bg-violet-50 text-violet-700' :
-                                'bg-slate-50 text-slate-600'
-                              }`}>{r.paymentMethod}</span>
-                          </div>
+                          <PaymentStatusBadge
+                            status={r.paymentStatus || r.payment_status}
+                            outstanding={currentOutstanding}
+                            grandTotal={r.totalCost}
+                          />
                         </td>
                         <td className="px-5 py-4 text-xs text-slate-500 font-medium whitespace-nowrap">
                           {r.purchaseDate ? new Date(r.purchaseDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}

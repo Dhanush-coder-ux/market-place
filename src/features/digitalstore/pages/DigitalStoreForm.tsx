@@ -204,9 +204,6 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
   const handleNext = async () => {
     if (currentStep === 1 && !validateStep1()) return;
     
-    // Auto-save on every step
-    await saveDraft();
-    
     window.scrollTo({ top: 0, behavior: "smooth" });
     setCurrentStep((prev) => Math.min(prev + 1, STEPS.length));
   };

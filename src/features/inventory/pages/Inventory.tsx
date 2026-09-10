@@ -979,7 +979,8 @@ const InventoryPage = () => {
     const params: any = {
       active: "true",
       limit: limit.toString(),
-      offset: offset.toString()
+      offset: offset.toString(),
+      exclude_tracking: "true"
     };
     if (filters.search) params.q = filters.search;
     if (filters.fromDate) params.from_date = filters.fromDate;

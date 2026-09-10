@@ -83,3 +83,40 @@ export const AntBadge: React.FC<AntBadgeProps> = ({
     </span>
   );
 };
+
+export const PaymentStatusBadge: React.FC<{
+  status?: string;
+  outstanding?: number;
+  grandTotal?: number;
+  className?: string;
+}> = ({ status, outstanding, grandTotal, className }) => {
+  let displayStatus = (status || "UNPAID").toUpperCase();
+
+  if (outstanding !== undefined && grandTotal !== undefined && grandTotal > 0) {
+    if (outstanding <= 0) {
+      displayStatus = "PAID";
+    } else if (outstanding > 0 && grandTotal > outstanding) {
+      displayStatus = "PARTIAL";
+    } else if (outstanding >= grandTotal) {
+      displayStatus = "UNPAID";
+    }
+  }
+
+  if (displayStatus === "OUTSTANDING") {
+    displayStatus = "UNPAID";
+  }
+
+  let variant: any = "pay-pending";
+  if (displayStatus === "PAID" || displayStatus === "COMPLETED") {
+    variant = "pay-paid";
+  } else if (displayStatus === "PARTIAL" || displayStatus === "PARTIALLY_PAID" || displayStatus === "PARTIALLY PAID") {
+    variant = "pay-partial";
+  } else if (displayStatus === "UNPAID" || displayStatus === "DUE" || displayStatus === "PENDING") {
+    variant = "pay-pending";
+  }
+
+  const label = displayStatus === "PARTIALLY_PAID" || displayStatus === "PARTIALLY PAID" ? "PARTIAL" : displayStatus;
+
+  return <AntBadge variant={variant} type="pill" dot className={className}>{label}</AntBadge>;
+};
+

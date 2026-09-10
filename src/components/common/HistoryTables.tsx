@@ -298,7 +298,8 @@ export function StockMovementsTable({ rows, loading, onViewDetails }: StockMovem
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap">
                           <TypeBadge 
-                            type={r.displayType} 
+                            type={r.displayType}
+                            labelOverride={r.displayType} 
                             icon={r.isInc ? ArrowUp : ArrowDown} 
                           />
                         </td>

@@ -92,11 +92,17 @@ const StockMovementTab = ({ inventoryId, product }: StockMovementTabProps) => {
         rawData.forEach((a: any) => {
           const mType = a.movement_type || "";
           let displayType = "Adjustment";
+          if (mType) {
+            displayType = mType.split('_').map((word: string) => {
+              if (word.toUpperCase() === 'PO') return 'PO';
+              return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+            }).join(' ');
+          }
+
           let source = "stock";
-          if (mType.includes("PURCHASE") || mType === "DIRECT") { displayType = "Purchase"; source = "purchase"; }
-          else if (mType.includes("PO_")) { displayType = "PO Purchase"; source = "purchase"; }
-          else if (mType.includes("SALES_RETURN") || mType.includes("SALE_RETURN") || mType.includes("RETURN")) { displayType = "Sales Return"; source = "return"; }
-          else if (mType.includes("SALES")) { displayType = "Sales"; source = "sales"; }
+          if (mType.includes("PURCHASE") || mType === "DIRECT" || mType.includes("PO_")) { source = "purchase"; }
+          else if (mType.includes("RETURN")) { source = "return"; }
+          else if (mType.includes("SALES")) { source = "sales"; }
 
           const sid = a.supplier_id || a.datas?.supplier_id || a.reference_id;
           let finalDesc = a.description || `Stock ${displayType}`;

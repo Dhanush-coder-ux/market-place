@@ -63,10 +63,10 @@ export const shopApi = {
     return await apiClient.post(`${ENDPOINTS.SHOPS}/${shop_id}/announcements`, data);
   },
   updateAnnouncement: async (announcement_id: number, data: Record<string, any>) => {
-    return await apiClient.put(`${ENDPOINTS.SHOPS}/announcements/${announcement_id}?shop_id=${SHOP_ID}`, data);
+    return await apiClient.put(`${ENDPOINTS.SHOPS}/${SHOP_ID}/announcements`, { ...data, id: announcement_id });
   },
   deleteAnnouncement: async (announcement_id: number) => {
-    return await apiClient.delete(`${ENDPOINTS.SHOPS}/announcements/${announcement_id}?shop_id=${SHOP_ID}`);
+    return await apiClient.delete(`${ENDPOINTS.SHOPS}/${SHOP_ID}/announcements/${announcement_id}`);
   },
 
   

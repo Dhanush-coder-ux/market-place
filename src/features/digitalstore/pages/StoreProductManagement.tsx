@@ -489,7 +489,7 @@ const ProductDashboard = () => {
   const loadProducts = async (currentPage = 1, currentLimit = limit) => {
     try {
       setLoading(true);
-      const res = await inventoryApi.getInventoriesByShop(SHOP_ID, { 
+      const res = await inventoryApi.getInventoriesByShop(SHOP_ID, {
         active: "true",
         limit: currentLimit.toString(),
         offset: currentPage.toString()
@@ -567,7 +567,7 @@ const ProductDashboard = () => {
           raw: p,
         };
       });
-      
+
       if (rawList.length < currentLimit) {
         setHasMore(false);
       } else {
@@ -734,7 +734,7 @@ const ProductDashboard = () => {
   };
 
   return (
-    <div className="space-y-4" style={{ fontFamily: "Inter, sans-serif" }}>
+    <div className="flex-1 flex flex-col min-h-0 gap-2.5 font-sans w-full overflow-hidden relative" style={{ fontFamily: "Inter, sans-serif" }}>
 
       {/* ── Toolbar ── */}
       <div className="bg-white rounded-xl border border-slate-200 px-4 py-3 flex flex-wrap items-center gap-3">
@@ -896,7 +896,7 @@ const ProductDashboard = () => {
             <div className="bg-white rounded-lg shadow-sm border border-slate-100 min-w-0 overflow-hidden flex flex-col flex-1 min-h-0 mt-1">
               <div className="overflow-auto flex-1 scrollbar-thin scrollbar-thumb-slate-100">
                 <table className="w-full text-left min-w-[700px] border-collapse relative">
-                  <thead className="sticky top-14 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0]">
+                  <thead className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0]">
                     <tr>
                       <th className="py-3 px-4 text-[10px] font-semibold text-slate-500 uppercase tracking-wider w-10 text-center">
                         <input
@@ -916,19 +916,19 @@ const ProductDashboard = () => {
                       <th className="py-3 px-4 text-[10px] font-semibold text-slate-500 uppercase tracking-wider text-right w-16 sticky right-0 bg-white shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)]">Actions</th>
                     </tr>
                   </thead>
-                <tbody>
-                  {filtered.map((p) => (
-                    <ProductRow
-                      key={p.id}
-                      product={p}
-                      selected={selectedIds.includes(p.id)}
-                      onSelect={() => toggleSelect(p.id)}
-                      onToggleVisibility={() => toggleVisibility(p.id)}
-                      onEdit={() => handleOpenEdit(p)}
-                      actionLoading={togglingId === p.id}
-                    />
-                  ))}
-                </tbody>
+                  <tbody>
+                    {filtered.map((p) => (
+                      <ProductRow
+                        key={p.id}
+                        product={p}
+                        selected={selectedIds.includes(p.id)}
+                        onSelect={() => toggleSelect(p.id)}
+                        onToggleVisibility={() => toggleVisibility(p.id)}
+                        onEdit={() => handleOpenEdit(p)}
+                        actionLoading={togglingId === p.id}
+                      />
+                    ))}
+                  </tbody>
                 </table>
               </div>
             </div>

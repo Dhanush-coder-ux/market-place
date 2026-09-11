@@ -21,12 +21,13 @@ const toCardShape = (o: OrderRecord, customerMap?: Record<string, { name: string
   return {
     id: o.id,
     billNo: o.ui_id || o.id,
-    customerName: o.customer_name || o.additional_infos?.customer_name || o.datas?.customer_name || c?.name || "Unknown",
-    phone: o.customer_number || o.additional_infos?.customer_phone || o.datas?.phone || c?.phone || "—",
+    customerName: o.online_details?.name || o.customer_name || o.additional_infos?.customer_name || o.datas?.customer_name || c?.name || "Unknown",
+    phone: o.online_details?.phone || o.customer_number || o.additional_infos?.customer_phone || o.datas?.phone || c?.phone || "—",
     totalAmount: Number(Number(o.calculation_infos?.total ?? o.calculation_infos?.grand_total ?? o.total_amount ?? o.datas?.total_amount ?? o.item_infos?.total_order_amount ?? o.pending_amount ?? 0).toFixed(2)),
     status: o.status ?? "PENDING",
     origin: o.origin || "OFFLINE",
     deliveryCode: (o as any).delivery_code || null,
+    online_details: o.online_details,
   };
 };
 

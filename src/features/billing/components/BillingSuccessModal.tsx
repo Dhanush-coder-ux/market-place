@@ -15,7 +15,7 @@ interface BillingSuccessModalProps {
     finalAmount: number;
     customerName: string;
     phone: string;
-    invoiceId?: string; // e.g. INV-2026-0847
+    orderId?: string;
   } | null;
   onClose: () => void;
   onNextBill: () => void;
@@ -118,7 +118,48 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
     setPhase("feeding");
     addTimer(() => setPhase("revealing"), 1800);
     addTimer(() => setPhase("cutting"), 3400);
-    addTimer(() => setPhase("done"), 4100);
+    addTimer(() => {
+      setPhase("done");
+      const content = document.getElementById("printable-receipt")?.innerHTML;
+      if (content) {
+        const iframe = document.createElement("iframe");
+        iframe.style.position = "fixed";
+        iframe.style.right = "0";
+        iframe.style.bottom = "0";
+        iframe.style.width = "0";
+        iframe.style.height = "0";
+        iframe.style.border = "0";
+        document.body.appendChild(iframe);
+        const doc = iframe.contentWindow?.document;
+        if (doc) {
+          const links = Array.from(document.querySelectorAll("link[rel='stylesheet'], style"))
+            .map(el => el.outerHTML)
+            .join("\n");
+          doc.open();
+          doc.write(`
+            <html>
+              <head>
+                <title>Receipt</title>
+                ${links}
+                <style>
+                  body { margin: 0; padding: 20px; font-family: sans-serif; background: white; color: black; }
+                  hr { border-color: #000; }
+                </style>
+              </head>
+              <body>
+                ${content}
+              </body>
+            </html>
+          `);
+          doc.close();
+          setTimeout(() => {
+            iframe.contentWindow?.focus();
+            iframe.contentWindow?.print();
+            setTimeout(() => document.body.removeChild(iframe), 1000);
+          }, 250);
+        }
+      }
+    }, 4100);
   }, [view, isAnimating, phase, onPrint, addTimer]);
 
   const handleClose = useCallback(() => {
@@ -206,7 +247,7 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
             </div>
             <h2 className="text-[17px] font-bold text-[#12161F] mb-1 tracking-tight">Bill saved</h2>
             <div className="font-mono text-[13px] font-semibold text-[#2C3E7A] bg-[#EDEFF7] inline-block px-3 py-1 rounded-full mt-1">
-              {details.invoiceId || "INV-LATEST"}
+              {details.orderId || "N/A"}
             </div>
             <div className="text-[12.5px] text-[#7A8497] mt-2">
               Stock updated · Receipt ready to print
@@ -437,6 +478,7 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
             >
               {/* Receipt content — reveals with clip-path */}
               <div
+                id="printable-receipt"
                 className="px-5 py-4 text-[11px] leading-[1.6] text-[#2A2520]"
                 style={{
                   animation: receiptRevealed
@@ -472,8 +514,8 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
 
                 {/* Invoice + Date */}
                 <div className="flex justify-between text-[10px]">
-                  <span className="text-[#8A857C]">Invoice</span>
-                  <span className="font-semibold">{details.invoiceId || "INV-LATEST"}</span>
+                  <span className="text-[#8A857C]">Order ID</span>
+                  <span className="font-semibold">{details.orderId || "N/A"}</span>
                 </div>
                 <div className="flex justify-between text-[10px]">
                   <span className="text-[#8A857C]">Date</span>

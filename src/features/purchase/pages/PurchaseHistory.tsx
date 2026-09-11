@@ -21,6 +21,7 @@ import {
 import { useLocation, useNavigate } from "react-router-dom";
 import { useHeader } from "@/context/HeaderContext";
 import { useBusinessApi } from "@/context/BusinessApiContext";
+import { useToast } from "@/context/ToastContext";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
 import { GroupedItemsDrawer } from "@/components/common/HistoryTables";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
@@ -557,6 +558,7 @@ const AmountWithReturnHover = ({ total, returns, refundAmount }: { total: number
 const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef, loadingMore, onRefresh }: { data: DirectPurchaseData[]; selectedIds: Set<string>; onSelect: (po: DirectPurchaseData) => void; totalCount: number; lastElementRef?: any; loadingMore?: boolean; onRefresh?: () => void }) => {
   const navigate = useNavigate();
   const { purchase } = useBusinessApi();
+  const { showToast } = useToast();
   const [drawerRecord, setDrawerRecord] = useState<any | null>(null);
   const [poToCancel, setPoToCancel] = useState<DirectPurchaseData | null>(null);
 
@@ -716,7 +718,7 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
                           onClick={() => {
                             const hasReturns = (po.returns?.length || 0) > 0 || ((po as any).purchase_returns?.length || 0) > 0;
                             if (hasReturns) {
-                              alert("Cannot edit purchase because items have been returned.");
+                              showToast("Cannot edit purchase because items have been returned.", "warning");
                               return;
                             }
                             navigate(`/purchase/edit/${po.id}`);
@@ -746,14 +748,14 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-44 bg-white border border-slate-200 rounded-lg shadow-lg py-1 z-50 text-left font-sans">
                           <DropdownMenuItem
-                            onClick={() => alert("Invoice generated and ready to print/share!")}
+                            onClick={() => showToast("Invoice generated and ready to print/share!", "info")}
                             className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer outline-none"
                           >
                             <Printer size={13} />
                             Print / Share
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => alert("Record payment initiated!")}
+                            onClick={() => showToast("Record payment initiated!", "info")}
                             className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer outline-none"
                           >
                             <Share2 size={13} />
@@ -797,13 +799,13 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
           if (!poToCancel) return;
           try {
             await purchase.cancelPurchase(SHOP_ID, poToCancel.id);
-            alert("Purchase cancelled successfully.");
+            showToast("Purchase cancelled successfully.", "success");
             if (onRefresh) onRefresh();
             else window.location.reload();
           } catch (err: any) {
             console.error("Failed to cancel purchase:", err);
             const msg = err?.response?.data?.detail?.msg || err?.response?.data?.detail || "Failed to cancel purchase.";
-            alert(typeof msg === 'string' ? msg : "Failed to cancel purchase.");
+            showToast(typeof msg === 'string' ? msg : "Failed to cancel purchase.", "error");
           }
         }}
         title="Cancel Purchase"

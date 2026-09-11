@@ -253,6 +253,7 @@ export interface OrderRecord {
     [key: string]: unknown;
   };
   pending_amount?: number;
+  online_details?: Record<string, any>;
 }
 
 // Purchase types: DIRECT | PO_CREATE | PO_UPDATE | PRODUCTION

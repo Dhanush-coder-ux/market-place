@@ -11,7 +11,8 @@ export type OrderCardType = {
   phone: string
   totalAmount: number;
   orderType: string;
-  status: string
+  status: string;
+  online_details?: any;
 };
 
 
@@ -67,6 +68,7 @@ export interface OrderResponse {
     customer_name?: string;
     customer_mobile_number?: string;
   };
+  online_details?: any;
   items?: OrderItemResponse[];
   exchanged_items?: ExchangeInfo[] | null;
   returns?: any[];

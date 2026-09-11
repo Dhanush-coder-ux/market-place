@@ -1349,15 +1349,15 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                   <div className="pf-section-enter space-y-4">
                     <div className="grid grid-cols-3 gap-4">
                       <InputField
-                        label="Sell price"
-                        name="mrp"
+                        label="Selling price"
+                        name="selling_price"
                         hint="optional"
                         type="number"
-                        value={form.mrp}
+                        value={form.selling_price}
                         onChange={handleChange}
                         placeholder="0.00"
                         leftEl={<IndianRupee size={13} />}
-                        tooltip="Maximum retail price printed on the product packaging."
+                        tooltip="The price you charge the customer."
                       />
                       <InputField
                         label="Reorder point"
@@ -1408,15 +1408,14 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         tooltip="The price you charge the customer."
                       />
                       <InputField
-                        label="Sell price"
-                        name="mrp"
-                        hint="optional"
+                        label="Buy price"
+                        name="cost_to_make"
                         type="number"
-                        value={form.mrp}
+                        value={form.cost_to_make}
                         onChange={handleChange}
                         placeholder="0.00"
                         leftEl={<IndianRupee size={13} />}
-                        tooltip="Maximum retail price shown for reference."
+                        tooltip="The cost to make or purchase this item."
                       />
                     </div>
                     <p className="text-[11px] text-slate-400 flex items-center gap-1.5">

@@ -20,6 +20,7 @@ type OrderDetailType = {
   gstPercent: number;
   gstAmount: number;
   grandTotal: number;
+  online_details?: any;
 };
 
 const OrderDetailView: React.FC<{ order: OrderDetailType }> = ({ order }) => {
@@ -50,6 +51,18 @@ const OrderDetailView: React.FC<{ order: OrderDetailType }> = ({ order }) => {
             <Phone className="text-gray-500" size={18} />
             <span className="font-medium text-gray-700">{order.phone}</span>
           </div>
+          
+          {order.online_details?.full_address && (
+            <div className="flex items-start gap-2 pt-2 border-t mt-2">
+              <span className="font-medium text-gray-500 text-sm mt-0.5">Address:</span>
+              <span className="text-gray-700 text-sm flex-1">
+                {order.online_details.full_address}
+                {order.online_details.city ? `, ${order.online_details.city}` : ''}
+                {order.online_details.state ? `, ${order.online_details.state}` : ''}
+                {order.online_details.pincode ? ` - ${order.online_details.pincode}` : ''}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 

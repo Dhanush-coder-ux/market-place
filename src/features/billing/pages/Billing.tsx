@@ -49,6 +49,7 @@ const Billing = () => {
     finalAmount: number;
     customerName: string;
     phone: string;
+    orderId?: string;
   } | null>(null);
 
   // ── Billing Totals
@@ -292,6 +293,7 @@ const Billing = () => {
           finalAmount,
           customerName: customerName || "Walk-in Customer",
           phone: phone || "",
+          orderId: res.data?.id || res.id || undefined,
         });
         showToast("Order confirmed successfully", "success");
       }

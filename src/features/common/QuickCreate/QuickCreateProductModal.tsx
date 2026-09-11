@@ -234,7 +234,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
     gst: "18",
     hsn: "",
     opening_stock: "0",
-    reorder_point: "5",
+    reorder_point: "1",
     location: "",
     batch_tracking: false,
     serial_tracking: false,
@@ -300,7 +300,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
       setCombinations(prev => generateCombinations(
         variantTypes,
         prev,
-        { buy_price: form.buy_price, sell_price: form.sell_price, mrp: form.mrp, reorder_point: form.reorder_point || "5" }
+        { buy_price: form.buy_price, sell_price: form.sell_price, mrp: form.mrp, reorder_point: form.reorder_point || "1" }
       ));
     }
   }, [variantTypes, form.has_variants, form.buy_price, form.sell_price, form.mrp, form.reorder_point]);
@@ -616,7 +616,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
         const vData: any = {
           name: variantName,
           storage_location: form.location || null,
-          reorder_point: Number(combo.reorder_point) || 5,
+          reorder_point: Number(combo.reorder_point) || 1,
           buy_price: 0,
           sell_price: 0,
           visible_online: false,
@@ -645,7 +645,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
         buy_price: null,
         sell_price: null,
         gst: form.gst ? (form.gst.includes("%") ? form.gst : `${form.gst}%`) : "18%",
-        reorder_point: Number(form.reorder_point) || 5,
+        reorder_point: Number(form.reorder_point) || 1,
         visible_online: false,
         custom_fields: {
           brand: form.brand,

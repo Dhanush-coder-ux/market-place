@@ -229,7 +229,6 @@ const Order = () => {
                   setIsOpen={() => handleOpenDetails(order)}
                   viewMode={viewMode}
                   onStatusChange={(newStatus) => handleStatusChange(newStatus, order)}
-                  onDeleteClick={(e) => { e.stopPropagation(); handleDeleteOrder(order.id); }}
                   onVerifyDelivery={() => setVerifyingOrder({ id: order.id, billNo: cardData.billNo, customerName: cardData.customerName })}
                 />
               );

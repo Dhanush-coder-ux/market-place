@@ -598,6 +598,7 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                 <tr className="sticky top-0 bg-slate-50/90 backdrop-blur-sm z-10 text-[9px] font-black text-slate-400 tracking-wider uppercase border-b border-slate-100 shadow-[0_1px_0_rgba(0,0,0,0.05)]">
                   <th className="px-5 py-3.5">Purchase ID</th>
                   <th className="px-5 py-3.5">Invoice</th>
+                  <th className="px-5 py-3.5">Ref/Transaction Number</th>
                   <th className="px-5 py-3.5">Product</th>
                   <th className="px-5 py-3.5 text-center">Stock In/Out</th>
                   <th className="px-5 py-3.5 text-center">Stock After</th>
@@ -652,6 +653,9 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                         </td>
                         <td className="px-5 py-4 text-xs font-mono text-slate-500 whitespace-nowrap">
                           {r.invoiceNo}
+                        </td>
+                        <td className="px-5 py-4 text-xs font-mono text-slate-500 whitespace-nowrap">
+                          {r.referenceNo}
                         </td>
                         <td className="px-5 py-4">
                           {hasList ? (

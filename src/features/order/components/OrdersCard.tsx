@@ -35,7 +35,7 @@ const DeliveryBadge = ({ onClick }: { onClick?: () => void }) => (
   </button>
 );
 
-const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "grid", onStatusChange, onDeleteClick, onVerifyDelivery }) => {
+const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "grid", onStatusChange, onVerifyDelivery }) => {
   const variant = statusConfig[order.status] ?? "ps-draft";
   const showDeliveryVerify = order.origin === "ONLINE" && !["COMPLETED", "CANCELED", "REFUNDED", "DELIVERED"].includes(order.status);
 

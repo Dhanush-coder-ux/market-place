@@ -958,6 +958,11 @@ const ProductInfos = () => {
       offset: "1",
     };
     if (debouncedSearch) params.q = debouncedSearch;
+    
+    if (activeKpi === "Inactive Products") params.exclude_active = "true";
+    if (activeKpi === "Stock Not Tracking") params.exclude_tracking = "true";
+
+    if (filters.status === "In stock") params.stock_status = "in_stock";
     if (filters.status === "Low stock") params.stock_status = "low";
     if (filters.status === "Out of stock") params.stock_status = "out_of_stock";
 
@@ -989,7 +994,7 @@ const ProductInfos = () => {
         }
       }
     );
-  }, [refreshKey, debouncedSearch, filters.status, getData]);
+  }, [refreshKey, debouncedSearch, filters.status, activeKpi, getData]);
 
   const toggleSelectProduct = (id: string) => {
     setSelectedProducts(prev => {
@@ -1105,12 +1110,6 @@ const ProductInfos = () => {
   const filteredProducts = useMemo(() => {
     let result = products;
 
-    if (activeKpi === "Inactive Products") {
-      result = result.filter((p: any) => p.is_active === false);
-    } else if (activeKpi === "Stock Not Tracking") {
-      result = result.filter((p: any) => p.track_stock === false || p.is_stock_tracked === false || p.type === "service");
-    }
-
     if (debouncedSearch) {
       const lowerSearch = debouncedSearch.toLowerCase();
       result = result.filter((p: any) => {
@@ -1130,14 +1129,10 @@ const ProductInfos = () => {
       });
     }
 
-    if (filters.status !== "All") {
+    if (filters.category !== "All") {
       result = result.filter((p: any) => {
-        const stock = calculateProductStock(p);
-        const reorderPoint = Number(
-          p.reorder_point_infos?.reorder_point ?? p.reorder_point ?? p.additional_infos?.reorder_point ?? p.datas?.reorder_point ?? 10
-        );
-        const status = getStockStatus(stock, reorderPoint);
-        return status.label === filters.status;
+        const cat = p.category_infos?.name || p.additional_infos?.category || p.datas?.category || p.category || p.category_id;
+        return cat === filters.category;
       });
     }
 

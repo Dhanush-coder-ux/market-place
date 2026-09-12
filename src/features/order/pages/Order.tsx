@@ -98,17 +98,7 @@ const Order = () => {
     }
   };
 
-  const handleDeleteOrder = async (orderId: string) => {
-    if (!window.confirm("Are you sure you want to delete this order? This action cannot be undone.")) return;
-    try {
-      const res = await orderApi.deleteOrder(SHOP_ID, orderId);
-      if (res) {
-        setOrders(prev => prev.filter(o => o.id !== orderId));
-      }
-    } catch (e) {
-      console.error("Failed to delete order", e);
-    }
-  };
+
 
   const handleOpenDetails = async (order: OrderRecord) => {
     try {

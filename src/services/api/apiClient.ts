@@ -10,10 +10,20 @@ interface RequestOptions {
 const parseError = async (res: Response): Promise<string> => {
   try {
     const body = await res.json();
+    
     if (typeof body?.detail === "object" && body?.detail !== null) {
-      return body.detail.description || body.detail.msg || `Request failed (${res.status})`;
+      const msg = body.detail.msg;
+      const desc = body.detail.description;
+      if (msg && desc) return `${msg}: ${desc}`;
+      return desc || msg || `Request failed (${res.status})`;
     }
-    return body?.detail ?? `Request failed (${res.status})`;
+    
+    if (typeof body?.detail === "string") return body.detail;
+    if (typeof body?.description === "string") return body.description;
+    if (typeof body?.msg === "string") return body.msg;
+    if (typeof body?.message === "string") return body.message;
+    
+    return `Request failed (${res.status})`;
   } catch {
     return `Request failed (${res.status})`;
   }

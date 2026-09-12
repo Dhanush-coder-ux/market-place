@@ -185,7 +185,7 @@ export default function SupplierDetail() {
            setPurchases(r?.data ? (Array.isArray(r.data) ? r.data : [r.data]) : []);
         });
       } else if (activeTab === 2) {
-        supplierApi.getClearedHistory(SHOP_ID, id).then((res: any) => {
+        supplierApi.getClearedHistory(SHOP_ID, id, { exclude_cancel: true }).then((res: any) => {
           let historyList = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
           if (res?.data?.datas) historyList = res.data.datas;
           setClearedHistory(historyList);
@@ -288,7 +288,7 @@ export default function SupplierDetail() {
   useEffect(() => {
     if (!id || activeTab !== 2) return;
     setHistoryLoading(true);
-    supplierApi.getClearedHistory(SHOP_ID, id)
+    supplierApi.getClearedHistory(SHOP_ID, id, { exclude_cancel: true })
       .then((res: any) => {
         let historyList = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
         if (res?.data?.datas) historyList = res.data.datas;
@@ -644,7 +644,7 @@ export default function SupplierDetail() {
                   batch_details: firstItem.batch_details,
                   serial_info: firstItem.serial_info,
                   invoiceNo: p.invoice_no || pd.invoiceNo || '—',
-                  referenceNo: pd.referenceNo || '—',
+                  referenceNo: pd.referenceNo || p.notes || '—',
                   purchaseDate: p.purchase_date || pd.date || p.created_at,
                   paymentMethod: p.payment_infos?.[0]?.method ?? ((p.payment_status && p.payment_status.toLowerCase() === "outstanding") ? "Outstanding" : (payment.method || p.payment_status || '—')),
                   paymentStatus: p.payment_status || pd.payment_status || pd.paymentStatus || p.datas?.payment_status,

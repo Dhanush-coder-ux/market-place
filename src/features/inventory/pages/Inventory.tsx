@@ -980,12 +980,20 @@ const InventoryPage = () => {
       active: "true",
       limit: limit.toString(),
       offset: offset.toString(),
-      exclude_tracking: "true"
+      exclude_non_tracking: "true"
     };
     if (filters.search) params.q = filters.search;
     if (filters.fromDate) params.from_date = filters.fromDate;
     if (filters.toDate) params.to_date = filters.toDate;
-    if (filters.stockStatus) params.stock_status = filters.stockStatus;
+    if (filters.stockStatus && filters.stockStatus !== "available") {
+      if (filters.stockStatus === "low") {
+        params.exclude_outofstock = "true";
+        params.exclude_stock = "true";
+      } else if (filters.stockStatus === "out_of_stock") {
+        params.exclude_lowstock = "true";
+        params.exclude_stock = "true";
+      }
+    }
 
     const res = await getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}`, params);
 

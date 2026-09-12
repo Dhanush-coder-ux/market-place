@@ -28,7 +28,7 @@ const CustomerList = () => {
   const { showToast } = useToast();
 
   /* ── State ── */
-  const [activeKpi, _setActiveKpi] = useState("All Customers");
+
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [fromDate, setFromDate] = useState("");
@@ -87,16 +87,18 @@ const CustomerList = () => {
   }, [setActions, navigate]);
 
   /* ── Fetch Page ── */
-  const fetchPage = useCallback(async (limit: number, offset: number, _filters: any) => {
+  const fetchPage = useCallback(async (limit: number, offset: number, filters: any) => {
     const params: any = {
       shop_id: SHOP_ID,
       limit: limit.toString(),
       offset: offset.toString()
     };
-    // We will fetch all and filter locally as per user request to not modify backend code
-    // if (filters.search) params.q = filters.search;
-    // if (filters.fromDate) params.from_date = filters.fromDate;
-    // if (filters.toDate) params.to_date = filters.toDate;
+    
+    if (filters.search) params.q = filters.search;
+    if (filters.fromDate) params.from_date = filters.fromDate;
+    if (filters.toDate) params.to_date = filters.toDate;
+    if (filters.filterOutstanding === "Outstanding") params.exclude_non_outstanding = true;
+    if (filters.filterOutstanding === "Cleared") params.exclude_outstanding = true;
 
     const res = await customer.getCustomersByShopId(SHOP_ID, params);
 
@@ -117,51 +119,18 @@ const CustomerList = () => {
 
   /* ── API Filters ── */
   const apiFilters = useMemo(() => ({
+    search: debouncedSearch,
+    fromDate,
+    toDate,
+    filterOutstanding,
     refreshKey
-  }), [refreshKey]);
+  }), [debouncedSearch, fromDate, toDate, filterOutstanding, refreshKey]);
 
-  const { items: customers, loading, loadingMore, totalCount, lastElementRef } = useInfiniteScroll({
+  const { items: filteredCustomers, loading, loadingMore, totalCount, lastElementRef } = useInfiniteScroll({
     fetchPage,
     filters: apiFilters,
     limit: 50
   });
-
-  /* ── Local Filters ── */
-  const filteredCustomers = useMemo(() => {
-    let result = customers;
-
-    if (activeKpi === "Outstanding Due") {
-      result = result.filter((c: any) => (c.dues || 0) > 0);
-    }
-    if (debouncedSearch) {
-      const q = debouncedSearch.toLowerCase();
-      result = result.filter((c: any) => 
-        (c.name && c.name.toLowerCase().includes(q)) ||
-        (c.ui_id && c.ui_id.toLowerCase().includes(q)) ||
-        (c.contact_infos?.mobile_number && c.contact_infos.mobile_number.includes(q)) ||
-        (c.contact_infos?.email && c.contact_infos.email.toLowerCase().includes(q)) ||
-        (c.location_infos?.full_address && c.location_infos.full_address.toLowerCase().includes(q))
-      );
-    }
-    
-    if (fromDate) {
-      const from = new Date(fromDate).getTime();
-      result = result.filter((c: any) => new Date(c.created_at).getTime() >= from);
-    }
-    
-    if (toDate) {
-      const to = new Date(toDate).getTime() + 86400000;
-      result = result.filter((c: any) => new Date(c.created_at).getTime() <= to);
-    }
-    
-    if (filterOutstanding === "Outstanding") {
-      result = result.filter((c: any) => (c.outstanding_infos?.amount ?? c.outstanding ?? 0) > 0);
-    } else if (filterOutstanding === "Cleared") {
-      result = result.filter((c: any) => (c.outstanding_infos?.amount ?? c.outstanding ?? 0) <= 0);
-    }
-
-    return result;
-  }, [customers, debouncedSearch, fromDate, toDate, filterOutstanding]);
 
   const activeFilters = [fromDate, toDate, filterOutstanding !== "All"].filter(Boolean).length;
   const clearAll = () => { setFromDate(""); setToDate(""); setSearchTerm(""); setFilterOutstanding("All"); };
@@ -242,7 +211,7 @@ const CustomerList = () => {
     }
   }, [selectedCustomers, setBottomActions]);
 
-  if (loading && customers.length === 0 && !searchTerm && !debouncedSearch) {
+  if (loading && filteredCustomers.length === 0 && !searchTerm && !debouncedSearch) {
     return (
       <div className="flex-1 p-6">
         <SkeletonLoader variant="list" rows={8} showStats={true} />
@@ -258,7 +227,7 @@ const CustomerList = () => {
       <div className="flex gap-3 pb-1 overflow-x-auto scrollbar-none">
         <StatCard
           label="All Customers"
-          value={analyticsStats?.total_customers ?? customers.length}
+          value={analyticsStats?.total_customers ?? filteredCustomers.length}
           icon={<Users size={18} />}
           iconBg="bg-blue-50"
           iconColor="text-blue-600"
@@ -268,7 +237,7 @@ const CustomerList = () => {
         />
         <StatCard
           label="Outstanding Due"
-          value={String(analyticsStats?.outstanding_customers_count ?? customers.filter((c: any) => (c.outstanding_infos?.amount ?? c.outstanding ?? 0) > 0).length)}
+          value={String(analyticsStats?.outstanding_customers_count ?? filteredCustomers.filter((c: any) => (c.outstanding_infos?.amount ?? c.outstanding ?? 0) > 0).length)}
           icon={<AlertCircle size={18} />}
           iconBg="bg-rose-50"
           iconColor="text-rose-500"

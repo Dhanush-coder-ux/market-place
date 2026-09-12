@@ -119,6 +119,7 @@ export interface DirectPurchaseData {
   version?: string;
   returns?: any[];
   refund_amount?: number;
+  notes?: string;
 }
 
 type ViewMode = "grid" | "horizontal" | "vertical";
@@ -296,6 +297,7 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
     payment_status: (p as any).payment_status ?? "PENDING",
     returns: (p as any).returns || d2?.returns || (p as any).purchase_returns || d2?.purchase_returns || [],
     refund_amount: Number((p as any).refund_amount || (p as any).return?.refund_amount || 0),
+    notes: (p as any).notes || d2?.notes || d2?.purchaseDetails?.referenceNo || "",
   };
 }
 
@@ -890,7 +892,7 @@ const PurchaseHistory = () => {
     return () => setActions(null);
   }, [setActions, isCleanMode, setRefreshKey]);
 
-  const [_activeKpi, _setActiveKpi] = useState("All Purchases");
+  const [activeKpi, setActiveKpi] = useState("All Purchases");
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
@@ -1006,6 +1008,14 @@ const PurchaseHistory = () => {
     if (filters.toDate) params.to_date = filters.toDate;
     if (filters.payment_status) params.payment_status = filters.payment_status;
     if (filters.payment_method) params.payment_method = filters.payment_method;
+    
+    if (filters.activeKpi === "Outstanding Payments") {
+      params.exclude_non_outstanding = true;
+      params.exclude_return = true;
+    }
+    if (filters.activeKpi === "Purchase Returns") {
+      params.exclude_non_return = true;
+    }
 
     const res = await purchase.getPurchasesByShop(SHOP_ID, params);
 
@@ -1027,8 +1037,9 @@ const PurchaseHistory = () => {
     toDate,
     payment_status: filterStatus,
     payment_method: filterPaymentMethod,
+    activeKpi,
     refreshKey
-  }), [debouncedSearch, filterVendor, fromDate, toDate, filterStatus, filterPaymentMethod, refreshKey]);
+  }), [debouncedSearch, filterVendor, fromDate, toDate, filterStatus, filterPaymentMethod, activeKpi, refreshKey]);
 
   const { items, loading, loadingMore, totalCount, lastElementRef } = useInfiniteScroll<DirectPurchaseData, any>({
     fetchPage,
@@ -1071,6 +1082,8 @@ const PurchaseHistory = () => {
               iconBg="bg-blue-50"
               iconColor="text-blue-600"
               subValue="All purchases"
+              onClick={() => setActiveKpi("All Purchases")}
+              className={activeKpi === "All Purchases" ? "ring-2 ring-blue-400 border-transparent shadow-sm" : ""}
             />
             <StatCard
               label="Outstanding Payments"
@@ -1079,6 +1092,8 @@ const PurchaseHistory = () => {
               iconBg="bg-amber-50"
               iconColor="text-amber-500"
               subValue="Purchases with outstanding > 0"
+              onClick={() => setActiveKpi("Outstanding Payments")}
+              className={activeKpi === "Outstanding Payments" ? "ring-2 ring-amber-400 border-transparent shadow-sm" : ""}
             />
             <StatCard
               label="Purchase Returns"
@@ -1087,6 +1102,8 @@ const PurchaseHistory = () => {
               iconBg="bg-rose-50"
               iconColor="text-rose-550"
               subValue="Purchases with linked returns tag"
+              onClick={() => setActiveKpi("Purchase Returns")}
+              className={activeKpi === "Purchase Returns" ? "ring-2 ring-rose-400 border-transparent shadow-sm" : ""}
             />
           </div>
         )}

@@ -701,11 +701,13 @@ const PurchaseDetail = () => {
               variant: (po.status || "Completed").toLowerCase() === 'draft' ? "draft" : "vendor",
               dotColor: "bg-[var(--mv-purchase-dot)]"
             },
-            po.outstanding && po.outstanding > 0
-              ? (po.paid_amount === 0
-                ? { text: "Unpaid", variant: "pay-pending", dotColor: "bg-[var(--pay-pending-dot)]" }
-                : { text: "Partially paid", variant: "pay-partial", dotColor: "bg-[var(--pay-partial-dot)]" })
-              : { text: "Paid", variant: "pay-paid", dotColor: "bg-[var(--pay-paid-dot)]" },
+            (po.status || "").toLowerCase() === 'cancelled' || (po.status || "").toLowerCase() === 'canceled' || (po.payment_status || "").toLowerCase() === 'cancelled' || (po.payment_status || "").toLowerCase() === 'canceled'
+              ? { text: "Cancelled", variant: "ps-cancelled", dotColor: "bg-[var(--ps-cancelled-dot)]" }
+              : po.outstanding && po.outstanding > 0
+                ? (po.paid_amount === 0
+                  ? { text: "Unpaid", variant: "pay-pending", dotColor: "bg-[var(--pay-pending-dot)]" }
+                  : { text: "Partially paid", variant: "pay-partial", dotColor: "bg-[var(--pay-partial-dot)]" })
+                : { text: "Paid", variant: "pay-paid", dotColor: "bg-[var(--pay-paid-dot)]" },
             ...(((po.returns?.length || 0) > 0 || ((po as any).purchase_returns?.length || 0) > 0)
               ? [{ text: "Returned", variant: "tx-sales-return" }]
               : [])
@@ -786,6 +788,9 @@ const PurchaseDetail = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-8">
                       <DetailItem icon={Building2} label="Vendor Name" value={po.vendor} />
                       <DetailItem icon={FileText} label="Purchase Invoice" value={po.poNumber} />
+                      {po.notes && (
+                        <DetailItem icon={ReceiptText} label="Transaction Ref No." value={po.notes} />
+                      )}
                       {po.systemId && po.systemId !== po.poNumber && (
                         <DetailItem icon={FileText} label="System ID" value={po.systemId} />
                       )}

@@ -130,6 +130,7 @@ const SalesListPage: React.FC = () => {
   const [orders, setOrders] = useState<OrderResponse[]>([]);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [activeKpi, setActiveKpi] = useState("Total Orders");
   const [selectedSale, setSelectedSale] = useState<SaleRecord | null>(null);
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 300);
@@ -219,6 +220,10 @@ const SalesListPage: React.FC = () => {
   const fetchPage = React.useCallback(async (limit: number, offset: number, filters: any) => {
     const params: any = { limit: limit.toString(), offset: offset.toString() };
     if (filters.search) params.q = filters.search;
+    
+    if (filters.activeKpi === "Online Sales") params.exclude_offline = true;
+    if (filters.activeKpi === "Offline Sales") params.exclude_online = true;
+
     if (filters.origin === "Offline") params.origin = "OFFLINE";
     else if (filters.origin === "Offline Return") params.origin = "OFFLINE_SALES_RETURN";
     else if (filters.origin === "Online") params.origin = "ONLINE";
@@ -338,7 +343,8 @@ const SalesListPage: React.FC = () => {
     status: filterStatus,
     fromDate,
     toDate,
-  }), [debouncedSearch, filterOrigin, filterPayment, filterStatus, fromDate, toDate]);
+    activeKpi,
+  }), [debouncedSearch, filterOrigin, filterPayment, filterStatus, fromDate, toDate, activeKpi]);
 
   const { items, loading, loadingMore, stats, totalCount, lastElementRef, reload } = useInfiniteScroll({
     fetchPage,
@@ -355,45 +361,8 @@ const SalesListPage: React.FC = () => {
   }, [reload]);
 
   const filtered = useMemo<any[]>(() => {
-    let result = [...(items as any[])];
-
-    if (debouncedSearch) {
-      const q = debouncedSearch.toLowerCase();
-      result = result.filter((s: any) =>
-        (s.ui_id && s.ui_id.toString().toLowerCase().includes(q)) ||
-        (s.customer?.customer_name && s.customer.customer_name.toLowerCase().includes(q)) ||
-        (s.customer_id && s.customer_id.toLowerCase().includes(q)) ||
-        (s.customer_id && customerMap[s.customer_id] && customerMap[s.customer_id].toLowerCase().includes(q))
-      );
-    }
-
-    if (filterOrigin) {
-      result = result.filter((s: any) => s.origin === filterOrigin);
-    }
-
-    if (filterPayment) {
-      result = result.filter((s: any) => {
-        const pm = s.payment_method || "";
-        return pm === filterPayment || pm.includes(filterPayment);
-      });
-    }
-
-    if (filterStatus) {
-      result = result.filter((s: any) => s.status.toUpperCase() === filterStatus.toUpperCase());
-    }
-
-    if (fromDate) {
-      const f = new Date(fromDate).setHours(0, 0, 0, 0);
-      result = result.filter((s: any) => new Date(s.created_at).getTime() >= f);
-    }
-
-    if (toDate) {
-      const t = new Date(toDate).setHours(23, 59, 59, 999);
-      result = result.filter((s: any) => new Date(s.created_at).getTime() <= t);
-    }
-
-    return result;
-  }, [items, debouncedSearch, filterOrigin, filterPayment, filterStatus, fromDate, toDate, customerMap]);
+    return items as any[];
+  }, [items]);
 
   const activeFilters = [filterOrigin, filterPayment, filterStatus, fromDate, toDate].filter(Boolean).length;
   const clearAll = () => {
@@ -433,6 +402,8 @@ const SalesListPage: React.FC = () => {
             iconBg="bg-blue-50"
             iconColor="text-blue-600"
             subValue="All Time"
+            onClick={() => setActiveKpi("Total Orders")}
+            className={activeKpi === "Total Orders" ? "ring-2 ring-blue-400 border-transparent shadow-sm" : ""}
           />
           <StatCard
             label="Online Sales"
@@ -442,6 +413,8 @@ const SalesListPage: React.FC = () => {
             iconBg="bg-rose-50"
             iconColor="text-rose-500"
             subValue={`${analyticsStats?.overview?.sales?.total_online_sales ?? 0} Orders`}
+            onClick={() => setActiveKpi("Online Sales")}
+            className={activeKpi === "Online Sales" ? "ring-2 ring-rose-400 border-transparent shadow-sm" : ""}
           />
           <StatCard
             label="Offline Sales"
@@ -451,6 +424,8 @@ const SalesListPage: React.FC = () => {
             iconBg="bg-indigo-50"
             iconColor="text-indigo-500"
             subValue={`${analyticsStats?.overview?.sales?.total_offline_sales ?? 0} Orders`}
+            onClick={() => setActiveKpi("Offline Sales")}
+            className={activeKpi === "Offline Sales" ? "ring-2 ring-indigo-400 border-transparent shadow-sm" : ""}
           />
         </div>
       )}

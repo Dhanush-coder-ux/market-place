@@ -92,18 +92,20 @@ export const PaymentStatusBadge: React.FC<{
 }> = ({ status, outstanding, grandTotal, className }) => {
   let displayStatus = (status || "UNPAID").toUpperCase();
 
-  if (outstanding !== undefined && grandTotal !== undefined && grandTotal > 0) {
-    if (outstanding <= 0) {
-      displayStatus = "PAID";
-    } else if (outstanding > 0 && grandTotal > outstanding) {
-      displayStatus = "PARTIAL";
-    } else if (outstanding >= grandTotal) {
+  if (displayStatus !== "CANCELLED" && displayStatus !== "CANCELED" && displayStatus !== "CANCEL") {
+    if (outstanding !== undefined && grandTotal !== undefined && grandTotal > 0) {
+      if (outstanding <= 0) {
+        displayStatus = "PAID";
+      } else if (outstanding > 0 && grandTotal > outstanding) {
+        displayStatus = "PARTIAL";
+      } else if (outstanding >= grandTotal) {
+        displayStatus = "UNPAID";
+      }
+    }
+
+    if (displayStatus === "OUTSTANDING") {
       displayStatus = "UNPAID";
     }
-  }
-
-  if (displayStatus === "OUTSTANDING") {
-    displayStatus = "UNPAID";
   }
 
   let variant: any = "pay-pending";
@@ -113,6 +115,9 @@ export const PaymentStatusBadge: React.FC<{
     variant = "pay-partial";
   } else if (displayStatus === "UNPAID" || displayStatus === "DUE" || displayStatus === "PENDING") {
     variant = "pay-pending";
+  } else if (displayStatus === "CANCELLED" || displayStatus === "CANCELED" || displayStatus === "CANCEL") {
+    variant = "ps-cancelled";
+    displayStatus = "CANCELLED";
   }
 
   const label = displayStatus === "PARTIALLY_PAID" || displayStatus === "PARTIALLY PAID" ? "PARTIAL" : displayStatus;

@@ -127,7 +127,7 @@ const Supplier = () => {
   };
 
   const [suppliers, setSuppliers] = useState<SupplierRecord[]>([]);
-  const [activeKpi, _setActiveKpi] = useState("All Suppliers");
+
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filters, setFilters] = useState({
@@ -285,8 +285,8 @@ const Supplier = () => {
     if (debouncedSearch) params.q = debouncedSearch;
     if (fromDate) params.from_date = fromDate;
     if (toDate) params.to_date = toDate;
-    if (filters.status === "Outstanding") params.has_outstanding = "true";
-    if (filters.status === "Cleared") params.has_outstanding = "false";
+    if (filters.status === "Outstanding") params.exclude_non_outstanding = "true";
+    if (filters.status === "Cleared") params.exclude_outstanding = "true";
 
     getData(`${ENDPOINTS.SUPPLIERS}/by/shop/${SHOP_ID}`, params).then((res) => {
       if (res) {
@@ -351,9 +351,7 @@ const Supplier = () => {
   const filteredSuppliers = useMemo(() => {
     let result = suppliers;
 
-    if (activeKpi === "Outstanding Due") {
-      result = result.filter((s: any) => getSupplierOutstanding(s) > 0);
-    }
+
 
     if (debouncedSearch) {
       const lower = debouncedSearch.toLowerCase();

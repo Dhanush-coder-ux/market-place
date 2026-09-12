@@ -615,7 +615,8 @@ const PurchaseForm = () => {
         payment_infos: paymentInfosPayload,
         purchase_date: purchaseDetails.date,
         items: transformedProducts,
-        invoice_no: purchaseDetails.invoiceNo || ""
+        invoice_no: purchaseDetails.invoiceNo || "",
+        notes: payment.referenceNo || ""
       };
 
       let res;
@@ -625,6 +626,7 @@ const PurchaseForm = () => {
           shop_id: SHOP_ID,
           supplier_id: supplierDetails?.id || purchaseDetails.supplier || undefined,
           invoice_no: purchaseDetails.invoiceNo || undefined,
+          notes: payment.referenceNo || undefined,
           status: draftStatus ? "DRAFT" : "COMPLETED",
           calculation_infos: {
             distribute_by: costMethodMap[costMethod] || "NONE",

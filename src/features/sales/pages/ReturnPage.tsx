@@ -76,7 +76,7 @@ const ReturnPage: React.FC = () => {
     setLoading(true);
     getData(`${ENDPOINTS.ORDERS}/${SHOP_ID}/${id}`)
       .then(res => setSale(res?.data || res))
-      .catch(() => showToast("Failed to load order", "error"))
+      .catch((err: any) => showToast(err?.message || "Failed to load order", "error"))
       .finally(() => setLoading(false));
   }, [id]);
 

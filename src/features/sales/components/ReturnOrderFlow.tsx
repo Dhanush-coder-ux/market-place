@@ -861,9 +861,10 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
       }
       onSuccess?.();
       setState(s => ({ ...s, isSubmitting: false, step: 5 }));
-    } catch (err) {
+    } catch (err: any) {
       console.error("Return/Exchange failed:", err);
-      showToast("Operation failed. Please try again.", "error");
+      const msg = err?.message || err?.detail?.description || err?.detail?.msg || (typeof err === "string" ? err : "Operation failed. Please try again.");
+      showToast(msg, "error");
       setState(s => ({ ...s, isSubmitting: false }));
     }
   }, [state, selectedItems, sale, showToast, totals.diff]);

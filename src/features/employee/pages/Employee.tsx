@@ -128,8 +128,8 @@ export default function Employee() {
         return next;
       });
       setRefreshKey(prev => prev + 1);
-    } catch (_err) {
-      showToast("Failed to delete employee", "error");
+    } catch (err: any) {
+      showToast(err?.message || "Failed to delete employee", "error");
     } finally {
       setIsDeleteDialogOpen(false);
       setEmployeeToDelete(null);
@@ -146,8 +146,8 @@ export default function Employee() {
       showToast("Selected employees deleted successfully", "success");
       setSelectedEmployees(new Set());
       setRefreshKey(prev => prev + 1);
-    } catch {
-      showToast("Failed to delete some employees", "error");
+    } catch (e: any) {
+      showToast(e?.message || "Failed to delete some employees", "error");
     }
   };
 
@@ -159,8 +159,8 @@ export default function Employee() {
         shop_id: emp.shop_id || SHOP_ID
       });
       showToast("Verification email sent again", "success");
-    } catch (_err) {
-      showToast("Failed to send verification email", "error");
+    } catch (err: any) {
+      showToast(err?.message || "Failed to send verification email", "error");
     }
   };
 

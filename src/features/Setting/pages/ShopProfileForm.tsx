@@ -53,8 +53,8 @@ export const ShopProfileForm = () => {
           });
         }
       }
-    } catch {
-      showToast("Failed to fetch shop details", "error");
+    } catch (e: any) {
+      showToast(e?.message || "Failed to fetch shop details", "error");
     } finally {
       setLoading(false);
     }

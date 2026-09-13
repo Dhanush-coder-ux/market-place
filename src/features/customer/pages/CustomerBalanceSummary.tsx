@@ -116,8 +116,8 @@ export default function CustomerBalanceSummary() {
       await customer.deleteCustomer(SHOP_ID, customerToDelete.id);
       showToast("Customer deleted successfully", "success");
       setRefreshKey(prev => prev + 1);
-    } catch (_err) {
-      showToast("Failed to delete customer", "error");
+    } catch (err: any) {
+      showToast(err?.message || "Failed to delete customer", "error");
     } finally {
       setIsDeleteDialogOpen(false);
       setCustomerToDelete(null);

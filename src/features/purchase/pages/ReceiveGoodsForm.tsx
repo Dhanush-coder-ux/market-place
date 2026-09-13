@@ -666,8 +666,8 @@ const ReceiveGoodForm = () => {
       setSelectedPORef(data.id || poId);
       setManualStatus((data.datas?.status as ReceiveStatus) || (data.status as ReceiveStatus) || "Pending");
       setSearchParams(prev => { prev.set("poId", data.id || poId); return prev; }, { replace: true });
-    } catch {
-      showToast("Failed to load PO", "error");
+    } catch (e: any) {
+      showToast(e?.message || "Failed to load PO", "error");
     } finally {
       setLoadingPO(false);
     }

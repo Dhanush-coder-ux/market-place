@@ -729,8 +729,8 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
         onSuccess(createdProduct);
         onClose();
       }
-    } catch (error) {
-      showToast("Failed to create product", "error");
+    } catch (error: any) {
+      showToast(error?.message || "Failed to create product", "error");
     } finally {
       setSubmitting(false);
     }

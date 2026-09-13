@@ -71,8 +71,8 @@ export default function NotificationsPage() {
     try {
       await refreshNotifications();
       showToast("Notifications refreshed", "success");
-    } catch {
-      showToast("Could not refresh notifications", "error");
+    } catch (e: any) {
+      showToast(e?.message || "Could not refresh notifications", "error");
     } finally {
       setIsRefreshing(false);
     }
@@ -82,8 +82,8 @@ export default function NotificationsPage() {
     try {
       await markAllAsRead();
       showToast("All notifications marked as read", "success");
-    } catch {
-      showToast("Failed to mark all as read", "error");
+    } catch (e: any) {
+      showToast(e?.message || "Failed to mark all as read", "error");
     }
   };
 
@@ -92,8 +92,8 @@ export default function NotificationsPage() {
     try {
       await clearAllNotifications();
       showToast("All notifications cleared", "success");
-    } catch {
-      showToast("Failed to clear notifications", "error");
+    } catch (e: any) {
+      showToast(e?.message || "Failed to clear notifications", "error");
     }
   };
 
@@ -108,8 +108,8 @@ export default function NotificationsPage() {
     try {
       await deleteNotification(id);
       showToast("Notification dismissed", "success");
-    } catch {
-      showToast("Failed to dismiss notification", "error");
+    } catch (e: any) {
+      showToast(e?.message || "Failed to dismiss notification", "error");
     }
   };
 

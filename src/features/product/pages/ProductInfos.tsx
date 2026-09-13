@@ -1016,8 +1016,8 @@ const ProductInfos = () => {
       );
       showToast("Product deleted successfully", "success");
       setRefreshKey((prev: number) => prev + 1);
-    } catch {
-      showToast("Failed to delete product", "error");
+    } catch (e: any) {
+      showToast(e?.message || "Failed to delete product", "error");
     } finally {
       setIsDeleteDialogOpen(false);
       setProductToDelete(null);
@@ -1039,8 +1039,8 @@ const ProductInfos = () => {
       showToast("Selected products deleted successfully", "success");
       setSelectedProducts(new Set());
       setRefreshKey((prev: number) => prev + 1);
-    } catch {
-      showToast("Failed to delete some products", "error");
+    } catch (e: any) {
+      showToast(e?.message || "Failed to delete some products", "error");
     }
   };
 

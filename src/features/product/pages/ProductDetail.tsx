@@ -199,8 +199,8 @@ const ProductDetail = () => {
       await deleteData(`${ENDPOINTS.INVENTORIES}/${SHOP_ID}/${id}`);
       showToast("Product deleted successfully", "success");
       navigate("/product/all");
-    } catch {
-      showToast("Failed to delete product", "error");
+    } catch (e: any) {
+      showToast(e?.message || "Failed to delete product", "error");
     } finally {
       setDeleting(false);
       setShowDeleteModal(false);

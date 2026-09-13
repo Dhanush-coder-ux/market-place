@@ -118,8 +118,8 @@ export default function SupplierDetail() {
       if (res?.data?.datas) purList = res.data.datas;
       
       setClearPurchases(purList);
-    } catch {
-      showToast("Failed to fetch outstanding purchases", "error");
+    } catch (e: any) {
+      showToast(e?.message || "Failed to fetch outstanding purchases", "error");
     } finally {
       setClearLoading(false);
     }
@@ -167,8 +167,8 @@ export default function SupplierDetail() {
         });
       }
 
-    } catch {
-      showToast("Failed to apply payment", "error");
+    } catch (e: any) {
+      showToast(e?.message || "Failed to apply payment", "error");
     } finally {
       setClearSaving(false);
     }
@@ -328,8 +328,8 @@ export default function SupplierDetail() {
         showToast("Supplier deleted successfully", "success");
         navigate("/supplier/all");
       }
-    } catch {
-      showToast("Failed to delete supplier", "error");
+    } catch (e: any) {
+      showToast(e?.message || "Failed to delete supplier", "error");
     } finally {
       setDeleting(false);
       setShowDeleteModal(false);

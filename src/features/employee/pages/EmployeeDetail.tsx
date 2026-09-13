@@ -65,8 +65,8 @@ export default function EmployeeDetail() {
       await deleteData(`${ENDPOINTS.EMPLOYEES}/${SHOP_ID}/${employee.id}`);
       showToast("Employee removed successfully", "success");
       navigate("/employee/all");
-    } catch (_err) {
-      showToast("Failed to remove employee", "error");
+    } catch (err: any) {
+      showToast(err?.message || "Failed to remove employee", "error");
     }
   };
 
@@ -79,8 +79,8 @@ export default function EmployeeDetail() {
         shop_id: employee.shop_id || SHOP_ID
       });
       showToast("Verification email sent again", "success");
-    } catch (_err) {
-      showToast("Failed to send verification email", "error");
+    } catch (err: any) {
+      showToast(err?.message || "Failed to send verification email", "error");
     } finally {
       setResendingVerification(false);
     }

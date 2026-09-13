@@ -910,8 +910,8 @@ const InventoryPage = () => {
       showToast("Selected products deleted successfully", "success");
       setSelectedItems(new Set());
       setRefreshKey((prev: number) => prev + 1);
-    } catch {
-      showToast("Failed to delete some products", "error");
+    } catch (e: any) {
+      showToast(e?.message || "Failed to delete some products", "error");
     }
   };
 

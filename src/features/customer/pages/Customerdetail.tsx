@@ -291,9 +291,9 @@ export default function CustomerDetail() {
       } else {
         showToast("Failed to delete customer. Please try again.", "error");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Delete error:", error);
-      showToast("An unexpected error occurred.", "error");
+      showToast(error?.message || "An unexpected error occurred.", "error");
     } finally {
       setDeleting(false);
       setShowDeleteModal(false);

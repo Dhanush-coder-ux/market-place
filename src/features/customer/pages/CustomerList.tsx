@@ -162,8 +162,8 @@ const CustomerList = () => {
       showToast("Selected customers deleted successfully", "success");
       setSelectedCustomers(new Set());
       setRefreshKey(prev => prev + 1);
-    } catch {
-      showToast("Failed to delete some customers", "error");
+    } catch (e: any) {
+      showToast(e?.message || "Failed to delete some customers", "error");
     }
   };
 
@@ -178,8 +178,8 @@ const CustomerList = () => {
         return next;
       });
       setRefreshKey(prev => prev + 1);
-    } catch {
-      showToast("Failed to delete customer", "error");
+    } catch (e: any) {
+      showToast(e?.message || "Failed to delete customer", "error");
     }
   };
 

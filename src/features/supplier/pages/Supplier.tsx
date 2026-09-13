@@ -430,8 +430,8 @@ const Supplier = () => {
       showToast("Supplier deleted successfully", "success");
       setRefreshKey(prev => prev + 1);
       setSelectedSupplier(null);
-    } catch {
-      showToast("Failed to delete supplier", "error");
+    } catch (e: any) {
+      showToast(e?.message || "Failed to delete supplier", "error");
     } finally {
       setIsDeleteDialogOpen(false);
       setSupplierToDelete(null);

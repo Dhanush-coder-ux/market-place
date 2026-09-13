@@ -9,7 +9,10 @@ import {
   Trash2,
   CheckCircle2,
   AlertCircle,
+  PowerOff,
 } from "lucide-react";
+import { shopApi } from "@/services/api/shop";
+import { useNavigate } from "react-router-dom";
 import { ShopProfileForm } from "../../Setting/pages/ShopProfileForm";
 import OperatingHours from "../pages/OperatingHours";
 import DeliveryPreferences from "../pages/Deliveryinfo";
@@ -25,8 +28,24 @@ interface SidebarItem {
 }
 
 export function StoreSettingsLayout({ shop }: { shop: any }) {
+  const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState<SettingSection>("details");
   const { showToast } = useToast();
+  const [turningOff, setTurningOff] = useState(false);
+
+  const handleTurnOffStore = async () => {
+    if (!shop?.id) return;
+    setTurningOff(true);
+    try {
+      await shopApi.updateShop({ id: shop.id, visible_online: false });
+      showToast("Digital store has been turned off", "success");
+      navigate("/setup-digital-store", { replace: true });
+    } catch (e: any) {
+      showToast(e?.message || "Failed to turn off store", "error");
+    } finally {
+      setTurningOff(false);
+    }
+  };
 
   const [hoursStatus, setHoursStatus] = useState<React.ReactNode>(null);
   const [deliveryStatus, setDeliveryStatus] = useState<React.ReactNode>(null);
@@ -324,18 +343,24 @@ export function StoreSettingsLayout({ shop }: { shop: any }) {
             </div>
 
             <div className="space-y-4">
-              {/* Deactivate */}
-              <div className="bg-white rounded-xl border border-red-100 p-5">
+              {/* Turn Off Digital Store */}
+              <div className="bg-white rounded-xl border border-amber-200 bg-amber-50/20 p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-sm font-semibold text-slate-800">Deactivate Store</p>
-                    <p className="text-[12px] text-slate-500 mt-0.5 leading-relaxed">
-                      Temporarily take your store offline. Your products and configuration will be saved,
-                      but the shop won't be accessible to customers.
+                    <div className="flex items-center gap-2">
+                      <PowerOff size={15} className="text-amber-600" />
+                      <p className="text-sm font-semibold text-slate-800">Turn Off Digital Store</p>
+                    </div>
+                    <p className="text-[12px] text-slate-500 mt-1 leading-relaxed">
+                      Temporarily turn off your digital store. Your products, operating hours, delivery settings, and configurations will be saved, but the shop won't be accessible or visible to customers online.
                     </p>
                   </div>
-                  <button className="h-8 px-4 border border-red-200 hover:bg-red-50 text-red-600 text-sm font-medium rounded-lg transition-all shrink-0 cursor-pointer">
-                    Deactivate
+                  <button
+                    onClick={handleTurnOffStore}
+                    disabled={turningOff}
+                    className="h-8 px-4 border border-amber-300 hover:bg-amber-100 text-amber-800 text-xs font-semibold rounded-lg transition-all shrink-0 cursor-pointer disabled:opacity-50"
+                  >
+                    {turningOff ? "Turning Off..." : "Turn Off Store"}
                   </button>
                 </div>
               </div>

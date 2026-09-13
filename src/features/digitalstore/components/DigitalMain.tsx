@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import {
   Megaphone, Package, Settings2, AlertCircle,
-  WifiOff,
+  PowerOff,
   Edit3, QrCode, Users, X, Download, ExternalLink,
   Hash,
   BadgeCheck,
 } from "lucide-react";
+import { useToast } from "@/context/ToastContext";
 import { QRCodeSVG } from "qrcode.react";
 import { shopApi } from "@/services/api/shop";
 import { inventoryApi } from "@/services/api/inventory";
@@ -222,6 +223,7 @@ const TAB_CONFIG: { tab: TabType; icon: React.ElementType }[] = [
 // ═══════════════════════════════════════════════════════════════════════════════
 const DigitalMain = () => {
   const navigate  = useNavigate();
+  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<TabType>("Announcements");
   const [shop, setShop]           = useState<ShopData | null>(null);
   const [followersCount, setFollowersCount] = useState<number>(0);
@@ -229,6 +231,41 @@ const DigitalMain = () => {
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState<string | null>(null);
   const [showQR, setShowQR]       = useState(false);
+  const [showTurnOffConfirm, setShowTurnOffConfirm] = useState(false);
+  const [updatingVisibility, setUpdatingVisibility] = useState(false);
+
+  const handleToggleStoreVisibility = async () => {
+    if (!shop) return;
+    if (shop.visible_online) {
+      setShowTurnOffConfirm(true);
+    } else {
+      try {
+        setUpdatingVisibility(true);
+        await shopApi.updateShop({ id: shop.id, visible_online: true });
+        setShop({ ...shop, visible_online: true });
+        showToast("Digital store is now online", "success");
+      } catch (err: any) {
+        showToast(err?.message || "Failed to turn on digital store", "error");
+      } finally {
+        setUpdatingVisibility(false);
+      }
+    }
+  };
+
+  const handleConfirmTurnOff = async () => {
+    if (!shop) return;
+    try {
+      setUpdatingVisibility(true);
+      await shopApi.updateShop({ id: shop.id, visible_online: false });
+      showToast("Digital store turned off", "success");
+      setShowTurnOffConfirm(false);
+      navigate("/setup-digital-store", { replace: true });
+    } catch (err: any) {
+      showToast(err?.message || "Failed to turn off digital store", "error");
+    } finally {
+      setUpdatingVisibility(false);
+    }
+  };
 
   useEffect(() => {
     if (!SHOP_ID || SHOP_ID === "string") { navigate("/setup-digital-store"); return; }
@@ -363,16 +400,24 @@ const DigitalMain = () => {
                     <Hash size={9} /> Store #{shop.sequence_id}
                   </span>
                 )}
-                <span className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded border ${
-                  shop.visible_online
-                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                    : "bg-slate-100 text-slate-500 border-slate-200"
-                }`}>
-                  {shop.visible_online
-                    ? <><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />Online</>
-                    : <><WifiOff size={9} />Offline</>
-                  }
-                </span>
+                {/* Digital Store Visibility Toggle */}
+                <button
+                  type="button"
+                  onClick={handleToggleStoreVisibility}
+                  disabled={updatingVisibility}
+                  className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all border shadow-sm cursor-pointer ${
+                    shop.visible_online
+                      ? "bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100"
+                      : "bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200"
+                  }`}
+                  title={shop.visible_online ? "Click to turn off Digital Store" : "Click to turn on Digital Store"}
+                >
+                  <span className={`w-2 h-2 rounded-full ${shop.visible_online ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`} />
+                  <span>{shop.visible_online ? "Online" : "Offline"}</span>
+                  <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ml-0.5 ${shop.visible_online ? "bg-emerald-500" : "bg-slate-300"}`}>
+                    <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${shop.visible_online ? "translate-x-3.5" : "translate-x-0.5"}`} />
+                  </span>
+                </button>
                 {shop.business_infos?.gst_infos?.registered && (
                   <span className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
                     <BadgeCheck size={10} /> GST Registered
@@ -464,6 +509,46 @@ const DigitalMain = () => {
           {activeTab === "Settings"      && <StoreSettingsLayout shop={shop} />}
         </div>
       </div>
+
+      {/* ── Confirmation Modal for Turning Off Digital Store ── */}
+      {showTurnOffConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="relative bg-white rounded-2xl shadow-xl border border-slate-200 max-w-md w-full p-6 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                <PowerOff className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-800">Turn Off Digital Store?</h3>
+                <p className="text-xs text-slate-500 mt-0.5">Take your online storefront offline</p>
+              </div>
+            </div>
+
+            <p className="text-sm text-slate-600 leading-relaxed mb-6">
+              Your digital store will be taken offline and hidden from customers. All your existing products, categories, delivery options, and operating hours will be preserved so you can turn it back on anytime.
+            </p>
+
+            <div className="flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowTurnOffConfirm(false)}
+                disabled={updatingVisibility}
+                className="h-9 px-4 rounded-lg border border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmTurnOff}
+                disabled={updatingVisibility}
+                className="h-9 px-4 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold transition-colors flex items-center gap-2 cursor-pointer shadow-sm disabled:opacity-50"
+              >
+                {updatingVisibility ? "Turning Off..." : "Turn Off Store"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         @keyframes fadeIn { from { opacity:0; transform:translateY(4px) } to { opacity:1; transform:translateY(0) } }

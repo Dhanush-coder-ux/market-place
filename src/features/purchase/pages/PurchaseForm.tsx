@@ -835,7 +835,7 @@ const PurchaseForm = () => {
                 </div>
 
                 <Input
-                  label="Supplier Invoice #"
+                  label="Supplier Invoice # (optional)"
                   tooltip="Enter the invoice number provided by the supplier for this purchase."
                   placeholder="INV-2026-..."
                   value={purchaseDetails.invoiceNo}
@@ -934,7 +934,7 @@ const PurchaseForm = () => {
                   {/* Transport */}
                   <div className="flex flex-col gap-2">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 group cursor-help w-fit">
-                      Transport Charge
+                      Transport Charge <span className="normal-case font-normal text-slate-400">(optional)</span>
                       <Tooltip message="Delivery or transportation costs charged by the supplier.">
                         <span className="cursor-help flex"><Info size={12} className="text-slate-400 group-hover:text-blue-500 transition-colors" /></span>
                       </Tooltip>
@@ -954,7 +954,7 @@ const PurchaseForm = () => {
                   {/* Other Charges */}
                   <div className="flex flex-col gap-2">
                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 group cursor-help w-fit">
-                      Other Charges
+                      Other Charges <span className="normal-case font-normal text-slate-400">(optional)</span>
                       <Tooltip message="Any additional fees, loading/unloading costs, or miscellaneous charges.">
                         <span className="cursor-help flex"><Info size={12} className="text-slate-400 group-hover:text-blue-500 transition-colors" /></span>
                       </Tooltip>

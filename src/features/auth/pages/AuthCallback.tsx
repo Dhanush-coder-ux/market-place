@@ -54,11 +54,14 @@ const AuthCallback = () => {
         localStorage.setItem("refresh_token", refreshToken);
       }
 
-      // Decode JWT payload to extract user_id ("sub" claim)
+      // Decode JWT payload to extract user_id ("sub" claim), email, user_name
       try {
         const payload = JSON.parse(atob(accessToken.split(".")[1]));
         const userId = payload.sub || payload.user_id;
         if (userId) localStorage.setItem("user_id", userId);
+        if (payload.email) localStorage.setItem("user_email", payload.email);
+        const name = payload.entity_name || payload.name || payload.user_name || (payload.email ? payload.email.split("@")[0] : "");
+        if (name) localStorage.setItem("user_name", name);
       } catch (e) {
         console.warn("Could not decode JWT payload:", e);
       }

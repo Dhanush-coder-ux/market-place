@@ -86,8 +86,8 @@ const generateItems = (sale: SaleRecord, productMap: Record<string, string> = {}
       batch_id: item.batch_id, serialno_id: item.serialno_id,
       serial_numbers: Array.isArray((item as any).serialno_infos) && (item as any).serialno_infos.length > 0 ? (item as any).serialno_infos : (item.serial_numbers || []),
       stocks_before: (item as any).stocks_before,
-      unit: item.unit !== undefined ? item.unit : ((item as any).entered_unit !== undefined ? (item as any).entered_unit : ""),
-      entered_unit: (item as any).entered_unit !== undefined ? (item as any).entered_unit : (item.unit !== undefined ? item.unit : ""),
+      unit: (item as any).unit_infos?.name || (item as any).unit_name || (item.unit !== undefined ? item.unit : ((item as any).entered_unit !== undefined ? (item as any).entered_unit : "")),
+      entered_unit: (item as any).entered_unit !== undefined ? (item as any).entered_unit : ((item as any).unit_name || item.unit || ""),
       entered_qty: Number((item as any).entered_qty ?? item.quantity),
       unit_infos: (item as any).unit_infos || null
     } as any;
@@ -534,17 +534,20 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
     const item = saleItems.find(i => i.id === itemId);
     if (!item) return;
     setState(s => {
-      const nextUnits = { ...s.itemUnits, [itemId]: unit };
+      const prevUnit = s.itemUnits[itemId] || item.entered_unit || item.unit;
+      const prevFactor = getUnitConversionFactor(item, prevUnit);
+      const nextFactor = getUnitConversionFactor(item, unit);
       
-      const factor = getUnitConversionFactor(item, unit);
       const baseMaxReturnable = Math.max(0, item.quantity - item.returned_quantity);
-      const maxReturnableInSelectedUnit = factor > 0 ? baseMaxReturnable / factor : baseMaxReturnable;
+      const maxReturnableInSelectedUnit = nextFactor > 0 ? baseMaxReturnable / nextFactor : baseMaxReturnable;
       
       const nextReturnItems = { ...s.returnItems };
       if (nextReturnItems[itemId] !== undefined) {
-         nextReturnItems[itemId] = Math.min(Math.max(1, nextReturnItems[itemId]), maxReturnableInSelectedUnit);
+        const currentVal = nextReturnItems[itemId];
+        const converted = Math.round((currentVal * prevFactor) / nextFactor);
+        nextReturnItems[itemId] = Math.min(Math.max(1, converted), maxReturnableInSelectedUnit);
       }
-      return { ...s, itemUnits: nextUnits, returnItems: nextReturnItems };
+      return { ...s, itemUnits: { ...s.itemUnits, [itemId]: unit }, returnItems: nextReturnItems };
     });
   }, [saleItems]);
 
@@ -583,7 +586,45 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
 
   const addExchangeProduct = useCallback((_itemId: string, product: any) => setState(s => {
     const current = s.exchangeMap["__global__"] || [];
+    const existingIndex = current.findIndex((x: any) =>
+      x.id === product.id &&
+      x.variant_id === product.variant_id &&
+      x.batch_id === product.batch_id &&
+      !x.requireSerial
+    );
+    if (existingIndex >= 0) {
+      const existing = current[existingIndex];
+      const addedQty = product.quantity || product.qty || 1;
+      const maxStk = existing.maxStock !== undefined ? existing.maxStock : 9999;
+      const updatedQty = Math.min(existing.quantity + addedQty, maxStk);
+      const unitP = existing.price ?? existing.sell_price ?? 0;
+      const updatedList = [...current];
+      updatedList[existingIndex] = {
+        ...existing,
+        quantity: updatedQty,
+        qty: updatedQty,
+        tprice: updatedQty * unitP
+      };
+      return { ...s, exchangeMap: { ...s.exchangeMap, "__global__": updatedList } };
+    }
     return { ...s, exchangeMap: { ...s.exchangeMap, "__global__": [...current, { ...product, exchangeId: crypto.randomUUID() }] } };
+  }), []);
+
+  const updateExchangeQty = useCallback((exchangeId: string, newQty: number) => setState(s => {
+    const current = s.exchangeMap["__global__"] || [];
+    return {
+      ...s,
+      exchangeMap: {
+        ...s.exchangeMap,
+        "__global__": current.map((ex: any) => {
+          if (ex.exchangeId === exchangeId) {
+            const unitP = ex.price ?? ex.sell_price ?? 0;
+            return { ...ex, quantity: newQty, qty: newQty, tprice: newQty * unitP };
+          }
+          return ex;
+        })
+      }
+    };
   }), []);
 
   const removeExchangeProduct = useCallback((_itemId: string, exchangeId: string) => setState(s => {
@@ -660,10 +701,17 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
       if (s.step === 2) {
         const d = Math.abs(totals.diff);
         const newPayments = [...s.payments];
-        if (newPayments.length === 1 && newPayments[0].amount === 0) {
+        if (newPayments.length === 1) {
           let maxAllowed = d;
-          if (newPayments[0].mode === "On Credit" && customerOutstanding > 0) maxAllowed = Math.min(maxAllowed, customerOutstanding);
+          if (newPayments[0].mode === "On Credit" && customerOutstanding > 0) {
+            maxAllowed = Math.min(maxAllowed, customerOutstanding);
+          }
           newPayments[0] = { ...newPayments[0], amount: maxAllowed };
+        } else {
+          const currentSum = newPayments.reduce((acc, p) => acc + (p.amount || 0), 0);
+          if (currentSum === 0) {
+            newPayments[0] = { ...newPayments[0], amount: d };
+          }
         }
         return { ...s, step: 3, payments: newPayments };
       }
@@ -756,7 +804,7 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
           exchangeItems.push({
             order_item_id: item.id,
             quantity: item.returnQty,
-            unit: item.entered_unit || item.unit,
+            unit: state.itemUnits[item.id] || item.entered_unit || item.unit,
             reason: state.itemReasons[item.id] || "Customer Request",
             serialno_infos: item.selectedSerials?.length
               ? item.selectedSerials.map(s => {
@@ -830,20 +878,17 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
       if (!reasonsOk) return false;
       // only require replacement items for exchange mode
       if (state.mode === "exchange") {
-        const totalReturnQty = selectedItems.reduce((acc, i) => acc + i.returnQty, 0);
         const globalList = state.exchangeMap["__global__"] || [];
         if (globalList.length === 0) return false;
         
-        let totalReplacementQty = 0;
         for (const ex of globalList) {
           const qty = ex.quantity || ex.qty || 1;
-          totalReplacementQty += qty;
+          if (qty <= 0) return false;
           if (ex.requireSerial && (!ex.serialNumbers && !ex.serial_numbers || (ex.serialNumbers || ex.serial_numbers).length !== qty)) return false;
           if (ex.batchTracking && !ex.batch_id && !ex.batchId) return false;
           if (ex.maxStock !== undefined && qty > ex.maxStock) return false;
         }
         
-        if (totalReplacementQty !== totalReturnQty) return false;
         return true;
       }
       return state.mode === "refund";
@@ -858,7 +903,7 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
     return true;
   }, [state.step, state.mode, state.itemReasons, state.exchangeMap, selectedItems, totals.diff, state.payments]);
 
-  return { state, saleItems, selectedItems, totals, reset, setMode, setReason, setNotes, updatePayment, addPayment, removePayment, toggleItem, selectAll, updateQty, setUnit, addExchangeProduct, removeExchangeProduct, setSerialReturns, goNext, goBack, confirm, canProceed, customerOutstanding };
+  return { state, saleItems, selectedItems, totals, reset, setMode, setReason, setNotes, updatePayment, addPayment, removePayment, toggleItem, selectAll, updateQty, setUnit, addExchangeProduct, updateExchangeQty, removeExchangeProduct, setSerialReturns, goNext, goBack, confirm, canProceed, customerOutstanding };
 };
 
 // Export the hook for use in ReturnPage full-page component
@@ -1039,12 +1084,67 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
       // include_serialno=true ensures serial number data is returned for serial-tracked products
       const response = await inventoryApi.getInventoryById(SHOP_ID, targetId, { include_serialno: 'true' });
       const fullProduct = response?.data || response;
-      setPendingProduct(mapToInventoryItem(fullProduct));
-      setIsProductModalOpen(true);
+      const mapped = mapToInventoryItem(fullProduct);
+      
+      const hasComplex = mapped.requireSerial || mapped.batchTracking || (mapped.variants && mapped.variants.length > 0 && !(mapped.variants[0] as any)?.isBatchOnly);
+      if (hasComplex) {
+        setPendingProduct(mapped);
+        setIsProductModalOpen(true);
+      } else {
+        const baseRootPrice = mapped.price || 0;
+        const exGstRate = parseFloat(String(mapped.gst || "0").replace('%', '')) || 0;
+        let displayPrice = baseRootPrice;
+        if (gstType === "EXCLUSIVE") { displayPrice += baseRootPrice * (exGstRate / 100); }
+
+        m.addExchangeProduct("__global__", {
+          id: mapped.id,
+          inventoryId: mapped.id,
+          code: mapped.product_barcode,
+          name: mapped.product_name,
+          sell_price: displayPrice,
+          price: displayPrice,
+          qty: 1,
+          quantity: 1,
+          tprice: displayPrice,
+          serialNumbers: [],
+          serial_numbers: [],
+          variant_id: null,
+          batch_id: null,
+          serialno_id: null,
+          requireSerial: false,
+          batchTracking: false,
+          maxStock: (mapped as any).isStockTracked !== false ? mapped.stocks : undefined,
+          gst: mapped.gst,
+          unitInfos: mapped.unitInfos,
+          unit: mapped.unitInfos?.name || (mapped as any).unit || "",
+          _product: mapped
+        });
+      }
     } catch (e) {
       console.error(e);
-      setPendingProduct(mapToInventoryItem(ep));
-      setIsProductModalOpen(true);
+      const baseRootPrice = ep.price || 0;
+      m.addExchangeProduct("__global__", {
+        id: ep.id ?? ep._id,
+        inventoryId: ep.id ?? ep._id,
+        code: ep.barcode || ep.sku || "",
+        name: ep.name || "Product",
+        sell_price: baseRootPrice,
+        price: baseRootPrice,
+        qty: 1,
+        quantity: 1,
+        tprice: baseRootPrice,
+        serialNumbers: [],
+        serial_numbers: [],
+        variant_id: null,
+        batch_id: null,
+        serialno_id: null,
+        requireSerial: false,
+        batchTracking: false,
+        maxStock: ep.stocks,
+        gst: ep.gst || "0",
+        unit: ep.unit || "",
+        _product: ep
+      });
     } finally {
       setLoadingExch(false);
     }
@@ -1190,12 +1290,14 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                       { id: "exchange" as ReturnMode, icon: <RefreshCw size={24} />, label: "Exchange", desc: "Swap for other products" },
                     ].map(opt => (
                       <button key={opt.id} onClick={() => m.setMode(opt.id)}
-                        className={`text-left p-4 border-2 rounded-lg transition-all duration-200 cursor-pointer ${state.mode === opt.id ? "bg-white border-blue-500 text-blue-700 shadow-xl shadow-blue-500/10 scale-[1.02]" : "bg-slate-50/50 border-slate-50 hover:border-slate-200"
-                          }`}
-                      >
-                        <div className={`mb-3 ${state.mode === opt.id ? "text-blue-600" : "text-slate-400"}`}>{opt.icon}</div>
-                        <p className="text-[14px] font-bold text-slate-800 mb-1">{opt.label}</p>
-                        <p className="text-[11px] text-slate-500 leading-normal font-medium">{opt.desc}</p>
+                        className={`text-left p-4 border-2 rounded-lg transition-all duration-200 cursor-pointer flex flex-col gap-2.5 ${state.mode === opt.id ? 'border-blue-600 bg-blue-50/50 shadow-md ring-4 ring-blue-500/10' : 'border-slate-100 bg-white hover:border-slate-300 hover:bg-slate-50'}`}>
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${state.mode === opt.id ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'bg-slate-100 text-slate-500'}`}>
+                          {opt.icon}
+                        </div>
+                        <div>
+                          <p className="text-[14px] font-bold text-slate-800">{opt.label}</p>
+                          <p className="text-[12px] text-slate-400 font-medium">{opt.desc}</p>
+                        </div>
                       </button>
                     ))}
                   </div>
@@ -1213,31 +1315,52 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                           <p className="text-[12px] text-slate-400 font-semibold">Select items to return from the list above, then pick their replacements here.</p>
                         </div>
                       ) : (() => {
-                        const totalReturnQty = selectedItems.reduce((acc, i) => acc + i.returnQty, 0);
                         const exList = state.exchangeMap["__global__"] || [];
-                        const usedQty = exList.reduce((sum: number, ex: any) => sum + (ex.quantity || ex.qty || 1), 0);
-                        const remainingQty = totalReturnQty - usedQty;
 
                         return (
                           <>
-                            <div className="flex items-center justify-between mb-3">
-                              <p className="text-[12px] font-bold text-slate-600">
-                                Replacing <span className="text-slate-900">{totalReturnQty} item{totalReturnQty > 1 ? 's' : ''}</span>
+                            <div className="flex items-center justify-between mb-3 bg-slate-50 p-2.5 px-3.5 rounded-lg border border-slate-100">
+                              <p className="text-[12px] font-semibold text-slate-600">
+                                Return Value: <span className="font-mono font-bold text-slate-900">{fmt(totals.returnValue)}</span>
                               </p>
+                              {exList.length > 0 && (
+                                <p className="text-[12px] font-semibold text-slate-600">
+                                  Replacement Value: <span className="font-mono font-bold text-emerald-600">{fmt(totals.exchangeValue)}</span>
+                                </p>
+                              )}
                             </div>
 
                             {exList.length > 0 && (
                               <div className="mb-4 bg-emerald-50/50 border border-emerald-100 rounded-lg p-3">
-                                <p className="text-[10px] font-bold text-emerald-800 uppercase mb-2 flex items-center gap-1.5"><CheckCircle2 size={12} /> Selected Replacements ({usedQty}/{totalReturnQty})</p>
+                                <div className="flex items-center justify-between mb-2">
+                                  <p className="text-[10px] font-bold text-emerald-800 uppercase flex items-center gap-1.5"><CheckCircle2 size={12} /> Selected Replacements ({exList.length})</p>
+                                  <span className="font-mono font-bold text-[11px] text-emerald-700">{fmt(totals.exchangeValue)}</span>
+                                </div>
                                 <div className="space-y-2">
                                   {exList.map((ex: any) => (
-                                    <div key={ex.exchangeId} className="flex items-center justify-between bg-white border border-emerald-100 rounded-md p-2 shadow-sm">
-                                      <div className="flex-1 min-w-0">
+                                    <div key={ex.exchangeId} className="flex items-center justify-between bg-white border border-emerald-100 rounded-md p-2.5 shadow-sm">
+                                      <div className="flex-1 min-w-0 pr-3">
                                         <p className="text-[12px] font-bold text-slate-800">{ex.name}</p>
-                                        <p className="text-[10px] text-slate-500">Qty: {ex.quantity || ex.qty || 1} {ex.serialNumbers?.length > 0 ? `· Serials: ${ex.serialNumbers.join(", ")}` : ''}</p>
+                                        <div className="flex items-center gap-2 mt-1">
+                                          {!ex.requireSerial ? (
+                                            <QuantityStepper
+                                              value={ex.quantity || 1}
+                                              max={ex.maxStock !== undefined ? ex.maxStock : 999}
+                                              onChange={newQ => m.updateExchangeQty(ex.exchangeId, newQ)}
+                                            />
+                                          ) : (
+                                            <span className="text-[10px] text-slate-500 font-semibold">Qty: {ex.quantity}</span>
+                                          )}
+                                          {ex.serialNumbers?.length > 0 && (
+                                            <span className="text-[10px] text-violet-600 font-mono font-semibold bg-violet-50 px-1.5 py-0.5 rounded border border-violet-100 truncate">
+                                              SN: {ex.serialNumbers.join(", ")}
+                                            </span>
+                                          )}
+                                          <span className="text-[10px] text-slate-400">@ {fmt(ex.price || ex.sell_price || 0)}</span>
+                                        </div>
                                       </div>
-                                      <div className="flex items-center gap-3">
-                                        <span className="font-mono text-[11px] font-black">{fmt(ex.tprice || (ex.price || ex.sell_price || 0) * (ex.quantity || ex.qty || 1))}</span>
+                                      <div className="flex items-center gap-3 shrink-0">
+                                        <span className="font-mono text-[12px] font-black text-slate-900">{fmt((ex.price || ex.sell_price || 0) * (ex.quantity || 1))}</span>
                                         <button onClick={() => m.removeExchangeProduct("__global__", ex.exchangeId)} className="w-6 h-6 rounded flex items-center justify-center bg-red-50 text-red-500 hover:bg-red-100 transition-colors">
                                           <X size={14} />
                                         </button>
@@ -1248,85 +1371,73 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                               </div>
                             )}
 
-                            {remainingQty > 0 ? (
-                              <>
-                                <div className="relative mb-4">
-                                  <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                                  <input
-                                    type="text"
-                                    placeholder={`Search catalog to select remaining ${remainingQty} item${remainingQty > 1 ? 's' : ''}...`}
-                                    value={exchSearch}
-                                    onChange={e => setExchSearch(e.target.value)}
-                                    className="w-full h-11 px-4 pl-10 text-[13px] text-slate-800 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-400 font-sans shadow-sm"
-                                  />
-                                </div>
-                                {loadingExch ? (
-                                  <div className="text-center py-10">
-                                    <Loader2 size={28} className="text-blue-500 mx-auto animate-spin" />
-                                    <p className="text-[11px] text-slate-400 mt-3 font-bold tracking-wide uppercase">Loading Catalog...</p>
-                                  </div>
-                                ) : exchProducts.length === 0 ? (
-                                  <div className="py-8 text-center bg-slate-50 rounded-lg border border-slate-100 border-dashed">
-                                    <p className="text-[12px] text-slate-400 font-bold">No matching products found</p>
-                                  </div>
-                                ) : (
-                                  <div className="flex flex-col gap-2 max-h-[300px] overflow-y-scroll pr-1 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-slate-50">
-                                    {exchProducts.map(ep => {
-                                      const sel = (state.exchangeMap["__global__"] || []).some((ex: any) => ex.id === ep.id);
-                                      const resolvedStock = ep.stocks || 0;
-                                      const inStock = ep.hasVariants || ep.hasBatches || resolvedStock > 0;
-                                      const parts = [];
-                                      if (ep.hasVariants) parts.push(ep.variantCount > 0 ? `${ep.variantCount} VARIANT${ep.variantCount > 1 ? 'S' : ''}` : 'VARIANTS');
-                                      if (ep.hasBatches) parts.push('BATCHES');
-                                      if (ep.hasSerials) parts.push('SERIALS');
-                                      
-                                      let stockLabel = 'OUT OF STOCK';
-                                      if (inStock) {
-                                        if (parts.length > 0) {
-                                          stockLabel = `${parts.join(' & ')}${resolvedStock > 0 ? ` · ${resolvedStock} IN STOCK` : ''}`;
-                                        } else {
-                                          stockLabel = resolvedStock > 0 ? `${resolvedStock} IN STOCK` : 'IN STOCK';
-                                        }
-                                      }
-                                      
-                                      const baseRootPrice = ep.price || 0;
-                                      const exGstRate = parseFloat(String(ep.gst || ep.datas?.gst || "0").replace('%', '')) || 0;
-                                      let displayPrice = baseRootPrice;
-                                      if (gstType === "EXCLUSIVE") { displayPrice += baseRootPrice * (exGstRate / 100); }
-                                      return (
-                                        <div key={ep.id ?? ep._id ?? ep.name} onClick={() => inStock && handleExchangeClick(ep)} className={`flex items-center gap-3 p-3 px-4 border rounded-lg transition-all duration-200 cursor-pointer ${sel ? "bg-blue-50 border-blue-500 shadow-md scale-[0.99]" : !inStock ? "opacity-50 grayscale cursor-not-allowed border-slate-100" : "bg-white border-slate-100 hover:border-blue-400 hover:shadow-lg"}`}>
-                                          <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center flex-shrink-0 transition-colors"><Package size={16} className="text-slate-400" /></div>
-                                          <div className="flex-1 min-w-0">
-                                            <p className="text-[13px] font-bold text-slate-800 truncate">{ep.name}</p>
-                                            <div className="flex items-center gap-2.5 mt-0.5 flex-wrap">
-                                              <span className="font-mono text-[10px] text-slate-400 font-medium">{ep.barcode || (ep.id ?? ep._id ?? '').slice(-6)}</span>
-                                              <span className={`text-[10px] font-black uppercase tracking-tight ${inStock ? ((ep.hasVariants || ep.hasBatches) ? 'text-blue-500' : 'text-emerald-600') : 'text-red-500'}`}>{stockLabel}</span>
-                                            </div>
-                                          </div>
-                                            <div className="text-right flex-shrink-0">
-                                              <p className="font-mono text-[13px] font-black text-slate-900">{displayPrice === 0 && (ep.hasVariants || ep.hasBatches) ? <span className="text-slate-400 font-normal text-[11px]">see details</span> : <>{baseRootPrice === 0 && displayPrice > 0 && (ep.hasVariants || ep.hasBatches) && <span className="font-normal text-[11px] text-slate-400">from </span>}{fmt(displayPrice)}</>}</p>
-                                            {sel && <div className="mt-1 flex justify-end"><div className="w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/30"><Check size={11} className="text-white" /></div></div>}
-                                          </div>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                )}
-                              </>
-                            ) : (
+                            <div className="relative mb-4">
+                              <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                              <input
+                                type="text"
+                                placeholder="Search replacement catalog to add products..."
+                                value={exchSearch}
+                                onChange={e => setExchSearch(e.target.value)}
+                                className="w-full h-11 px-4 pl-10 text-[13px] text-slate-800 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:bg-white focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-400 font-sans shadow-sm"
+                              />
+                            </div>
+                            {loadingExch ? (
+                              <div className="text-center py-10">
+                                <Loader2 size={28} className="text-blue-500 mx-auto animate-spin" />
+                                <p className="text-[11px] text-slate-400 mt-3 font-bold tracking-wide uppercase">Loading Catalog...</p>
+                              </div>
+                            ) : exchProducts.length === 0 ? (
                               <div className="py-8 text-center bg-slate-50 rounded-lg border border-slate-100 border-dashed">
-                                <CheckCircle2 size={24} className="mx-auto text-emerald-400 mb-2" />
-                                <p className="text-[13px] text-slate-600 font-bold">Full quantity replaced.</p>
-                                <p className="text-[11px] text-slate-400 font-medium">To change items, remove a selection above.</p>
+                                <p className="text-[12px] text-slate-400 font-bold">No matching products found</p>
+                              </div>
+                            ) : (
+                              <div className="flex flex-col gap-2 max-h-[300px] overflow-y-scroll pr-1 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-slate-50">
+                                {exchProducts.map(ep => {
+                                  const sel = (state.exchangeMap["__global__"] || []).some((ex: any) => ex.id === ep.id);
+                                  const resolvedStock = ep.stocks || 0;
+                                  const inStock = ep.hasVariants || ep.hasBatches || resolvedStock > 0;
+                                  const parts = [];
+                                  if (ep.hasVariants) parts.push(ep.variantCount > 0 ? `${ep.variantCount} VARIANT${ep.variantCount > 1 ? 'S' : ''}` : 'VARIANTS');
+                                  if (ep.hasBatches) parts.push('BATCHES');
+                                  if (ep.hasSerials) parts.push('SERIALS');
+                                  
+                                  let stockLabel = 'OUT OF STOCK';
+                                  if (inStock) {
+                                    if (parts.length > 0) {
+                                      stockLabel = `${parts.join(' & ')}${resolvedStock > 0 ? ` · ${resolvedStock} IN STOCK` : ''}`;
+                                    } else {
+                                      stockLabel = resolvedStock > 0 ? `${resolvedStock} IN STOCK` : 'IN STOCK';
+                                    }
+                                  }
+                                  
+                                  const baseRootPrice = ep.price || 0;
+                                  const exGstRate = parseFloat(String(ep.gst || ep.datas?.gst || "0").replace('%', '')) || 0;
+                                  let displayPrice = baseRootPrice;
+                                  if (gstType === "EXCLUSIVE") { displayPrice += baseRootPrice * (exGstRate / 100); }
+                                  return (
+                                    <div key={ep.id ?? ep._id ?? ep.name} onClick={() => inStock && handleExchangeClick(ep)} className={`flex items-center gap-3 p-3 px-4 border rounded-lg transition-all duration-200 cursor-pointer ${sel ? "bg-blue-50 border-blue-500 shadow-md scale-[0.99]" : !inStock ? "opacity-50 grayscale cursor-not-allowed border-slate-100" : "bg-white border-slate-100 hover:border-blue-400 hover:shadow-lg"}`}>
+                                      <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center flex-shrink-0 transition-colors"><Package size={16} className="text-slate-400" /></div>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-[13px] font-bold text-slate-800 truncate">{ep.name}</p>
+                                        <div className="flex items-center gap-2.5 mt-0.5 flex-wrap">
+                                          <span className="font-mono text-[10px] text-slate-400 font-medium">{ep.barcode || (ep.id ?? ep._id ?? '').slice(-6)}</span>
+                                          <span className={`text-[10px] font-black uppercase tracking-tight ${inStock ? ((ep.hasVariants || ep.hasBatches) ? 'text-blue-500' : 'text-emerald-600') : 'text-red-500'}`}>{stockLabel}</span>
+                                        </div>
+                                      </div>
+                                      <div className="text-right flex-shrink-0">
+                                        <p className="font-mono text-[13px] font-black text-slate-900">{displayPrice === 0 && (ep.hasVariants || ep.hasBatches) ? <span className="text-slate-400 font-normal text-[11px]">see details</span> : <>{baseRootPrice === 0 && displayPrice > 0 && (ep.hasVariants || ep.hasBatches) && <span className="font-normal text-[11px] text-slate-400">from </span>}{fmt(displayPrice)}</>}</p>
+                                        {sel && <div className="mt-1 flex justify-end"><div className="w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/30"><Check size={11} className="text-white" /></div></div>}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
                               </div>
                             )}
                           </>
                         );
                       })()}
-
                     </div>
                   )}
-
                 </>
               )}
               {state.step === 3 && (
@@ -1416,21 +1527,25 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                   <div>
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Items Summary</p>
                     <div className="border border-slate-100 rounded-lg overflow-hidden shadow-sm">
-                      {selectedItems.map((item, idx) => (
-                        <div key={item.id} className={`flex items-center gap-3.5 p-3.5 px-4.5 bg-white ${idx > 0 ? 'border-t border-slate-50' : ''}`}>
-                          <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm" style={{ background: item.imageColor }}><Package size={14} className="text-slate-600/60" /></div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[13px] font-bold text-slate-800">{item.name}</p>
-                            <p className="font-mono text-[10px] text-slate-400 uppercase tracking-wider font-bold mt-0.5">{item.sku} · qty {item.returnQty}</p>
-                            {item.exchangeItems && item.exchangeItems.map((ex: any) => (
-                              <p key={ex.exchangeId} className="text-[11px] text-blue-600 font-black mt-1 flex items-center gap-1.5">
-                                <ArrowRight size={10} /> {ex.name} (Qty: {ex.quantity || ex.qty || 1})
-                              </p>
-                            ))}
+                      {selectedItems.map((item, idx) => {
+                        const selectedUnit = state.itemUnits[item.id] || item.entered_unit || item.unit;
+                        const factor = getUnitConversionFactor(item, selectedUnit);
+                        return (
+                          <div key={item.id} className={`flex items-center gap-3.5 p-3.5 px-4.5 bg-white ${idx > 0 ? 'border-t border-slate-50' : ''}`}>
+                            <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm" style={{ background: item.imageColor }}><Package size={14} className="text-slate-600/60" /></div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[13px] font-bold text-slate-800">{item.name}</p>
+                              <p className="font-mono text-[10px] text-slate-400 uppercase tracking-wider font-bold mt-0.5">{item.sku} · qty {item.returnQty} {selectedUnit}</p>
+                              {item.exchangeItems && item.exchangeItems.map((ex: any) => (
+                                <p key={ex.exchangeId} className="text-[11px] text-blue-600 font-black mt-1 flex items-center gap-1.5">
+                                  <ArrowRight size={10} /> {ex.name} (Qty: {ex.quantity || ex.qty || 1})
+                                </p>
+                              ))}
+                            </div>
+                            <span className="font-mono text-[13px] font-black text-slate-900">{fmt(item.unitPrice * item.returnQty * factor)}</span>
                           </div>
-                          <span className="font-mono text-[13px] font-black text-slate-900">{fmt(item.unitPrice * item.returnQty)}</span>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -1473,10 +1588,7 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
           </div>
           {(() => {
             const usedSerials = (state.exchangeMap["__global__"] || []).flatMap((d: any) => d.serial_numbers || []);
-            const totalReturnQty = selectedItems.reduce((acc, i) => acc + i.returnQty, 0);
-            const usedQty = (state.exchangeMap["__global__"] || []).reduce((sum: number, ex: any) => sum + (ex.quantity || ex.qty || 1), 0);
-            const remainingQty = Math.max(1, totalReturnQty - usedQty);
-            return <ProductSelectionModal isExchange={true} isOpen={isProductModalOpen} product={pendingProduct} onClose={() => setIsProductModalOpen(false)} onSuccess={handleProductSelectSuccess} excludedSerials={usedSerials} initialQuantity={1} maxAllowedQuantity={remainingQty} />;
+            return <ProductSelectionModal isExchange={true} isOpen={isProductModalOpen} product={pendingProduct} onClose={() => setIsProductModalOpen(false)} onSuccess={handleProductSelectSuccess} excludedSerials={usedSerials} initialQuantity={1} />;
           })()}
           {state.step < 5 && (
             <div className="flex-shrink-0 p-4 px-6 border-t border-slate-100 bg-white flex items-center gap-3">

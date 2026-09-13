@@ -28,6 +28,7 @@ export interface SupplierCustomFieldDefinition {
   type: string;
   required: boolean;
   visible_online: boolean;
+  has_values?: boolean;
   created_at?: string;
   updated_at?: string;
 }

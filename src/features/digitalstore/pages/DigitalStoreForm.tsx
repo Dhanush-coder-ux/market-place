@@ -255,7 +255,6 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
             joined_date: new Date().toISOString().split('T')[0],
             mobile_number: localStorage.getItem("user_phone") || "0000000000",
             email: localStorage.getItem("user_email") || "owner@example.com",
-            department: "MANAGER",
             additional_infos: {}
           });
         } catch (empErr) {

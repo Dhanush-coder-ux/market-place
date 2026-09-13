@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import {
   Megaphone, Package, Settings2, AlertCircle,
   WifiOff,
-  Edit3, QrCode, Users, X, Download,
+  Edit3, QrCode, Users, X, Download, ExternalLink,
   Hash,
   BadgeCheck,
 } from "lucide-react";
@@ -166,7 +166,18 @@ function QRModal({ shop, onClose }: { shop: ShopData; onClose: () => void }) {
             {shop.address?.full_address && (
               <p className="text-[11px] text-slate-400 mt-0.5">{shop.address.full_address}</p>
             )}
-            <p className="text-[10px] text-slate-300 mt-1 font-mono break-all">{storeUrl}</p>
+            <div className="mt-2.5 p-2 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between gap-2 text-left">
+              <span className="text-[11px] text-slate-600 font-mono truncate flex-1" title={storeUrl}>{storeUrl}</span>
+              <a
+                href={storeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Open Link in New Tab"
+                className="text-blue-600 hover:text-blue-700 p-1 hover:bg-blue-50 rounded shrink-0 transition-colors"
+              >
+                <ExternalLink size={12} />
+              </a>
+            </div>
           </div>
 
           {/* Actions */}
@@ -213,6 +224,7 @@ const DigitalMain = () => {
   const navigate  = useNavigate();
   const [activeTab, setActiveTab] = useState<TabType>("Announcements");
   const [shop, setShop]           = useState<ShopData | null>(null);
+  const [followersCount, setFollowersCount] = useState<number>(0);
   const [fallbackImg, setFallbackImg] = useState<string | null>(null);
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState<string | null>(null);
@@ -223,16 +235,30 @@ const DigitalMain = () => {
     const load = async () => {
       setLoading(true);
       try {
-        const [shopRes, productsRes] = await Promise.all([
+        const [shopRes, productsRes, followersRes] = await Promise.allSettled([
           shopApi.getShopById(SHOP_ID),
           inventoryApi.getInventoriesByShop(SHOP_ID, { limit: "50" }),
+          shopApi.getShopFollowers(SHOP_ID),
         ]);
-        const data = shopRes?.data ?? shopRes;
-        if (data) {
+
+        if (shopRes.status === "fulfilled" && (shopRes.value?.data || shopRes.value)) {
+          const data = shopRes.value?.data ?? shopRes.value;
+          if (!data.visible_online) {
+            navigate("/setup-digital-store", { replace: true });
+            return;
+          }
           setShop(data);
-          const prods = productsRes?.data ?? productsRes ?? [];
-          const withImg = prods.find((p: any) => p.image_url || p.image || p.datas?.image_url || p.datas?.image);
-          if (withImg) setFallbackImg(withImg.image_url || withImg.image || withImg.datas?.image_url || withImg.datas?.image);
+
+          if (productsRes.status === "fulfilled") {
+            const prods = productsRes.value?.data ?? productsRes.value ?? [];
+            const withImg = prods.find((p: any) => p.image_url || p.image || p.datas?.image_url || p.datas?.image);
+            if (withImg) setFallbackImg(withImg.image_url || withImg.image || withImg.datas?.image_url || withImg.datas?.image);
+          }
+
+          if (followersRes.status === "fulfilled") {
+            const rawFollowers = followersRes.value?.data ?? (Array.isArray(followersRes.value) ? followersRes.value : []);
+            setFollowersCount(Array.isArray(rawFollowers) ? rawFollowers.length : 0);
+          }
         } else {
           setError("Shop not found");
         }
@@ -377,11 +403,13 @@ const DigitalMain = () => {
                 <QrCode size={15} className="text-blue-500 group-hover:text-blue-600" />
                 <span className="text-sm font-medium text-slate-700 group-hover:text-blue-600">QR Code</span>
               </button>
-              <div className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-lg">
-                <Users size={15} className="text-slate-400" />
+              <div className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-lg shadow-sm">
+                <Users size={15} className="text-blue-500" />
                 <div>
-                  <p className="text-[10px] text-slate-400 leading-none mb-0.5">Followers</p>
-                  <p className="text-sm font-semibold text-slate-800 leading-none">1.2K</p>
+                  <p className="text-[10px] text-slate-400 leading-none mb-0.5 font-medium">Followers</p>
+                  <p className="text-sm font-bold text-slate-800 leading-none">
+                    {followersCount >= 1000 ? `${(followersCount / 1000).toFixed(1)}K` : followersCount}
+                  </p>
                 </div>
               </div>
             </div>

@@ -9,6 +9,7 @@ import { InputBuilderProvider } from '@/components/inputbuilders/context/InputBu
 import { HeaderProvider } from '@/context/HeaderContext';
 import { ToastProvider } from '@/context/ToastContext';
 import { QuickCreateProvider } from '@/features/common/QuickCreate/QuickCreateContext';
+import { NotificationProvider } from '@/context/NotificationContext';
 
 // Prevent keyboard accidental typing of +, -, e, E in number inputs globally
 document.addEventListener(
@@ -44,7 +45,9 @@ createRoot(document.getElementById('root')!).render(
           <HeaderProvider>
             <ToastProvider>
               <QuickCreateProvider>
-                <App />
+                <NotificationProvider>
+                  <App />
+                </NotificationProvider>
               </QuickCreateProvider>
             </ToastProvider>
           </HeaderProvider>

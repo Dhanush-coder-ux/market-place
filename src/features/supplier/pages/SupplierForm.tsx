@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { 
-  Building2, 
+  Building2, Pencil, Trash2, Info, 
   MapPin, 
   Mail, 
   Phone, 
@@ -66,11 +66,54 @@ const SupplierForm = () => {
 
   // ── Custom Fields Form & Sidebar State ──
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
   const [newFieldName, setNewFieldName] = useState("");
   const [newFieldLabel, setNewFieldLabel] = useState("");
   const [newFieldType, setNewFieldType] = useState("text");
   const [newFieldRequired, setNewFieldRequired] = useState(false);
   const [newFieldVisible, setNewFieldVisible] = useState(false);
+  const [newFieldHasValues, setNewFieldHasValues] = useState(false);
+
+  const handleOpenCreateCustomField = () => {
+    setEditingFieldId(null);
+    setNewFieldName("");
+    setNewFieldLabel("");
+    setNewFieldType("text");
+    setNewFieldRequired(false);
+    setNewFieldVisible(false);
+    setNewFieldHasValues(false);
+    setIsSidebarOpen(true);
+  };
+
+  const handleOpenEditCustomField = (field: any) => {
+    setEditingFieldId(field.id);
+    setNewFieldName(field.field_name || "");
+    setNewFieldLabel(field.label_name || "");
+    setNewFieldType(field.type || "text");
+    setNewFieldRequired(!!field.required);
+    setNewFieldVisible(!!field.visible_online);
+    setNewFieldHasValues(!!field.has_values);
+    setIsSidebarOpen(true);
+  };
+
+  const handleDeleteCustomField = async (field: any) => {
+    if (field.has_values) {
+      showToast(`Cannot delete "${field.label_name}" because it already contains saved values.`, "error");
+      return;
+    }
+    if (!window.confirm(`Are you sure you want to delete custom field "${field.label_name}"?`)) {
+      return;
+    }
+    try {
+      await supplierCustomFields.deleteField(SHOP_ID, field.id);
+      showToast("Custom field deleted successfully", "success");
+      const fields = await supplierCustomFields.getAllFields(SHOP_ID);
+      setCustomFieldDefs(fields);
+    } catch (err: any) {
+      const msg = err?.detail?.description || err?.detail?.msg || err?.message || "Failed to delete custom field";
+      showToast(msg, "error");
+    }
+  };
 
   const initialFormData: SupplierData = {
     supplier_name: "",
@@ -297,43 +340,50 @@ const SupplierForm = () => {
         }
         navigate("/supplier/all");
       }
-    } catch {
-      showToast("Operation failed", "error");
+    } catch (e: any) {
+      showToast(e?.message || "Operation failed", "error");
     } finally {
       isSubmittingRef.current = false;
       setSubmitting(false);
     }
   };
 
-  const handleCreateCustomField = async () => {
-    if (!newFieldName || !newFieldLabel) {
-      showToast("Field Name and Label are required", "error");
+  const handleSaveCustomField = async () => {
+    if (!newFieldLabel.trim()) {
+      showToast("Label Name is required", "error");
       return;
     }
     try {
-      await supplierCustomFields.createField({
-        shop_id: SHOP_ID,
-        field_infos: [{
-          field_name: newFieldName,
-          label_name: newFieldLabel,
-          type: newFieldType,
+      if (editingFieldId) {
+        await supplierCustomFields.updateField({
+          shop_id: SHOP_ID,
+          field_id: editingFieldId,
+          label_name: newFieldLabel.trim(),
+          type: newFieldHasValues ? undefined : newFieldType,
           required: newFieldRequired,
           visible_online: newFieldVisible,
-        }]
-      });
-      showToast("Custom field created successfully", "success");
-      // Refresh definitions
+        });
+        showToast("Custom field updated successfully", "success");
+      } else {
+        const internalName = newFieldName.trim() || newFieldLabel.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim().replace(/\s+/g, "_");
+        await supplierCustomFields.createField({
+          shop_id: SHOP_ID,
+          field_infos: [{
+            field_name: internalName,
+            label_name: newFieldLabel.trim(),
+            type: newFieldType,
+            required: newFieldRequired,
+            visible_online: newFieldVisible,
+          }]
+        });
+        showToast("Custom field created successfully", "success");
+      }
       const fields = await supplierCustomFields.getAllFields(SHOP_ID);
       setCustomFieldDefs(fields);
-      // Reset sidebar form
-      setNewFieldName("");
-      setNewFieldLabel("");
-      setNewFieldType("text");
-      setNewFieldRequired(false);
-      setNewFieldVisible(false);
       setIsSidebarOpen(false);
-    } catch {
-      showToast("Failed to create custom field", "error");
+    } catch (err: any) {
+      const msg = err?.detail?.description || err?.detail?.msg || err?.message || "Failed to save custom field";
+      showToast(msg, "error");
     }
   };
 
@@ -385,7 +435,7 @@ const SupplierForm = () => {
                 />
               </div>
               <Input
-                label="Contact Person Name"
+                label="Contact Person Name (optional)"
                 tooltip="Name of the primary point of contact at this business. Fill this to unlock contact email & mobile."
                 name="contact_name"
                 value={formData.contact_name}
@@ -397,7 +447,7 @@ const SupplierForm = () => {
               {formData.contact_name.trim() && (
                 <>
                   <Input
-                    label="Contact Person Email"
+                    label="Contact Person Email (optional)"
                     name="contact_email"
                     type="email"
                     value={formData.contact_email}
@@ -406,7 +456,7 @@ const SupplierForm = () => {
                     leftIcon={<Mail size={16} className="text-slate-400" />}
                   />
                   <Input
-                    label="Contact Person Mobile"
+                    label="Contact Person Mobile (optional)"
                     tooltip="Mobile number of the primary contact person."
                     name="contact_mobile"
                     value={formData.contact_mobile}
@@ -417,7 +467,7 @@ const SupplierForm = () => {
                 </>
               )}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400   ml-1">Business Type</label>
+                <label className="text-[10px] font-black text-slate-400 ml-1">Business Type <span className="normal-case font-normal text-slate-400">(optional)</span></label>
                 <ReusableSelect
                   value={formData.type}
                   onValueChange={(val) => setFormData(p => ({ ...p, type: val }))}
@@ -447,7 +497,7 @@ const SupplierForm = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Input
-                label="Email Address"
+                label="Email Address" tooltip="Provide business email. At least one contact method (Email or Phone) is required."
                 name="email"
                 type="email"
                 value={formData.email}
@@ -456,9 +506,7 @@ const SupplierForm = () => {
                 leftIcon={<Mail size={16} className="text-slate-400" />}
               />
               <Input
-                label="Phone Number"
-                required
-                tooltip="Primary business phone number for general communication."
+                label="Phone Number" tooltip="Primary business phone number. At least one contact method (Email or Phone) is required."
                 name="phone"
                 value={formData.phone}
                 onChange={handleChange}
@@ -467,7 +515,7 @@ const SupplierForm = () => {
               />
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:col-span-2">
                 <Input
-                  label="City / Region"
+                  label="City / Region (optional)"
                   name="city"
                   value={formData.city}
                   onChange={handleChange}
@@ -475,21 +523,21 @@ const SupplierForm = () => {
                   leftIcon={<MapPin size={16} className="text-slate-400" />}
                 />
                 <Input
-                  label="State"
+                  label="State (optional)"
                   name="state"
                   value={formData.state}
                   onChange={handleChange}
                   placeholder="Maharashtra"
                 />
                 <Input
-                  label="Country"
+                  label="Country (optional)"
                   name="country"
                   value={formData.country}
                   onChange={handleChange}
                   placeholder="India"
                 />
                 <Input
-                  label="ZIP Code"
+                  label="ZIP Code (optional)"
                   name="zipcode"
                   value={formData.zipcode}
                   onChange={handleChange}
@@ -497,7 +545,7 @@ const SupplierForm = () => {
                 />
               </div>
               <div className="md:col-span-2 space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400   ml-1">Street Address</label>
+                <label className="text-[10px] font-black text-slate-400 ml-1">Street Address <span className="normal-case font-normal text-slate-400">(optional)</span></label>
                 <textarea
                   name="address"
                   value={formData.address}
@@ -529,7 +577,7 @@ const SupplierForm = () => {
 
             <div className="space-y-6">
               <Input
-                label="GSTIN / Tax ID"
+                label="GSTIN / Tax ID (optional)"
                 tooltip="Goods and Services Tax Identification Number of the supplier."
                 name="gst_number"
                 value={formData.gst_number}
@@ -552,7 +600,7 @@ const SupplierForm = () => {
               <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400">
                 <FileText size={16} />
               </div>
-              <h3 className="text-[10px] font-black text-slate-800  ">Internal Notes</h3>
+              <h3 className="text-[10px] font-black text-slate-800">Internal Notes <span className="normal-case font-normal text-slate-400">(optional)</span></h3>
             </div>
             <textarea
               name="notes"
@@ -576,7 +624,7 @@ const SupplierForm = () => {
               </div>
               <button
                 type="button"
-                onClick={() => setIsSidebarOpen(true)}
+                onClick={handleOpenCreateCustomField}
                 className="h-8 px-3 rounded-lg border border-indigo-100 text-indigo-600 font-bold text-xs bg-indigo-50/50 hover:bg-indigo-100 transition-all flex items-center gap-1.5"
               >
                 <Plus size={14} />
@@ -590,11 +638,38 @@ const SupplierForm = () => {
             ) : (
               <div className="space-y-4">
                 {customFieldDefs.map((field) => (
-                  <div key={field.id} className="space-y-1.5">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">
-                      {field.label_name}
-                      {field.required && <span className="text-rose-500 ml-0.5">*</span>}
-                    </label>
+                  <div key={field.id} className="space-y-1.5 p-3 rounded-lg bg-slate-50/50 border border-slate-100 hover:border-slate-200 transition-colors">
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-1.5">
+                        <label className="text-[10px] font-black text-slate-600 uppercase tracking-wider ml-1">
+                          {field.label_name}
+                          {field.required && <span className="text-rose-500 ml-0.5">*</span>}
+                        </label>
+                        {field.has_values && (
+                          <span className="text-[9px] font-bold px-1.5 py-0.2 bg-blue-50 text-blue-600 rounded border border-blue-100 leading-none">
+                            Has data
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditCustomField(field)}
+                          title="Edit field"
+                          className="p-1 text-slate-400 hover:text-indigo-600 rounded hover:bg-indigo-50 transition-colors"
+                        >
+                          <Pencil size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteCustomField(field)}
+                          title={field.has_values ? "Cannot delete: field has saved values" : "Delete field"}
+                          className={`p-1 rounded transition-colors ${field.has_values ? "text-slate-300 hover:text-rose-400 hover:bg-rose-50" : "text-slate-400 hover:text-rose-600 hover:bg-rose-50"}`}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
                     {field.type === 'boolean' ? (
                       <div className="flex items-center gap-2">
                         <input
@@ -634,42 +709,53 @@ const SupplierForm = () => {
       <RightSidebarFilter
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
-        onApply={handleCreateCustomField}
-        applyLabel="Create"
+        onApply={handleSaveCustomField}
+        applyLabel={editingFieldId ? "Update" : "Create"}
         onClear={() => {
-          setNewFieldName("");
-          setNewFieldLabel("");
-          setNewFieldType("text");
-          setNewFieldRequired(false);
-          setNewFieldVisible(false);
+          if (!editingFieldId) {
+            setNewFieldName("");
+            setNewFieldLabel("");
+            setNewFieldType("text");
+            setNewFieldRequired(false);
+            setNewFieldVisible(false);
+          }
         }}
-        title="Create Custom Field"
+        title={editingFieldId ? "Edit Custom Field" : "Create Custom Field"}
       >
         <div className="space-y-5">
-          <div className="space-y-1">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Label Name (Display Name)</label>
-            <Input
-              value={newFieldLabel}
-              onChange={(e) => {
-                const val = e.target.value;
-                setNewFieldLabel(val);
+          {newFieldHasValues && (
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2.5 text-amber-800 text-xs font-medium leading-relaxed">
+              <Info size={15} className="shrink-0 mt-0.5 text-amber-600" />
+              <span>
+                <strong>Note:</strong> This field already has saved supplier data. The <strong>Field Type</strong> cannot be changed, but you can update the Display Label and settings.
+              </span>
+            </div>
+          )}
+          <Input
+            label="Label Name (Display Name)"
+            required
+            value={newFieldLabel}
+            onChange={(e) => {
+              const val = e.target.value;
+              setNewFieldLabel(val);
+              if (!editingFieldId) {
                 setNewFieldName(val.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim().replace(/\s+/g, "_"));
-              }}
-              placeholder="e.g. Tax ID"
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Field Name (Internal Name)</label>
-            <Input
-              value={newFieldName}
-              disabled
-              placeholder="Auto-generated from Label Name"
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Field Type</label>
+              }
+            }}
+            placeholder="e.g. GST Exemption Category"
+          />
+          <Input
+            label="Field Name (Internal Name)"
+            required
+            disabled
+            value={newFieldName}
+            placeholder="Auto-generated from Label Name"
+          />
+          <div>
             <ReusableSelect
+              label="Field Type"
               value={newFieldType}
+              disabled={newFieldHasValues}
               onValueChange={(val) => setNewFieldType(val)}
               options={[
                 { label: "Text", value: "text" },
@@ -679,16 +765,19 @@ const SupplierForm = () => {
               ]}
               placeholder="Select Type"
             />
+            {newFieldHasValues && (
+              <p className="text-[10px] text-slate-400 mt-1 ml-1 font-medium">Type is locked because field has existing data</p>
+            )}
           </div>
           <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50 border border-slate-100">
-            <span className="text-xs font-bold text-slate-500">Required Field</span>
+            <span className="text-xs font-bold text-slate-500">Required Field <span className="font-normal text-slate-400 text-[11px]">(optional)</span></span>
             <Switch
               checked={newFieldRequired}
               onCheckedChange={(checked: boolean) => setNewFieldRequired(checked)}
             />
           </div>
           <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50 border border-slate-100">
-            <span className="text-xs font-bold text-slate-500">Visible Online</span>
+            <span className="text-xs font-bold text-slate-500">Visible Online <span className="font-normal text-slate-400 text-[11px]">(optional)</span></span>
             <Switch
               checked={newFieldVisible}
               onCheckedChange={(checked: boolean) => setNewFieldVisible(checked)}

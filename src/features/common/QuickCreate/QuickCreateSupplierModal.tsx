@@ -90,7 +90,7 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
           />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Input
-              label="Contact Person Name"
+              label="Contact Person Name (optional)"
               name="contact_person"
               value={form.contact_person}
               onChange={handleChange}
@@ -98,7 +98,7 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
               leftIcon={<User size={16} className="text-slate-400" />}
             />
             <Input
-              label="Contact Person Email"
+              label="Contact Person Email (optional)"
               name="contact_person_email"
               type="email"
               value={form.contact_person_email}
@@ -109,7 +109,7 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Input
-              label="Contact Person Phone"
+              label="Contact Person Phone (optional)"
               name="contact_person_phone"
               value={form.contact_person_phone}
               onChange={handleChange}
@@ -118,7 +118,7 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
             />
             <div className="space-y-1.5">
               <label className="text-[10px] font-black text-slate-400 ml-1">
-                Business Type
+                Business Type <span className="normal-case font-normal text-slate-400">(optional)</span>
               </label>
               <ReusableSelect
                 value={form.type}
@@ -144,7 +144,7 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Input
-              label="Email Address"
+              label="Email Address" tooltip="At least one contact method (Email or Phone) is required."
               name="email"
               type="email"
               value={form.email}
@@ -153,7 +153,7 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
               leftIcon={<Mail size={16} className="text-slate-400" />}
             />
             <Input
-              label="Phone Number"
+              label="Phone Number" tooltip="At least one contact method (Email or Phone) is required."
               name="phone"
               value={form.phone}
               onChange={handleChange}
@@ -163,7 +163,7 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Input
-              label="City"
+              label="City (optional)"
               name="city"
               value={form.city}
               onChange={handleChange}
@@ -171,7 +171,7 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
               leftIcon={<MapPin size={16} className="text-slate-400" />}
             />
             <Input
-              label="State"
+              label="State (optional)"
               name="state"
               value={form.state}
               onChange={handleChange}
@@ -180,7 +180,7 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Input
-              label="Country"
+              label="Country (optional)"
               name="country"
               value={form.country}
               onChange={handleChange}
@@ -231,7 +231,7 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
             </div>
           </div>
           <Input
-            label="GSTIN / Tax ID"
+            label="GSTIN / Tax ID (optional)"
             name="gst_number"
             value={form.gst_number}
             onChange={handleChange}
@@ -242,7 +242,7 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
             <div className="flex items-center gap-2 mb-1">
               <FileText size={14} className="text-slate-400" />
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                Internal Notes
+                Internal Notes <span className="normal-case font-normal text-slate-400">(optional)</span>
               </label>
             </div>
             <textarea

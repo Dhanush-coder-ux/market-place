@@ -20,7 +20,8 @@ export function ReusableSelect({
   error,
   required,
   footer,
-  onScrollEnd
+  onScrollEnd,
+  disabled
 }: ReusableSelectProps) {
   const [open, setOpen] = useState(false);
   const mappedValue = value === "" ? "__EMPTY__" : value;
@@ -34,12 +35,13 @@ export function ReusableSelect({
   return (
     <div className="space-y-2 w-full">
       {label && (
-        <label className="text-xs font-semibold text-gray-500   ml-1">
-          {label}{required}
+        <label className="text-xs font-semibold text-gray-500 ml-1">
+          {label}
+          {required === true ? <span className="text-red-500 ml-1">*</span> : required}
         </label>
       )}
 
-      <Select value={mappedValue} onValueChange={handleValueChange} open={open} onOpenChange={setOpen}>
+      <Select value={mappedValue} onValueChange={handleValueChange} open={open} onOpenChange={setOpen} disabled={disabled}>
         <SelectTrigger
           className={cn(
             "w-full h-10 rounded-lg border-gray-200 bg-white px-4 py-5 shadow-sm transition-all hover:border-blue-400 focus:ring-4 focus:ring-blue-500/10 outline-none",

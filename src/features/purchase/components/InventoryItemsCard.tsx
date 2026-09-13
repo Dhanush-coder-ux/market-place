@@ -811,13 +811,13 @@ export const InventoryItemsCard = ({
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-200 sticky top-0 z-10">
                 <th className="py-2.5 px-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '45px' }}>#</th>
-                <th className="py-2.5 px-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '270px' }}>Item Description</th>
-                <th className="py-2.5 px-2 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '110px' }}>Qty / Unit</th>
-                <th className="py-2.5 px-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '160px' }}>{type === "PURCHASE" ? "Buy Price / Unit" : "Material Cost"}</th>
+                <th className="py-2.5 px-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '270px' }}>Item Description *</th>
+                <th className="py-2.5 px-2 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '110px' }}>Qty / Unit *</th>
+                <th className="py-2.5 px-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '160px' }}>{type === "PURCHASE" ? "Buy Price / Unit *" : "Material Cost *"}</th>
                 <th className="py-2.5 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '100px' }}>Subtotal</th>
                 <th className="py-2.5 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '90px' }}>Allocated</th>
                 <th className="py-2.5 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '85px' }}>Tax (GST)</th>
-                <th className="py-2.5 px-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '240px' }}>Pricing & Margin / Unit</th>
+                <th className="py-2.5 px-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '240px' }}>Pricing & Margin / Unit (optional)</th>
                 <th className="py-2.5 px-3 text-right text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '90px' }}>Actions</th>
               </tr>
             </thead>
@@ -966,7 +966,7 @@ export const InventoryItemsCard = ({
                         </div>
                       </td>
 
-                      {/* Qty / Unit */}
+                      {/* Qty / Unit * */}
                       <td className="py-2.5 px-2 align-top">
                         <div className="flex flex-col items-center justify-center gap-1.5">
                           <Input

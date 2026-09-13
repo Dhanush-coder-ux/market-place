@@ -62,7 +62,7 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
 
   // ── Shop selector state ──────────────────────────────────────────────────────
   const [isShopMenuOpen, setIsShopMenuOpen] = useState(false);
-  const [shops, setShops] = useState<Array<{ id: string; name: string; logo_url?: string; categories?: string[] }>>([]);
+  const [shops, setShops] = useState<Array<{ id: string; name: string; logo_url?: string; categories?: string[]; visible_online?: boolean }>>([]);
   const [shopsLoading, setShopsLoading] = useState(true);
   const [currentShopId, setCurrentShopId] = useState<string | null>(() => localStorage.getItem("shop_id"));
   const [selectedShop, setSelectedShop] = useState<{ name: string; initial: string; logo_url?: string }>({
@@ -70,6 +70,39 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
     initial: "S",
   });
   const shopMenuRef = useRef<HTMLDivElement>(null);
+
+  // ── User profile state ───────────────────────────────────────────────────────
+  const [userInfo, setUserInfo] = useState<{ name: string; email: string; initial: string }>(() => {
+    let email = localStorage.getItem("user_email") || "";
+    let name = localStorage.getItem("user_name") || "";
+
+    const token = localStorage.getItem("auth_token");
+    if (token && token.split(".").length === 3) {
+      try {
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        if (!email && payload.email) email = payload.email;
+        if (!name && (payload.entity_name || payload.name || payload.user_name)) {
+          name = payload.entity_name || payload.name || payload.user_name;
+        }
+      } catch (e) {
+        console.warn("Could not decode token for user info:", e);
+      }
+    }
+
+    if (!name && email) {
+      const usernamePart = email.split("@")[0];
+      name = usernamePart
+        .split(/[._-]/)
+        .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
+        .join(" ");
+    }
+
+    const displayName = name || "Admin User";
+    const displayEmail = email || "admin@marketplace.io";
+    const initial = (displayName.charAt(0) || displayEmail.charAt(0) || "U").toUpperCase();
+
+    return { name: displayName, email: displayEmail, initial };
+  });
 
   // Fetch shops
   useEffect(() => {
@@ -141,7 +174,29 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
     if (!shopId || !userId) return;
 
     employeeApi.getEmployeesByShop(shopId)
-      .then(() => {
+      .then((empRes: any) => {
+        const list = empRes?.data || empRes || [];
+        if (Array.isArray(list) && list.length > 0) {
+          const currentEmp = list.find((e: any) => 
+            (userId && (e.user_id === userId || e.id === userId)) ||
+            (userInfo.email && e.email?.toLowerCase() === userInfo.email.toLowerCase())
+          ) || list[0];
+
+          if (currentEmp) {
+            const empName = currentEmp.name;
+            const empEmail = currentEmp.email;
+            if (empName || empEmail) {
+              setUserInfo((prev) => {
+                const resolvedName = empName || prev.name;
+                const resolvedEmail = empEmail || prev.email;
+                const initial = (resolvedName.charAt(0) || resolvedEmail.charAt(0) || "U").toUpperCase();
+                if (empName) localStorage.setItem("user_name", empName);
+                if (empEmail) localStorage.setItem("user_email", resolvedEmail);
+                return { name: resolvedName, email: resolvedEmail, initial };
+              });
+            }
+          }
+        }
         // Call allowed modules API
         return apiClient.get(`${ENDPOINTS.EMPLOYEES}/modules/allowed`);
       })
@@ -176,6 +231,11 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
     "Online Orders": "ONLINE_ORDERS",
   };
 
+  const isCurrentShopOnline = useMemo(() => {
+    const active = shops.find((s: any) => s.id === currentShopId);
+    return active?.visible_online === true;
+  }, [shops, currentShopId]);
+
   const filteredLinks: SidebarLink[] = useMemo(() => {
     return links
       .filter((link) => {
@@ -185,21 +245,26 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
         return allowedModules.includes(moduleKey);
       })
       .map((link) => {
-        if (!link.subLinks) return link;
+        let updatedLink = { ...link };
+        if (link.name === "Digital Store") {
+          updatedLink.path = isCurrentShopOnline ? "/profile" : "/setup-digital-store";
+        }
 
-        const visibleSubItems = link.subLinks.filter((item) => {
+        if (!updatedLink.subLinks) return updatedLink;
+
+        const visibleSubItems = updatedLink.subLinks.filter((item) => {
           if (item.name === "Saved Drafts" || (!isSubGroup(item) && (item as SubLink).path?.includes('/drafts'))) {
             return false;
           }
-          if (link.name === "Purchases" && isSubGroup(item) && item.settingsKey) {
+          if (updatedLink.name === "Purchases" && isSubGroup(item) && item.settingsKey) {
             return settings[item.settingsKey] === true;
           }
           return true;
         });
 
-        return { ...link, subLinks: visibleSubItems };
+        return { ...updatedLink, subLinks: visibleSubItems };
       });
-  }, [links, settings, allowedModules]);
+  }, [links, settings, allowedModules, isCurrentShopOnline]);
 
   const handleHover = useCallback(
     (link: SidebarLink | null, top: number) => setHoveredItem(link ? { link, top } : null),
@@ -488,8 +553,11 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
         <div
           className={`flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-white/[0.06] transition-colors duration-150 cursor-default ${isOpen ? "justify-start" : "justify-center"}`}
         >
-          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 shrink-0 flex items-center justify-center text-[11px] font-semibold text-white ring-2 ring-white/10">
-            A
+          <div
+            className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 shrink-0 flex items-center justify-center text-[11px] font-semibold text-white ring-2 ring-white/10"
+            title={`${userInfo.name} (${userInfo.email})`}
+          >
+            {userInfo.initial}
           </div>
           <AnimatePresence mode="wait">
             {isOpen && (
@@ -501,11 +569,11 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
                 transition={{ duration: 0.12 }}
                 className="min-w-0 flex-1"
               >
-                <p className="text-[12px] font-medium text-white/85 leading-none mb-1 truncate">
-                  Admin User
+                <p className="text-[12px] font-medium text-white/85 leading-none mb-1 truncate" title={userInfo.name}>
+                  {userInfo.name}
                 </p>
-                <p className="text-[10px] text-white/40 leading-none truncate">
-                  admin@marketplace.io
+                <p className="text-[10px] text-white/40 leading-none truncate" title={userInfo.email}>
+                  {userInfo.email}
                 </p>
               </motion.div>
             )}
@@ -670,42 +738,46 @@ const SidebarItem = memo(({ link, sidebarOpen, collapseTrigger, activeAccordion,
               to={link.path!}
               target={link.newTab ? "_blank" : undefined}
               rel={link.newTab ? "noopener noreferrer" : undefined}
-              className={({ isActive }) =>
-                `${tokens.itemBase} h-9 px-2.5 flex-1 ${getActiveClass(isActive)} ${sidebarOpen ? "justify-between" : "justify-center"}`
-              }
+              className={({ isActive }) => {
+                const isActuallyActive = isActive || (link.name === "Digital Store" && (pathname === "/profile" || pathname === "/setup-digital-store"));
+                return `${tokens.itemBase} h-9 px-2.5 flex-1 ${getActiveClass(isActuallyActive)} ${sidebarOpen ? "justify-between" : "justify-center"}`;
+              }}
             >
-              {({ isActive }) => (
-                <>
-                  {isActive && sidebarOpen && (
-                    <motion.div
-                      layoutId="activeIndicator"
-                      className="absolute left-0 top-1/2 -translate-y-1/2 w-[2.5px] h-4 bg-white/70 rounded-full"
-                    />
-                  )}
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <Icon
-                      size={15}
-                      strokeWidth={1.6}
-                      className={`shrink-0 ${isActive ? tokens.iconActive : tokens.iconInactive}`}
-                    />
-                    <AnimatePresence mode="wait">
-                      {sidebarOpen && (
-                        <motion.span
-                          key="label"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
-                          transition={{ duration: 0.08 }}
-                          className="truncate"
-                        >
-                          {link.name}
-                        </motion.span>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                  {!sidebarOpen && <Tooltip label={link.name} />}
-                </>
-              )}
+              {({ isActive }) => {
+                const isActuallyActive = isActive || (link.name === "Digital Store" && (pathname === "/profile" || pathname === "/setup-digital-store"));
+                return (
+                  <>
+                    {isActuallyActive && sidebarOpen && (
+                      <motion.div
+                        layoutId="activeIndicator"
+                        className="absolute left-0 top-1/2 -translate-y-1/2 w-[2.5px] h-4 bg-white/70 rounded-full"
+                      />
+                    )}
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <Icon
+                        size={15}
+                        strokeWidth={1.6}
+                        className={`shrink-0 ${isActuallyActive ? tokens.iconActive : tokens.iconInactive}`}
+                      />
+                      <AnimatePresence mode="wait">
+                        {sidebarOpen && (
+                          <motion.span
+                            key="label"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.08 }}
+                            className="truncate"
+                          >
+                            {link.name}
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                    {!sidebarOpen && <Tooltip label={link.name} />}
+                  </>
+                );
+              }}
             </NavLink>
           )}
           {link.addPath && sidebarOpen && (

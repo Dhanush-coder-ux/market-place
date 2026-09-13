@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
-  Save,
+  Save, Pencil, Trash2, Info,
   User,
   Mail,
   Phone,
@@ -46,13 +46,56 @@ const CustomerFormPage = () => {
   const [customFieldDefs, setCustomFieldDefs] = useState<CustomerCustomFieldDefinition[]>([]);
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
 
-  // Sidebar creation form state
+  // Sidebar creation / editing form state
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
   const [newFieldName, setNewFieldName] = useState("");
   const [newFieldLabel, setNewFieldLabel] = useState("");
   const [newFieldType, setNewFieldType] = useState("text");
   const [newFieldRequired, setNewFieldRequired] = useState(false);
   const [newFieldVisible, setNewFieldVisible] = useState(false);
+  const [newFieldHasValues, setNewFieldHasValues] = useState(false);
+
+  const handleOpenCreateCustomField = () => {
+    setEditingFieldId(null);
+    setNewFieldName("");
+    setNewFieldLabel("");
+    setNewFieldType("text");
+    setNewFieldRequired(false);
+    setNewFieldVisible(false);
+    setNewFieldHasValues(false);
+    setIsSidebarOpen(true);
+  };
+
+  const handleOpenEditCustomField = (field: any) => {
+    setEditingFieldId(field.id);
+    setNewFieldName(field.field_name || "");
+    setNewFieldLabel(field.label_name || "");
+    setNewFieldType(field.type || "text");
+    setNewFieldRequired(!!field.required);
+    setNewFieldVisible(!!field.visible_online);
+    setNewFieldHasValues(!!field.has_values);
+    setIsSidebarOpen(true);
+  };
+
+  const handleDeleteCustomField = async (field: any) => {
+    if (field.has_values) {
+      showToast(`Cannot delete "${field.label_name}" because it already contains saved values.`, "error");
+      return;
+    }
+    if (!window.confirm(`Are you sure you want to delete custom field "${field.label_name}"?`)) {
+      return;
+    }
+    try {
+      await customerCustomFieldsApi.deleteField(SHOP_ID, field.id);
+      showToast("Custom field deleted successfully", "success");
+      const fields = await customerCustomFieldsApi.getAllFields(SHOP_ID);
+      setCustomFieldDefs(fields);
+    } catch (err: any) {
+      const msg = err?.detail?.description || err?.detail?.msg || err?.message || "Failed to delete custom field";
+      showToast(msg, "error");
+    }
+  };
 
   const initialFormData = {
     first_name: "",
@@ -297,41 +340,60 @@ const CustomerFormPage = () => {
       } else {
         showToast("Failed to save customer", "error");
       }
+    } catch (err: any) {
+      const msg = err?.detail?.description || err?.detail?.msg || err?.message || "Failed to save customer";
+      showToast(msg, "error");
     } finally {
       isSubmittingRef.current = false;
       setSubmitting(false);
     }
   };
 
-  const handleCreateCustomField = async () => {
-    if (!newFieldName || !newFieldLabel) {
-      showToast("Field Name and Label are required", "error");
+  const handleSaveCustomField = async () => {
+    if (!newFieldLabel.trim()) {
+      showToast("Label Name is required", "error");
       return;
     }
     try {
-      await customerCustomFieldsApi.createField({
-        shop_id: SHOP_ID,
-        field_infos: [{
-          field_name: newFieldName,
-          label_name: newFieldLabel,
-          type: newFieldType,
+      if (editingFieldId) {
+        await customerCustomFieldsApi.updateField({
+          shop_id: SHOP_ID,
+          field_id: editingFieldId,
+          label_name: newFieldLabel.trim(),
+          type: newFieldHasValues ? null : newFieldType,
           required: newFieldRequired,
           visible_online: newFieldVisible,
-        }],
-      });
-      showToast("Custom field created successfully", "success");
-      // Refresh definitions
+        });
+        showToast("Custom field updated successfully", "success");
+      } else {
+        if (!newFieldName.trim()) {
+          showToast("Field name is required", "error");
+          return;
+        }
+        await customerCustomFieldsApi.createField({
+          shop_id: SHOP_ID,
+          field_infos: [{
+            field_name: newFieldName.trim(),
+            label_name: newFieldLabel.trim(),
+            type: newFieldType,
+            required: newFieldRequired,
+            visible_online: newFieldVisible,
+          }],
+        });
+        showToast("Custom field created successfully", "success");
+      }
       const fields = await customerCustomFieldsApi.getAllFields(SHOP_ID);
       setCustomFieldDefs(fields);
-      // Reset sidebar form
       setNewFieldName("");
       setNewFieldLabel("");
       setNewFieldType("text");
       setNewFieldRequired(false);
       setNewFieldVisible(false);
+      setEditingFieldId(null);
       setIsSidebarOpen(false);
-    } catch {
-      showToast("Failed to create custom field", "error");
+    } catch (err: any) {
+      const msg = err?.detail?.description || err?.detail?.msg || err?.message || "Failed to save custom field";
+      showToast(msg, "error");
     }
   };
 
@@ -362,15 +424,14 @@ const CustomerFormPage = () => {
                 placeholder="John"
               />
               <Input
-                label="Last Name"
-                required
+                label="Last Name (optional)"
                 name="last_name"
                 value={formData.last_name}
                 onChange={handleChange}
                 placeholder="Doe"
               />
               <Input
-                label="Email Address"
+                label="Email Address" tooltip="At least one contact method (Email or Phone) is required."
                 type="email"
                 name="email"
                 value={formData.email}
@@ -379,7 +440,7 @@ const CustomerFormPage = () => {
                 leftIcon={<Mail size={16} className="text-slate-400" />}
               />
               <Input
-                label="Phone Number"
+                label="Phone Number" tooltip="At least one contact method (Email or Phone) is required."
                 type="tel"
                 name="phone"
                 value={formData.phone}
@@ -400,7 +461,7 @@ const CustomerFormPage = () => {
             </div>
             <div className="p-8 space-y-6">
               <Input
-                label="Full Address"
+                label="Full Address (optional)"
                 name="full_address"
                 value={formData.full_address}
                 onChange={handleChange}
@@ -409,21 +470,21 @@ const CustomerFormPage = () => {
               />
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Input
-                  label="State"
+                  label="State (optional)"
                   name="state"
                   value={formData.state}
                   onChange={handleChange}
                   placeholder="Tamil Nadu"
                 />
                 <Input
-                  label="Country"
+                  label="Country (optional)"
                   name="country"
                   value={formData.country}
                   onChange={handleChange}
                   placeholder="India"
                 />
                 <Input
-                  label="ZIP Code"
+                  label="ZIP Code (optional)"
                   name="zip_code"
                   value={formData.zip_code}
                   onChange={handleChange}
@@ -451,7 +512,7 @@ const CustomerFormPage = () => {
                 </div>
                 {formData.can_have_credit && (
                   <Input
-                    label="Credit Limit"
+                    label="Credit Limit" required
                     type="number"
                     name="credit_limit"
                     value={formData.credit_limit}
@@ -463,7 +524,7 @@ const CustomerFormPage = () => {
                 {formData.can_have_credit && (
                   <ReusableSelect
                     key={`terms-${id || searchParams.get("draftId") || "new"}-${formData.credit_terms}`}
-                    label="Credit Terms"
+                    label="Credit Terms" required
                     value={formData.credit_terms}
                     onValueChange={(val) => handleSelectChange("credit_terms", val)}
                     options={[
@@ -474,7 +535,7 @@ const CustomerFormPage = () => {
                 )}
               <div className="flex flex-col gap-1.5 w-full flex-1">
                 <label className="text-[11px] font-bold text-slate-500 ml-1  ">
-                  Internal Remarks
+                  Internal Remarks <span className="normal-case font-normal text-slate-400">(optional)</span>
                 </label>
                 <textarea
                   name="notes"
@@ -502,7 +563,7 @@ const CustomerFormPage = () => {
               </div>
               <button
                 type="button"
-                onClick={() => setIsSidebarOpen(true)}
+                onClick={handleOpenCreateCustomField}
                 className="h-8 px-3 rounded-lg border border-indigo-100 text-indigo-600 font-bold text-xs bg-indigo-50/50 hover:bg-indigo-100 transition-all flex items-center gap-1.5"
               >
                 <Plus size={14} />
@@ -518,11 +579,38 @@ const CustomerFormPage = () => {
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {customFieldDefs.map((field) => (
-                    <div key={field.id} className="space-y-1.5">
-                      <label className="text-[11px] font-bold text-slate-500 ml-1">
-                        {field.label_name}
-                        {field.required && <span className="text-rose-500 ml-0.5">*</span>}
-                      </label>
+                    <div key={field.id} className="space-y-1.5 p-3 rounded-lg bg-slate-50/50 border border-slate-100 hover:border-slate-200 transition-colors">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-1.5">
+                          <label className="text-[11px] font-bold text-slate-700 ml-1">
+                            {field.label_name}
+                            {field.required && <span className="text-rose-500 ml-0.5">*</span>}
+                          </label>
+                          {field.has_values && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.2 bg-blue-50 text-blue-600 rounded border border-blue-100 leading-none">
+                              Has data
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditCustomField(field)}
+                            title="Edit field"
+                            className="p-1 text-slate-400 hover:text-indigo-600 rounded hover:bg-indigo-50 transition-colors"
+                          >
+                            <Pencil size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCustomField(field)}
+                            title={field.has_values ? "Cannot delete: field has saved values" : "Delete field"}
+                            className={`p-1 rounded transition-colors ${field.has_values ? "text-slate-300 hover:text-rose-400 hover:bg-rose-50" : "text-slate-400 hover:text-rose-600 hover:bg-rose-50"}`}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
                       {field.type === 'boolean' ? (
                         <div className="flex items-center gap-2 h-10 px-4 rounded-lg border border-slate-200 bg-slate-50/30">
                           <input
@@ -560,41 +648,55 @@ const CustomerFormPage = () => {
 
         {/* Sidebar Filter for Custom Field Creation */}
         <RightSidebarFilter
-          isOpen={isSidebarOpen}
-          onClose={() => setIsSidebarOpen(false)}
-          onApply={handleCreateCustomField}
-          applyLabel="Create"
-          onClear={() => {
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        onApply={handleSaveCustomField}
+        applyLabel={editingFieldId ? "Update" : "Create"}
+        onClear={() => {
+          if (!editingFieldId) {
             setNewFieldName("");
             setNewFieldLabel("");
             setNewFieldType("text");
             setNewFieldRequired(false);
             setNewFieldVisible(false);
-          }}
-          title="Create Custom Field"
-        >
-          <div className="space-y-5">
-            <Input
-              label="Label Name (Display Name)"
-              required
-              value={newFieldLabel}
-              onChange={(e) => {
-                const val = e.target.value;
-                setNewFieldLabel(val);
+          }
+        }}
+        title={editingFieldId ? "Edit Custom Field" : "Create Custom Field"}
+      >
+        <div className="space-y-5">
+          {newFieldHasValues && (
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2.5 text-amber-800 text-xs font-medium leading-relaxed">
+              <Info size={15} className="shrink-0 mt-0.5 text-amber-600" />
+              <span>
+                <strong>Note:</strong> This field already has saved customer data. The <strong>Field Type</strong> cannot be changed, but you can update the Display Label and settings.
+              </span>
+            </div>
+          )}
+          <Input
+            label="Label Name (Display Name)"
+            required
+            value={newFieldLabel}
+            onChange={(e) => {
+              const val = e.target.value;
+              setNewFieldLabel(val);
+              if (!editingFieldId) {
                 setNewFieldName(val.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim().replace(/\s+/g, "_"));
-              }}
-              placeholder="e.g. Loyalty Card ID"
-            />
-            <Input
-              label="Field Name (Internal Name)"
-              required
-              disabled
-              value={newFieldName}
-              placeholder="Auto-generated from Label Name"
-            />
+              }
+            }}
+            placeholder="e.g. Loyalty Membership ID"
+          />
+          <Input
+            label="Field Name (Internal Name)"
+            required
+            disabled
+            value={newFieldName}
+            placeholder="Auto-generated from Label Name"
+          />
+          <div>
             <ReusableSelect
               label="Field Type"
               value={newFieldType}
+              disabled={newFieldHasValues}
               onValueChange={(val) => setNewFieldType(val)}
               options={[
                 { label: "Text", value: "text" },
@@ -604,22 +706,26 @@ const CustomerFormPage = () => {
               ]}
               placeholder="Select Type"
             />
-            <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50 border border-slate-100">
-              <span className="text-xs font-bold text-slate-500">Required Field</span>
-              <Switch
-                checked={newFieldRequired}
-                onCheckedChange={(checked) => setNewFieldRequired(checked)}
-              />
-            </div>
-            <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50 border border-slate-100">
-              <span className="text-xs font-bold text-slate-500">Visible Online</span>
-              <Switch
-                checked={newFieldVisible}
-                onCheckedChange={(checked) => setNewFieldVisible(checked)}
-              />
-            </div>
+            {newFieldHasValues && (
+              <p className="text-[10px] text-slate-400 mt-1 ml-1 font-medium">Type is locked because field has existing data</p>
+            )}
           </div>
-        </RightSidebarFilter>
+          <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50 border border-slate-100">
+            <span className="text-xs font-bold text-slate-500">Required Field <span className="font-normal text-slate-400 text-[11px]">(optional)</span></span>
+            <Switch
+              checked={newFieldRequired}
+              onCheckedChange={(checked: boolean) => setNewFieldRequired(checked)}
+            />
+          </div>
+          <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50 border border-slate-100">
+            <span className="text-xs font-bold text-slate-500">Visible Online <span className="font-normal text-slate-400 text-[11px]">(optional)</span></span>
+            <Switch
+              checked={newFieldVisible}
+              onCheckedChange={(checked: boolean) => setNewFieldVisible(checked)}
+            />
+          </div>
+        </div>
+      </RightSidebarFilter>
       </div>
       <NavigationBlocker data={{ formData, customFieldValues }} isLoading={loadingData} isSubmitting={submitting} />
     </div>

@@ -73,6 +73,7 @@ export interface CustomerCustomFieldDefinition {
   type: string; // 'text' | 'number' | 'date' | 'boolean'
   required: boolean;
   visible_online: boolean;
+  has_values?: boolean;
   created_at?: string;
   updated_at?: string;
 }

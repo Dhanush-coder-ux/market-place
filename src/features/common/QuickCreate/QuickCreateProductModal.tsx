@@ -48,34 +48,52 @@ interface QuickCreateDropdownModalProps {
 }
 
 const QuickCreateDropdownModal: React.FC<QuickCreateDropdownModalProps> = ({ isOpen, onClose, type, onSuccess }) => {
-  const [value, setValue] = useState("");
+  const [name, setName] = useState("");
+  const [shortName, setShortName] = useState("");
+  const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const { showToast } = useToast();
 
   if (!isOpen) return null;
 
   const handleSave = async () => {
-    if (!value.trim()) return;
+    if (!name.trim()) {
+      showToast(`${type} Name is required`, "error");
+      return;
+    }
+    if (type === "Unit" && !shortName.trim()) {
+      showToast("Unit Short Name / Symbol is required", "error");
+      return;
+    }
     setLoading(true);
 
     try {
       if (type === "Category") {
-        const res = await utilityApi.createShopCategory({ shop_id: SHOP_ID, name: value.trim() });
+        const res = await utilityApi.createShopCategory({
+          shop_id: SHOP_ID,
+          name: name.trim(),
+          description: description.trim() || undefined
+        });
         const data = res.data || res;
         if (data && data.id) onSuccess({ id: data.id, name: data.name });
       } else {
         const res = await utilityApi.createShopUnit({
           shop_id: SHOP_ID,
-          name: value.trim(),
-          short_name: value.trim().substring(0, 3).toUpperCase()
+          name: name.trim(),
+          short_name: shortName.trim().toUpperCase(),
+          description: description.trim() || undefined
         });
         const data = res.data || res;
         if (data && data.id) onSuccess({ id: data.id, name: data.name });
       }
-      setValue("");
+      setName("");
+      setShortName("");
+      setDescription("");
       onClose();
-    } catch (err) {
-      showToast(`Failed to create ${type}`, "error");
+      showToast(`${type} created successfully`, "success");
+    } catch (err: any) {
+      const msg = err?.detail?.description || err?.message || `Failed to create ${type}`;
+      showToast(msg, "error");
     } finally {
       setLoading(false);
     }
@@ -90,23 +108,59 @@ const QuickCreateDropdownModal: React.FC<QuickCreateDropdownModalProps> = ({ isO
             <X size={18} />
           </button>
         </div>
-        <div className="p-5">
-          <label className="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wide">Name</label>
-          <input
-            type="text"
-            autoFocus
-            className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all shadow-sm"
-            placeholder={`e.g. ${type === "Category" ? "Beverages" : "Box"}`}
-            value={value}
-            onChange={e => setValue(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleSave()}
-          />
+        <div className="p-5 space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">
+              {type === "Category" ? "Category Name" : "Unit Name"} <span className="text-red-500 ml-0.5">*</span>
+            </label>
+            <input
+              type="text"
+              autoFocus
+              className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all shadow-sm"
+              placeholder={`e.g. ${type === "Category" ? "Beverages" : "Box"}`}
+              value={name}
+              onChange={e => {
+                setName(e.target.value);
+                if (type === "Unit" && !shortName) {
+                  setShortName(e.target.value.substring(0, 3).toUpperCase());
+                }
+              }}
+            />
+          </div>
+
+          {type === "Unit" && (
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">
+                Short Name / Symbol <span className="text-red-500 ml-0.5">*</span>
+              </label>
+              <input
+                type="text"
+                className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all shadow-sm uppercase font-mono"
+                placeholder="e.g. BX, PCS, KG"
+                value={shortName}
+                onChange={e => setShortName(e.target.value)}
+              />
+            </div>
+          )}
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wide">
+              Description <span className="normal-case font-normal text-slate-400">(optional)</span>
+            </label>
+            <textarea
+              rows={2}
+              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all shadow-sm resize-none"
+              placeholder="Brief description..."
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+            />
+          </div>
         </div>
         <div className="px-5 py-4 bg-slate-50/50 border-t border-slate-100 flex justify-end gap-2">
           <button onClick={onClose} className="px-4 h-9 rounded-lg font-semibold text-xs text-slate-600 hover:bg-slate-100 transition-colors">Cancel</button>
           <button
             onClick={handleSave}
-            disabled={!value.trim() || loading}
+            disabled={!name.trim() || (type === "Unit" && !shortName.trim()) || loading}
             className="px-4 h-9 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? "Saving..." : "Save"}
@@ -324,7 +378,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
           />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="relative">
-              <label className="text-[10px] font-black text-slate-400 ml-1 block mb-1">Barcode / SKU</label>
+              <label className="text-[10px] font-black text-slate-400 ml-1 block mb-1">Barcode / SKU <span className="normal-case font-normal text-slate-400">(optional)</span></label>
               <div className="relative">
                 <input
                   name="barcode"
@@ -362,7 +416,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
                 </div>
               )}
             </div>
-            <Input label="Brand" name="brand" value={form.brand} onChange={handleChange} placeholder="e.g. Apple" />
+            <Input label="Brand (optional)" name="brand" value={form.brand} onChange={handleChange} placeholder="e.g. Apple" />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-1.5">
@@ -406,7 +460,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-slate-400 ml-1">GST Rate</label>
+              <label className="text-[10px] font-black text-slate-400 ml-1">GST Rate <span className="normal-case font-normal text-slate-400">(optional)</span></label>
               <ReusableSelect
                 value={form.gst}
                 onValueChange={(val) => setForm(p => ({ ...p, gst: val }))}
@@ -425,8 +479,8 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
       content: (
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Input label="Reorder Point" type="number" name="reorder_point" value={form.reorder_point} onChange={handleChange} />
-            <Input label="Storage Location" name="location" value={form.location} onChange={handleChange} placeholder="e.g. Aisle 4, Shelf B" />
+            <Input label="Reorder Point (optional)" type="number" name="reorder_point" value={form.reorder_point} onChange={handleChange} />
+            <Input label="Storage Location (optional)" name="location" value={form.location} onChange={handleChange} placeholder="e.g. Aisle 4, Shelf B" />
           </div>
 
           <div className="space-y-4 pt-2">

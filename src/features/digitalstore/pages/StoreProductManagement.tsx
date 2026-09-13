@@ -685,16 +685,12 @@ const ProductDashboard = () => {
           values: valuesToSave,
         });
       }
-      const buyPrice = editingProduct.buyPrice ?? editingProduct.raw?.pricing_infos?.buy_price ?? editingProduct.raw?.buy_price ?? 0;
-      const sellPrice = editingProduct.price ?? editingProduct.raw?.pricing_infos?.sell_price ?? 0;
-      const onlinePrice = editingProduct.onlineSellPrice ?? sellPrice;
+      const onlinePrice = editingProduct.onlineSellPrice !== undefined ? editingProduct.onlineSellPrice : editingProduct.price;
       await inventoryApi.updateInventory({
         id: editingProduct.id,
         shop_id: SHOP_ID,
         visible_online: editingProduct.visibleOnApp,
         description: editingProduct.description,
-        buy_price: buyPrice,
-        sell_price: sellPrice,
         online_sell_price: onlinePrice,
       });
       showToast("Product updated successfully", "success");

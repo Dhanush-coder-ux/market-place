@@ -75,7 +75,7 @@ export interface EmployeeRecord {
   email: string;
   mobile_number: string;
   role: string;
-  department: string;
+  department?: string;
   created_at: string;
   updated_at: string;
   joined_date: string;

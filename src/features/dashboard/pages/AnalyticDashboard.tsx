@@ -25,6 +25,7 @@ import {
 } from "recharts";
 import { useBusinessApi } from "@/context/BusinessApiContext";
 import { useToast } from "@/context/ToastContext";
+import { useNotifications } from "@/context/NotificationContext";
 import { apiClient } from "@/services/api/apiClient";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { CustomTooltip } from "../components/CustomTooltip";
@@ -173,18 +174,22 @@ const AnalyticsDashboard = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const { showToast } = useToast();
 
+  const { latestNotification } = useNotifications();
+
   const handleSync = async () => {
     setIsSyncing(true);
+    const userId = localStorage.getItem("user_id") || "";
     try {
-      await apiClient.post(`${ENDPOINTS.ANALYTICS_DASHBOARD}sync?shop_id=${SHOP_ID}`, {});
-      showToast("Shop data synced successfully!", "success");
-      fetchStats();
+      await apiClient.post(`${ENDPOINTS.ANALYTICS_DASHBOARD}sync?shop_id=${SHOP_ID}&user_id=${userId}`, {});
+      showToast("Sync started in background. You will receive a notification when finished.", "info");
     } catch (err: any) {
-      showToast(err.message || "Failed to sync data", "error");
+      showToast(err.message || "Failed to start sync", "error");
     } finally {
       setIsSyncing(false);
     }
   };
+
+
 
   const [selectedSupplier, setSelectedSupplier] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
@@ -277,6 +282,17 @@ const AnalyticsDashboard = () => {
       fetchStats();
     }
   }, [fetchStats, activeRange, customStart, customEnd, selectedSupplier, selectedCategory]);
+
+  // Automatically refresh dashboard data when sync notification is received
+  useEffect(() => {
+    if (
+      latestNotification &&
+      (latestNotification.additional_metadata?.type === "analytics_sync" ||
+       latestNotification.title?.toLowerCase().includes("sync"))
+    ) {
+      fetchStats();
+    }
+  }, [latestNotification, fetchStats]);
 
   // ── Derived metrics ──
   const salesOverall = stats?.overview?.sales ?? {};

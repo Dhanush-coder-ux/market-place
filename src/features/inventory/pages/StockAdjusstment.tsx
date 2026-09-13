@@ -860,7 +860,7 @@ export default function StockAdjustmentPage() {
                             {/* Product Selector */}
                             <div className="xl:col-span-5 space-y-3">
                               <div className="flex flex-col gap-1.5">
-                                <label className="text-[10px] font-bold text-slate-500 ml-1 uppercase tracking-wider">Product Details</label>
+                                <label className="text-[10px] font-bold text-slate-500 ml-1 uppercase tracking-wider">Product Details <span className="text-red-500 ml-0.5">*</span></label>
                                 <SearchSelect
                                   fetchOptions={async (q) => await inventoryApi.searchInventories(q, true)}
                                   value={item.product}
@@ -993,7 +993,7 @@ export default function StockAdjustmentPage() {
                             <div className="xl:col-span-7 space-y-4">
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <ReusableSelect
-                                  label="Action Type"
+                                  label="Action Type" required
                                   options={
                                     item.has_serialno_tracking && (!item.existing_serial_numbers || item.existing_serial_numbers.length === 0)
                                       ? typeOptions.filter(o => o.value === 'INCREMENT')

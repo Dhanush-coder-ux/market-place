@@ -128,17 +128,86 @@ const ApiContext = createContext<ApiContextType | null>(null);
 // ─── Error parser ─────────────────────────────────────────────────────────────
 
 const parseError = async (res: Response): Promise<string> => {
+  // 1. 500+ Internal / Gateway Server Errors
+  if (res.status >= 500) {
+    return "System error, please try again sometime";
+  }
+
+  // 2. 401 Unauthorized / Session Expired
+  if (res.status === 401) {
+    try {
+      const body = await res.clone().json();
+      const desc = body?.detail?.description || body?.detail?.msg || (typeof body?.detail === "string" ? body.detail : null);
+      if (desc && !desc.toLowerCase().includes("internal") && !desc.toLowerCase().includes("error")) {
+        return desc;
+      }
+    } catch { /* ignore */ }
+    return "Session expired. Please log in again to continue.";
+  }
+
+  // 3. 400, 422 and other client error details
   try {
     const body = await res.json();
-    const detail = body?.detail;
-    if (Array.isArray(detail)) {
-      return detail.map((d: any) => d?.msg || d?.description || JSON.stringify(d)).join(", ");
+    
+    // Check nested detail object or array
+    if (typeof body?.detail === "object" && body?.detail !== null) {
+      // Pydantic validation errors list
+      if (Array.isArray(body.detail)) {
+        const errorMsgs = body.detail.map((item: any) => {
+          if (typeof item === "string") return item;
+          const field = Array.isArray(item?.loc) ? item.loc[item.loc.length - 1] : "";
+          const msg = item?.msg || item?.description || JSON.stringify(item);
+          return field && field !== "body" ? `${field}: ${msg}` : msg;
+        }).filter(Boolean);
+        if (errorMsgs.length > 0) return errorMsgs.join(", ");
+      }
+
+      // Backend custom HTTP exception dictionary: { title, msg, description, ... }
+      const desc = body.detail.description;
+      const msg = body.detail.msg;
+      if (desc && typeof desc === "string" && desc.trim()) {
+        return desc;
+      }
+      if (msg && typeof msg === "string" && msg.trim()) {
+        return msg;
+      }
+      if (body.detail.error && typeof body.detail.error === "string") {
+        return body.detail.error;
+      }
+      return JSON.stringify(body.detail);
     }
-    if (typeof detail === "object" && detail !== null) {
-      return detail.description || detail.msg || JSON.stringify(detail);
+    
+    // Direct detail string
+    if (typeof body?.detail === "string" && body.detail.trim()) {
+      return body.detail;
     }
-    return detail ?? body?.message ?? body?.description ?? `Request failed (${res.status})`;
+    
+    // Top-level description, msg, error, or message
+    if (typeof body?.description === "string" && body.description.trim()) {
+      return body.description;
+    }
+    if (typeof body?.msg === "string" && body.msg.trim()) {
+      return body.msg;
+    }
+    if (typeof body?.message === "string" && body.message.trim()) {
+      return body.message;
+    }
+    if (typeof body?.error === "string" && body.error.trim()) {
+      return body.error;
+    }
+
+    if (res.status === 400) return "Invalid request. Please check the entered details.";
+    if (res.status === 422) return "Validation error. Please verify the submitted data.";
+    if (res.status === 403) return "You do not have permission to perform this action.";
+    if (res.status === 404) return "Requested resource was not found.";
+
+    return `Request failed (${res.status})`;
   } catch {
+    if (res.status === 400) return "Invalid request. Please check the entered details.";
+    if (res.status === 422) return "Validation error. Please verify the submitted data.";
+    if (res.status === 401) return "Session expired. Please log in again to continue.";
+    if (res.status === 403) return "You do not have permission to perform this action.";
+    if (res.status === 404) return "Requested resource was not found.";
     return `Request failed (${res.status})`;
   }
 };

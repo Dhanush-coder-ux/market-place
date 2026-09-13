@@ -274,6 +274,7 @@ export interface CreateInventoryCustomFieldPayload {
     type: string;          // 'text' | 'number' | 'date' | 'boolean'
     required?: boolean;
     visible_online?: boolean;
+  has_values?: boolean;
   }>;
 }
 

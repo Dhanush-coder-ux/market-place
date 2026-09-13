@@ -116,8 +116,9 @@ export interface SelectOption {
 }
 
 export interface ReusableSelectProps {
+  disabled?: boolean;
   options: SelectOption[]
-  required?: React.ReactNode
+  required?: boolean | React.ReactNode
   value?: string
   onValueChange: (value: string) => void
   placeholder?: string

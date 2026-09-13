@@ -344,8 +344,8 @@ const ProfileForm: React.FC = () => {
         setGstType(formData.gst_registered ? "registered" : "non-registered");
         navigate(id ? "/" : "/shop-select");
       }
-    } catch {
-      showToast("Operation failed", "error");
+    } catch (e: any) {
+      showToast(e?.message || "Operation failed", "error");
     } finally {
       setSubmitting(false);
     }

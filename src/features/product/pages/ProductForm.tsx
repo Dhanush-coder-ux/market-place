@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
-  Package, Save, Cpu, AlertCircle, Layers, Zap, Bookmark,
+  Package, Save, Pencil, Trash2, Cpu, AlertCircle, Layers, Zap, Bookmark,
   Plus, Info, ImagePlus, X, UploadCloud,
   BarChart3, Check, Settings2, FileText,
   IndianRupee, Barcode,
@@ -220,34 +220,52 @@ interface QuickCreateDropdownModalProps {
 }
 
 const QuickCreateDropdownModal: React.FC<QuickCreateDropdownModalProps> = ({ isOpen, onClose, type, onSuccess }) => {
-  const [value, setValue] = useState("");
+  const [name, setName] = useState("");
+  const [shortName, setShortName] = useState("");
+  const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const { showToast } = useToast();
 
   if (!isOpen) return null;
 
   const handleSave = async () => {
-    if (!value.trim()) return;
+    if (!name.trim()) {
+      showToast(`${type === "categories" ? "Category" : "Unit"} Name is required`, "error");
+      return;
+    }
+    if (type === "units" && !shortName.trim()) {
+      showToast("Unit Short Name / Symbol is required", "error");
+      return;
+    }
     setLoading(true);
 
     try {
       if (type === "categories") {
-        const res = await utilityApi.createShopCategory({ shop_id: SHOP_ID, name: value.trim() });
+        const res = await utilityApi.createShopCategory({
+          shop_id: SHOP_ID,
+          name: name.trim(),
+          description: description.trim() || undefined,
+        });
         const data = res.data || res;
         if (data && data.id) onSuccess({ id: data.id, name: data.name });
       } else {
         const res = await utilityApi.createShopUnit({
           shop_id: SHOP_ID,
-          name: value.trim(),
-          short_name: value.trim().substring(0, 3).toUpperCase()
+          name: name.trim(),
+          short_name: shortName.trim().toUpperCase(),
+          description: description.trim() || undefined,
         });
         const data = res.data || res;
         if (data && data.id) onSuccess({ id: data.id, name: data.name });
       }
-      setValue("");
+      setName("");
+      setShortName("");
+      setDescription("");
       onClose();
-    } catch (err) {
-      showToast(`Failed to create ${type === "categories" ? "category" : "unit"}`, "error");
+      showToast(`${type === "categories" ? "Category" : "Unit"} created successfully`, "success");
+    } catch (err: any) {
+      const msg = err?.detail?.description || err?.message || `Failed to create ${type === "categories" ? "category" : "unit"}`;
+      showToast(msg, "error");
     } finally {
       setLoading(false);
     }
@@ -262,23 +280,59 @@ const QuickCreateDropdownModal: React.FC<QuickCreateDropdownModalProps> = ({ isO
             <X size={18} />
           </button>
         </div>
-        <div className="p-5">
-          <label className="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wide">Name</label>
-          <input
-            type="text"
-            autoFocus
-            className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all shadow-sm"
-            placeholder={`e.g. ${type === "categories" ? "Beverages" : "Box"}`}
-            value={value}
-            onChange={e => setValue(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleSave()}
-          />
+        <div className="p-5 space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">
+              {type === "categories" ? "Category Name" : "Unit Name"} <span className="text-red-500 ml-0.5">*</span>
+            </label>
+            <input
+              type="text"
+              autoFocus
+              className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all shadow-sm"
+              placeholder={`e.g. ${type === "categories" ? "Beverages" : "Box"}`}
+              value={name}
+              onChange={e => {
+                setName(e.target.value);
+                if (type === "units" && !shortName) {
+                  setShortName(e.target.value.substring(0, 3).toUpperCase());
+                }
+              }}
+            />
+          </div>
+
+          {type === "units" && (
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">
+                Short Name / Symbol <span className="text-red-500 ml-0.5">*</span>
+              </label>
+              <input
+                type="text"
+                className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all shadow-sm uppercase font-mono"
+                placeholder="e.g. BX, PCS, KG"
+                value={shortName}
+                onChange={e => setShortName(e.target.value)}
+              />
+            </div>
+          )}
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 mb-1.5 uppercase tracking-wide">
+              Description <span className="normal-case font-normal text-slate-400">(optional)</span>
+            </label>
+            <textarea
+              rows={2}
+              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all shadow-sm resize-none"
+              placeholder="Brief description..."
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+            />
+          </div>
         </div>
         <div className="px-5 py-4 bg-slate-50/50 border-t border-slate-100 flex justify-end gap-2">
           <button onClick={onClose} className="px-4 h-9 rounded-lg font-semibold text-xs text-slate-600 hover:bg-slate-100 transition-colors">Cancel</button>
           <button
             onClick={handleSave}
-            disabled={!value.trim() || loading}
+            disabled={!name.trim() || (type === "units" && !shortName.trim()) || loading}
             className="px-4 h-9 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? "Saving..." : "Save"}
@@ -306,13 +360,56 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   const [customFieldDefs, setCustomFieldDefs] = useState<any[]>([]);
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
 
-  // Sidebar creation form state
+  // Sidebar creation / editing form state
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
   const [newFieldName, setNewFieldName] = useState("");
   const [newFieldLabel, setNewFieldLabel] = useState("");
   const [newFieldType, setNewFieldType] = useState("text");
   const [newFieldRequired, setNewFieldRequired] = useState(false);
   const [newFieldVisible, setNewFieldVisible] = useState(false);
+  const [newFieldHasValues, setNewFieldHasValues] = useState(false);
+
+  const handleOpenCreateCustomField = () => {
+    setEditingFieldId(null);
+    setNewFieldName("");
+    setNewFieldLabel("");
+    setNewFieldType("text");
+    setNewFieldRequired(false);
+    setNewFieldVisible(false);
+    setNewFieldHasValues(false);
+    setIsSidebarOpen(true);
+  };
+
+  const handleOpenEditCustomField = (field: any) => {
+    setEditingFieldId(field.id);
+    setNewFieldName(field.field_name || "");
+    setNewFieldLabel(field.label_name || "");
+    setNewFieldType(field.type || "text");
+    setNewFieldRequired(!!field.required);
+    setNewFieldVisible(!!field.visible_online);
+    setNewFieldHasValues(!!field.has_values);
+    setIsSidebarOpen(true);
+  };
+
+  const handleDeleteCustomField = async (field: any) => {
+    if (field.has_values) {
+      showToast(`Cannot delete "${field.label_name}" because it already contains saved values.`, "error");
+      return;
+    }
+    if (!window.confirm(`Are you sure you want to delete custom field "${field.label_name}"?`)) {
+      return;
+    }
+    try {
+      await inventoryCustomFields.deleteField(SHOP_ID, field.id);
+      showToast("Custom field deleted successfully", "success");
+      const fields = await inventoryCustomFields.getAllFields(SHOP_ID);
+      setCustomFieldDefs(fields);
+    } catch (err: any) {
+      const msg = err?.detail?.description || err?.detail?.msg || err?.message || "Failed to delete custom field";
+      showToast(msg, "error");
+    }
+  };
 
   const [modalState, setModalState] = useState<{ type: "Supplier" | "Category" | "Unit" | null; query: string }>({ type: null, query: "" });
 
@@ -918,10 +1015,15 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         variant_types: form.has_variants ? variantTypes.map(vt => ({ name: vt.name, values: vt.values })) : null,
         variant_infos: form.has_variants ? mappedVariants : null,
         storage_location: form.location || null,
-        // For made-to-order items set price directly; for stocked items price comes from purchase
-        buy_price: !form.track_stock ? (Number(form.cost_to_make) || null) : null,
-        sell_price: !form.track_stock ? (Number(form.selling_price) || null) : null,
-        online_sell_price: !form.track_stock ? (Number(form.selling_price) || 0) : 0,
+        buy_price: form.cost_to_make !== "" && !isNaN(Number(form.cost_to_make))
+          ? Number(form.cost_to_make)
+          : (form.selling_price !== "" && !isNaN(Number(form.selling_price)) ? Number(form.selling_price) : null),
+        sell_price: form.selling_price !== "" && !isNaN(Number(form.selling_price))
+          ? Number(form.selling_price)
+          : null,
+        online_sell_price: form.selling_price !== "" && !isNaN(Number(form.selling_price))
+          ? Number(form.selling_price)
+          : 0,
         gst: gstFormatted,
         reorder_point: Number(form.reorder_point) || 1,
         visible_online: form.visible_online,
@@ -940,9 +1042,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       } else {
         res = await inventoryApi.createInventory(payload);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error("Failed to save product:", e);
-      showToast("Failed to save product. Please try again.", "error");
+      const errMsg = e?.message || e?.detail?.description || e?.detail?.msg || "Failed to save product. Please try again.";
+      showToast(errMsg, "error");
       isSubmittingRef.current = false;
       setIsSubmitting(false);
       return;
@@ -1017,35 +1120,43 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   };
 
 
-  const handleCreateCustomField = async () => {
-    if (!newFieldName || !newFieldLabel) {
-      showToast("Field Name and Label are required", "error");
+  const handleSaveCustomField = async () => {
+    if (!newFieldLabel.trim()) {
+      showToast("Label Name is required", "error");
       return;
     }
     try {
-      await inventoryCustomFields.createField({
-        shop_id: SHOP_ID,
-        field_infos: [{
-          field_name: newFieldName,
-          label_name: newFieldLabel,
-          type: newFieldType,
+      if (editingFieldId) {
+        await inventoryCustomFields.updateField({
+          shop_id: SHOP_ID,
+          field_id: editingFieldId,
+          label_name: newFieldLabel.trim(),
+          type: newFieldHasValues ? undefined : newFieldType,
           required: newFieldRequired,
           visible_online: newFieldVisible,
-        }]
-      });
-      showToast("Custom field created successfully", "success");
+        });
+        showToast("Custom field updated successfully", "success");
+      } else {
+        const internalName = newFieldName.trim() || newFieldLabel.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim().replace(/\s+/g, "_");
+        await inventoryCustomFields.createField({
+          shop_id: SHOP_ID,
+          field_infos: [{
+            field_name: internalName,
+            label_name: newFieldLabel.trim(),
+            type: newFieldType,
+            required: newFieldRequired,
+            visible_online: newFieldVisible,
+          }]
+        });
+        showToast("Custom field created successfully", "success");
+      }
       // Refresh definitions
       const fields = await inventoryCustomFields.getAllFields(SHOP_ID);
       setCustomFieldDefs(fields);
-      // Reset sidebar form
-      setNewFieldName("");
-      setNewFieldLabel("");
-      setNewFieldType("text");
-      setNewFieldRequired(false);
-      setNewFieldVisible(false);
       setIsSidebarOpen(false);
-    } catch {
-      showToast("Failed to create custom field", "error");
+    } catch (err: any) {
+      const msg = err?.detail?.description || err?.detail?.msg || err?.message || "Failed to save custom field";
+      showToast(msg, "error");
     }
   };
 
@@ -1374,6 +1485,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                       <InputField
                         label="Storage Location"
                         name="location"
+                        hint="optional"
                         disabled={form.has_variants}
                         value={form.location}
                         onChange={handleChange}
@@ -1410,6 +1522,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                       <InputField
                         label="Buy price"
                         name="cost_to_make"
+                        hint="optional"
                         type="number"
                         value={form.cost_to_make}
                         onChange={handleChange}
@@ -1534,7 +1647,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
               extra={
                 <button
                   type="button"
-                  onClick={() => setIsSidebarOpen(true)}
+                  onClick={handleOpenCreateCustomField}
                   className="h-8 px-3 rounded-lg border border-indigo-100 text-indigo-600 font-bold text-xs bg-indigo-50/50 hover:bg-indigo-100 transition-all flex items-center gap-1.5"
                 >
                   <Plus size={14} />
@@ -1549,11 +1662,35 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {customFieldDefs.map((field) => (
-                    <div key={field.id} className="space-y-1.5">
-                      <Label
-                        text={field.label_name}
-                        required={field.required}
-                      />
+                    <div key={field.id} className="space-y-1.5 p-3 rounded-xl bg-slate-50/40 border border-slate-100 hover:border-slate-200 transition-colors">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <Label text={field.label_name} required={field.required} />
+                          {field.has_values && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.2 bg-blue-50 text-blue-600 rounded border border-blue-100 leading-none">
+                              Has data
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditCustomField(field)}
+                            title="Edit field"
+                            className="p-1 text-slate-400 hover:text-indigo-600 rounded hover:bg-indigo-50 transition-colors"
+                          >
+                            <Pencil size={13} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCustomField(field)}
+                            title={field.has_values ? "Cannot delete: field has saved values" : "Delete field"}
+                            className={`p-1 rounded transition-colors ${field.has_values ? "text-slate-300 hover:text-rose-400 hover:bg-rose-50" : "text-slate-400 hover:text-rose-600 hover:bg-rose-50"}`}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
                       {field.type === 'boolean' ? (
                         <div className="flex items-center gap-2 h-10 px-4 rounded-lg border border-slate-200 bg-slate-50/30">
                           <input
@@ -1620,22 +1757,32 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         }}
       />
 
-      {/* Sidebar Filter for Custom Field Creation */}
+      {/* Sidebar Filter for Custom Field Creation / Editing */}
       <RightSidebarFilter
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
-        onApply={handleCreateCustomField}
-        applyLabel="Create"
+        onApply={handleSaveCustomField}
+        applyLabel={editingFieldId ? "Update" : "Create"}
         onClear={() => {
-          setNewFieldName("");
-          setNewFieldLabel("");
-          setNewFieldType("text");
-          setNewFieldRequired(false);
-          setNewFieldVisible(false);
+          if (!editingFieldId) {
+            setNewFieldName("");
+            setNewFieldLabel("");
+            setNewFieldType("text");
+            setNewFieldRequired(false);
+            setNewFieldVisible(false);
+          }
         }}
-        title="Create Custom Field"
+        title={editingFieldId ? "Edit Custom Field" : "Create Custom Field"}
       >
         <div className="space-y-5">
+          {newFieldHasValues && (
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2.5 text-amber-800 text-xs font-medium leading-relaxed">
+              <Info size={15} className="shrink-0 mt-0.5 text-amber-600" />
+              <span>
+                <strong>Note:</strong> This field already has saved product data. The <strong>Field Type</strong> cannot be changed, but you can update the Display Label and settings.
+              </span>
+            </div>
+          )}
           <InputField
             label="Label Name (Display Name)"
             required
@@ -1643,7 +1790,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
             onChange={(e) => {
               const val = e.target.value;
               setNewFieldLabel(val);
-              setNewFieldName(val.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim().replace(/\s+/g, "_"));
+              if (!editingFieldId) {
+                setNewFieldName(val.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim().replace(/\s+/g, "_"));
+              }
             }}
             placeholder="e.g. Rack Number"
           />
@@ -1654,27 +1803,33 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
             value={newFieldName}
             placeholder="Auto-generated from Label Name"
           />
-          <ReusableSelect
-            label="Field Type"
-            value={newFieldType}
-            onValueChange={(val) => setNewFieldType(val)}
-            options={[
-              { label: "Text", value: "text" },
-              { label: "Number", value: "number" },
-              { label: "Date", value: "date" },
-              { label: "Yes / No (Boolean)", value: "boolean" },
-            ]}
-            placeholder="Select Type"
-          />
+          <div>
+            <ReusableSelect
+              label="Field Type"
+              value={newFieldType}
+              disabled={newFieldHasValues}
+              onValueChange={(val) => setNewFieldType(val)}
+              options={[
+                { label: "Text", value: "text" },
+                { label: "Number", value: "number" },
+                { label: "Date", value: "date" },
+                { label: "Yes / No (Boolean)", value: "boolean" },
+              ]}
+              placeholder="Select Type"
+            />
+            {newFieldHasValues && (
+              <p className="text-[10px] text-slate-400 mt-1 ml-1 font-medium">Type is locked because field has existing data</p>
+            )}
+          </div>
           <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50 border border-slate-100">
-            <span className="text-xs font-bold text-slate-500">Required Field</span>
+            <span className="text-xs font-bold text-slate-500">Required Field <span className="font-normal text-slate-400 text-[11px]">(optional)</span></span>
             <Switch
               checked={newFieldRequired}
               onCheckedChange={(checked: boolean) => setNewFieldRequired(checked)}
             />
           </div>
           <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50 border border-slate-100">
-            <span className="text-xs font-bold text-slate-500">Visible Online</span>
+            <span className="text-xs font-bold text-slate-500">Visible Online <span className="font-normal text-slate-400 text-[11px]">(optional)</span></span>
             <Switch
               checked={newFieldVisible}
               onCheckedChange={(checked: boolean) => setNewFieldVisible(checked)}

@@ -52,6 +52,10 @@ export const shopApi = {
     return await apiClient.get(`${ENDPOINTS.SHOPS}/by/${shop_id}`);
   },
   
+  getShopFollowers: async (shop_id: string) => {
+    return await apiClient.get(`${ENDPOINTS.SHOPS}/followers/shop/${shop_id}`);
+  },
+  
   getMyShops: async (session_id?: string) => {
     return await apiClient.get(ENDPOINTS.MY_SHOPS, session_id ? { session_id } : undefined);
   },

@@ -170,7 +170,6 @@ const EmployeeForm = () => {
       role: formData.role,
       mobile_number: formData.mobile_number,
       joined_date: formData.joinDate,
-      department: "STAFF",
     };
     
     const nestedData = {
@@ -259,7 +258,7 @@ const EmployeeForm = () => {
                   leftIcon={<Mail size={16} className="text-slate-300" />}
                 />
                 <Input
-                  label="Phone Number"
+                  label="Phone Number (optional)"
                   type="tel"
                   name="mobile_number"
                   value={formData.mobile_number}
@@ -270,7 +269,7 @@ const EmployeeForm = () => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-500 ml-1  ">System Role</label>
+                  <label className="text-[11px] font-bold text-slate-500 ml-1">System Role <span className="text-red-500 ml-1">*</span></label>
                   <ReusableSelect 
                     options={roleOptions}
                     value={formData.role}
@@ -292,7 +291,7 @@ const EmployeeForm = () => {
             </div>
             <div className="p-8 space-y-6">
               <Input
-                label="Salary Range / CTC"
+                label="Salary Range / CTC (optional)"
                 name="salary_range"
                 value={formData.salary_range}
                 onChange={handleChange}
@@ -300,7 +299,7 @@ const EmployeeForm = () => {
                 leftIcon={<Tag size={16} className="text-slate-300" />}
               />
               <Input
-                label="Joining Date"
+                label="Joining Date (optional)"
                 type="date"
                 name="joinDate"
                 value={formData.joinDate}
@@ -320,7 +319,7 @@ const EmployeeForm = () => {
             </div>
             <div className="p-8 space-y-6">
               <Input
-                label="Physical Address"
+                label="Physical Address (optional)"
                 name="address"
                 value={formData.address}
                 onChange={handleChange}
@@ -328,7 +327,7 @@ const EmployeeForm = () => {
                 leftIcon={<MapPin size={16} className="text-slate-300" />}
               />
               <Input
-                label="ZIP Code"
+                label="ZIP Code (optional)"
                 name="zip_code"
                 value={formData.zip_code}
                 onChange={handleChange}

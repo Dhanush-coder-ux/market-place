@@ -8,23 +8,86 @@ interface RequestOptions {
 }
 
 const parseError = async (res: Response): Promise<string> => {
+  // 1. 500+ Internal / Gateway Server Errors
+  if (res.status >= 500) {
+    return "System error, please try again sometime";
+  }
+
+  // 2. 401 Unauthorized / Session Expired
+  if (res.status === 401) {
+    try {
+      const body = await res.clone().json();
+      const desc = body?.detail?.description || body?.detail?.msg || (typeof body?.detail === "string" ? body.detail : null);
+      if (desc && !desc.toLowerCase().includes("internal") && !desc.toLowerCase().includes("error")) {
+        return desc;
+      }
+    } catch { /* ignore */ }
+    return "Session expired. Please log in again to continue.";
+  }
+
+  // 3. 400, 422 and other client error details
   try {
     const body = await res.json();
     
+    // Check nested detail object or array
     if (typeof body?.detail === "object" && body?.detail !== null) {
-      const msg = body.detail.msg;
+      // Pydantic validation errors list
+      if (Array.isArray(body.detail)) {
+        const errorMsgs = body.detail.map((item: any) => {
+          if (typeof item === "string") return item;
+          const field = Array.isArray(item?.loc) ? item.loc[item.loc.length - 1] : "";
+          const msg = item?.msg || item?.description || JSON.stringify(item);
+          return field && field !== "body" ? `${field}: ${msg}` : msg;
+        }).filter(Boolean);
+        if (errorMsgs.length > 0) return errorMsgs.join(", ");
+      }
+
+      // Backend custom HTTP exception dictionary: { title, msg, description, ... }
       const desc = body.detail.description;
-      if (msg && desc) return `${msg}: ${desc}`;
-      return desc || msg || `Request failed (${res.status})`;
+      const msg = body.detail.msg;
+      if (desc && typeof desc === "string" && desc.trim()) {
+        return desc;
+      }
+      if (msg && typeof msg === "string" && msg.trim()) {
+        return msg;
+      }
+      if (body.detail.error && typeof body.detail.error === "string") {
+        return body.detail.error;
+      }
+      return JSON.stringify(body.detail);
     }
     
-    if (typeof body?.detail === "string") return body.detail;
-    if (typeof body?.description === "string") return body.description;
-    if (typeof body?.msg === "string") return body.msg;
-    if (typeof body?.message === "string") return body.message;
+    // Direct detail string
+    if (typeof body?.detail === "string" && body.detail.trim()) {
+      return body.detail;
+    }
     
+    // Top-level description, msg, error, or message
+    if (typeof body?.description === "string" && body.description.trim()) {
+      return body.description;
+    }
+    if (typeof body?.msg === "string" && body.msg.trim()) {
+      return body.msg;
+    }
+    if (typeof body?.message === "string" && body.message.trim()) {
+      return body.message;
+    }
+    if (typeof body?.error === "string" && body.error.trim()) {
+      return body.error;
+    }
+
+    if (res.status === 400) return "Invalid request. Please check the entered details.";
+    if (res.status === 422) return "Validation error. Please verify the submitted data.";
+    if (res.status === 403) return "You do not have permission to perform this action.";
+    if (res.status === 404) return "Requested resource was not found.";
+
     return `Request failed (${res.status})`;
   } catch {
+    if (res.status === 400) return "Invalid request. Please check the entered details.";
+    if (res.status === 422) return "Validation error. Please verify the submitted data.";
+    if (res.status === 401) return "Session expired. Please log in again to continue.";
+    if (res.status === 403) return "You do not have permission to perform this action.";
+    if (res.status === 404) return "Requested resource was not found.";
     return `Request failed (${res.status})`;
   }
 };
@@ -43,40 +106,7 @@ const handleLogout = () => {
 };
 
 let isRefreshing = false;
-let isPrompting = false;
-let promptQueue: Array<(val: boolean) => void> = [];
 let failedQueue: Array<(success: boolean) => void> = [];
-
-async function askUserToRestart(): Promise<boolean> {
-  if (isPrompting) {
-    return new Promise(resolve => promptQueue.push(resolve));
-  }
-  isPrompting = true;
-  
-  return new Promise(resolve => {
-    // If we're not in a browser environment or the event is somehow not caught, fallback
-    let handled = false;
-    
-    const resolveAndClean = (result: boolean) => {
-      if (handled) return;
-      handled = true;
-      isPrompting = false;
-      promptQueue.forEach(cb => cb(result));
-      promptQueue = [];
-      resolve(result);
-    };
-
-    const event = new CustomEvent("session-expired", {
-      detail: { resolve: resolveAndClean }
-    });
-    window.dispatchEvent(event);
-
-    // Fallback: if no listener handles it within 1 second, just assume false (logout)
-    setTimeout(() => {
-      if (!handled) resolveAndClean(false);
-    }, 1000);
-  });
-}
 
 async function handleTokenRefresh(): Promise<boolean> {
   if (isRefreshing) {
@@ -85,18 +115,12 @@ async function handleTokenRefresh(): Promise<boolean> {
     });
   }
 
-  // Ask for user confirmation via the modal
-  const userWantsToRestart = await askUserToRestart();
-  if (!userWantsToRestart) {
-    // They rejected or it failed
-    return false;
-  }
-
-  // User accepted, proceed with actual token refresh
   isRefreshing = true;
   const refreshToken = localStorage.getItem("refresh_token");
   if (!refreshToken) {
     isRefreshing = false;
+    failedQueue.forEach(cb => cb(false));
+    failedQueue = [];
     return false;
   }
 
@@ -115,7 +139,9 @@ async function handleTokenRefresh(): Promise<boolean> {
 
     if (refreshRes.ok) {
       const refreshData = await refreshRes.json();
-      localStorage.setItem("auth_token", refreshData.access_token);
+      if (refreshData.access_token) {
+        localStorage.setItem("auth_token", refreshData.access_token);
+      }
       if (refreshData.refresh_token) {
         localStorage.setItem("refresh_token", refreshData.refresh_token);
       }
@@ -298,9 +324,11 @@ export const apiClient = {
   get: (endpoint: string, params?: Record<string, string>) => request({ method: "GET", endpoint, params }),
   post: (endpoint: string, body: unknown, params?: Record<string, string>) => request({ method: "POST", endpoint, body, params }),
   put: (endpoint: string, body: unknown, params?: Record<string, string>) => request({ method: "PUT", endpoint, body, params }),
+  patch: (endpoint: string, body?: unknown, params?: Record<string, string>) => request({ method: "PATCH", endpoint, body, params }),
   delete: (endpoint: string, body?: unknown) => request({ method: "DELETE", endpoint, body }),
   /** DELETE with query params instead of body (e.g. image delete by URL) */
   deleteWithParams: (endpoint: string, params?: Record<string, string>) => request({ method: "DELETE", endpoint, params }),
   /** POST multipart form-data for file uploads */
   postFormData: (endpoint: string, formData: FormData) => requestFormData(endpoint, formData),
 };
+

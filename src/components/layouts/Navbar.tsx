@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Bell,
@@ -22,7 +22,7 @@ import {
   Users,
   Printer,
 } from "lucide-react";
-import { notificationApi } from "@/services/api/notification";
+import { useNotifications } from "@/context/NotificationContext";
 
 // -----------------------------
 // Route Config
@@ -47,8 +47,6 @@ const SEARCHABLE_ROUTES = [
   { name: "Settings", path: "/settings", icon: Settings2 },
 ];
 
-
-
 // -----------------------------
 // Navbar
 // -----------------------------
@@ -60,76 +58,9 @@ export const Navbar = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
-
-  // Notifications
-  const [latestNotification, setLatestNotification] = useState<{ title: string; message: string } | null>(null);
-  const [isIslandExpanded, setIsIslandExpanded] = useState(false);
-
-  // A ref to keep track of all seen notification IDs
-  const seenNotifIds = useRef<Set<string>>(new Set());
-  // A ref to store the queue of incoming notifications
-  const notifQueue = useRef<{ id: string; title: string; message: string }[]>([]);
-  // A ref to track if we're currently animating a notification
-  const isAnimating = useRef(false);
-
-  const processQueue = useCallback(() => {
-    if (isAnimating.current || notifQueue.current.length === 0) return;
-
-    isAnimating.current = true;
-    const nextNotif = notifQueue.current.shift()!;
-    setLatestNotification(nextNotif);
-    setIsIslandExpanded(true);
-
-    // Hide after 4 seconds
-    setTimeout(() => {
-      setIsIslandExpanded(false);
-      // Wait for the hide animation to finish, then process the next one
-      setTimeout(() => {
-        isAnimating.current = false;
-        processQueue();
-      }, 500); // 500ms for CSS transition
-    }, 4000);
-  }, []);
-
-  useEffect(() => {
-    const userId = localStorage.getItem("user_id");
-    if (!userId) return;
-
-    let isFirstLoad = true;
-
-    const fetchNotifs = async () => {
-      try {
-        const data = await notificationApi.getNotifications(userId);
-        if (data && Array.isArray(data)) {
-          if (isFirstLoad) {
-            // First load: just record seen IDs and set the latest as current without animating
-            data.forEach((n: any) => seenNotifIds.current.add(n.id));
-            if (data.length > 0) {
-              setLatestNotification(data[0]);
-            }
-            isFirstLoad = false;
-          } else {
-            // Subsequent loads: find new notifications
-            // Since data is usually newest first, we reverse it to queue older new messages first
-            const newNotifs = data.filter((n: any) => !seenNotifIds.current.has(n.id)).reverse();
-            if (newNotifs.length > 0) {
-              newNotifs.forEach((n: any) => {
-                seenNotifIds.current.add(n.id);
-                notifQueue.current.push(n);
-              });
-              processQueue();
-            }
-          }
-        }
-      } catch (e) { }
-    };
-
-    fetchNotifs();
-    const interval = setInterval(fetchNotifs, 10000); // 10s poll
-    return () => clearInterval(interval);
-  }, [processQueue]);
-
-
+  // Real-time WebSocket Notifications from Context
+  const { unreadCount, notifications, latestNotification, isIslandExpanded } = useNotifications();
+  const lastNotification = latestNotification || notifications[0] || null;
 
   // Filter routes
   const filteredRoutes = SEARCHABLE_ROUTES.filter((route) =>
@@ -171,8 +102,6 @@ export const Navbar = () => {
 
   return (
     <>
-
-
       <div className="sticky top-0 z-40 w-full flex items-center justify-between px-4 lg:px-6 bg-white/80 backdrop-blur-md border-b border-slate-200/60 shadow-sm h-14">
 
         {/* Search */}
@@ -206,19 +135,19 @@ export const Navbar = () => {
                     Quick Navigation
                   </p>
                   {filteredRoutes.map((route) => (
-                      <button
-                        key={route.path}
-                        onClick={() => handleNavigate(route.path)}
-                        className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg md:hover:bg-blue-50 text-sm group md:transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="text-slate-700 group-hover:text-blue-700 font-semibold">
-                            {route.name}
-                          </span>
-                        </div>
-                        <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 md:group-hover:opacity-100 md:group-hover:translate-x-0 text-blue-600 md:transition-all md:duration-200" />
-                      </button>
-                    ))}
+                    <button
+                      key={route.path}
+                      onClick={() => handleNavigate(route.path)}
+                      className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg md:hover:bg-blue-50 text-sm group md:transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-slate-700 group-hover:text-blue-700 font-semibold">
+                          {route.name}
+                        </span>
+                      </div>
+                      <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 md:group-hover:opacity-100 md:group-hover:translate-x-0 text-blue-600 md:transition-all md:duration-200" />
+                    </button>
+                  ))}
                 </div>
               ) : (
                 <div className="p-8 text-center">
@@ -235,24 +164,26 @@ export const Navbar = () => {
 
         {/* RIGHT - Actions */}
         <div className="flex items-center gap-2 sm:gap-4">
-
-
-
           <div className="flex items-center gap-1">
             <Link to="/notifications" className="group">
-              <button className="relative flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 backdrop-blur-md hover:bg-blue-500/20 text-blue-600 rounded-full transition-all duration-300 ease-out shadow-sm overflow-hidden border border-blue-500/20">
+              <button 
+                className="relative flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 backdrop-blur-md hover:bg-blue-500/20 text-blue-600 rounded-full transition-all duration-300 ease-out shadow-sm overflow-hidden border border-blue-500/20"
+                title="View Notifications"
+              >
                 <div className="relative flex shrink-0 items-center justify-center">
                   <Bell className="w-4 h-4 text-blue-600 group-hover:text-blue-800 transition-colors" />
-                  {latestNotification && (
-                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-rose-500 rounded-full shadow-[0_0_0_2px_white] transition-shadow animate-pulse"></span>
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[14px] h-[14px] px-0.5 bg-rose-500 text-white text-[9px] font-black rounded-full flex items-center justify-center shadow-sm animate-pulse">
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
                   )}
                 </div>
-                <div className={`flex flex-col items-start transition-all duration-500 ease-out overflow-hidden whitespace-nowrap ${isIslandExpanded ? 'w-[130px] opacity-100' : 'w-0 opacity-0 group-hover:w-[130px] group-hover:opacity-100'}`}>
+                <div className={`flex flex-col items-start transition-all duration-500 ease-out overflow-hidden whitespace-nowrap ${isIslandExpanded ? 'w-[180px] opacity-100' : 'w-0 opacity-0 group-hover:w-[180px] group-hover:opacity-100'}`}>
                   <span className="text-[9px] font-extrabold text-blue-500/80 uppercase tracking-wider leading-none mb-0.5">
-                    {latestNotification ? "New Message" : "Notifications"}
+                    {latestNotification ? "New Alert" : (unreadCount > 0 ? `${unreadCount} Unread` : "Notifications")}
                   </span>
-                  <span className="text-[11px] font-semibold text-blue-900 leading-none truncate w-full text-left">
-                    {latestNotification ? (latestNotification.title || latestNotification.message) : "No new alerts"}
+                  <span className="text-[11px] font-semibold text-blue-900 leading-none truncate w-full text-left" title={lastNotification ? (lastNotification.title || lastNotification.message) : "All caught up"}>
+                    {lastNotification ? (lastNotification.title || lastNotification.message) : "All caught up"}
                   </span>
                 </div>
               </button>
@@ -262,13 +193,11 @@ export const Navbar = () => {
                 <Settings className="w-5 h-5 md:group-hover:rotate-45 md:transition-transform md:duration-300" />
               </button>
             </Link>
-
           </div>
-
         </div>
       </div>
 
-      {/* Dynamic CSS animations for Navbar text slideshow and shimmer */}
+      {/* Dynamic CSS animations */}
       <style>{`
         @keyframes slideText {
           0%, 28% { transform: translateY(0); }

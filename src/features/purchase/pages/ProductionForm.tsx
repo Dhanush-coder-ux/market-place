@@ -382,7 +382,7 @@ const ProductionForm = () => {
               
               <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black text-slate-500   ml-1">Location / Floor *</label>
+                  <label className="text-[10px] font-black text-slate-500   ml-1">Location / Floor <span className="normal-case font-normal text-slate-400">(optional)</span></label>
                   <div className="relative group">
                     <MapPin size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-blue-500 transition-colors z-10" />
                     <ReusableSelect
@@ -400,7 +400,7 @@ const ProductionForm = () => {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black text-slate-500   ml-1">Supervisor *</label>
+                  <label className="text-[10px] font-black text-slate-500   ml-1">Supervisor <span className="normal-case font-normal text-slate-400">(optional)</span></label>
                   <div className="relative group">
                     <User size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-blue-500 transition-colors z-10" />
                     <ReusableSelect
@@ -426,13 +426,13 @@ const ProductionForm = () => {
                 />
 
                 <Input
-                  label="Batch # (Auto-generated)"
+                  label="Batch # (optional)"
                   value={productionDetails.batchNo}
                   onChange={(e) => setProductionDetails({ ...productionDetails, batchNo: e.target.value })}
                 />
 
                 <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black text-slate-500   ml-1">Process Status</label>
+                  <label className="text-[10px] font-black text-slate-500   ml-1">Process Status <span className="normal-case font-normal text-slate-400">(optional)</span></label>
                   <div className="relative group">
                     <ClipboardList size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-blue-500 transition-colors z-10" />
                     <ReusableSelect

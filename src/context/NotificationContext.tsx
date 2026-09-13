@@ -120,11 +120,24 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
       }
 
       const connectionKey = `${effectiveId}_${shopId || ""}`;
-      // Determine WS URL (Port 8009 for Hyperlocal-Notification-Service)
-      const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsHost = window.location.hostname || "localhost";
+      
+      // Determine WebSocket URL from environment gateway URL or fallback
+      const getWsBaseUrl = () => {
+        const envWs = import.meta.env.VITE_WS_URL;
+        if (envWs) return envWs.replace(/\/+$/, "");
+
+        const gatewayUrl = (import.meta.env.VITE_GATEWAY_URL || "https://marketplace.debuggers.co.in/api/").trim();
+        const base = gatewayUrl
+          .replace(/^http:\/\//i, "ws://")
+          .replace(/^https:\/\//i, "wss://")
+          .replace(/\/+$/, "");
+
+        return base;
+      };
+
+      const wsBase = getWsBaseUrl();
       const queryParam = shopId ? `?shop_id=${encodeURIComponent(shopId)}` : "";
-      const wsUrl = `${wsProtocol}//${wsHost}:8009/notifications/ws/${effectiveId}${queryParam}`;
+      const wsUrl = `${wsBase}/notifications/ws/${effectiveId}${queryParam}`;
 
       try {
         if (socketRef.current) {

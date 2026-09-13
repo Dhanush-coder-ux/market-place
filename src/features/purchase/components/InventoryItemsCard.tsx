@@ -880,7 +880,7 @@ export const InventoryItemsCard = ({
                               <SearchSelect
                                 labelKey="name"
                                 valueKey="id"
-                                fetchOptions={async (q) => await inventoryApi.searchInventories(q)}
+                                fetchOptions={async (q) => await inventoryApi.searchInventories(q, undefined, true)}
                                 options={product.inventory_id ? [{ id: product.inventory_id, name: product.name }] as any[] : []}
                                 value={product.inventory_id}
                                 onCreateNew={(query) => {

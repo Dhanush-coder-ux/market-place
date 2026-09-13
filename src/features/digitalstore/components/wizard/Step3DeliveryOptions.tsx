@@ -1,5 +1,5 @@
 import React from "react";
-import { IndianRupee, MapPin, ShoppingBag, Truck, Zap, Globe, Timer, Sparkles, ShieldCheck } from "lucide-react";
+import { IndianRupee, MapPin, ShoppingBag, Truck, Zap, Globe, Timer, Sparkles} from "lucide-react";
 import { StoreFormData } from "@/features/digitalstore/type";
 
 interface Step3Props {
@@ -8,7 +8,7 @@ interface Step3Props {
 }
 
 const DELIVERY_META: Record<
-  "instant" | "standard" | "nationwide",
+  "instant" | "standard" | "nationwide" | "pickuponly",
   {
     title: string;
     subtitle: string;
@@ -22,7 +22,7 @@ const DELIVERY_META: Record<
   }
 > = {
   standard: {
-    title: "Normal Delivery",
+    title: "Standard Delivery",
     subtitle: "Standard shipping option for your regular orders",
     badge: "Standard",
     icon: Truck,
@@ -33,9 +33,9 @@ const DELIVERY_META: Record<
     defaultSpeed: "2–3 Business Days"
   },
   instant: {
-    title: "Express Delivery",
+    title: "Instant Delivery",
     subtitle: "Fast priority delivery for urgent customer orders",
-    badge: "Fast",
+    badge: "Instant",
     icon: Zap,
     accentColor: "text-amber-600",
     activeBg: "bg-amber-50/40",
@@ -44,15 +44,26 @@ const DELIVERY_META: Record<
     defaultSpeed: "Within 12 Hours"
   },
   nationwide: {
-    title: "Same-Day Delivery",
-    subtitle: "Deliver orders on the exact same day within your local radius",
-    badge: "Urgent",
+    title: "Nationwide Delivery",
+    subtitle: "Deliver orders across the country with our shipping partners",
+    badge: "Nationwide",
     icon: Globe,
     accentColor: "text-purple-600",
     activeBg: "bg-purple-50/40",
     activeBorder: "border-purple-400",
     badgeColor: "bg-purple-100 text-purple-700",
-    defaultSpeed: "Within 3–4 Hours"
+    defaultSpeed: "5-7 Business Days"
+  },
+  pickuponly: {
+    title: "Store Pickup",
+    subtitle: "Customers can pick up their orders directly from the store",
+    badge: "Pickup",
+    icon: ShoppingBag,
+    accentColor: "text-emerald-600",
+    activeBg: "bg-emerald-50/40",
+    activeBorder: "border-emerald-400",
+    badgeColor: "bg-emerald-100 text-emerald-700",
+    defaultSpeed: "Same Day"
   },
 };
 
@@ -179,45 +190,49 @@ function StoreDeliveryCardInner({
       {enabled && (
         <div className="px-5 pb-5 pt-0 border-t border-slate-200/60 animate-in slide-in-from-top-1 fade-in duration-200">
           <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <InputField
-              label="Minimum Order Value"
-              icon={ShoppingBag}
-              iconColor="text-amber-500"
-              value={data?.minOrderAmount}
-              onChange={(v) => updateDelivery("minOrderAmount", v)}
-              prefix="₹"
-              placeholder="0"
-            />
+            {meta.badge !== "Pickup" && (
+              <>
+                <InputField
+                  label="Minimum Order Value"
+                  icon={ShoppingBag}
+                  iconColor="text-amber-500"
+                  value={data?.minOrderAmount}
+                  onChange={(v) => updateDelivery("minOrderAmount", v)}
+                  prefix="₹"
+                  placeholder="0"
+                />
 
-            <InputField
-              label="Estimated Delivery Time"
-              icon={Timer}
-              iconColor="text-blue-500"
-              type="text"
-              value={data?.speed}
-              onChange={(v) => updateDelivery("speed", v)}
-              placeholder={meta.defaultSpeed}
-            />
+                <InputField
+                  label="Estimated Delivery Time"
+                  icon={Timer}
+                  iconColor="text-blue-500"
+                  type="text"
+                  value={data?.speed}
+                  onChange={(v) => updateDelivery("speed", v)}
+                  placeholder={meta.defaultSpeed}
+                />
 
-            <InputField
-              label="Delivery Charge"
-              icon={Truck}
-              iconColor="text-slate-500"
-              value={data?.chargePerKm}
-              onChange={(v) => updateDelivery("chargePerKm", v)}
-              prefix="₹"
-              placeholder="40"
-            />
+                <InputField
+                  label="Delivery Charge"
+                  icon={Truck}
+                  iconColor="text-slate-500"
+                  value={data?.chargePerKm}
+                  onChange={(v) => updateDelivery("chargePerKm", v)}
+                  prefix="₹"
+                  placeholder="40"
+                />
 
-            <InputField
-              label="Free Delivery Above"
-              icon={IndianRupee}
-              iconColor="text-emerald-500"
-              value={data?.freeThreshold}
-              onChange={(v) => updateDelivery("freeThreshold", v)}
-              prefix="₹"
-              placeholder="500"
-            />
+                <InputField
+                  label="Free Delivery Above"
+                  icon={IndianRupee}
+                  iconColor="text-emerald-500"
+                  value={data?.freeThreshold}
+                  onChange={(v) => updateDelivery("freeThreshold", v)}
+                  prefix="₹"
+                  placeholder="500"
+                />
+              </>
+            )}
 
             <InputField
               label="Delivery Radius (Optional)"
@@ -228,38 +243,6 @@ function StoreDeliveryCardInner({
               suffix="km"
               placeholder="10"
             />
-
-            {/* Delivery By */}
-            <div>
-              <label className="flex items-center gap-1.5 text-[11px] font-bold text-slate-600 mb-1.5 uppercase tracking-wide">
-                <ShieldCheck size={12} className="text-violet-500" />
-                Fulfillment Partner
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => updateDelivery("manageStore", true)}
-                  className={`py-2 px-3 text-xs font-semibold rounded-xl border transition-all ${
-                    data?.manageStore
-                      ? "bg-blue-50 border-blue-300 text-blue-700 shadow-xs"
-                      : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  In-House Staff
-                </button>
-                <button
-                  type="button"
-                  onClick={() => updateDelivery("manageStore", false)}
-                  className={`py-2 px-3 text-xs font-semibold rounded-xl border transition-all ${
-                    !data?.manageStore
-                      ? "bg-blue-50 border-blue-300 text-blue-700 shadow-xs"
-                      : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  3rd Party Partner
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       )}
@@ -269,7 +252,7 @@ function StoreDeliveryCardInner({
 
 export default function Step3DeliveryOptions({ form, setForm }: Step3Props) {
   const updateDelivery = (
-    type: "instant" | "standard" | "nationwide",
+    type: "instant" | "standard" | "nationwide" | "pickuponly",
     field: string,
     value: any
   ) => {
@@ -314,6 +297,11 @@ export default function Step3DeliveryOptions({ form, setForm }: Step3Props) {
 
       {/* Delivery cards */}
       <div className="space-y-4">
+        <StoreDeliveryCardInner
+          meta={DELIVERY_META.pickuponly}
+          data={form.deliveryOptions.pickuponly}
+          updateDelivery={(field, val) => updateDelivery("pickuponly", field, val)}
+        />
         <StoreDeliveryCardInner
           meta={DELIVERY_META.standard}
           data={form.deliveryOptions.standard}

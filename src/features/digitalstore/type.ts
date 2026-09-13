@@ -25,6 +25,7 @@ export interface StoreFormData {
     instant: DeliveryConfig;
     standard: DeliveryConfig;
     nationwide: DeliveryConfig;
+    pickuponly: DeliveryConfig;
   };
 
   // Step 3 Additions
@@ -32,6 +33,7 @@ export interface StoreFormData {
 }
 
 export interface DeliveryConfig {
+  id?: number;
   enabled: boolean;
   speed: string;
   freeThreshold: number;

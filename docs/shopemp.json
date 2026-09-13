@@ -160,6 +160,22 @@
               "default": "Asia/Kolkata",
               "title": "Timezone"
             }
+          },
+          {
+            "name": "visible_online",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Visible Online"
+            }
           }
         ],
         "responses": {
@@ -399,6 +415,456 @@
               ],
               "default": "Asia/Kolkata",
               "title": "Timezone"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/shops/by/ids": {
+      "post": {
+        "tags": [
+          "Shop CRUD"
+        ],
+        "summary": "Get Bulk By Ids",
+        "operationId": "get_bulk_by_ids_shops_by_ids_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetBulkShopsByIdSchema"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/shops/geofenced": {
+      "post": {
+        "tags": [
+          "Shop CRUD"
+        ],
+        "summary": "Get Geofenced Shops",
+        "operationId": "get_geofenced_shops_shops_geofenced_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetGeofencedShopsSchema"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/shops/{shop_id}/operating-hours": {
+      "post": {
+        "tags": [
+          "Shop CRUD"
+        ],
+        "summary": "Add Operating Hours",
+        "operationId": "add_operating_hours_shops__shop_id__operating_hours_post",
+        "parameters": [
+          {
+            "name": "shop_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Shop Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOperatingHoursSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Shop CRUD"
+        ],
+        "summary": "Get Operating Hours",
+        "operationId": "get_operating_hours_shops__shop_id__operating_hours_get",
+        "parameters": [
+          {
+            "name": "shop_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Shop Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/shops/operating-hours/{hours_id}": {
+      "put": {
+        "tags": [
+          "Shop CRUD"
+        ],
+        "summary": "Update Operating Hours",
+        "operationId": "update_operating_hours_shops_operating_hours__hours_id__put",
+        "parameters": [
+          {
+            "name": "hours_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Hours Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateOperatingHoursSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Shop CRUD"
+        ],
+        "summary": "Delete Operating Hours",
+        "operationId": "delete_operating_hours_shops_operating_hours__hours_id__delete",
+        "parameters": [
+          {
+            "name": "hours_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Hours Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/shops/{shop_id}/delivery": {
+      "post": {
+        "tags": [
+          "Shop CRUD"
+        ],
+        "summary": "Add Delivery Options",
+        "operationId": "add_delivery_options_shops__shop_id__delivery_post",
+        "parameters": [
+          {
+            "name": "shop_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Shop Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDeliverySchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Shop CRUD"
+        ],
+        "summary": "Get Delivery Options",
+        "operationId": "get_delivery_options_shops__shop_id__delivery_get",
+        "parameters": [
+          {
+            "name": "shop_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Shop Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/shops/delivery/{delivery_id}": {
+      "put": {
+        "tags": [
+          "Shop CRUD"
+        ],
+        "summary": "Update Delivery Options",
+        "operationId": "update_delivery_options_shops_delivery__delivery_id__put",
+        "parameters": [
+          {
+            "name": "delivery_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Delivery Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDeliverySchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Shop CRUD"
+        ],
+        "summary": "Delete Delivery Options",
+        "operationId": "delete_delivery_options_shops_delivery__delivery_id__delete",
+        "parameters": [
+          {
+            "name": "delivery_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Delivery Id"
             }
           }
         ],
@@ -949,8 +1415,117 @@
               "default": "Asia/Kolkata",
               "title": "Timezone"
             }
+          },
+          {
+            "name": "from_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From Date"
+            }
+          },
+          {
+            "name": "to_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To Date"
+            }
+          },
+          {
+            "name": "role",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Role"
+            }
+          },
+          {
+            "name": "department",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Department"
+            }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/employees/bulk": {
+      "post": {
+        "tags": [
+          "Employee CRUD"
+        ],
+        "summary": "Create Bulk",
+        "operationId": "create_bulk_employees_bulk_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "items": {
+                  "$ref": "#/components/schemas/CreateEmployeeSchema"
+                },
+                "type": "array",
+                "title": "Data"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -1148,6 +1723,27 @@
         }
       }
     },
+    "/employees/modules/allowed": {
+      "get": {
+        "tags": [
+          "Employee CRUD"
+        ],
+        "summary": "Get Modules Allowed",
+        "operationId": "get_modules_allowed_employees_modules_allowed_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/employees/by/shop/{shop_id}": {
       "get": {
         "tags": [
@@ -1233,6 +1829,70 @@
               "default": "Asia/Kolkata",
               "title": "Timezone"
             }
+          },
+          {
+            "name": "from_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From Date"
+            }
+          },
+          {
+            "name": "to_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To Date"
+            }
+          },
+          {
+            "name": "role",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Role"
+            }
+          },
+          {
+            "name": "department",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Department"
+            }
           }
         ],
         "responses": {
@@ -1300,6 +1960,57 @@
               ],
               "default": "Asia/Kolkata",
               "title": "Timezone"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/employees/internal/role/{shop_id}/{user_id}": {
+      "get": {
+        "tags": [
+          "Employee CRUD"
+        ],
+        "summary": "Internal Get User Role",
+        "operationId": "internal_get_user_role_employees_internal_role__shop_id___user_id__get",
+        "parameters": [
+          {
+            "name": "shop_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Shop Id"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
             }
           }
         ],
@@ -1461,23 +2172,104 @@
             "$ref": "#/components/schemas/DeliveryTypeEnum"
           },
           "speed": {
-            "type": "string",
-            "title": "Speed"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speed",
+            "default": ""
           },
           "free_shipping_amount": {
-            "type": "number",
-            "title": "Free Shipping Amount"
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Free Shipping Amount",
+            "default": 0
+          },
+          "min_order_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Order Amount",
+            "default": 0
+          },
+          "delivery_charge": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivery Charge",
+            "default": 0
+          },
+          "charge_per_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Charge Per Km",
+            "default": 0
+          },
+          "radius": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Radius",
+            "default": 0
           },
           "delivery_by": {
-            "$ref": "#/components/schemas/DeliveryByEnum"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeliveryByEnum"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "PARTNERS"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled",
+            "default": true
           }
         },
         "type": "object",
         "required": [
-          "type",
-          "speed",
-          "free_shipping_amount",
-          "delivery_by"
+          "type"
         ],
         "title": "CreateDeliverySchema"
       },
@@ -1509,7 +2301,14 @@
             "title": "Email"
           },
           "department": {
-            "$ref": "#/components/schemas/EmployeeDepartmentEnums"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EmployeeDepartmentEnums"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "additional_infos": {
             "anyOf": [
@@ -1532,8 +2331,7 @@
           "role",
           "joined_date",
           "mobile_number",
-          "email",
-          "department"
+          "email"
         ],
         "title": "CreateEmployeeSchema"
       },
@@ -1717,7 +2515,8 @@
         "type": "string",
         "enum": [
           "INHOUSE",
-          "PARTNERS"
+          "PARTNERS",
+          "STORE"
         ],
         "title": "DeliveryByEnum"
       },
@@ -1727,7 +2526,10 @@
           "PICKUP_ONLY",
           "INSTANT",
           "STANDARD",
-          "NATIONWIDE"
+          "NATIONWIDE",
+          "NORMAL",
+          "EXPRESS",
+          "SAME_DAY"
         ],
         "title": "DeliveryTypeEnum"
       },
@@ -1799,6 +2601,91 @@
           "USER"
         ],
         "title": "EmployeeRoleEnums"
+      },
+      "GetBulkShopsByIdSchema": {
+        "properties": {
+          "shop_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Shop Ids"
+          },
+          "timezone": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TimeZoneEnum"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "Asia/Kolkata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "shop_ids"
+        ],
+        "title": "GetBulkShopsByIdSchema"
+      },
+      "GetGeofencedShopsSchema": {
+        "properties": {
+          "latitude": {
+            "type": "number",
+            "title": "Latitude"
+          },
+          "longitude": {
+            "type": "number",
+            "title": "Longitude"
+          },
+          "delivery_type": {
+            "$ref": "#/components/schemas/DeliveryTypeEnum"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit",
+            "default": 20
+          },
+          "offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offset",
+            "default": 1
+          },
+          "timezone": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TimeZoneEnum"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "Asia/Kolkata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "latitude",
+          "longitude",
+          "delivery_type"
+        ],
+        "title": "GetGeofencedShopsSchema"
       },
       "HTTPValidationError": {
         "properties": {
@@ -2092,6 +2979,120 @@
         ],
         "title": "UpdateAnnouncementSchema"
       },
+      "UpdateDeliverySchema": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeliveryTypeEnum"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "speed": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speed"
+          },
+          "free_shipping_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Free Shipping Amount"
+          },
+          "min_order_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Order Amount"
+          },
+          "delivery_charge": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivery Charge"
+          },
+          "charge_per_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Charge Per Km"
+          },
+          "radius": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Radius"
+          },
+          "delivery_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DeliveryByEnum"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          }
+        },
+        "type": "object",
+        "title": "UpdateDeliverySchema"
+      },
       "UpdateEmployeeSchema": {
         "properties": {
           "id": {
@@ -2176,6 +3177,53 @@
           "shop_id"
         ],
         "title": "UpdateEmployeeSchema"
+      },
+      "UpdateOperatingHoursSchema": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "open_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Open At"
+          },
+          "close_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Close At"
+          },
+          "day": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DayEnum"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "UpdateOperatingHoursSchema"
       },
       "UpdateShopSchema": {
         "properties": {

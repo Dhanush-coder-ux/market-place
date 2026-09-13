@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { StoreFormData } from "@/features/digitalstore/type";
 import { Clock, ChevronDown, Copy, Sun, Moon, Check } from "lucide-react";
+import { useBusinessApi } from "@/context/BusinessApiContext";
 
 interface Step2Props {
   form: StoreFormData;
@@ -265,8 +266,18 @@ const WEEKDAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"];
 const WEEKEND = ["SATURDAY", "SUNDAY"];
 
 export default function Step2OperatingHours({ form, setForm }: Step2Props) {
-  const toggleDay = (dayName: string, isOpen: boolean) => {
+  const { shop } = useBusinessApi();
+
+  const toggleDay = async (dayName: string, isOpen: boolean) => {
     if (isOpen) {
+      const existing = form.operatingHours.find(h => h.day === dayName);
+      if (existing?.id) {
+        try {
+          await shop.deleteOperatingHours(existing.id);
+        } catch (err) {
+          console.error(`Failed to delete operating hours for ${dayName}:`, err);
+        }
+      }
       setForm(prev => ({ ...prev, operatingHours: prev.operatingHours.filter(h => h.day !== dayName) }));
     } else {
       setForm(prev => ({ ...prev, operatingHours: [...prev.operatingHours, { day: dayName, open_at: "09:00:00+00:00", close_at: "21:00:00+00:00" }] }));

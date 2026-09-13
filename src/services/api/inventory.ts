@@ -140,11 +140,12 @@ export const inventoryApi = {
    * API response shape: { detail: { msg, status_code, success }, data: [ ...items ] }
    * Returns a normalized list with {id, name, stocks, sell_price, buy_price, barcode, unit}.
    */
-  searchInventories: async (query: string, isActive?: boolean): Promise<any[]> => {
+  searchInventories: async (query: string, isActive?: boolean, excludeNonTracking?: boolean): Promise<any[]> => {
     try {
       const params: Record<string, string> = { limit: '200', offset: '1' };
       if (query) params.q = query;
       if (isActive !== undefined) params.active = isActive ? 'true' : 'false';
+      if (excludeNonTracking) params.exclude_non_tracking = 'true';
 
       const response = await apiClient.get(`${INV}/by/shop/${SHOP_ID}`, params);
 

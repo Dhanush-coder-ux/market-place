@@ -24,6 +24,7 @@ import {
   Cell,
 } from "recharts";
 import { useBusinessApi } from "@/context/BusinessApiContext";
+import { useToast } from "@/context/ToastContext";
 import { apiClient } from "@/services/api/apiClient";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { CustomTooltip } from "../components/CustomTooltip";
@@ -169,6 +170,21 @@ const AnalyticsDashboard = () => {
   const [stats, setStats] = useState<UnifiedDashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const { showToast } = useToast();
+
+  const handleSync = async () => {
+    setIsSyncing(true);
+    try {
+      await apiClient.post(`${ENDPOINTS.ANALYTICS_DASHBOARD}sync?shop_id=${SHOP_ID}`, {});
+      showToast("Shop data synced successfully!", "success");
+      fetchStats();
+    } catch (err: any) {
+      showToast(err.message || "Failed to sync data", "error");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const [selectedSupplier, setSelectedSupplier] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
@@ -463,6 +479,17 @@ const AnalyticsDashboard = () => {
                 title="Refresh"
               >
                 <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-blue-600" : ""}`} />
+              </button>
+              
+              {/* Sync */}
+              <button
+                onClick={handleSync}
+                disabled={isSyncing}
+                className="h-9 px-4 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-xs hover:bg-blue-700 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Sync Data"
+              >
+                <Zap className={`w-4 h-4 mr-1.5 ${isSyncing ? "animate-pulse" : ""}`} />
+                {isSyncing ? "Syncing..." : "Sync"}
               </button>
             </div>
           </div>

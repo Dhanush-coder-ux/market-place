@@ -169,7 +169,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
   const fetchInventory = useCallback(async (q: string) => {
     setLoading(true);
     try {
-      const data = await inventoryApi.searchInventories(q, true);
+      const data = await inventoryApi.searchInventories(q);
       const mapped = data.map((p: any) => {
         let computedStock = Number(p.stock_infos?.available_stocks ?? p.stock_infos?.physical_stocks ?? p.stocks ?? 0);
         let computedPrice = p.pricing_infos?.sell_price ?? p.sell_price ?? 0;

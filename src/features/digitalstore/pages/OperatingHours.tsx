@@ -262,8 +262,16 @@ export default function OperatingHours({ onStatusChange }: { onStatusChange?: (s
     }).catch(err => console.error("Failed to load operating hours:", err));
   }, []);
 
-  const toggleDay = (dayName: string, isOpen: boolean) => {
+  const toggleDay = async (dayName: string, isOpen: boolean) => {
     if (isOpen) {
+      const existing = operatingHours.find(h => h.day === dayName);
+      if (existing?.id) {
+        try {
+          await shop.deleteOperatingHours(existing.id);
+        } catch (err) {
+          console.error(`Failed to delete operating hours for ${dayName}:`, err);
+        }
+      }
       setOperatingHours(prev => prev.filter(h => h.day !== dayName));
     } else {
       setOperatingHours(prev => [...prev, { day: dayName, open_at: "09:00:00+00:00", close_at: "21:00:00+00:00" }]);
@@ -302,37 +310,26 @@ export default function OperatingHours({ onStatusChange }: { onStatusChange?: (s
     setIsSaving(true);
     try {
       const currentRes = await shop.getOperatingHours(SHOP_ID);
-      let currentIds: Record<string, number> = {};
+      
+      // Delete all existing operating hours
       if (currentRes && currentRes.data && Array.isArray(currentRes.data)) {
-         currentRes.data.forEach((h: any) => { currentIds[h.day] = h.id; });
+         const deletePromises = currentRes.data.map((h: any) => 
+           shop.deleteOperatingHours(h.id).catch(e => console.error("Failed to delete", h.id, e))
+         );
+         await Promise.all(deletePromises);
       }
 
-      const activeDays = operatingHours.map(h => h.day);
-      
-      const promises = ALL_DAYS.map(async (day) => {
-        const isActive = activeDays.includes(day);
-        const config = operatingHours.find(h => h.day === day);
-        const id = currentIds[day];
-
-        if (!isActive) {
-          if (id) {
-            await shop.deleteOperatingHours(id);
-          }
-        } else if (config) {
-          const payload = {
-            day: day,
-            open_at: config.open_at.replace("+00:00", ""),
-            close_at: config.close_at.replace("+00:00", "")
-          };
-          if (id) {
-            await shop.updateOperatingHours(id, { ...payload, id });
-          } else {
-            await shop.createOperatingHours(SHOP_ID, payload);
-          }
-        }
+      // Create the current active ones
+      const createPromises = operatingHours.map(async (config) => {
+        const payload = {
+          day: config.day,
+          open_at: config.open_at.replace("+00:00", ""),
+          close_at: config.close_at.replace("+00:00", "")
+        };
+        return shop.createOperatingHours(SHOP_ID, payload);
       });
 
-      await Promise.all(promises);
+      await Promise.all(createPromises);
       
       const newRes = await shop.getOperatingHours(SHOP_ID);
       if (newRes && newRes.data && Array.isArray(newRes.data)) {

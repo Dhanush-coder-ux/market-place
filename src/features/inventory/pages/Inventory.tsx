@@ -423,8 +423,8 @@ const ProductRow = React.memo(
                   toggleExpand(item.id);
                 }}
                 className={`w-5 h-5 mx-auto rounded flex items-center justify-center transition-colors ${isExpanded
-                    ? "bg-blue-600 text-white"
-                    : "text-blue-300 hover:text-blue-500"
+                  ? "bg-blue-600 text-white"
+                  : "text-blue-300 hover:text-blue-500"
                   }`}
               >
                 {isExpanded ? (
@@ -500,8 +500,8 @@ const ProductRow = React.memo(
                       toggleExpand(item.id);
                     }}
                     className={`mt-1 flex items-center gap-2 w-fit px-2 py-1.5 rounded-xl border transition-all ${isExpanded
-                        ? "bg-slate-50 border-slate-200"
-                        : "bg-white border-slate-200 hover:border-blue-300 shadow-sm"
+                      ? "bg-slate-50 border-slate-200"
+                      : "bg-white border-slate-200 hover:border-blue-300 shadow-sm"
                       }`}
                   >
                     <div className="flex items-center gap-1.5">

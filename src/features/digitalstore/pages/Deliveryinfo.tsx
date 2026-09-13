@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { IndianRupee, MapPin, ShoppingBag, Truck, Zap, Globe, Timer, Check, Loader2, Sparkles, ShieldCheck } from "lucide-react";
+import { IndianRupee, MapPin, ShoppingBag, Truck, Zap, Globe, Timer, Check, Loader2, Sparkles } from "lucide-react";
 import { useBusinessApi } from "@/context/BusinessApiContext";
 import { SHOP_ID } from "@/services/endpoints";
 
@@ -16,8 +16,8 @@ export type DeliveryConfig = {
 };
 
 interface DeliveryCardMeta {
-  key: "normal" | "express" | "sameday";
-  backendType: "NORMAL" | "EXPRESS" | "SAME_DAY";
+  key: "normal" | "express" | "sameday" | "pickuponly";
+  backendType: "STANDARD" | "INSTANT" | "NATIONWIDE" | "PICKUP_ONLY";
   legacyBackendTypes: string[];
   title: string;
   subtitle: string;
@@ -32,10 +32,24 @@ interface DeliveryCardMeta {
 
 export const DELIVERY_OPTIONS_CONFIG: DeliveryCardMeta[] = [
   {
+    key: "pickuponly",
+    backendType: "PICKUP_ONLY",
+    legacyBackendTypes: ["PICKUP_ONLY"],
+    title: "Store Pickup",
+    subtitle: "Customers can pick up their orders directly from the store",
+    badge: "Pickup",
+    icon: ShoppingBag,
+    accentColor: "text-emerald-600",
+    activeBg: "bg-emerald-50/40",
+    activeBorder: "border-emerald-400",
+    badgeColor: "bg-emerald-100 text-emerald-700",
+    defaultSpeed: "Same Day"
+  },
+  {
     key: "normal",
-    backendType: "NORMAL",
+    backendType: "STANDARD",
     legacyBackendTypes: ["NORMAL", "STANDARD"],
-    title: "Normal Delivery",
+    title: "Standard Delivery",
     subtitle: "Standard shipping option for your regular orders",
     badge: "Standard",
     icon: Truck,
@@ -47,11 +61,11 @@ export const DELIVERY_OPTIONS_CONFIG: DeliveryCardMeta[] = [
   },
   {
     key: "express",
-    backendType: "EXPRESS",
+    backendType: "INSTANT",
     legacyBackendTypes: ["EXPRESS", "INSTANT"],
-    title: "Express Delivery",
+    title: "Instant Delivery",
     subtitle: "Fast priority delivery for urgent customer orders",
-    badge: "Fast",
+    badge: "Instant",
     icon: Zap,
     accentColor: "text-amber-600",
     activeBg: "bg-amber-50/40",
@@ -61,17 +75,17 @@ export const DELIVERY_OPTIONS_CONFIG: DeliveryCardMeta[] = [
   },
   {
     key: "sameday",
-    backendType: "SAME_DAY",
-    legacyBackendTypes: ["SAME_DAY", "NATIONWIDE", "PICKUP_ONLY"],
-    title: "Same-Day Delivery",
-    subtitle: "Deliver orders on the exact same day within your local radius",
-    badge: "Urgent",
+    backendType: "NATIONWIDE",
+    legacyBackendTypes: ["SAME_DAY", "NATIONWIDE"],
+    title: "Nationwide Delivery",
+    subtitle: "Deliver orders across the country with our shipping partners",
+    badge: "Nationwide",
     icon: Globe,
     accentColor: "text-purple-600",
     activeBg: "bg-purple-50/40",
     activeBorder: "border-purple-400",
     badgeColor: "bg-purple-100 text-purple-700",
-    defaultSpeed: "Within 3–4 Hours"
+    defaultSpeed: "5-7 Business Days"
   }
 ];
 
@@ -198,45 +212,49 @@ export function DeliveryCardInner({
       {enabled && (
         <div className="px-5 pb-5 pt-0 border-t border-slate-200/60 animate-in slide-in-from-top-1 fade-in duration-200">
           <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <InputField
-              label="Minimum Order Value"
-              icon={ShoppingBag}
-              iconColor="text-amber-500"
-              value={data.minOrderAmount}
-              onChange={(v) => onChange("minOrderAmount", v)}
-              prefix="₹"
-              placeholder="0"
-            />
+            {meta.badge !== "Pickup" && (
+              <>
+                <InputField
+                  label="Minimum Order Value"
+                  icon={ShoppingBag}
+                  iconColor="text-amber-500"
+                  value={data.minOrderAmount}
+                  onChange={(v) => onChange("minOrderAmount", v)}
+                  prefix="₹"
+                  placeholder="0"
+                />
 
-            <InputField
-              label="Estimated Delivery Time"
-              icon={Timer}
-              iconColor="text-blue-500"
-              type="text"
-              value={data.speed}
-              onChange={(v) => onChange("speed", v)}
-              placeholder={meta.defaultSpeed}
-            />
+                <InputField
+                  label="Estimated Delivery Time"
+                  icon={Timer}
+                  iconColor="text-blue-500"
+                  type="text"
+                  value={data.speed}
+                  onChange={(v) => onChange("speed", v)}
+                  placeholder={meta.defaultSpeed}
+                />
 
-            <InputField
-              label="Delivery Charge"
-              icon={Truck}
-              iconColor="text-slate-500"
-              value={data.deliveryCharge}
-              onChange={(v) => onChange("deliveryCharge", v)}
-              prefix="₹"
-              placeholder="40"
-            />
+                <InputField
+                  label="Delivery Charge"
+                  icon={Truck}
+                  iconColor="text-slate-500"
+                  value={data.deliveryCharge}
+                  onChange={(v) => onChange("deliveryCharge", v)}
+                  prefix="₹"
+                  placeholder="40"
+                />
 
-            <InputField
-              label="Free Delivery Above"
-              icon={IndianRupee}
-              iconColor="text-emerald-500"
-              value={data.freeThreshold}
-              onChange={(v) => onChange("freeThreshold", v)}
-              prefix="₹"
-              placeholder="500"
-            />
+                <InputField
+                  label="Free Delivery Above"
+                  icon={IndianRupee}
+                  iconColor="text-emerald-500"
+                  value={data.freeThreshold}
+                  onChange={(v) => onChange("freeThreshold", v)}
+                  prefix="₹"
+                  placeholder="500"
+                />
+              </>
+            )}
 
             <InputField
               label="Delivery Radius (Optional)"
@@ -247,38 +265,6 @@ export function DeliveryCardInner({
               suffix="km"
               placeholder="10"
             />
-
-            {/* Delivery By */}
-            <div>
-              <label className="flex items-center gap-1.5 text-[11px] font-bold text-slate-600 mb-1.5 uppercase tracking-wide">
-                <ShieldCheck size={12} className="text-violet-500" />
-                Fulfillment Partner
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => onChange("deliveryBy", "INHOUSE")}
-                  className={`py-2 px-3 text-xs font-semibold rounded-xl border transition-all ${
-                    data.deliveryBy === "INHOUSE"
-                      ? "bg-blue-50 border-blue-300 text-blue-700 shadow-xs"
-                      : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  In-House Staff
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onChange("deliveryBy", "PARTNERS")}
-                  className={`py-2 px-3 text-xs font-semibold rounded-xl border transition-all ${
-                    data.deliveryBy === "PARTNERS"
-                      ? "bg-blue-50 border-blue-300 text-blue-700 shadow-xs"
-                      : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  3rd Party Partner
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       )}
@@ -321,6 +307,16 @@ export default function DeliveryPreferences({ onStatusChange }: { onStatusChange
       chargePerKm: 0,
       deliveryBy: "INHOUSE",
     },
+    pickuponly: {
+      enabled: true,
+      speed: "Same Day",
+      minOrderAmount: 0,
+      deliveryCharge: 0,
+      freeThreshold: 0,
+      radius: 5,
+      chargePerKm: 0,
+      deliveryBy: "INHOUSE",
+    }
   });
 
   const [isLoading, setIsLoading] = useState(true);

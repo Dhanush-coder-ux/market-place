@@ -47,7 +47,8 @@ const INITIAL_STATE: StoreFormData = {
   deliveryOptions: {
     instant: { enabled: true, speed: "Within 12 hours", freeThreshold: 50, radius: 5, minOrderAmount: 100, chargePerKm: 15, manageStore: true, partners: true },
     standard: { enabled: false, speed: "1–2 Business Days", freeThreshold: 30, radius: 10, minOrderAmount: 150, chargePerKm: 10, manageStore: false, partners: true },
-    nationwide: { enabled: false, speed: "5–7 Business Days", freeThreshold: 100, radius: 100, minOrderAmount: 300, chargePerKm: 5, manageStore: false, partners: true }
+    nationwide: { enabled: false, speed: "5–7 Business Days", freeThreshold: 100, radius: 100, minOrderAmount: 300, chargePerKm: 5, manageStore: false, partners: true },
+    pickuponly: { enabled: true, speed: "Same Day", freeThreshold: 0, radius: 5, minOrderAmount: 0, chargePerKm: 0, manageStore: true, partners: false }
   },
   selectedProducts: {}
 };
@@ -81,25 +82,57 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
       shop.getShopById(currentShopId).then((res) => {
         if (res && res.data) {
           const s = res.data;
-          setForm((prev) => ({
-            ...prev,
-            name: s.name || prev.name,
-            tagline: s.tagline || prev.tagline,
-            description: s.description || prev.description,
-            category: s.categories?.[0] || prev.category,
-            address: s.address?.full_address || prev.address,
-            latitude: s.address?.latitude || prev.latitude,
-            longitude: s.address?.longitude || prev.longitude,
-            gstRegistered: !!s.business_infos?.gst_infos?.registered,
-            gstNumber: s.business_infos?.gst_infos?.number || "",
-            logoPreview: s.logo_url || prev.logoPreview,
-            bannerPreview: s.banner_url || prev.bannerPreview,
-            contactEmail: s.additional_infos?.emails?.[0] || prev.contactEmail,
-            contactPhone: s.additional_infos?.mobile_numbers?.[0] || prev.contactPhone,
-            website: s.additional_infos?.website || prev.website,
-            instagram: s.additional_infos?.instagram || prev.instagram,
-            twitter: s.additional_infos?.facebook || prev.twitter,
-          }));
+          setForm((prev) => {
+            const loadedOperatingHours = s.operating_hours?.length > 0 ? s.operating_hours : prev.operatingHours;
+            const loadedDeliveryOptions = JSON.parse(JSON.stringify(prev.deliveryOptions));
+            
+            if (s.delivery_options?.length > 0) {
+              s.delivery_options.forEach((d: any) => {
+                let key: "instant" | "standard" | "nationwide" | "pickuponly" | null = null;
+                if (d.type === "INSTANT" || d.type === "EXPRESS") key = "instant";
+                else if (d.type === "STANDARD" || d.type === "NORMAL") key = "standard";
+                else if (d.type === "NATIONWIDE" || d.type === "SAME_DAY") key = "nationwide";
+                else if (d.type === "PICKUP_ONLY") key = "pickuponly";
+                
+                if (key) {
+                  loadedDeliveryOptions[key] = {
+                    ...loadedDeliveryOptions[key],
+                    id: d.id,
+                    enabled: d.enabled !== false,
+                    speed: d.speed || loadedDeliveryOptions[key].speed,
+                    freeThreshold: d.free_shipping_amount ?? loadedDeliveryOptions[key].freeThreshold,
+                    radius: d.radius ?? loadedDeliveryOptions[key].radius,
+                    minOrderAmount: d.min_order_amount ?? loadedDeliveryOptions[key].minOrderAmount,
+                    chargePerKm: d.charge_per_km ?? loadedDeliveryOptions[key].chargePerKm,
+                    partners: d.delivery_by !== "INHOUSE",
+                    manageStore: d.delivery_by === "INHOUSE",
+                  };
+                }
+              });
+            }
+
+            return {
+              ...prev,
+              name: s.name || prev.name,
+              tagline: s.tagline || prev.tagline,
+              description: s.description || prev.description,
+              category: s.categories?.[0] || prev.category,
+              address: s.address?.full_address || prev.address,
+              latitude: s.address?.latitude || prev.latitude,
+              longitude: s.address?.longitude || prev.longitude,
+              gstRegistered: !!s.business_infos?.gst_infos?.registered,
+              gstNumber: s.business_infos?.gst_infos?.number || "",
+              logoPreview: s.logo_url || prev.logoPreview,
+              bannerPreview: s.banner_url || prev.bannerPreview,
+              contactEmail: s.additional_infos?.emails?.[0] || prev.contactEmail,
+              contactPhone: s.additional_infos?.mobile_numbers?.[0] || prev.contactPhone,
+              website: s.additional_infos?.website || prev.website,
+              instagram: s.additional_infos?.instagram || prev.instagram,
+              twitter: s.additional_infos?.facebook || prev.twitter,
+              operatingHours: loadedOperatingHours,
+              deliveryOptions: loadedDeliveryOptions,
+            };
+          });
         }
       }).catch(err => console.error("Failed to fetch shop:", err))
         .finally(() => setIsLoading(false));
@@ -148,8 +181,8 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
       const fullPayload = {
         ...payload,
         operating_hours: form.operatingHours,
-        delivery_options: Object.values(form.deliveryOptions).filter(d => d.enabled).map(d => ({
-          type: d.speed.includes("12 hours") ? "INSTANT" : d.speed.includes("1-2") ? "STANDARD" : "NATIONWIDE",
+        delivery_options: Object.entries(form.deliveryOptions).filter(([_, d]) => d.enabled).map(([key, d]) => ({
+          type: key === "instant" ? "INSTANT" : key === "standard" ? "STANDARD" : key === "pickuponly" ? "PICKUP_ONLY" : "NATIONWIDE",
           speed: d.speed,
           free_shipping_amount: d.freeThreshold,
           radius: d.radius,
@@ -165,7 +198,44 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
 
       // 1. Create or Update Shop
       if (currentShopId && currentShopId !== "string") {
-        await shop.updateShop({ id: currentShopId, ...fullPayload, visible_online: true });
+        await shop.updateShop({ id: currentShopId, ...payload, visible_online: true });
+
+        // Clean sweep: delete all existing operating hours, then recreate them
+        const currentOhRes = await shop.getOperatingHours(currentShopId);
+        if (currentOhRes?.data && Array.isArray(currentOhRes.data)) {
+          const ohDeletePromises = currentOhRes.data.map((h: any) => 
+            shop.deleteOperatingHours(h.id).catch(e => console.error("Failed to delete", h.id, e))
+          );
+          await Promise.all(ohDeletePromises);
+        }
+
+        const ohPromises = form.operatingHours.map(oh => {
+          return shop.createOperatingHours(currentShopId, oh);
+        });
+
+        // Safely update delivery options using PUT by ID
+        const doPromises = Object.entries(form.deliveryOptions).map(([key, d]) => {
+          const type = key === "instant" ? "INSTANT" : key === "standard" ? "STANDARD" : key === "pickuponly" ? "PICKUP_ONLY" : "NATIONWIDE";
+          const dPayload = {
+            type,
+            speed: d.speed,
+            free_shipping_amount: d.freeThreshold,
+            radius: d.radius,
+            min_order_amount: d.minOrderAmount,
+            charge_per_km: d.chargePerKm,
+            delivery_by: d.partners ? "PARTNERS" : "INHOUSE",
+            enabled: d.enabled
+          };
+          
+          if (d.id) {
+            return shop.updateDeliveryOption(d.id, { ...dPayload, id: d.id });
+          } else if (d.enabled) {
+            return shop.createDeliveryOption(currentShopId, dPayload);
+          }
+          return Promise.resolve();
+        });
+
+        await Promise.all([...ohPromises, ...doPromises]);
       } else {
         const res = await shop.createShop({ ...fullPayload, visible_online: true });
         newShopId = res.data?.id || res.id;

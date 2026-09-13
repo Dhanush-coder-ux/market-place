@@ -1,3 +1,4 @@
+import { useToast } from "@/context/ToastContext";
 import { useEffect, useState } from "react";
 import { StoreFormData } from "@/features/digitalstore/type";
 import { Check, ChevronLeft, ChevronRight, Store, Clock, MapPin, Package, CheckCircle2, Rocket } from "lucide-react";
@@ -69,6 +70,7 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
   const navigate = useNavigate();
   const { shop } = useBusinessApi();
   const { setBottomActions } = useHeader();
+  const { showToast } = useToast();
 
   useEffect(() => {
     if (existingData) {
@@ -198,7 +200,7 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
 
       // 1. Create or Update Shop
       if (currentShopId && currentShopId !== "string") {
-        await shop.updateShop({ id: currentShopId, ...payload, visible_online: true });
+        await shop.updateShop({ id: currentShopId, ...fullPayload, visible_online: true });
 
         // Clean sweep: delete all existing operating hours, then recreate them
         const currentOhRes = await shop.getOperatingHours(currentShopId);
@@ -262,8 +264,10 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
         }
       }
       return newShopId;
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to save draft", err);
+      const msg = err?.detail?.description || err?.detail?.msg || err?.message || "Failed to save shop details";
+      showToast(msg, "error");
       return null;
     } finally {
       setIsLoading(false);
@@ -317,9 +321,10 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
 
         navigate("/profile");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to create shop", err);
-      alert("Failed to create shop");
+      const msg = err?.detail?.description || err?.detail?.msg || err?.message || "Failed to launch shop";
+      showToast(msg, "error");
     } finally {
       setIsLoading(false);
     }

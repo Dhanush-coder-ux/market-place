@@ -490,7 +490,6 @@ const ProductDashboard = () => {
     try {
       setLoading(true);
       const res = await inventoryApi.getInventoriesByShop(SHOP_ID, {
-        active: "true",
         limit: currentLimit.toString(),
         offset: currentPage.toString()
       });

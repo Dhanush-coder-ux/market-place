@@ -1,3 +1,4 @@
+import { useToast } from "@/context/ToastContext";
 import { useState, useRef, useEffect } from "react";
 import {
   Megaphone, RefreshCw, Gift, Sparkles,
@@ -189,6 +190,7 @@ function DeleteModal({
 // ─── Main Component ────────────────────────────────────────────────────────────
 
 export default function AnnouncementsPage() {
+  const { showToast } = useToast();
   const { shop } = useBusinessApi();
   const [editingId, setEditingId] = useState<number | null>(null);
   const [text, setText] = useState("");
@@ -299,7 +301,7 @@ export default function AnnouncementsPage() {
       setTimeout(() => { setSent(false); resetForm(); }, 1800);
     } catch (err) {
       console.error(err);
-      alert("Failed to save announcement.");
+      showToast("Failed to save announcement", "error");
     } finally {
       setIsSaving(false);
     }
@@ -349,7 +351,7 @@ export default function AnnouncementsPage() {
         setDeleteTarget(null);
       } catch (err) {
         console.error(err);
-        alert("Failed to delete.");
+        showToast("Failed to delete announcement", "error");
       } finally {
         setIsSaving(false);
       }

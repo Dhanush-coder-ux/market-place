@@ -1,3 +1,4 @@
+import { useToast } from "@/context/ToastContext";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Clock, ChevronDown, Copy, Sun, Moon, Check, Timer, CheckCircle2 } from "lucide-react";
@@ -244,6 +245,7 @@ const WEEKDAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"];
 const WEEKEND = ["SATURDAY", "SUNDAY"];
 
 export default function OperatingHours({ onStatusChange }: { onStatusChange?: (status: React.ReactNode) => void }) {
+  const { showToast } = useToast();
   const { shop } = useBusinessApi();
   const [operatingHours, setOperatingHours] = useState<Array<{ day: string, open_at: string, close_at: string, id?: number }>>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -342,10 +344,10 @@ export default function OperatingHours({ onStatusChange }: { onStatusChange?: (s
         setOperatingHours(hours.filter((h: any) => ALL_DAYS.includes(h.day as any)));
       }
 
-      alert("Operating hours saved successfully!");
+      showToast("Operating hours saved successfully!", "success");
     } catch (err) {
       console.error("Failed to save operating hours", err);
-      alert("Failed to save operating hours");
+      showToast("Failed to save operating hours", "error");
     } finally {
       setIsSaving(false);
     }

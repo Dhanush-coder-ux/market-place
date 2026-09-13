@@ -132,7 +132,7 @@ export default function Step3Products({ form, setForm }: Step3Props) {
 
   // Load products
   useEffect(() => {
-    getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}?limit=50&offset=1&active=true`).then((res) => {
+    getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}?limit=50&offset=1`).then((res) => {
       const items = res?.data || res?.datas || [];
       if (Array.isArray(items)) setProducts(items);
     });

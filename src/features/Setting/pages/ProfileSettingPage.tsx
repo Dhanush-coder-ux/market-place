@@ -126,9 +126,9 @@ export const ProfileSettingsPage = () => {
         await shopApi.updateShop(payload);
         showToast("GST configuration updated successfully", "success");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      showToast("Failed to sync GST configuration with backend", "error");
+      showToast(err?.message || "Failed to sync GST configuration with backend", "error");
     } finally {
       setGstConfirmLoading(false);
     }

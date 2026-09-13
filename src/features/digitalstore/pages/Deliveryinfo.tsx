@@ -1,3 +1,4 @@
+import { useToast } from "@/context/ToastContext";
 import React, { useState, useEffect } from "react";
 import { IndianRupee, MapPin, ShoppingBag, Truck, Zap, Globe, Timer, Check, Loader2, Sparkles } from "lucide-react";
 import { useBusinessApi } from "@/context/BusinessApiContext";
@@ -273,6 +274,7 @@ export function DeliveryCardInner({
 }
 
 export default function DeliveryPreferences({ onStatusChange }: { onStatusChange?: (status: React.ReactNode) => void }) {
+  const { showToast } = useToast();
   const { shop } = useBusinessApi();
   const currentShopId = localStorage.getItem("shop_id") || SHOP_ID;
 
@@ -400,7 +402,7 @@ export default function DeliveryPreferences({ onStatusChange }: { onStatusChange
 
   const handleSave = async () => {
     if (!currentShopId || currentShopId === "string") {
-      alert("Please select or create a store first.");
+      showToast("Please select or create a store first.", "error");
       return;
     }
 
@@ -445,7 +447,7 @@ export default function DeliveryPreferences({ onStatusChange }: { onStatusChange
       setTimeout(() => setSaveSuccess(false), 4000);
     } catch (err) {
       console.error("Failed to save delivery preferences:", err);
-      alert("Failed to save delivery options. Please check your backend connection.");
+      showToast("Failed to save delivery options", "error");
     } finally {
       setIsSaving(false);
     }

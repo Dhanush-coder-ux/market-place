@@ -27,6 +27,13 @@ export const supplierApi = {
     shop_id: string;
     outstanding_infos: { amount: number };
     type: 'INCREMENT' | 'DECREMENT' | 'DIRECT';
+    entity_name?: string;
+    entity_id?: string;
+    invoice_no?: string;
+    payment_method?: string;
+    notes?: string;
+    cleared_amount?: number;
+    outstanding_amount?: number;
   }) => {
     return await apiClient.put(`${ENDPOINTS.SUPPLIERS}/outstanding`, data);
   },

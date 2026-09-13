@@ -74,7 +74,7 @@ const ProfileHero: React.FC<ProfileHeroProps> = ({
             {/* Address */}
             <div className="flex items-center gap-1.5 text-sm text-white/55 mb-3">
               <MapPin size={13} className="shrink-0 text-white/40" />
-              <span className="truncate">{address}</span>
+              <span className="truncate">{typeof address === "object" ? ((address as any)?.full_address || "Address not set") : (address || "Address not set")}</span>
             </div>
 
             {/* Taxonomy badges */}

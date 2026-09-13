@@ -99,4 +99,23 @@ export const purchaseApi = {
     if (!shopId || !id) throw new Error("Shop ID and Purchase ID are required.");
     return await apiClient.post(`${ENDPOINTS.PURCHASES}/cancel`, { id, shop_id: shopId });
   },
+
+  /**
+   * Record payment for a purchase without hitting update limits
+   */
+  recordPayment: async (data: {
+    purchase_id?: string;
+    id?: string;
+    shop_id: string;
+    amount: number;
+    payment_method?: string;
+    reference_no?: string;
+    notes?: string;
+    supplier_id?: string;
+    invoice_no?: string;
+    date?: string;
+  }) => {
+    return await apiClient.put(`${ENDPOINTS.PURCHASES}/payment`, data);
+  },
+
 };

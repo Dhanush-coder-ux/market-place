@@ -129,51 +129,26 @@ export default function SupplierDetail() {
     if (!selectedPurchase || !clearAmount || !id) return;
     setClearSaving(true);
     try {
-      const fullRes = await purchaseApi.getPurchaseById(SHOP_ID, selectedPurchase.purchase_id || selectedPurchase.id);
-      const pData = fullRes?.data?.datas?.[0] || fullRes?.data || selectedPurchase;
-      
       const amountToPay = Number(clearAmount);
-      const newPayment = {
-        method: clearPaymentMethod,
-        amount: amountToPay,
-        date: new Date().toISOString(),
-        ...(clearReferenceNo.trim() ? { reference_no: clearReferenceNo.trim() } : {})
-      };
-      const updatedPaymentInfos = [...(pData.payment_infos || []), newPayment];
+      const purchaseId = selectedPurchase.purchase_id || selectedPurchase.id;
+      const invoiceNo = selectedPurchase.invoice_no || selectedPurchase.ui_id;
+      const notesStr = clearReferenceNo.trim() 
+        ? `${clearPaymentMethod} - ${clearReferenceNo.trim()}` 
+        : `Payment for purchase ${invoiceNo}`;
 
-      const updatePayload = {
-        id: pData.purchase_id || pData.id,
+      // Call supplierApi.updateOutstanding to update supplier balance, record in ledger history, and reflect in purchase
+      await supplierApi.updateOutstanding({
+        id,
         shop_id: SHOP_ID,
-        payment_infos: updatedPaymentInfos,
-        items: (pData.items || []).map((item: any) => ({
-          id: item.id,
-          product_id: item.product_id || item.inventory_id,
-          variant_id: item.variant_id || item.variant_infos?.id || undefined,
-          batch_infos: item.batch_infos || undefined,
-          serialno_numbers: item.serial_numbers || item.serialno_numbers || undefined,
-          storage_location_infos: item.storage_location_infos || undefined,
-          reorder_point_infos: item.reorder_point_infos || undefined,
-          pricing_infos: item.pricing_infos || { 
-            buy_price: Number(item.buy_price || 0), 
-            sell_price: Number(item.sell_price || 0) 
-          },
-          gst: item.gst || "0%",
-          stock_infos: item.stock_infos || item.stocks_infos || { stocks: 0 }
-        }))
-      };
-      
-      await purchaseApi.updatePurchase(updatePayload);
-      
-      try {
-        await supplierApi.updateOutstanding({
-          id,
-          shop_id: SHOP_ID,
-          outstanding_infos: { amount: amountToPay },
-          type: 'DECREMENT'
-        });
-      } catch (e) {
-        // fail silently for supplier if purchase update succeeds
-      }
+        outstanding_infos: { amount: amountToPay },
+        type: 'DECREMENT',
+        entity_name: 'PURCHASE',
+        entity_id: purchaseId,
+        invoice_no: invoiceNo,
+        payment_method: clearPaymentMethod,
+        notes: notesStr,
+        cleared_amount: amountToPay
+      });
       
       showToast("Payment applied successfully", "success");
       setShowClearModal(false);

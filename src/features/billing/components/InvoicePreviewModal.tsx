@@ -134,7 +134,7 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
                     (shopData?.business_infos?.gst_infos?.number || shopData?.gst_infos?.number || shopData?.gst_number || shopData?.gst) !== "N/A" && (
                       <>GSTIN: {shopData?.business_infos?.gst_infos?.number || shopData?.gst_infos?.number || shopData?.gst_number || shopData?.gst}<br /></>
                     )}
-                    {shopData?.address?.full_address || shopData?.address_infos?.address_line_1 || shopData?.address || "Address N/A"}
+                    {shopData?.address?.full_address || shopData?.address_infos?.address_line_1 || (typeof shopData?.address === 'string' ? shopData.address : null) || "Address N/A"}
                   </p>
                 </div>
 

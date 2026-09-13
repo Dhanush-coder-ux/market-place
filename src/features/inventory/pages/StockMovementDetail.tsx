@@ -212,6 +212,10 @@ const StockMovementDetail = () => {
                       <span className="text-[11px] font-medium text-slate-500">Processed At</span>
                       <span className="text-[11px] font-bold text-slate-700">{fmtDate(dateStr)}</span>
                     </div>
+                    <div className="flex justify-between items-center py-2 border-b border-slate-100 last:border-0">
+                      <span className="text-[11px] font-medium text-slate-500">Executed By</span>
+                      <span className="text-[11px] font-bold text-slate-700">{adjustment.added_by || adjustment.user_name || adjustment.user_info?.name || adjustment.user || adjustment.executed_by || adjustment.performed_by || "System"}</span>
+                    </div>
                   </div>
                 </div>
               </div>

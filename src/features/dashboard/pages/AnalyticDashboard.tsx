@@ -1,50 +1,96 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import {
-  IndianRupee, TrendingUp, ShoppingCart, Zap,
-  BarChart2, ArrowUpRight, ArrowDownRight, Package,
-  Calendar, RefreshCw, ShoppingBag
+  IndianRupee,
+  ShoppingBag,
+  ShoppingCart,
+  TrendingUp,
+  Package,
+  Calendar,
+  RefreshCw,
+  ArrowUpRight,
+  ArrowDownRight,
+  BarChart2,
+  Zap,
 } from "lucide-react";
 import {
-  AreaChart, Area, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  PieChart,
+  Pie,
+  Cell,
 } from "recharts";
-import { SectionCard } from "../components/SectionCard";
+import { useBusinessApi } from "@/context/BusinessApiContext";
+import { apiClient } from "@/services/api/apiClient";
+import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { CustomTooltip } from "../components/CustomTooltip";
-import { useApi } from "../../../context/ApiContext";
-import { useBusinessApi } from "../../../context/BusinessApiContext";
-import { ENDPOINTS, SHOP_ID } from "../../../services/endpoints";
-import { ReusableSelect } from "../../../components/ui/ReusableSelect";
+import { SectionCard } from "../components/SectionCard";
+import { ReusableSelect } from "@/components/ui/ReusableSelect";
 
 // ── TYPES ────────────────────────────────────────────────────────────────────
 
-interface UnifiedDashboardResponse {
-  product?: any;
-  supplier?: any;
-  customer?: any;
+export interface UnifiedDashboardResponse {
   overview?: {
-    supplier?: any;
-    customer?: any;
+    supplier?: {
+      shop_id?: string;
+      total_cleared_amounts?: number;
+      total_outstandings?: number;
+      total_suppliers?: number;
+    };
+    customer?: {
+      shop_id?: string;
+      total_cleared_amounts?: number;
+      total_credit_limits?: number;
+      total_customers?: number;
+      total_outstandings?: number;
+      total_settlements?: number;
+    };
     purchase?: {
+      shop_id?: string;
+      total_outstanding_amounts?: number;
       total_purchase?: number;
       total_purchase_amounts?: number;
       total_purchase_stocks?: number;
-      total_outstanding_amounts?: number;
     };
-    inventory?: any;
-    stock_adjustment?: any;
+    inventory?: {
+      shop_id?: string;
+      total_active_products?: number;
+      total_inactive_product?: number;
+      total_low_stocks?: number;
+      total_no_stocks?: number;
+      total_non_tracking_products?: number;
+      total_stocks?: number;
+    };
+    stock_adjustment?: {
+      shop_id?: string;
+      total_stockmovadj?: number;
+      total_stockmovadj_decrements?: number;
+      total_stockmovadj_increments?: number;
+    };
     sales?: {
-      total_sales?: number;
-      total_sales_amounts?: number;
+      shop_id?: string;
       total_cost?: number;
-      total_profit?: number;
-      total_sales_stocks?: number;
-      total_online_sales?: number;
-      total_online_sales_amount?: number;
       total_offline_sales?: number;
       total_offline_sales_amount?: number;
+      total_online_sales?: number;
+      total_online_sales_amount?: number;
+      total_profit?: number;
+      total_sales?: number;
+      total_sales_amounts?: number;
+      total_sales_stocks?: number;
     };
   };
-  dashboard?: any;
+  dashboard?: {
+    supplier?: any;
+    customer?: any;
+    purchase?: any;
+    inventory?: any;
+    stock_adjustment?: any;
+    sales?: any;
+  };
   trends?: {
     suppliers?: any[];
     customers?: any[];
@@ -52,7 +98,11 @@ interface UnifiedDashboardResponse {
     stock_adjustments?: any[];
     sales?: any[];
   };
-  inventory?: any;
+  inventory?: {
+    overall?: any;
+    low_stock?: any[];
+    out_of_stock?: any[];
+  };
   top?: {
     top_suppliers?: any[];
     top_customers?: any[];
@@ -108,23 +158,9 @@ const getRangeDate = (key: RangeKey): { start: Date; end: Date } => {
   }
 };
 
-// ── PAYMENT COLORS ───────────────────────────────────────────────────────────
-
-const PAYMENT_COLORS: Record<string, string> = {
-  CASH: "#10b981",
-  UPI: "#3b82f6",
-  CARD: "#8b5cf6",
-  CREDIT: "#f59e0b",
-  ONLINE: "#06b6d4",
-  Online: "#3b82f6",
-  Offline: "#10b981",
-};
-const DEFAULT_COLOR = "#94a3b8";
-
 // ── MAIN COMPONENT ───────────────────────────────────────────────────────────
 
 const AnalyticsDashboard = () => {
-  const { getData } = useApi();
   const { analytics } = useBusinessApi();
 
   const [activeRange, setActiveRange] = useState<RangeKey>("month");
@@ -144,7 +180,7 @@ const AnalyticsDashboard = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const res = await getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}?limit=100`);
+        const res = await apiClient.get(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}?limit=100`);
         if (res?.data) {
           const arr = Array.isArray(res.data) ? res.data : (res.data.datas || []);
           setProductsList(arr);
@@ -152,13 +188,13 @@ const AnalyticsDashboard = () => {
       } catch (e) { }
     };
     fetchProducts();
-  }, [getData]);
+  }, []);
 
   // ── Fetch Suppliers and Categories for Filter ──
   useEffect(() => {
     const fetchSuppliers = async () => {
       try {
-        const res = await getData(`${ENDPOINTS.SUPPLIERS}/by/shop/${SHOP_ID}?limit=100`);
+        const res = await apiClient.get(`${ENDPOINTS.SUPPLIERS}/by/shop/${SHOP_ID}?limit=100`);
         if (res?.data) {
           const arr = Array.isArray(res.data) ? res.data : (res.data.datas || []);
           setSuppliers(arr);
@@ -168,7 +204,7 @@ const AnalyticsDashboard = () => {
 
     const fetchCustomCategories = async () => {
       try {
-        const res = await getData(`${ENDPOINTS.SHOP_CATEGORIES}`, { shop_id: SHOP_ID });
+        const res = await apiClient.get(`${ENDPOINTS.SHOP_CATEGORIES}`, { shop_id: SHOP_ID });
         if (res?.data) {
           const arr = Array.isArray(res.data) ? res.data : (res.data.datas || []);
           const names = arr.map((c: any) => c.name).filter(Boolean);
@@ -179,7 +215,7 @@ const AnalyticsDashboard = () => {
 
     fetchSuppliers();
     fetchCustomCategories();
-  }, [getData]);
+  }, []);
 
   const allCategories = useMemo(() => {
     return Array.from(new Set(customCategories));
@@ -218,7 +254,7 @@ const AnalyticsDashboard = () => {
     } finally {
       setLoading(false);
     }
-  }, [analytics, dateRange, activeRange, selectedSupplier, selectedCategory]);
+  }, [analytics, dateRange, selectedSupplier, selectedCategory]);
 
   useEffect(() => {
     if (activeRange !== "custom" || (customStart && customEnd)) {
@@ -229,14 +265,13 @@ const AnalyticsDashboard = () => {
   // ── Derived metrics ──
   const salesOverall = stats?.overview?.sales ?? {};
   const purchaseOverall = stats?.overview?.purchase ?? {};
+  const customerOverall = stats?.overview?.customer ?? {};
 
   const totalOrders = salesOverall.total_sales ?? 0;
   const netRevenue = salesOverall.total_sales_amounts ?? 0;
+  const totalCost = salesOverall.total_cost ?? 0;
 
-  const totalCost = selectedSupplier && stats?.supplier
-    ? (stats.supplier.total_purchase_amounts ?? 0)
-    : (salesOverall.total_cost ?? purchaseOverall.total_purchase_amounts ?? 0);
-
+  const totalPurchaseAmount = purchaseOverall.total_purchase_amounts ?? 0;
   const totalPurchaseCount = purchaseOverall.total_purchase ?? 0;
   const totalPurchaseStocks = purchaseOverall.total_purchase_stocks ?? 0;
   const totalPurchaseOutstanding = purchaseOverall.total_outstanding_amounts ?? 0;
@@ -245,17 +280,10 @@ const AnalyticsDashboard = () => {
   const aov = totalOrders > 0 ? netRevenue / totalOrders : 0;
   const grossMargin = netRevenue > 0 ? (totalProfit / netRevenue) * 100 : 0;
   
-  const totalReturnsValue = 0;
+  const customerOutstanding = customerOverall.total_outstandings ?? 0;
+  const receivedAmount = Math.max(0, netRevenue - customerOutstanding);
+
   const totalReturnsCount = 0;
-  const totalExchangesCount = 0;
-
-  const outstandingAmount = selectedSupplier && stats?.supplier
-    ? (stats.supplier.total_outstandings ?? 0)
-    : (purchaseOverall.total_outstanding_amounts ?? 0);
-
-  const receivedAmount = selectedSupplier && stats?.supplier
-    ? Math.max(0, (stats.supplier.total_purchase_amounts ?? 0) - (stats.supplier.total_outstandings ?? 0))
-    : Math.max(0, netRevenue - outstandingAmount);
 
   // Name lookup maps
   const supplierNameMap = useMemo(() => {
@@ -278,8 +306,14 @@ const AnalyticsDashboard = () => {
 
   // Format daily trend for chart
   const dailyTrend = useMemo(() => {
-    const salesTrend = stats?.trends?.sales || [];
-    const purchaseTrend = stats?.trends?.purchases || [];
+    const salesTrend = (stats?.trends?.sales && stats.trends.sales.length > 0)
+      ? stats.trends.sales
+      : (stats?.dashboard?.sales?.trend || []);
+
+    const purchaseTrend = (stats?.trends?.purchases && stats.trends.purchases.length > 0)
+      ? stats.trends.purchases
+      : (stats?.dashboard?.purchase?.trend || []);
+
     const map: Record<string, any> = {};
 
     salesTrend.forEach((s: any) => {
@@ -289,7 +323,8 @@ const AnalyticsDashboard = () => {
         date,
         revenue: s.total_sales_amounts || 0,
         orders: s.total_sales || 0,
-        profit: s.total_profit || (s.total_sales_amounts || 0) - (s.total_cost || 0),
+        profit: s.total_profit || ((s.total_sales_amounts || 0) - (s.total_cost || 0)),
+        purchases: 0,
       };
     });
 
@@ -302,104 +337,119 @@ const AnalyticsDashboard = () => {
           revenue: 0,
           orders: 0,
           profit: 0,
+          purchases: p.total_purchase_amounts || 0,
         };
-      }
-      if (map[date].revenue === 0) {
-        const cost = p.total_purchase_amounts || 0;
-        map[date].profit = Math.max(0, map[date].revenue - cost);
+      } else {
+        map[date].purchases = p.total_purchase_amounts || 0;
       }
     });
 
     return Object.values(map).sort((a: any, b: any) => a.date.localeCompare(b.date));
   }, [stats]);
 
-  const chartData = dailyTrend.map((d: any) => ({
-    date: d.date?.substring(5) || "", // MM-DD
-    revenue: d.revenue,
-    profit: d.profit,
-    orders: d.orders,
-  }));
-
+  // Payment Breakdown
   const paymentBreakdown = useMemo(() => {
-    const onlineAmount = stats?.overview?.sales?.total_online_sales_amount ?? 0;
-    const offlineAmount = stats?.overview?.sales?.total_offline_sales_amount ?? 0;
-    const onlineCount = stats?.overview?.sales?.total_online_sales ?? 0;
-    const offlineCount = stats?.overview?.sales?.total_offline_sales ?? 0;
+    const offlineAmt = salesOverall.total_offline_sales_amount ?? 0;
+    const onlineAmt = salesOverall.total_online_sales_amount ?? 0;
+    const offlineCount = salesOverall.total_offline_sales ?? 0;
+    const onlineCount = salesOverall.total_online_sales ?? 0;
 
-    if (onlineAmount === 0 && offlineAmount === 0) {
-      return [
-        { method: "Offline", total: 0, count: 0 },
-        { method: "Online", total: 0, count: 0 }
-      ];
+    const data = [];
+    if (offlineAmt > 0 || offlineCount > 0) {
+      data.push({ name: "Offline", value: offlineAmt, count: offlineCount, color: "#10b981" });
     }
+    if (onlineAmt > 0 || onlineCount > 0) {
+      data.push({ name: "Online", value: onlineAmt, count: onlineCount, color: "#3b82f6" });
+    }
+    if (data.length === 0) {
+      data.push({ name: "Offline", value: 0, count: 0, color: "#10b981" });
+    }
+    return data;
+  }, [salesOverall]);
 
-    return [
-      { method: "Offline", total: offlineAmount, count: offlineCount },
-      { method: "Online", total: onlineAmount, count: onlineCount }
-    ];
-  }, [stats]);
-
-  const salesByCategory = useMemo(() => {
-    const categoriesMap: Record<string, number> = {};
-    const products = stats?.top?.top_products || [];
-    products.forEach((p: any) => {
-      const prodDetail = productsList.find((item: any) => item.id === p.product_id);
-      const cat = prodDetail?.category_infos?.name || prodDetail?.datas?.category_infos?.name || "General";
-      categoriesMap[cat] = (categoriesMap[cat] || 0) + (p.total_sales_amounts || 0);
-    });
-    return Object.entries(categoriesMap).map(([category, revenue]) => ({ category, revenue }));
-  }, [stats, productsList]);
-
+  // Top Products
   const topProducts = useMemo(() => {
-    const products = stats?.top?.top_products || [];
-    return products.map((p: any) => ({
-      inventory_id: p.product_id,
-      name: productNameMap[p.product_id] || p.product_name || "Unknown Product",
-      total_revenue: p.total_sales_amounts || 0,
-      total_qty: p.total_sales_stocks || 0,
-      total_profit: null,
-    }));
+    const raw = stats?.top?.top_products || stats?.dashboard?.inventory?.top_products || [];
+    return raw.map((p: any) => {
+      const pName = productNameMap[p.product_id] || p.product_name || p.name || p.product_id || "Product";
+      const totalQty = p.total_sales_stocks ?? p.stocks ?? 0;
+      const totalRev = p.total_sales_amounts ?? p.total_revenue ?? 0;
+      const totalCostVal = p.total_purchase_amounts ?? 0;
+      const totalProfitVal = totalRev > 0 ? Math.max(0, totalRev - totalCostVal) : 0;
+      return {
+        ...p,
+        name: pName,
+        total_qty: totalQty,
+        total_revenue: totalRev,
+        total_profit: totalProfitVal,
+      };
+    });
   }, [stats, productNameMap]);
 
+  // Sales by Category
+  const salesByCategory = useMemo(() => {
+    const map: Record<string, number> = {};
+    topProducts.forEach((p: any) => {
+      const prodInfo = productsList.find((prod) => prod.id === p.product_id);
+      const catName = prodInfo?.categories?.[0] || prodInfo?.category || p.category || "General";
+      map[catName] = (map[catName] || 0) + (p.total_revenue || 0);
+    });
+
+    if (customCategories.length > 0) {
+      customCategories.forEach((cat) => {
+        if (map[cat] === undefined) {
+          map[cat] = 0;
+        }
+      });
+    }
+
+    return Object.entries(map)
+      .map(([category, revenue]) => ({ category, revenue }))
+      .sort((a, b) => b.revenue - a.revenue);
+  }, [topProducts, productsList, customCategories]);
+
+  // Top Suppliers
   const topSuppliers = useMemo(() => {
-    const supps = stats?.top?.top_suppliers || [];
-    return supps.map((s: any) => ({
-      supplier_id: s.supplier_id,
-      id: s.supplier_id,
-      name: supplierNameMap[s.supplier_id] || s.supplier_name || "Unknown Supplier",
-      total_revenue: s.total_purchase_amounts || 0,
-      total_qty: s.total_purchases || 0,
-      total_profit: s.total_outstandings || 0,
-    }));
+    const raw = stats?.top?.top_suppliers || stats?.dashboard?.supplier?.top_suppliers || [];
+    return raw.map((s: any) => {
+      const sName = supplierNameMap[s.supplier_id] || s.supplier_name || s.name || s.supplier_id || "Supplier";
+      return {
+        ...s,
+        name: sName,
+        total_revenue: s.total_purchase_amounts ?? 0,
+        total_qty: s.total_purchases ?? 0,
+        total_profit: s.total_outstandings ?? 0,
+      };
+    });
   }, [stats, supplierNameMap]);
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="p-6 space-y-5">
+    <div className="min-h-screen bg-slate-50/50 p-4 md:p-6 lg:p-8 font-sans">
+      <div className="max-w-[1600px] mx-auto space-y-6">
 
-        {/* ── TOP BAR: Title + Range Selector ── */}
-        <div className="bg-white rounded-lg border border-slate-200">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+        {/* ── HEADER ── */}
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+          <div className="p-5 md:px-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h1 className="display-font heading-page text-slate-800">Dashboard</h1>
-              <p className="text-xs text-slate-400 mt-0.5">
-                {dateRange.start.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-                {" — "}
+              <h1 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight">Dashboard</h1>
+              <p className="text-xs font-semibold text-slate-400 mt-0.5">
+                {dateRange.start.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} —{" "}
                 {dateRange.end.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
-              {/* Range Selector */}
-              <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
-                {(Object.keys(RANGE_LABELS) as RangeKey[]).map((r) => (
+            {/* Time filters & Actions */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="bg-slate-100 p-1 rounded-xl flex items-center gap-1">
+                {(["today", "month", "year", "custom"] as RangeKey[]).map((r) => (
                   <button
                     key={r}
                     onClick={() => setActiveRange(r)}
-                    className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${activeRange === r
-                        ? "bg-white text-blue-600 border border-slate-200"
+                    className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      activeRange === r
+                        ? "bg-white text-blue-600 shadow-xs"
                         : "text-slate-500 hover:text-slate-700"
-                      }`}
+                    }`}
                   >
                     {RANGE_LABELS[r]}
                   </button>
@@ -409,17 +459,17 @@ const AnalyticsDashboard = () => {
               {/* Refresh */}
               <button
                 onClick={fetchStats}
-                className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-all"
+                className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-all cursor-pointer"
                 title="Refresh"
               >
-                <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+                <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-blue-600" : ""}`} />
               </button>
             </div>
           </div>
 
           {/* Custom date inputs */}
           {activeRange === "custom" && (
-            <div className="px-6 pb-4 flex items-center gap-3">
+            <div className="px-6 pb-4 flex items-center gap-3 animate-in fade-in">
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-slate-400" />
                 <input
@@ -439,36 +489,36 @@ const AnalyticsDashboard = () => {
             </div>
           )}
 
-          {/* Additional Filters */}
-          <div className="px-6 pb-4 pt-2 border-t border-slate-100 flex items-center gap-4 bg-slate-50/50">
-            <div className="flex items-center gap-2 z-50">
-              <span className="text-xs font-medium text-slate-500">Supplier:</span>
+          {/* Filters Bar */}
+          <div className="px-6 py-3 border-t border-slate-100 flex items-center gap-4 bg-slate-50/50 flex-wrap">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-500">Supplier:</span>
               <div className="w-48">
                 <ReusableSelect
                   value={selectedSupplier}
                   onValueChange={setSelectedSupplier}
                   options={[
                     { label: "All Suppliers", value: "" },
-                    ...suppliers.map(s => ({ label: String(s.name || s.business_name || s.id), value: s.id }))
+                    ...suppliers.map((s) => ({ label: String(s.name || s.business_name || s.id), value: s.id })),
                   ]}
                   placeholder="All Suppliers"
-                  className="h-9 py-0 px-3 min-h-0 text-xs font-medium"
+                  className="h-8.5 py-0 px-3 min-h-0 text-xs font-medium bg-white"
                 />
               </div>
             </div>
 
-            <div className="flex items-center gap-2 z-50">
-              <span className="text-xs font-medium text-slate-500">Category:</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-slate-500">Category:</span>
               <div className="w-48">
                 <ReusableSelect
                   value={selectedCategory}
                   onValueChange={setSelectedCategory}
                   options={[
                     { label: "All Categories", value: "" },
-                    ...allCategories.map(c => ({ label: c, value: c }))
+                    ...allCategories.map((c) => ({ label: c, value: c })),
                   ]}
                   placeholder="All Categories"
-                  className="h-9 py-0 px-3 min-h-0 text-xs font-medium"
+                  className="h-8.5 py-0 px-3 min-h-0 text-xs font-medium bg-white"
                 />
               </div>
             </div>
@@ -477,7 +527,7 @@ const AnalyticsDashboard = () => {
 
         {/* ── ERROR STATE ── */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-600">
+          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600 font-semibold">
             {error}
           </div>
         )}
@@ -485,62 +535,57 @@ const AnalyticsDashboard = () => {
         {/* ── STAT CARDS ── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
           {/* Net Revenue */}
-          <div className="bg-white rounded-lg p-5 border border-slate-200 hover:border-slate-300 transition-all duration-200 group flex flex-col justify-between">
+          <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-all duration-200 group flex flex-col justify-between">
             <div>
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <h3 className="text-[12px] font-bold uppercase tracking-wider text-slate-500">Net Revenue</h3>
+                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Net Revenue</h3>
                   <p className="text-[11px] text-slate-400 font-medium mt-0.5">Total excl. GST</p>
                 </div>
-                <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-blue-50 shrink-0">
-                  <IndianRupee className="w-5 h-5 text-blue-600" />
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-blue-50 text-blue-600 shrink-0">
+                  <IndianRupee className="w-5 h-5" strokeWidth={2.5} />
                 </div>
               </div>
               <div className="flex items-end gap-2 mb-1">
-                <span className="text-[26px] font-bold text-slate-800 tracking-tight leading-none">
-                  {loading ? "—" : fmtShort(netRevenue)}
+                <span className="text-[26px] font-black text-slate-800 tracking-tight leading-none">
+                  {loading ? "—" : fmt(netRevenue)}
                 </span>
-                {totalReturnsValue > 0 && (
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md mb-0.5 text-rose-600 bg-rose-50">
-                    -{fmt(totalReturnsValue)} returns
-                  </span>
-                )}
               </div>
             </div>
 
-            <div className="mt-4 pt-4 border-t border-slate-100 space-y-2.5">
+            <div className="mt-4 pt-3.5 border-t border-slate-100 space-y-2">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_0_2px_rgba(16,185,129,0.2)]"></span>
-                  <span className="text-xs font-semibold text-slate-600">Received</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  <span className="text-xs font-medium text-slate-600">Received</span>
                 </div>
                 <span className="text-xs font-bold text-emerald-600">{fmt(receivedAmount)}</span>
               </div>
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_0_2px_rgba(245,158,11,0.2)]"></span>
-                  <span className="text-xs font-semibold text-slate-600">Outstanding</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                  <span className="text-xs font-medium text-slate-600">Outstanding</span>
                 </div>
-                <span className="text-xs font-bold text-amber-600">{fmt(outstandingAmount)}</span>
+                <span className="text-xs font-bold text-amber-600">{fmt(customerOutstanding)}</span>
               </div>
             </div>
           </div>
 
           {/* Total Profit */}
-          <div className="bg-white rounded-lg p-5 border border-slate-200 hover:border-slate-300 transition-all duration-200 group flex flex-col justify-between">
+          <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-all duration-200 group flex flex-col justify-between">
             <div>
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <h3 className="text-[12px] font-bold uppercase tracking-wider text-slate-500">Total Profit</h3>
+                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Profit</h3>
                   <p className="text-[11px] text-slate-400 font-medium mt-0.5">Net earnings</p>
                 </div>
-                <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${totalProfit >= 0 ? "bg-emerald-50" : "bg-rose-50"}`}>
-                  <TrendingUp className={`w-5 h-5 ${totalProfit >= 0 ? "text-emerald-600" : "text-rose-600"}`} />
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${totalProfit >= 0 ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"}`}>
+                  <TrendingUp className="w-5 h-5" strokeWidth={2.5} />
                 </div>
               </div>
               <div className="flex items-end gap-2 mb-1">
-                <span className={`text-[26px] font-bold tracking-tight leading-none ${totalProfit >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
-                  {loading ? "—" : fmtShort(totalProfit)}
+                <span className={`text-[26px] font-black tracking-tight leading-none ${totalProfit >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                  {loading ? "—" : fmt(totalProfit)}
                 </span>
                 {totalProfit >= 0 ? (
                   <ArrowUpRight className="w-4 h-4 text-emerald-500 mb-0.5" />
@@ -550,33 +595,33 @@ const AnalyticsDashboard = () => {
               </div>
             </div>
 
-            <div className="mt-4 pt-4 border-t border-slate-100">
+            <div className="mt-4 pt-3.5 border-t border-slate-100">
               <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                Total Cost: <span className="text-slate-600">{fmt(totalCost)}</span>
+                Total Cost: <span className="text-slate-700">{fmt(totalCost)}</span>
               </p>
             </div>
           </div>
 
           {/* Total Purchase */}
-          <div className="bg-white rounded-lg p-5 border border-slate-200 hover:border-slate-300 transition-all duration-200 group flex flex-col justify-between">
+          <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-all duration-200 group flex flex-col justify-between">
             <div>
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <h3 className="text-[12px] font-bold uppercase tracking-wider text-slate-500">Total Purchase</h3>
+                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Purchase</h3>
                   <p className="text-[11px] text-slate-400 font-medium mt-0.5">Procurement spend</p>
                 </div>
-                <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-indigo-50 shrink-0">
-                  <ShoppingBag className="w-5 h-5 text-indigo-600" />
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-indigo-50 text-indigo-600 shrink-0">
+                  <ShoppingBag className="w-5 h-5" strokeWidth={2.2} />
                 </div>
               </div>
               <div className="flex items-end gap-2 mb-1">
-                <span className="text-[26px] font-bold text-slate-800 tracking-tight leading-none">
-                  {loading ? "—" : fmtShort(totalCost)}
+                <span className="text-[26px] font-black text-slate-800 tracking-tight leading-none">
+                  {loading ? "—" : fmt(totalPurchaseAmount)}
                 </span>
               </div>
             </div>
 
-            <div className="mt-4 pt-4 border-t border-slate-100 space-y-1.5">
+            <div className="mt-4 pt-3.5 border-t border-slate-100 space-y-1.5">
               <div className="flex items-center justify-between text-[11px]">
                 <span className="font-bold text-slate-400 uppercase tracking-wider">Purchases:</span>
                 <span className="font-bold text-slate-700">{loading ? "—" : `${totalPurchaseCount} (${totalPurchaseStocks} stocks)`}</span>
@@ -589,269 +634,276 @@ const AnalyticsDashboard = () => {
           </div>
 
           {/* Total Orders */}
-          <div className="bg-white rounded-lg p-5 border border-slate-200 hover:border-slate-300 transition-all duration-200 group flex flex-col justify-between">
+          <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-all duration-200 group flex flex-col justify-between">
             <div>
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <h3 className="text-[12px] font-bold uppercase tracking-wider text-slate-500">Total Orders</h3>
+                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Orders</h3>
                   <p className="text-[11px] text-slate-400 font-medium mt-0.5">{RANGE_LABELS[activeRange]}</p>
                 </div>
-                <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-amber-50 shrink-0">
-                  <ShoppingCart className="w-5 h-5 text-amber-600" />
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-amber-50 text-amber-600 shrink-0">
+                  <ShoppingCart className="w-5 h-5" strokeWidth={2.2} />
                 </div>
               </div>
               <div className="flex items-end gap-2 mb-1">
-                <span className="text-[26px] font-bold text-slate-800 tracking-tight leading-none">
+                <span className="text-[26px] font-black text-slate-800 tracking-tight leading-none">
                   {loading ? "—" : totalOrders.toLocaleString()}
                 </span>
               </div>
             </div>
 
-            <div className="mt-4 pt-4 border-t border-slate-100 flex gap-2 flex-wrap">
-              {totalReturnsCount > 0 && (
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md text-rose-600 bg-rose-50 border border-rose-100">
-                  {totalReturnsCount} returns
-                </span>
-              )}
-              {totalExchangesCount > 0 && (
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md text-blue-600 bg-blue-50 border border-blue-100">
-                  {totalExchangesCount} exchanges
-                </span>
-              )}
-              {totalReturnsCount === 0 && totalExchangesCount === 0 && (
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md text-slate-400 bg-slate-50 border border-slate-100">
-                  Clean orders
-                </span>
-              )}
+            <div className="mt-4 pt-3.5 border-t border-slate-100 flex gap-2 flex-wrap">
+              <span className="text-[10.5px] font-bold px-2 py-0.5 rounded-md text-slate-500 bg-slate-100">
+                Clean orders
+              </span>
             </div>
           </div>
 
           {/* AOV */}
-          <div className="bg-white rounded-lg p-5 border border-slate-200 hover:border-slate-300 transition-all duration-200 group flex flex-col justify-between">
+          <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-all duration-200 group flex flex-col justify-between">
             <div>
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <h3 className="text-[12px] font-bold uppercase tracking-wider text-slate-500">Avg. Order Value</h3>
+                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Avg. Order Value</h3>
                   <p className="text-[11px] text-slate-400 font-medium mt-0.5">Revenue / Orders</p>
                 </div>
-                <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-violet-50 shrink-0">
-                  <Zap className="w-5 h-5 text-violet-600" />
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-purple-50 text-purple-600 shrink-0">
+                  <Zap className="w-5 h-5" strokeWidth={2.2} />
                 </div>
               </div>
               <div className="flex items-end gap-2 mb-1">
-                <span className="text-[26px] font-bold text-slate-800 tracking-tight leading-none">
+                <span className="text-[26px] font-black text-slate-800 tracking-tight leading-none">
                   {loading ? "—" : fmt(aov)}
                 </span>
               </div>
             </div>
 
-            <div className="mt-4 pt-4 border-t border-slate-100">
+            <div className="mt-4 pt-3.5 border-t border-slate-100">
               <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                Gross Margin: <span className="text-slate-600">{loading ? "—" : `${grossMargin.toFixed(1)}%`}</span>
+                Gross Margin: <span className="text-slate-700">{loading ? "—" : `${grossMargin.toFixed(1)}%`}</span>
               </p>
             </div>
           </div>
         </div>
 
-
-
-        {/* ── SALES PERFORMANCE LABEL ── */}
-        <h2 className="display-font text-base font-semibold text-slate-600 tracking-wide">
-          Sales Performance
-        </h2>
-
-        {/* ── ROW 2: Revenue Trend + Profitability ── */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
-
-          {/* Revenue & Profit Trend */}
-          <div className="xl:col-span-2">
-            <SectionCard title="Revenue & Profit Trend">
-              <div className="px-5 pb-5">
-                {chartData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={260}>
-                    <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="gRevenue" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.15} />
-                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                        </linearGradient>
-                        <linearGradient id="gProfit" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.15} />
-                          <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                      <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Area type="monotone" dataKey="revenue" name="Revenue" stroke="#3b82f6" strokeWidth={2.5} fill="url(#gRevenue)" dot={false} activeDot={{ r: 5, fill: "#3b82f6" }} />
-                      <Area type="monotone" dataKey="profit" name="Profit" stroke="#10b981" strokeWidth={2} fill="url(#gProfit)" dot={false} activeDot={{ r: 4, fill: "#10b981" }} />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="flex items-center justify-center h-[260px] text-sm text-slate-400">
-                    {loading ? "Loading chart data..." : "No sales data for this period"}
+        {/* ── ROW 2: Sales Performance ── */}
+        <div className="space-y-4">
+          <h2 className="text-base font-bold text-slate-800">Sales Performance</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            {/* Chart Area */}
+            <div className="lg:col-span-2">
+              <SectionCard title="Revenue & Profit Trend">
+                <div className="p-5">
+                  <div className="h-[280px] w-full">
+                    {dailyTrend.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={dailyTrend} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.25} />
+                              <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                            </linearGradient>
+                            <linearGradient id="profitGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
+                              <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                            </linearGradient>
+                          </defs>
+                          <XAxis
+                            dataKey="date"
+                            tickLine={false}
+                            axisLine={false}
+                            tick={{ fill: "#94a3b8", fontSize: 11 }}
+                            tickFormatter={(val) => {
+                              try {
+                                const parts = val.split("-");
+                                return `${parts[1]}/${parts[2]}`;
+                              } catch {
+                                return val;
+                              }
+                            }}
+                          />
+                          <YAxis
+                            tickLine={false}
+                            axisLine={false}
+                            tick={{ fill: "#94a3b8", fontSize: 11 }}
+                            tickFormatter={(val) => `₹${val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val}`}
+                          />
+                          <Tooltip content={<CustomTooltip />} />
+                          <Area
+                            type="monotone"
+                            dataKey="revenue"
+                            name="Revenue"
+                            stroke="#3b82f6"
+                            strokeWidth={2.5}
+                            fillOpacity={1}
+                            fill="url(#revenueGrad)"
+                          />
+                          <Area
+                            type="monotone"
+                            dataKey="profit"
+                            name="Profit"
+                            stroke="#10b981"
+                            strokeWidth={2.5}
+                            fillOpacity={1}
+                            fill="url(#profitGrad)"
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="h-full flex items-center justify-center text-xs font-semibold text-slate-400">
+                        No trend data available for this range
+                      </div>
+                    )}
                   </div>
-                )}
-                {/* Legend */}
-                <div className="flex gap-5 mt-2 px-1">
-                  <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                    <div className="w-3 h-1.5 rounded-full bg-blue-500" />Revenue
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                    <div className="w-3 h-1.5 rounded-full bg-emerald-500" />Profit
+
+                  {/* Legend */}
+                  <div className="flex items-center gap-5 mt-3 pt-3 border-t border-slate-100 text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                      <span className="font-semibold text-slate-600">Revenue</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                      <span className="font-semibold text-slate-600">Profit</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </SectionCard>
-          </div>
+              </SectionCard>
+            </div>
 
-          {/* Right: Profitability + Quick Stats */}
-          <div className="flex flex-col gap-4">
-            <SectionCard title="Profitability">
-              <div className="px-5 pb-5 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-slate-400">Gross Margin</p>
-                    <p className="display-font text-xl font-semibold text-slate-800">{grossMargin.toFixed(2)}%</p>
-                    <p className={`text-xs font-medium ${totalProfit >= 0 ? "text-emerald-500" : "text-rose-500"}`}>
-                      {totalProfit >= 0 ? "Profitable" : "Loss-making"}
-                    </p>
-                  </div>
-                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${totalProfit >= 0 ? "bg-emerald-50" : "bg-rose-50"}`}>
-                    <TrendingUp className={`w-6 h-6 ${totalProfit >= 0 ? "text-emerald-500" : "text-rose-500"}`} />
+            {/* Profitability & Quick Stats */}
+            <div className="space-y-4">
+              {/* Profitability */}
+              <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-bold text-slate-800">Profitability</h3>
+                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                    <TrendingUp className="w-4 h-4" />
                   </div>
                 </div>
-                <div className="h-px bg-slate-100" />
-                <div className="w-full bg-slate-100 rounded-full h-2.5">
+                <p className="text-xs text-slate-400 font-medium">Gross Margin</p>
+                <div className="flex items-baseline gap-2 mt-1 mb-3">
+                  <span className="text-2xl font-black text-slate-800">{grossMargin.toFixed(2)}%</span>
+                  <span className="text-xs font-bold text-emerald-600">Profitable</span>
+                </div>
+
+                {/* Progress bar */}
+                <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden mb-2">
                   <div
-                    className={`h-2.5 rounded-full transition-all duration-700 ${grossMargin >= 0 ? "bg-emerald-500" : "bg-rose-500"}`}
-                    style={{ width: `${Math.min(Math.abs(grossMargin), 100)}%` }}
+                    className="bg-emerald-500 h-full rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(100, Math.max(0, grossMargin))}%` }}
                   />
                 </div>
-                <div className="flex justify-between text-xs text-slate-400">
+                <div className="flex justify-between text-[10px] font-bold text-slate-400">
                   <span>0%</span>
                   <span>Margin: {grossMargin.toFixed(2)}%</span>
                   <span>100%</span>
                 </div>
               </div>
-            </SectionCard>
 
-            <SectionCard title="Quick Stats">
-              <div className="px-5 pb-5 grid grid-cols-2 gap-3">
-                <div className="text-center p-3 bg-blue-50 rounded-lg">
-                  <p className="display-font text-lg font-bold text-blue-600">{totalOrders}</p>
-                  <p className="text-xs text-slate-500">Orders</p>
-                </div>
-                <div className="text-center p-3 bg-emerald-50 rounded-lg">
-                  <p className="display-font text-lg font-bold text-emerald-600">{fmtShort(totalProfit)}</p>
-                  <p className="text-xs text-slate-500">Profit</p>
-                </div>
-                <div className="text-center p-3 bg-amber-50 rounded-lg">
-                  <p className="display-font text-lg font-bold text-amber-600">{fmtShort(aov)}</p>
-                  <p className="text-xs text-slate-500">AOV</p>
-                </div>
-                <div className="text-center p-3 bg-rose-50 rounded-lg flex items-center justify-around">
-                  <div>
-                    <p className="display-font text-lg font-bold text-rose-600">{totalReturnsCount}</p>
-                    <p className="text-xs text-slate-500">Returns</p>
+              {/* Quick Stats */}
+              <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Quick Stats</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-blue-50/50 border border-blue-100/60 rounded-xl p-3 text-center">
+                    <p className="text-lg font-black text-slate-800">{totalOrders}</p>
+                    <p className="text-[11px] font-semibold text-slate-500">Orders</p>
                   </div>
-                  <div className="h-8 w-px bg-rose-200"></div>
-                  <div>
-                    <p className="display-font text-lg font-bold text-blue-600">{totalExchangesCount}</p>
-                    <p className="text-xs text-slate-500">Exchanges</p>
+                  <div className="bg-emerald-50/50 border border-emerald-100/60 rounded-xl p-3 text-center">
+                    <p className="text-lg font-black text-emerald-600">{fmt(totalProfit)}</p>
+                    <p className="text-[11px] font-semibold text-slate-500">Profit</p>
                   </div>
+                  <div className="bg-amber-50/50 border border-amber-100/60 rounded-xl p-3 text-center">
+                    <p className="text-lg font-black text-amber-700">{fmtShort(aov)}</p>
+                    <p className="text-[11px] font-semibold text-slate-500">AOV</p>
+                  </div>
+                  <div className="bg-purple-50/50 border border-purple-100/60 rounded-xl p-3 text-center">
+                    <p className="text-lg font-black text-purple-700">{totalReturnsCount}</p>
+                    <p className="text-[11px] font-semibold text-slate-500">Returns</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── ROW 3: Sales by Payment & Top Selling Products ── */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+          {/* Sales by Payment */}
+          <div className="xl:col-span-1">
+            <SectionCard title="Sales by Payment">
+              <div className="p-5 flex flex-col justify-between h-[340px]">
+                <div className="h-[180px] w-full flex items-center justify-center">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={paymentBreakdown}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={55}
+                        outerRadius={75}
+                        paddingAngle={4}
+                        dataKey="value"
+                      >
+                        {paymentBreakdown.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value: any) => fmt(Number(value))} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="space-y-2 pt-3 border-t border-slate-100">
+                  {paymentBreakdown.map((item) => (
+                    <div key={item.name} className="flex items-center justify-between text-xs font-semibold">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                        <span className="text-slate-600">{item.name}</span>
+                      </div>
+                      <span className="text-slate-800 font-bold">
+                        {fmt(item.value)} <span className="text-slate-400 font-normal">({item.count})</span>
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </SectionCard>
           </div>
-        </div>
-
-        {/* ── ROW 3: Payment Breakdown + Top Products ── */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
-
-          {/* Sales by Payment */}
-          <SectionCard title="Sales by Payment">
-            <div className="px-5 pb-5">
-              {paymentBreakdown.length > 0 ? (
-                <div className="flex items-center gap-4">
-                  <ResponsiveContainer width={130} height={130}>
-                    <PieChart>
-                      <Pie
-                        data={paymentBreakdown.map((p: any) => ({ name: p.method, value: p.total }))}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={35}
-                        outerRadius={58}
-                        dataKey="value"
-                        strokeWidth={2}
-                        stroke="#fff"
-                      >
-                        {paymentBreakdown.map((p: any, i: number) => (
-                          <Cell key={i} fill={PAYMENT_COLORS[p.method] || DEFAULT_COLOR} />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="space-y-2 flex-1">
-                    {paymentBreakdown.map((p: any) => (
-                      <div key={p.method} className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="w-2.5 h-2.5 rounded-full shrink-0"
-                            style={{ background: PAYMENT_COLORS[p.method] || DEFAULT_COLOR }}
-                          />
-                          <span className="text-xs text-slate-600 font-medium">{p.method}</span>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-xs font-bold text-slate-700">{fmt(p.total)}</span>
-                          <span className="text-[10px] text-slate-400 ml-1">({p.count})</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center h-[130px] text-sm text-slate-400">
-                  No payment data
-                </div>
-              )}
-            </div>
-          </SectionCard>
 
           {/* Top Selling Products */}
           <div className="xl:col-span-2">
             <SectionCard title="Top Selling Products">
-              <div className="px-5 pb-5">
+              <div className="p-5 flex flex-col justify-between min-h-[340px]">
                 {topProducts.length > 0 ? (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {topProducts.map((p: any, i: number) => {
                       const maxQty = topProducts[0]?.total_qty || 1;
                       return (
-                        <div key={p.inventory_id} className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors group">
+                        <div key={p.product_id || i} className="flex items-center gap-3.5 p-2 rounded-xl hover:bg-slate-50/80 transition-colors group">
                           {/* Rank */}
                           <span className="w-7 h-7 flex items-center justify-center bg-slate-100 rounded-lg text-xs font-bold text-slate-500 shrink-0">
                             #{i + 1}
                           </span>
                           {/* Product info */}
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-slate-700 truncate">{p.name}</p>
-                            <div className="w-full bg-slate-100 rounded-full h-1 mt-1.5">
+                            <p className="text-xs font-bold text-slate-800 truncate">{p.name}</p>
+                            <div className="w-full bg-slate-100 rounded-full h-1.5 mt-1.5 overflow-hidden">
                               <div
-                                className="h-1 rounded-full bg-blue-400 group-hover:bg-blue-500 transition-all"
-                                style={{ width: `${(p.total_qty / maxQty) * 100}%` }}
+                                className="h-full rounded-full bg-blue-500 group-hover:bg-blue-600 transition-all"
+                                style={{ width: `${Math.max(5, (p.total_qty / maxQty) * 100)}%` }}
                               />
                             </div>
                           </div>
                           {/* Stats */}
                           <div className="text-right shrink-0">
-                            <p className="text-sm font-bold text-slate-700">{fmt(p.total_revenue)}</p>
-                            <div className="flex items-center gap-1 justify-end">
+                            <p className="text-xs font-bold text-slate-800">{fmt(p.total_revenue)}</p>
+                            <div className="flex items-center gap-1 justify-end text-[11px]">
                               <Package className="w-3 h-3 text-slate-400" />
-                              <span className="text-xs text-slate-500">{p.total_qty} sold</span>
-                              <span className="mx-0.5 text-slate-300">·</span>
-                              <span className={`text-xs font-medium ${p.total_profit >= 0 ? "text-emerald-500" : "text-rose-500"}`}>
-                                {p.total_profit >= 0 ? "+" : ""}{fmt(p.total_profit)}
+                              <span className="text-slate-500">{p.total_qty} sold</span>
+                              <span className="text-slate-300">·</span>
+                              <span className="font-semibold text-emerald-600">
+                                +{fmt(p.total_profit)}
                               </span>
                             </div>
                           </div>
@@ -860,33 +912,33 @@ const AnalyticsDashboard = () => {
                     })}
                   </div>
                 ) : (
-                  <div className="flex items-center justify-center h-[160px] text-sm text-slate-400">
+                  <div className="flex items-center justify-center h-[160px] text-xs font-semibold text-slate-400">
                     No product data for this period
                   </div>
                 )}
 
                 {/* Bottom quick stats */}
                 <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-3 gap-3">
-                  <div className="text-center p-2.5 bg-slate-50 rounded-lg">
-                    <div className="mb-1.5 flex justify-center">
-                      <BarChart2 className="w-5 h-5 text-slate-500" />
+                  <div className="text-center p-3 bg-slate-50 rounded-xl">
+                    <div className="mb-1 flex justify-center">
+                      <BarChart2 className="w-4 h-4 text-slate-500" />
                     </div>
-                    <p className="display-font text-sm font-bold text-slate-700">{grossMargin}%</p>
-                    <p className="text-xs text-slate-400">Gross Margin</p>
+                    <p className="text-xs font-bold text-slate-800">{grossMargin.toFixed(1)}%</p>
+                    <p className="text-[10px] font-semibold text-slate-400">Gross Margin</p>
                   </div>
-                  <div className="text-center p-2.5 bg-slate-50 rounded-lg">
-                    <div className="mb-1.5 flex justify-center">
-                      <ShoppingCart className="w-5 h-5 text-slate-500" />
+                  <div className="text-center p-3 bg-slate-50 rounded-xl">
+                    <div className="mb-1 flex justify-center">
+                      <ShoppingCart className="w-4 h-4 text-slate-500" />
                     </div>
-                    <p className="display-font text-sm font-bold text-slate-700">{totalOrders}</p>
-                    <p className="text-xs text-slate-400">Total Orders</p>
+                    <p className="text-xs font-bold text-slate-800">{totalOrders}</p>
+                    <p className="text-[10px] font-semibold text-slate-400">Total Orders</p>
                   </div>
-                  <div className="text-center p-2.5 bg-slate-50 rounded-lg">
-                    <div className="mb-1.5 flex justify-center">
-                      <TrendingUp className="w-5 h-5 text-emerald-500" />
+                  <div className="text-center p-3 bg-slate-50 rounded-xl">
+                    <div className="mb-1 flex justify-center">
+                      <TrendingUp className="w-4 h-4 text-emerald-500" />
                     </div>
-                    <p className="display-font text-sm font-bold text-slate-700">{fmtShort(aov)}</p>
-                    <p className="text-xs text-slate-400">AOV</p>
+                    <p className="text-xs font-bold text-slate-800">{fmtShort(aov)}</p>
+                    <p className="text-[10px] font-semibold text-slate-400">AOV</p>
                   </div>
                 </div>
               </div>
@@ -895,25 +947,24 @@ const AnalyticsDashboard = () => {
         </div>
 
         {/* ── ROW 4: Vendor & Category Analytics ── */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 mt-5">
-
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
           {/* Sales by Category */}
           <SectionCard title="Sales by Category">
-            <div className="px-5 pb-5">
+            <div className="p-5">
               {salesByCategory.length > 0 ? (
-                <div className="space-y-4 mt-2">
+                <div className="space-y-4">
                   {salesByCategory.map((c: any) => {
                     const maxRev = salesByCategory[0]?.revenue || 1;
                     return (
                       <div key={c.category} className="group">
                         <div className="flex justify-between items-end mb-1">
-                          <p className="text-sm font-semibold text-slate-700">{c.category}</p>
-                          <p className="text-sm font-bold text-slate-700">{fmt(c.revenue)}</p>
+                          <p className="text-xs font-bold text-slate-700">{c.category}</p>
+                          <p className="text-xs font-bold text-slate-800">{fmt(c.revenue)}</p>
                         </div>
-                        <div className="w-full bg-slate-100 rounded-full h-2">
+                        <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
                           <div
-                            className="h-2 rounded-full bg-violet-400 group-hover:bg-violet-500 transition-all"
-                            style={{ width: `${(c.revenue / maxRev) * 100}%` }}
+                            className="h-full rounded-full bg-purple-500 group-hover:bg-purple-600 transition-all"
+                            style={{ width: `${Math.max(2, (c.revenue / maxRev) * 100)}%` }}
                           />
                         </div>
                       </div>
@@ -921,7 +972,7 @@ const AnalyticsDashboard = () => {
                   })}
                 </div>
               ) : (
-                <div className="flex items-center justify-center h-[160px] text-sm text-slate-400">
+                <div className="flex items-center justify-center h-[160px] text-xs font-semibold text-slate-400">
                   No category data for this period
                 </div>
               )}
@@ -930,38 +981,36 @@ const AnalyticsDashboard = () => {
 
           {/* Top Suppliers */}
           <SectionCard title="Top Suppliers by Performance">
-            <div className="px-5 pb-5">
+            <div className="p-5">
               {topSuppliers.length > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {topSuppliers.map((s: any, i: number) => {
-                    const maxQty = topSuppliers[0]?.total_qty || 1;
-                    const sup = suppliers.find(sup => sup.id === s.supplier_id);
-                    const sName = sup?.name || sup?.supplier_name || sup?.business_name || s.supplier_id || "Unknown";
+                    const maxRev = topSuppliers[0]?.total_revenue || 1;
                     return (
-                      <div key={s.supplier_id} className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors group">
+                      <div key={s.supplier_id || i} className="flex items-center gap-3.5 p-2 rounded-xl hover:bg-slate-50/80 transition-colors group">
                         {/* Rank */}
                         <span className="w-7 h-7 flex items-center justify-center bg-slate-100 rounded-lg text-xs font-bold text-slate-500 shrink-0">
                           #{i + 1}
                         </span>
                         {/* Supplier info */}
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-slate-700 truncate">{sName}</p>
-                          <div className="w-full bg-slate-100 rounded-full h-1 mt-1.5">
+                          <p className="text-xs font-bold text-slate-800 truncate">{s.name}</p>
+                          <div className="w-full bg-slate-100 rounded-full h-1.5 mt-1.5 overflow-hidden">
                             <div
-                              className="h-1 rounded-full bg-blue-400 group-hover:bg-blue-500 transition-all"
-                              style={{ width: `${(s.total_qty / maxQty) * 100}%` }}
+                              className="h-full rounded-full bg-blue-500 group-hover:bg-blue-600 transition-all"
+                              style={{ width: `${Math.max(5, (s.total_revenue / maxRev) * 100)}%` }}
                             />
                           </div>
                         </div>
                         {/* Stats */}
                         <div className="text-right shrink-0">
-                          <p className="text-sm font-bold text-slate-700">{fmt(s.total_revenue)}</p>
-                          <div className="flex items-center gap-1 justify-end">
+                          <p className="text-xs font-bold text-slate-800">{fmt(s.total_revenue)}</p>
+                          <div className="flex items-center gap-1 justify-end text-[11px]">
                             <Package className="w-3 h-3 text-slate-400" />
-                            <span className="text-xs text-slate-500">{s.total_qty} items</span>
-                            <span className="mx-0.5 text-slate-300">·</span>
-                            <span className={`text-xs font-medium ${s.total_profit >= 0 ? "text-emerald-500" : "text-rose-500"}`}>
-                              {s.total_profit >= 0 ? "+" : ""}{fmt(s.total_profit)}
+                            <span className="text-slate-500">{s.total_qty} items</span>
+                            <span className="text-slate-300">·</span>
+                            <span className="font-semibold text-amber-600">
+                              +{fmt(s.total_profit)}
                             </span>
                           </div>
                         </div>
@@ -970,13 +1019,12 @@ const AnalyticsDashboard = () => {
                   })}
                 </div>
               ) : (
-                <div className="flex items-center justify-center h-[160px] text-sm text-slate-400">
+                <div className="flex items-center justify-center h-[160px] text-xs font-semibold text-slate-400">
                   No supplier data for this period
                 </div>
               )}
             </div>
           </SectionCard>
-
         </div>
 
       </div>

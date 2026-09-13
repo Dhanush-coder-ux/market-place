@@ -658,7 +658,7 @@ export default function StockMovementPage() {
         ref: a.ui_id ? `REF-${a.ui_id}` : (smId?.slice(0, 8).toUpperCase() || "—"),
         date: dateStr.includes("T") ? dateStr : dateStr + "T00:00:00",
         status: "Completed" as StatusType,
-        user: String(a.added_by || "System"),
+        user: String(a.added_by || a.user_name || a.user_info?.name || a.user || a.executed_by || a.performed_by || "System"),
         notes: a.description || "",
         variant: firstItem.variant,
         batch: firstItem.batch,

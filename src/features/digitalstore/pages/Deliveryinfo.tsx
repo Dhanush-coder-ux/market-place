@@ -1,21 +1,24 @@
-import { useState, useEffect } from "react";
-import { IndianRupee, MapPin, ShoppingBag, Truck, Zap, Globe, Timer, Check } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { IndianRupee, MapPin, ShoppingBag, Truck, Zap, Globe, Timer, Check, Loader2, Sparkles, ShieldCheck } from "lucide-react";
 import { useBusinessApi } from "@/context/BusinessApiContext";
 import { SHOP_ID } from "@/services/endpoints";
 
-type DeliveryConfig = {
+export type DeliveryConfig = {
+  id?: number;
   enabled: boolean;
   speed: string;
-  freeThreshold: number;
-  radius: number;
-  minOrderAmount: number;
-  chargePerKm: number;
-  manageStore: boolean;
-  partners: boolean;
-  id?: number;
+  minOrderAmount: number | "";
+  deliveryCharge: number | "";
+  freeThreshold: number | "";
+  radius: number | "";
+  chargePerKm: number | "";
+  deliveryBy: "PARTNERS" | "INHOUSE";
 };
 
-const DELIVERY_META: Record<"instant" | "standard" | "nationwide", {
+interface DeliveryCardMeta {
+  key: "normal" | "express" | "sameday";
+  backendType: "NORMAL" | "EXPRESS" | "SAME_DAY";
+  legacyBackendTypes: string[];
   title: string;
   subtitle: string;
   badge: string;
@@ -24,40 +27,55 @@ const DELIVERY_META: Record<"instant" | "standard" | "nationwide", {
   activeBg: string;
   activeBorder: string;
   badgeColor: string;
-}> = {
-  instant: {
-    title: "Instant Delivery",
-    subtitle: "Same-day delivery within your local area",
-    badge: "Fast",
-    icon: Zap,
+  defaultSpeed: string;
+}
+
+export const DELIVERY_OPTIONS_CONFIG: DeliveryCardMeta[] = [
+  {
+    key: "normal",
+    backendType: "NORMAL",
+    legacyBackendTypes: ["NORMAL", "STANDARD"],
+    title: "Normal Delivery",
+    subtitle: "Standard shipping option for your regular orders",
+    badge: "Standard",
+    icon: Truck,
     accentColor: "text-blue-600",
-    activeBg: "bg-blue-50/50",
+    activeBg: "bg-blue-50/40",
     activeBorder: "border-blue-400",
     badgeColor: "bg-blue-100 text-blue-700",
+    defaultSpeed: "2–3 Business Days"
   },
-  standard: {
-    title: "Standard Delivery",
-    subtitle: "City-wide delivery in 1–2 business days",
-    badge: "Popular",
-    icon: Truck,
-    accentColor: "text-violet-600",
-    activeBg: "bg-violet-50/40",
-    activeBorder: "border-violet-400",
-    badgeColor: "bg-violet-100 text-violet-700",
+  {
+    key: "express",
+    backendType: "EXPRESS",
+    legacyBackendTypes: ["EXPRESS", "INSTANT"],
+    title: "Express Delivery",
+    subtitle: "Fast priority delivery for urgent customer orders",
+    badge: "Fast",
+    icon: Zap,
+    accentColor: "text-amber-600",
+    activeBg: "bg-amber-50/40",
+    activeBorder: "border-amber-400",
+    badgeColor: "bg-amber-100 text-amber-700",
+    defaultSpeed: "Within 12 Hours"
   },
-  nationwide: {
-    title: "Nationwide Delivery",
-    subtitle: "Country-wide shipping in 5–7 business days",
-    badge: "Wide",
+  {
+    key: "sameday",
+    backendType: "SAME_DAY",
+    legacyBackendTypes: ["SAME_DAY", "NATIONWIDE", "PICKUP_ONLY"],
+    title: "Same-Day Delivery",
+    subtitle: "Deliver orders on the exact same day within your local radius",
+    badge: "Urgent",
     icon: Globe,
-    accentColor: "text-indigo-600",
-    activeBg: "bg-indigo-50/40",
-    activeBorder: "border-indigo-400",
-    badgeColor: "bg-indigo-100 text-indigo-700",
-  },
-};
+    accentColor: "text-purple-600",
+    activeBg: "bg-purple-50/40",
+    activeBorder: "border-purple-400",
+    badgeColor: "bg-purple-100 text-purple-700",
+    defaultSpeed: "Within 3–4 Hours"
+  }
+];
 
-function NumberField({
+function InputField({
   label,
   icon: Icon,
   iconColor,
@@ -65,6 +83,7 @@ function NumberField({
   suffix,
   value,
   onChange,
+  type = "number",
   placeholder,
 }: {
   label: string;
@@ -73,7 +92,8 @@ function NumberField({
   prefix?: string;
   suffix?: string;
   value: number | string | undefined;
-  onChange: (v: number | "") => void;
+  onChange: (v: any) => void;
+  type?: "number" | "text";
   placeholder?: string;
 }) {
   return (
@@ -82,17 +102,23 @@ function NumberField({
         <Icon size={12} className={iconColor} />
         {label}
       </label>
-      <div className="flex items-center rounded-lg border border-slate-200 bg-white overflow-hidden focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/10 transition-all">
+      <div className="flex items-center rounded-xl border border-slate-200 bg-white overflow-hidden focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/10 transition-all shadow-xs">
         {prefix && (
           <span className="px-3 py-2.5 text-xs font-bold text-slate-500 bg-slate-50 border-r border-slate-200 shrink-0">
             {prefix}
           </span>
         )}
         <input
-          type="number"
-          min="0"
+          type={type}
+          min={type === "number" ? "0" : undefined}
           value={value ?? ""}
-          onChange={(e) => onChange(e.target.value === "" ? "" : Number(e.target.value))}
+          onChange={(e) => {
+            if (type === "number") {
+              onChange(e.target.value === "" ? "" : Number(e.target.value));
+            } else {
+              onChange(e.target.value);
+            }
+          }}
           placeholder={placeholder}
           className="flex-1 px-3 py-2.5 text-sm outline-none bg-transparent text-slate-700 min-w-0"
         />
@@ -106,92 +132,153 @@ function NumberField({
   );
 }
 
-function StoreDeliveryCardInner({
+export function DeliveryCardInner({
   meta,
-  Icon,
   data,
-  updateDelivery,
+  onChange,
 }: {
-  meta: typeof DELIVERY_META["instant"];
-  Icon: React.ElementType;
+  meta: DeliveryCardMeta;
   data: DeliveryConfig;
-  updateDelivery: (field: keyof DeliveryConfig, value: any) => void;
+  onChange: (field: keyof DeliveryConfig, value: any) => void;
 }) {
+  const Icon = meta.icon;
   const enabled = data.enabled;
 
   return (
-    <div className={`rounded-2xl border-2 transition-all duration-300 overflow-hidden
-      ${enabled ? `${meta.activeBorder} ${meta.activeBg}` : "border-slate-200 bg-white opacity-80"}`}
+    <div
+      className={`rounded-2xl border-2 transition-all duration-300 overflow-hidden ${
+        enabled ? `${meta.activeBorder} ${meta.activeBg} shadow-xs` : "border-slate-200 bg-white opacity-80"
+      }`}
     >
+      {/* Card Header */}
       <div className="flex items-center justify-between px-5 py-4">
         <div className="flex items-center gap-3">
-          <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${enabled ? meta.activeBg : "bg-slate-100"}`}>
-            <Icon size={17} className={enabled ? meta.accentColor : "text-slate-400"} strokeWidth={2} />
+          <div
+            className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+              enabled ? "bg-white shadow-xs" : "bg-slate-100"
+            }`}
+          >
+            <Icon size={18} className={enabled ? meta.accentColor : "text-slate-400"} strokeWidth={2.2} />
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h4 className={`text-sm font-bold ${enabled ? "text-slate-800" : "text-slate-500"}`}>
                 {meta.title}
               </h4>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${enabled ? meta.badgeColor : "bg-slate-100 text-slate-400"}`}>
+              <span
+                className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                  enabled ? meta.badgeColor : "bg-slate-100 text-slate-400"
+                }`}
+              >
                 {meta.badge}
               </span>
             </div>
-            <p className="text-[11px] text-slate-500 mt-0.5">{meta.subtitle}</p>
+            <p className="text-[11.5px] text-slate-500 mt-0.5">{meta.subtitle}</p>
           </div>
         </div>
 
+        {/* Toggle switch */}
         <button
           type="button"
-          onClick={() => updateDelivery("enabled", !enabled)}
-          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none
-            ${enabled ? 'bg-blue-600' : 'bg-slate-300'}`}
+          onClick={() => onChange("enabled", !enabled)}
+          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none ${
+            enabled ? "bg-blue-600" : "bg-slate-300"
+          }`}
           aria-label={`Toggle ${meta.title}`}
         >
-          <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${enabled ? "translate-x-5" : "translate-x-0.5"}`} />
+          <span
+            className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+              enabled ? "translate-x-5" : "translate-x-0.5"
+            }`}
+          />
         </button>
       </div>
 
+      {/* Expanded settings */}
       {enabled && (
         <div className="px-5 pb-5 pt-0 border-t border-slate-200/60 animate-in slide-in-from-top-1 fade-in duration-200">
-          <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <NumberField
-              label="Delivery Radius"
-              icon={MapPin}
-              iconColor="text-blue-500"
-              value={data.radius}
-              onChange={(v) => updateDelivery("radius", v)}
-              suffix="km"
-              placeholder="5"
+          <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <InputField
+              label="Minimum Order Value"
+              icon={ShoppingBag}
+              iconColor="text-amber-500"
+              value={data.minOrderAmount}
+              onChange={(v) => onChange("minOrderAmount", v)}
+              prefix="₹"
+              placeholder="0"
             />
-            <NumberField
+
+            <InputField
+              label="Estimated Delivery Time"
+              icon={Timer}
+              iconColor="text-blue-500"
+              type="text"
+              value={data.speed}
+              onChange={(v) => onChange("speed", v)}
+              placeholder={meta.defaultSpeed}
+            />
+
+            <InputField
+              label="Delivery Charge"
+              icon={Truck}
+              iconColor="text-slate-500"
+              value={data.deliveryCharge}
+              onChange={(v) => onChange("deliveryCharge", v)}
+              prefix="₹"
+              placeholder="40"
+            />
+
+            <InputField
               label="Free Delivery Above"
               icon={IndianRupee}
               iconColor="text-emerald-500"
               value={data.freeThreshold}
-              onChange={(v) => updateDelivery("freeThreshold", v)}
+              onChange={(v) => onChange("freeThreshold", v)}
               prefix="₹"
               placeholder="500"
             />
-            <NumberField
-              label="Minimum Order"
-              icon={ShoppingBag}
-              iconColor="text-amber-500"
-              value={data.minOrderAmount}
-              onChange={(v) => updateDelivery("minOrderAmount", v)}
-              prefix="₹"
-              placeholder="100"
+
+            <InputField
+              label="Delivery Radius (Optional)"
+              icon={MapPin}
+              iconColor="text-indigo-500"
+              value={data.radius}
+              onChange={(v) => onChange("radius", v)}
+              suffix="km"
+              placeholder="10"
             />
-            <NumberField
-              label="Charge per km"
-              icon={Truck}
-              iconColor="text-slate-500"
-              value={data.chargePerKm}
-              onChange={(v) => updateDelivery("chargePerKm", v)}
-              prefix="₹"
-              suffix="/km"
-              placeholder="15"
-            />
+
+            {/* Delivery By */}
+            <div>
+              <label className="flex items-center gap-1.5 text-[11px] font-bold text-slate-600 mb-1.5 uppercase tracking-wide">
+                <ShieldCheck size={12} className="text-violet-500" />
+                Fulfillment Partner
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => onChange("deliveryBy", "INHOUSE")}
+                  className={`py-2 px-3 text-xs font-semibold rounded-xl border transition-all ${
+                    data.deliveryBy === "INHOUSE"
+                      ? "bg-blue-50 border-blue-300 text-blue-700 shadow-xs"
+                      : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  In-House Staff
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onChange("deliveryBy", "PARTNERS")}
+                  className={`py-2 px-3 text-xs font-semibold rounded-xl border transition-all ${
+                    data.deliveryBy === "PARTNERS"
+                      ? "bg-blue-50 border-blue-300 text-blue-700 shadow-xs"
+                      : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  3rd Party Partner
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -201,85 +288,102 @@ function StoreDeliveryCardInner({
 
 export default function DeliveryPreferences({ onStatusChange }: { onStatusChange?: (status: React.ReactNode) => void }) {
   const { shop } = useBusinessApi();
-  const [instant, setInstant] = useState<DeliveryConfig>({ enabled: false, speed: "Within 12 hours", freeThreshold: 50, radius: 5, minOrderAmount: 100, chargePerKm: 15, manageStore: true, partners: true });
-  const [standard, setStandard] = useState<DeliveryConfig>({ enabled: false, speed: "1–2 Business Days", freeThreshold: 30, radius: 10, minOrderAmount: 150, chargePerKm: 10, manageStore: false, partners: true });
-  const [nationwide, setNationwide] = useState<DeliveryConfig>({ enabled: false, speed: "5–7 Business Days", freeThreshold: 100, radius: 100, minOrderAmount: 300, chargePerKm: 5, manageStore: false, partners: true });
+  const currentShopId = localStorage.getItem("shop_id") || SHOP_ID;
+
+  const [deliveryConfigs, setDeliveryConfigs] = useState<Record<string, DeliveryConfig>>({
+    normal: {
+      enabled: true,
+      speed: "2–3 Business Days",
+      minOrderAmount: 0,
+      deliveryCharge: 40,
+      freeThreshold: 500,
+      radius: 15,
+      chargePerKm: 0,
+      deliveryBy: "PARTNERS",
+    },
+    express: {
+      enabled: false,
+      speed: "Within 12 Hours",
+      minOrderAmount: 100,
+      deliveryCharge: 80,
+      freeThreshold: 800,
+      radius: 10,
+      chargePerKm: 0,
+      deliveryBy: "PARTNERS",
+    },
+    sameday: {
+      enabled: false,
+      speed: "Within 3–4 Hours",
+      minOrderAmount: 200,
+      deliveryCharge: 120,
+      freeThreshold: 1200,
+      radius: 8,
+      chargePerKm: 0,
+      deliveryBy: "INHOUSE",
+    },
+  });
+
+  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
+  // Load existing options from backend
   useEffect(() => {
-    shop.getDeliveryOptions(SHOP_ID).then(res => {
-      if (res && res.data && Array.isArray(res.data)) {
-        res.data.forEach((d: any) => {
-          const conf = {
-            enabled: true,
-            speed: d.speed || "",
-            freeThreshold: d.free_shipping_amount || 0,
-            radius: d.radius || 0,
-            minOrderAmount: d.min_order_amount || 0,
-            chargePerKm: d.charge_per_km || 0,
-            manageStore: d.delivery_by === "INHOUSE",
-            partners: d.delivery_by === "PARTNERS",
-            id: d.id
-          };
-          if (d.type === "INSTANT") setInstant(prev => ({ ...prev, ...conf }));
-          else if (d.type === "STANDARD") setStandard(prev => ({ ...prev, ...conf }));
-          else if (d.type === "NATIONWIDE") setNationwide(prev => ({ ...prev, ...conf }));
-        });
-      }
-    }).catch(err => console.error("Failed to fetch delivery options:", err));
-  }, []);
-
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      const types = [
-        { type: "INSTANT", conf: instant, set: setInstant },
-        { type: "STANDARD", conf: standard, set: setStandard },
-        { type: "NATIONWIDE", conf: nationwide, set: setNationwide }
-      ];
-      const promises = types.map(async ({ type, conf, set }) => {
-        if (!conf.enabled) {
-          if (conf.id) {
-            await shop.deleteDeliveryOption(conf.id);
-            set(p => ({ ...p, id: undefined }));
-          }
-        } else {
-          const payload = {
-            type,
-            speed: conf.speed,
-            free_shipping_amount: conf.freeThreshold,
-            radius: conf.radius,
-            min_order_amount: conf.minOrderAmount,
-            charge_per_km: conf.chargePerKm,
-            delivery_by: conf.partners ? "PARTNERS" : "INHOUSE"
-          };
-          if (conf.id) {
-            await shop.updateDeliveryOption(conf.id, { ...payload, id: conf.id });
-          } else {
-            const res = await shop.createDeliveryOption(SHOP_ID, payload);
-            if (res && res.data && res.data.id) {
-              set(p => ({ ...p, id: res.data.id }));
-            }
-          }
-        }
-      });
-      await Promise.all(promises);
-      alert("Delivery preferences saved successfully!");
-    } catch (err) {
-      console.error("Failed to save delivery preferences", err);
-      alert("Failed to save delivery preferences");
-    } finally {
-      setIsSaving(false);
+    if (!currentShopId || currentShopId === "string") {
+      setIsLoading(false);
+      return;
     }
-  };
 
-  const activeCount = [instant, standard, nationwide].filter((d) => d.enabled).length;
+    setIsLoading(true);
+    shop.getDeliveryOptions(currentShopId)
+      .then((res: any) => {
+        const dataList = res?.data;
+        if (Array.isArray(dataList) && dataList.length > 0) {
+          setDeliveryConfigs((prev) => {
+            const next = { ...prev };
+            dataList.forEach((item: any) => {
+              const matchedMeta = DELIVERY_OPTIONS_CONFIG.find(
+                (m) => m.backendType === item.type || m.legacyBackendTypes.includes(item.type)
+              );
+              if (matchedMeta) {
+                next[matchedMeta.key] = {
+                  id: item.id,
+                  enabled: item.enabled !== undefined ? item.enabled : true,
+                  speed: item.speed || matchedMeta.defaultSpeed,
+                  minOrderAmount: item.min_order_amount ?? 0,
+                  deliveryCharge: item.delivery_charge ?? (item.charge_per_km ?? 0),
+                  freeThreshold: item.free_shipping_amount ?? 0,
+                  radius: item.radius ?? 0,
+                  chargePerKm: item.charge_per_km ?? 0,
+                  deliveryBy: item.delivery_by === "INHOUSE" ? "INHOUSE" : "PARTNERS",
+                };
+              }
+            });
+            return next;
+          });
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch delivery options:", err);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, [currentShopId]);
+
+  const activeCount = Object.values(deliveryConfigs).filter((d) => d.enabled).length;
 
   useEffect(() => {
     if (onStatusChange) {
       onStatusChange(
         <div className="flex items-center gap-2 shrink-0">
-          <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full shrink-0 ${activeCount > 0 ? "bg-emerald-50 text-emerald-600 border border-emerald-200" : "bg-slate-100 text-slate-500"}`}>
+          <span
+            className={`text-[11px] font-bold px-2.5 py-1 rounded-full shrink-0 ${
+              activeCount > 0
+                ? "bg-emerald-50 text-emerald-600 border border-emerald-200"
+                : "bg-slate-100 text-slate-500"
+            }`}
+          >
             {activeCount} Active
           </span>
         </div>
@@ -287,15 +391,81 @@ export default function DeliveryPreferences({ onStatusChange }: { onStatusChange
     }
   }, [activeCount, onStatusChange]);
 
-  const updateDelivery = (type: "instant" | "standard" | "nationwide", field: keyof DeliveryConfig, value: any) => {
-    if (type === "instant") setInstant(prev => ({ ...prev, [field]: value }));
-    else if (type === "standard") setStandard(prev => ({ ...prev, [field]: value }));
-    else if (type === "nationwide") setNationwide(prev => ({ ...prev, [field]: value }));
+  const updateCard = (key: string, field: keyof DeliveryConfig, value: any) => {
+    setDeliveryConfigs((prev) => ({
+      ...prev,
+      [key]: {
+        ...prev[key],
+        [field]: value,
+      },
+    }));
+    setSaveSuccess(false);
   };
+
+  const handleSave = async () => {
+    if (!currentShopId || currentShopId === "string") {
+      alert("Please select or create a store first.");
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveSuccess(false);
+    try {
+      const promises = DELIVERY_OPTIONS_CONFIG.map(async (meta) => {
+        const conf = deliveryConfigs[meta.key];
+        const payload = {
+          type: meta.backendType,
+          speed: conf.speed || meta.defaultSpeed,
+          free_shipping_amount: Number(conf.freeThreshold) || 0,
+          min_order_amount: Number(conf.minOrderAmount) || 0,
+          delivery_charge: Number(conf.deliveryCharge) || 0,
+          charge_per_km: Number(conf.chargePerKm) || 0,
+          radius: Number(conf.radius) || 0,
+          delivery_by: conf.deliveryBy,
+          enabled: conf.enabled,
+        };
+
+        if (!conf.enabled) {
+          if (conf.id) {
+            await shop.updateDeliveryOption(conf.id, { ...payload, id: conf.id, enabled: false });
+          }
+        } else {
+          if (conf.id) {
+            await shop.updateDeliveryOption(conf.id, { ...payload, id: conf.id });
+          } else {
+            const res = await shop.createDeliveryOption(currentShopId, payload);
+            if (res && res.data && res.data.id) {
+              setDeliveryConfigs((prev) => ({
+                ...prev,
+                [meta.key]: { ...prev[meta.key], id: res.data.id },
+              }));
+            }
+          }
+        }
+      });
+
+      await Promise.all(promises);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 4000);
+    } catch (err) {
+      console.error("Failed to save delivery preferences:", err);
+      alert("Failed to save delivery options. Please check your backend connection.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-2" />
+        <p className="text-xs font-semibold">Loading delivery configurations...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto py-6 px-1 space-y-5" style={{ fontFamily: "Inter, Poppins, sans-serif" }}>
-
       {/* ── Page Header ── */}
       {!onStatusChange && (
         <div className="flex items-start justify-between gap-4">
@@ -304,56 +474,58 @@ export default function DeliveryPreferences({ onStatusChange }: { onStatusChange
               <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "#eff6ff", color: "#3b82f6" }}>
                 <Truck size={18} strokeWidth={2.5} />
               </div>
-              <h1 className="text-[20px] font-extrabold text-slate-800 tracking-tight">Delivery Preferences</h1>
+              <h1 className="text-[20px] font-extrabold text-slate-800 tracking-tight">Delivery Options</h1>
             </div>
             <p className="text-[13px] text-slate-400 ml-12">
-              Manage fulfillment zones, shipping speeds, and courier partners.
+              Configure shipping fees, estimated delivery times, and minimum order values for each delivery type.
             </p>
           </div>
         </div>
       )}
 
-      {/* ── Delivery Cards from Step 3 ── */}
-      <div className="space-y-3">
-        <StoreDeliveryCardInner
-          meta={DELIVERY_META.instant}
-          Icon={DELIVERY_META.instant.icon}
-          data={instant}
-          updateDelivery={(field, value) => updateDelivery("instant", field, value)}
-        />
-        <StoreDeliveryCardInner
-          meta={DELIVERY_META.standard}
-          Icon={DELIVERY_META.standard.icon}
-          data={standard}
-          updateDelivery={(field, value) => updateDelivery("standard", field, value)}
-        />
-        <StoreDeliveryCardInner
-          meta={DELIVERY_META.nationwide}
-          Icon={DELIVERY_META.nationwide.icon}
-          data={nationwide}
-          updateDelivery={(field, value) => updateDelivery("nationwide", field, value)}
-        />
+      {/* ── Delivery Cards ── */}
+      <div className="space-y-4">
+        {DELIVERY_OPTIONS_CONFIG.map((meta) => (
+          <DeliveryCardInner
+            key={meta.key}
+            meta={meta}
+            data={deliveryConfigs[meta.key]}
+            onChange={(field, value) => updateCard(meta.key, field, value)}
+          />
+        ))}
       </div>
 
       {/* Helper note */}
-      <div className="flex items-start gap-2 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
-        <Timer size={13} className="text-slate-400 mt-0.5 shrink-0" />
-        <p className="text-[11px] text-slate-500 leading-relaxed">
-          <span className="font-semibold text-slate-600">Tip:</span> Set the free delivery threshold to encourage larger orders. Delivery charges apply per km above the free threshold.
+      <div className="flex items-start gap-2.5 bg-blue-50/60 border border-blue-100 rounded-2xl px-4 py-3.5">
+        <Sparkles size={16} className="text-blue-500 mt-0.5 shrink-0" />
+        <p className="text-[12px] text-blue-800 leading-relaxed">
+          <span className="font-bold">Pro Tip:</span> Offering free delivery above a threshold (e.g. ₹500) significantly boosts your average order value.
         </p>
       </div>
 
       {/* ── Save Button ── */}
-      <div className="flex justify-end pt-2">
-        <button
-          onClick={handleSave}
-          disabled={isSaving}
-          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[13.5px] font-bold text-white transition-all shadow-md ${isSaving ? 'opacity-70 cursor-not-allowed' : 'hover:opacity-90 cursor-pointer'}`}
-          style={{ background: "#3b82f6", boxShadow: "0 4px 14px rgba(59,130,246,0.3)" }}
-        >
-          {isSaving ? <Timer size={15} className="animate-spin" /> : <Check size={15} strokeWidth={3} />}
-          {isSaving ? "Saving..." : "Save Preferences"}
-        </button>
+      <div className="flex items-center justify-between pt-2">
+        {saveSuccess && (
+          <span className="text-xs font-bold text-emerald-600 flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl animate-in fade-in">
+            <Check size={14} strokeWidth={3} />
+            Delivery preferences saved successfully!
+          </span>
+        )}
+        <div className="ml-auto">
+          <button
+            onClick={handleSave}
+            disabled={isSaving}
+            className={`flex items-center gap-2 px-7 py-2.5 rounded-xl text-[13.5px] font-bold text-white transition-all shadow-md ${
+              isSaving
+                ? "opacity-70 cursor-not-allowed bg-blue-400"
+                : "bg-blue-600 hover:bg-blue-700 active:scale-98 cursor-pointer"
+            }`}
+            style={{ boxShadow: "0 4px 14px rgba(59,130,246,0.3)" }}
+          >
+            {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} strokeWidth={3} />}
+            {isSaving ? "Saving..." : "Save Preferences"}
+          </button>
+        </div>
       </div>
     </div>
   );

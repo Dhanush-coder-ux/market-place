@@ -14,10 +14,16 @@ export interface OperatingHoursFormData {
 }
 
 export interface DeliveryOptionFormData {
+  id?: number;
   type: DeliveryTypeEnum;
   speed: string;
   free_shipping_amount: number;
+  min_order_amount?: number;
+  delivery_charge?: number;
+  charge_per_km?: number;
+  radius?: number;
   delivery_by: DeliveryByEnum;
+  enabled?: boolean;
 }
 
 export interface AnnouncementFormData {

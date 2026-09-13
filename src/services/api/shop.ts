@@ -20,23 +20,33 @@ export const shopApi = {
     return await apiClient.get(ENDPOINTS.SHOPS, params);
   },
   
-  // ── Operating Hours (Dummy endpoints extracting from Shop) ───────────────
+  // ── Operating Hours ───────────────────────────────────────────────────────
   getOperatingHours: async (shop_id: string) => {
-    const shopRes = await apiClient.get(`${ENDPOINTS.SHOPS}/by/${shop_id}`);
-    return { data: shopRes?.data?.operating_hours || [] };
+    return await apiClient.get(`${ENDPOINTS.SHOPS}/${shop_id}/operating-hours`);
   },
-  createOperatingHours: async (_shop_id: string, data: any) => Promise.resolve({data}),
-  updateOperatingHours: async (_id: string | number, data: any) => Promise.resolve({data}),
-  deleteOperatingHours: async (_id: string | number) => Promise.resolve({}),
+  createOperatingHours: async (shop_id: string, data: any) => {
+    return await apiClient.post(`${ENDPOINTS.SHOPS}/${shop_id}/operating-hours`, data);
+  },
+  updateOperatingHours: async (id: string | number, data: any) => {
+    return await apiClient.put(`${ENDPOINTS.SHOPS}/operating-hours/${id}`, data);
+  },
+  deleteOperatingHours: async (id: string | number) => {
+    return await apiClient.delete(`${ENDPOINTS.SHOPS}/operating-hours/${id}`);
+  },
 
-  // ── Delivery Options (Dummy endpoints extracting from Shop) ──────────────
+  // ── Delivery Options ───────────────────────────────────────────────────────
   getDeliveryOptions: async (shop_id: string) => {
-    const shopRes = await apiClient.get(`${ENDPOINTS.SHOPS}/by/${shop_id}`);
-    return { data: shopRes?.data?.delivery_options || [] };
+    return await apiClient.get(`${ENDPOINTS.SHOPS}/${shop_id}/delivery`);
   },
-  createDeliveryOption: async (_shop_id: string, data: any) => Promise.resolve({data}),
-  updateDeliveryOption: async (_id: string | number, data: any) => Promise.resolve({data}),
-  deleteDeliveryOption: async (_id: string | number) => Promise.resolve({}),
+  createDeliveryOption: async (shop_id: string, data: any) => {
+    return await apiClient.post(`${ENDPOINTS.SHOPS}/${shop_id}/delivery`, data);
+  },
+  updateDeliveryOption: async (id: string | number, data: any) => {
+    return await apiClient.put(`${ENDPOINTS.SHOPS}/delivery/${id}`, data);
+  },
+  deleteDeliveryOption: async (id: string | number) => {
+    return await apiClient.delete(`${ENDPOINTS.SHOPS}/delivery/${id}`);
+  },
   
   getShopById: async (shop_id: string) => {
     return await apiClient.get(`${ENDPOINTS.SHOPS}/by/${shop_id}`);

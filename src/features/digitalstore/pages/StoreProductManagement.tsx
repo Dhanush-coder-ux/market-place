@@ -462,7 +462,7 @@ const ProductDashboard = () => {
 
   // Custom Field / Edit Modal State
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [customValues, setCustomValues] = useState<Record<string, string>>({});
+  const [shopFields, setShopFields] = useState<any[]>([]);
   const [savingProduct, setSavingProduct] = useState(false);
 
   // Additional Details State
@@ -583,7 +583,12 @@ const ProductDashboard = () => {
     }
   };
 
-  useEffect(() => { loadProducts(1, limit); }, []);
+  useEffect(() => { 
+    loadProducts(1, limit); 
+    inventoryCustomFieldsApi.getAllFields(SHOP_ID).then((res) => {
+      setShopFields(res);
+    }).catch(console.error);
+  }, []);
 
   const handlePrevPage = () => {
     if (page <= 1 || loading) return;
@@ -612,22 +617,29 @@ const ProductDashboard = () => {
     return Array.from(cats);
   }, [products]);
 
-  const loadCustomFieldsForProduct = async (product: Product) => {
+  const loadCustomFieldsForProduct = async (product: Product, currentShopFields: any[]) => {
     try {
       const values = await inventoryCustomFieldsApi.getValuesByProduct(SHOP_ID, product.id);
-      const valuesMap: Record<string, string> = {};
-      values.forEach((v) => { valuesMap[v.field_id] = v.value; });
-      setCustomValues(valuesMap);
+      const sections = values.map((v, i) => {
+        const field = currentShopFields.find(f => f.id === v.field_id);
+        return {
+          id: Date.now().toString() + i,
+          title: field?.label_name || "",
+          content: v.value
+        };
+      });
+      setAdditionalSections(sections.slice(0, 3));
     } catch (err) {
       console.error(err);
       showToast("Error loading custom fields", "error");
+      setAdditionalSections([]);
     }
   };
 
   const handleOpenEdit = (product: Product) => {
     setEditingProduct(product);
-    setAdditionalSections(product.raw?.additional_sections || []);
-    loadCustomFieldsForProduct(product);
+    setAdditionalSections([]);
+    loadCustomFieldsForProduct(product, shopFields);
   };
 
 
@@ -636,10 +648,36 @@ const ProductDashboard = () => {
     if (!editingProduct) return;
     try {
       setSavingProduct(true);
-      const valuesToSave = Object.entries(customValues).map(([fieldId, value]) => ({
-        field_id: fieldId,
-        value: String(value),
-      }));
+      
+      let currentShopFields = [...shopFields];
+      
+      const missingFields = additionalSections.filter(sec => 
+        sec.title.trim() && !currentShopFields.find(f => f.label_name.toLowerCase() === sec.title.trim().toLowerCase())
+      );
+
+      if (missingFields.length > 0) {
+        await inventoryCustomFieldsApi.createField({
+          shop_id: SHOP_ID,
+          field_infos: missingFields.map(sec => ({
+            field_name: sec.title.trim().toLowerCase().replace(/\s+/g, '_'),
+            label_name: sec.title.trim(),
+            type: "text",
+            visible_online: true
+          }))
+        });
+        
+        currentShopFields = await inventoryCustomFieldsApi.getAllFields(SHOP_ID);
+        setShopFields(currentShopFields);
+      }
+
+      const valuesToSave = additionalSections
+        .filter(sec => sec.title.trim() && sec.content.trim())
+        .map(sec => {
+          const field = currentShopFields.find(f => f.label_name.toLowerCase() === sec.title.trim().toLowerCase());
+          return field ? { field_id: field.id, value: sec.content.trim() } : null;
+        })
+        .filter(Boolean) as { field_id: string; value: string }[];
+
       if (valuesToSave.length > 0) {
         await inventoryCustomFieldsApi.bulkUpsertValues({
           shop_id: SHOP_ID,

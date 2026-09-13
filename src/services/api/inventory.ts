@@ -344,7 +344,12 @@ export const inventoryCustomFieldsApi = {
 
   /** POST /inventory-fields/values/bulk — Bulk upsert field values */
   bulkUpsertValues: async (data: BulkUpsertInventoryFieldValuesPayload) => {
-    return await apiClient.post(`${CF}/values/bulk`, data);
+    const payload = {
+      shop_id: data.shop_id,
+      product_id: data.product_id,
+      value_infos: data.values,
+    };
+    return await apiClient.post(`${CF}/values`, payload);
   },
 
   /** GET /inventory-fields/values/{shop_id}/{product_id} — All values for a product */

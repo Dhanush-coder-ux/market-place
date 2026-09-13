@@ -107,7 +107,7 @@ export default function Step3Products({ form, setForm }: Step3Props) {
   // Description in sidebar
   const [description, setDescription]       = useState("");
 
-  const [fieldValues, setFieldValues]       = useState<Record<string, string>>({});
+  const [shopFields, setShopFields]         = useState<any[]>([]);
 
   const [savingDesc, setSavingDesc]         = useState(false);
 
@@ -136,18 +136,26 @@ export default function Step3Products({ form, setForm }: Step3Props) {
       const items = res?.data || res?.datas || [];
       if (Array.isArray(items)) setProducts(items);
     });
+    inventoryCustomFieldsApi.getAllFields(SHOP_ID).then((res) => {
+      setShopFields(res);
+    }).catch(console.error);
   }, []);
 
-  // Load product-specific field values + description when opening sidebar
-  const loadProductData = async (product: any) => {
+  const loadProductData = async (product: any, currentShopFields: any[]) => {
     setDescription(product.description || "");
     try {
       const values = await inventoryCustomFieldsApi.getValuesByProduct(SHOP_ID, product.id);
-      const map: Record<string, string> = {};
-      values.forEach((v) => { map[v.field_id] = v.value; });
-      setFieldValues(map);
+      const sections = values.map((v, i) => {
+        const field = currentShopFields.find(f => f.id === v.field_id);
+        return {
+          id: Date.now().toString() + i,
+          title: field?.label_name || "",
+          content: v.value
+        };
+      });
+      setAdditionalSections(sections.slice(0, 3));
     } catch {
-      setFieldValues({});
+      setAdditionalSections([]);
     }
   };
 
@@ -187,10 +195,10 @@ export default function Step3Products({ form, setForm }: Step3Props) {
           new_custom_fields: [],
         }
     );
-    // Show "" for 0 so typing immediately clears it; otherwise show the saved value
     setOnlinePriceStr(resolvedPrice === 0 ? "" : String(resolvedPrice));
-    setAdditionalSections((existingConfig as any)?.additional_sections || []);
-    loadProductData(product);
+    
+    // We pass current shopFields to ensure accurate mapping
+    loadProductData(product, shopFields);
   };
 
   const handleApplyConfig = async () => {
@@ -209,24 +217,49 @@ export default function Step3Products({ form, setForm }: Step3Props) {
         online_sell_price: sidebarConfig.online_selling_price,
         description,
       });
-    } catch (e) {
-      console.error("Failed to save product details to backend", e);
-    } finally {
-      setSavingDesc(false);
-    }
 
-    // Save custom field values
-    const valuesToSave = Object.entries(fieldValues).map(([field_id, value]) => ({ field_id, value: String(value) }));
-    if (valuesToSave.length > 0) {
-      try {
+      // Handle custom fields
+      let currentShopFields = [...shopFields];
+      
+      const missingFields = additionalSections.filter(sec => 
+        sec.title.trim() && !currentShopFields.find(f => f.label_name.toLowerCase() === sec.title.trim().toLowerCase())
+      );
+
+      if (missingFields.length > 0) {
+        await inventoryCustomFieldsApi.createField({
+          shop_id: SHOP_ID,
+          field_infos: missingFields.map(sec => ({
+            field_name: sec.title.trim().toLowerCase().replace(/\s+/g, '_'),
+            label_name: sec.title.trim(),
+            type: "text",
+            visible_online: true
+          }))
+        });
+        
+        currentShopFields = await inventoryCustomFieldsApi.getAllFields(SHOP_ID);
+        setShopFields(currentShopFields);
+      }
+
+      const valuesToSave = additionalSections
+        .filter(sec => sec.title.trim() && sec.content.trim())
+        .map(sec => {
+          const field = currentShopFields.find(f => f.label_name.toLowerCase() === sec.title.trim().toLowerCase());
+          return field ? { field_id: field.id, value: sec.content.trim() } : null;
+        })
+        .filter(Boolean) as { field_id: string; value: string }[];
+
+      if (valuesToSave.length > 0) {
         await inventoryCustomFieldsApi.bulkUpsertValues({
           shop_id: SHOP_ID,
           product_id: activeProduct.id,
           values: valuesToSave,
         });
-      } catch (e) {
-        console.error("Failed to save field values", e);
       }
+
+    } catch (e) {
+      console.error("Failed to save product details to backend", e);
+    } finally {
+      setSavingDesc(false);
     }
 
     setForm(prev => ({

@@ -136,8 +136,15 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
       };
 
       const wsBase = getWsBaseUrl();
-      const queryParam = shopId ? `?shop_id=${encodeURIComponent(shopId)}` : "";
-      const wsUrl = `${wsBase}/notifications/ws/${effectiveId}${queryParam}`;
+      const token = localStorage.getItem("auth_token") || "";
+      const queryParams = new URLSearchParams();
+      if (shopId) queryParams.set("shop_id", shopId);
+      if (token) {
+        queryParams.set("token", token);
+        queryParams.set("auth_token", token);
+      }
+      const queryString = queryParams.toString() ? `?${queryParams.toString()}` : "";
+      const wsUrl = `${wsBase}/notifications/ws/${effectiveId}${queryString}`;
 
       try {
         if (socketRef.current) {

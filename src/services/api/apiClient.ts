@@ -198,7 +198,22 @@ async function request(options: RequestOptions): Promise<any> {
     const headers: Record<string, string> = {
       "Content-Type": "application/json"
     };
-    if (token) headers["Authorization"] = `Bearer ${token}`;
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const userInfos = {
+          user_id: payload.user_id || payload.sub || userId,
+          id: payload.user_id || payload.sub || userId,
+          name: payload.name || payload.entity_name || localStorage.getItem("user_name") || "",
+          email: payload.email || localStorage.getItem("user_email") || "",
+          role: payload.role || payload.entity_type || "User"
+        };
+        headers["x-user-infos"] = JSON.stringify(userInfos);
+      } catch (e) {
+        // ignore
+      }
+    }
     if (shopId) {
       headers["x-shop-id"] = shopId;
     }
@@ -274,7 +289,22 @@ async function requestFormData(endpoint: string, formData: FormData): Promise<an
     }
 
     const headers: Record<string, string> = {};
-    if (token) headers["Authorization"] = `Bearer ${token}`;
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const userInfos = {
+          user_id: payload.user_id || payload.sub || userId,
+          id: payload.user_id || payload.sub || userId,
+          name: payload.name || payload.entity_name || localStorage.getItem("user_name") || "",
+          email: payload.email || localStorage.getItem("user_email") || "",
+          role: payload.role || payload.entity_type || "User"
+        };
+        headers["x-user-infos"] = JSON.stringify(userInfos);
+      } catch (e) {
+        // ignore
+      }
+    }
     if (shopId) {
       headers["x-shop-id"] = shopId;
     }

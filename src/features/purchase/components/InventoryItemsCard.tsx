@@ -842,18 +842,19 @@ export const InventoryItemsCard = ({
                 const allocTotal = stats.allocations[index]?.alloc || 0;
                 const allocPerUnit = q > 0 ? allocTotal / q : 0;
                 const netCostPerUnit = stats.allocations[index]?.netCostPerUnit || rowBaseCost;
-                const costForSp = rowBaseCost + rowGstPerUnit;
+                const costForSp = gstMode === "inclusive" ? rowBaseCost + rowGstPerUnit : rowBaseCost;
                 const netCostForSp = costForSp + allocPerUnit;
 
                 let computedSellPrice = Number(product.sellingPrice) || 0;
                 if (product.marginType === "percent" && Number(product.marginPercent) > 0) {
-                  computedSellPrice = netCostForSp * (1 + Number(product.marginPercent) / 100);
+                  const m = Number(product.marginPercent);
+                  computedSellPrice = m < 100 ? netCostForSp / (1 - m / 100) : netCostForSp * (1 + m / 100);
                 } else if (product.marginType === "amount" && Number(product.marginAmount) > 0) {
                   computedSellPrice = netCostForSp + Number(product.marginAmount);
                 }
 
                 const effectiveMarginPct = netCostForSp > 0 && computedSellPrice > 0
-                  ? (((computedSellPrice - netCostForSp) / netCostForSp) * 100).toFixed(1)
+                  ? (((computedSellPrice - netCostForSp) / computedSellPrice) * 100).toFixed(1)
                   : null;
 
                 const isExpanded = expandedSettings.has(index) || expandedBreakdown.has(index);

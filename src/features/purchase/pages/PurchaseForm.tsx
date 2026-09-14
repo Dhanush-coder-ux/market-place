@@ -532,7 +532,7 @@ const PurchaseForm = () => {
         const rowBaseCost = baseCost;
         const rowGstPerUnit = gstMode === "inclusive"
           ? rawCostPrice - rowBaseCost
-          : rawCostPrice * (gstRate / 100);
+          : 0; // Exclude GST from cost when exclusive (input-tax credit)
         const costForSp = rowBaseCost + rowGstPerUnit;
 
         let allocated = 0;
@@ -547,7 +547,8 @@ const PurchaseForm = () => {
 
         let finalSellPrice = 0;
         if (p.marginType === "percent") {
-          finalSellPrice = netCostForSp + (netCostForSp * ((Number(p.marginPercent) || 0) / 100));
+          const m = Number(p.marginPercent) || 0;
+          finalSellPrice = m < 100 ? netCostForSp / (1 - m / 100) : netCostForSp * (1 + m / 100);
         } else if (p.marginType === "amount" && Number(p.marginAmount) > 0) {
           finalSellPrice = netCostForSp + (Number(p.marginAmount) || 0);
         } else {

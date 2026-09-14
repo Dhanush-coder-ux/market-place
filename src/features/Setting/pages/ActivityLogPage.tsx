@@ -42,6 +42,22 @@ const IconCart = () => (
 // Helpers
 // ---------------------------------------------------------------------------
 
+function parseToLocalDate(dateVal: any): Date | null {
+  if (!dateVal) return null;
+  if (dateVal instanceof Date) return dateVal;
+  let str = String(dateVal).trim();
+  if (!str) return null;
+
+  if (str.includes("T") || str.includes(" ")) {
+    if (!str.endsWith("Z") && !/[+-]\d{2}(:\d{2})?$/.test(str)) {
+      str = str.replace(" ", "T") + "Z";
+    }
+  }
+
+  const d = new Date(str);
+  return isNaN(d.getTime()) ? null : d;
+}
+
 function initials(n: string = "System") {
   return n.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
 }
@@ -50,6 +66,18 @@ function avatarColor(n: string = "System") {
   let s = 0;
   for (const ch of n) s += ch.charCodeAt(0);
   return c[s % c.length];
+}
+
+function getUserRole(e: LogEntry): string {
+  const user = (e.user_name || "").trim();
+  if (!user || user.toLowerCase() === "system") {
+    return "Automated";
+  }
+  const rawRole = (e.user_role || (e as any).userRole || e.meta?.role || "").trim();
+  if (rawRole && rawRole.toLowerCase() !== "user") {
+    return rawRole.charAt(0).toUpperCase() + rawRole.slice(1);
+  }
+  return "Owner";
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -113,6 +141,8 @@ interface LogEntry {
   id: string;
   ui_id?: string | number;
   user_name?: string;
+  user_email?: string;
+  user_role?: string;
   service?: string;
   action: string;
   entity_type?: string;
@@ -130,6 +160,7 @@ interface LogEntry {
     customer?: string;
     payment?: string;
     ui_id?: string | number;
+    role?: string;
   };
   category?: string;
 }
@@ -230,7 +261,7 @@ export const ActivityLogPage = () => {
   const fetchLogs = async () => {
     setLoading(true);
     try {
-      const res = await getData(`${ENDPOINTS.UTILITIES}/activity-logs/${SHOP_ID}`, { limit: "200" });
+      const res = await getData(`${ENDPOINTS.UTILITIES}/activity-logs/${SHOP_ID}`, { limit: "200", exclude_system: "true" });
       if (res?.data && Array.isArray(res.data)) {
         const normalizedData = res.data.map((log: LogEntry, i: number) => {
           let action = (log.action || "create").toLowerCase();
@@ -406,9 +437,10 @@ export const ActivityLogPage = () => {
               filteredLogs.map((e, i) => {
                 const open = openSet.has(e.id);
                 const user = e.user_name || "System";
-                const role = user === "System" ? "Automated" : "User";
-                const dateStr = e.created_at ? format(new Date(e.created_at), "dd MMM yyyy") : "—";
-                const timeStr = e.created_at ? format(new Date(e.created_at), "hh:mm a") : "—";
+                const role = getUserRole(e);
+                const logDate = parseToLocalDate(e.created_at);
+                const dateStr = logDate ? format(logDate, "dd MMM yyyy") : "—";
+                const timeStr = logDate ? format(logDate, "hh:mm a") : "—";
                 const disp = getDisplayName(e);
                 const entity = (e.entity_type || e.action.toUpperCase()).toString().toUpperCase();
 

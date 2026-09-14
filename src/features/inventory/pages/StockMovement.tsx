@@ -17,7 +17,6 @@ import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { useHeader } from "@/context/HeaderContext";
 import { ColumnPicker } from "@/components/common/ColumnPicker";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { useToast } from "@/context/ToastContext";
 import { createPortal } from "react-dom";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
@@ -529,6 +528,11 @@ export default function StockMovementPage() {
 
   const [directionFilter, setDirectionFilter] = useState<"ALL" | "IN" | "OUT">("ALL");
   const [analyticsStats, setAnalyticsStats] = useState<any>(null);
+  const [summaryStats, setSummaryStats] = useState<{ total: number; totalIn: number; totalOut: number }>({
+    total: 0,
+    totalIn: 0,
+    totalOut: 0,
+  });
 
   useEffect(() => {
     getData(ENDPOINTS.ANALYTICS_STOCKMOVADJ_OVERALL, { shop_id: SHOP_ID })
@@ -539,6 +543,33 @@ export default function StockMovementPage() {
         }
       })
       .catch(() => { });
+
+    stockMovAdjApi.getStockMovementsByShop(SHOP_ID, { limit: "500", offset: "1" }).then((res: any) => {
+      if (res && res.data) {
+        const rawList = Array.isArray(res.data) ? res.data : (res.data.datas || res.data.movements || []);
+        let inSum = 0;
+        let outSum = 0;
+        rawList.forEach((m: any) => {
+          const items = m.items || m.productsList || [];
+          if (items.length > 0) {
+            items.forEach((p: any) => {
+              const q = Number(p.qty) || 0;
+              if (q > 0) inSum += q;
+              else if (q < 0) outSum += Math.abs(q);
+            });
+          } else {
+            const q = Number(m.qty) || 0;
+            if (q > 0) inSum += q;
+            else if (q < 0) outSum += Math.abs(q);
+          }
+        });
+        setSummaryStats({
+          total: rawList.length,
+          totalIn: inSum,
+          totalOut: outSum
+        });
+      }
+    }).catch(() => {});
   }, [getData]);
 
   const handleBulkDelete = () => {
@@ -713,6 +744,12 @@ export default function StockMovementPage() {
       );
     }
 
+    if (directionFilter === "IN") {
+      result = result.filter(m => (m.qty > 0) || (m.productsList && m.productsList.some((p: any) => Number(p.qty) > 0)));
+    } else if (directionFilter === "OUT") {
+      result = result.filter(m => (m.qty < 0) || (m.productsList && m.productsList.some((p: any) => Number(p.qty) < 0)));
+    }
+
     if (typeFilter && typeFilter !== "All") {
       result = result.filter(m => m.type.toUpperCase() === typeFilter.toUpperCase());
     }
@@ -740,33 +777,9 @@ export default function StockMovementPage() {
     return result;
   }, [filtered, directionFilter, debouncedSearch, typeFilter, dateFrom, dateTo, sortField, sortDir]);
 
-  const dynamicTypes = useMemo(() => {
-    const s = new Set(filtered.map(m => m.type).filter(Boolean));
-    return ["All", ...Array.from(s)];
-  }, [filtered]);
 
-  const { calculatedIn, calculatedOut } = useMemo(() => {
-    let inSum = 0;
-    let outSum = 0;
-    filtered.forEach((m) => {
-      if (m.productsList && m.productsList.length > 0) {
-        m.productsList.forEach((p: any) => {
-          const q = Number(p.qty) || 0;
-          if (q > 0) inSum += q;
-          else if (q < 0) outSum += Math.abs(q);
-        });
-      } else {
-        const q = Number(m.qty) || 0;
-        if (q > 0) inSum += q;
-        else if (q < 0) outSum += Math.abs(q);
-      }
-    });
-    return { calculatedIn: inSum, calculatedOut: outSum };
-  }, [filtered]);
 
-  const totalIn = filtered.length > 0 ? calculatedIn : (analyticsStats?.overview?.stock_adjustment?.total_stockmovadj_increments ?? calculatedIn);
-  const totalOut = filtered.length > 0 ? calculatedOut : (analyticsStats?.overview?.stock_adjustment?.total_stockmovadj_decrements ?? calculatedOut);
-  const totalCount = filtered.length > 0 ? filtered.length : (analyticsStats?.overview?.stock_adjustment?.total_stockmovadj ?? filtered.length);
+
 
   function toggleSort(field: "date" | "qty") {
     if (sortField === field) setSortDir(d => d === "asc" ? "desc" : "asc");
@@ -812,7 +825,7 @@ export default function StockMovementPage() {
         <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-none">
           <StatCard
             label="All Movements"
-            value={totalCount.toString()}
+            value={(analyticsStats?.overview?.stock_adjustment?.total_stockmovadj ?? summaryStats.total).toString()}
             icon={Activity}
             iconBg="bg-blue-50"
             iconColor="text-blue-600"
@@ -822,7 +835,7 @@ export default function StockMovementPage() {
           />
           <StatCard
             label="Stock In"
-            value={`+${totalIn}`}
+            value={`+${analyticsStats?.overview?.stock_adjustment?.total_stockmovadj_increments ?? summaryStats.totalIn}`}
             icon={TrendingUp}
             iconBg="bg-emerald-50"
             iconColor="text-emerald-600"
@@ -833,7 +846,7 @@ export default function StockMovementPage() {
           />
           <StatCard
             label="Stock Out"
-            value={`-${totalOut}`}
+            value={`-${analyticsStats?.overview?.stock_adjustment?.total_stockmovadj_decrements ?? summaryStats.totalOut}`}
             icon={TrendingDown}
             iconBg="bg-rose-50"
             iconColor="text-rose-600"
@@ -864,14 +877,14 @@ export default function StockMovementPage() {
           <button
             type="button"
             onClick={() => setIsFilterOpen(true)}
-            className={`h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0 ${typeFilter !== "All" || dateFrom || dateTo
+            className={`h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0 ${Boolean(dateFrom || dateTo)
               ? "border-blue-200 text-[var(--mv-sales-tx)] bg-[var(--mv-sales-bg)]"
               : "border-slate-200 text-slate-650 bg-white hover:bg-slate-50"
               }`}
             title="Filters"
           >
             <Filter size={13} />
-            {(typeFilter !== "All" || dateFrom || dateTo) && <span className="w-1.5 h-1.5 rounded-full bg-[var(--mv-sales-bg)] animate-pulse" />}
+            {(Boolean(dateFrom || dateTo)) && <span className="w-1.5 h-1.5 rounded-full bg-[var(--mv-sales-bg)] animate-pulse" />}
           </button>
 
           <ColumnPicker
@@ -892,37 +905,24 @@ export default function StockMovementPage() {
         title="Stock Movement Filters"
       >
         <div className="space-y-4">
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Movement Type</label>
-            <ReusableSelect
-              options={dynamicTypes.map(t => ({ label: String(t).replace(/_/g, ' '), value: String(t) }))}
-              value={typeFilter}
-              onValueChange={(val) => setTypeFilter(val)}
-              placeholder="Type"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Date Range</label>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="relative">
-                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[9px] font-bold text-slate-400 uppercase">From</span>
-                <input
-                  type="date"
-                  value={dateFrom}
-                  onChange={e => setDateFrom(e.target.value)}
-                  className="w-full h-9 pl-11 pr-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
-                />
-              </div>
-              <div className="relative">
-                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[9px] font-bold text-slate-400 uppercase">To</span>
-                <input
-                  type="date"
-                  value={dateTo}
-                  onChange={e => setDateTo(e.target.value)}
-                  className="w-full h-9 pl-9 pr-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
-                />
-              </div>
+          <div className="flex items-center gap-2">
+            <div className="space-y-1.5 flex-1">
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">From</label>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={e => setDateFrom(e.target.value)}
+                className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+              />
+            </div>
+            <div className="space-y-1.5 flex-1">
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">To</label>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={e => setDateTo(e.target.value)}
+                className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+              />
             </div>
           </div>
         </div>

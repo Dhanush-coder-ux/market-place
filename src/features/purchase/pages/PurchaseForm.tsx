@@ -99,6 +99,7 @@ const PurchaseForm = () => {
   const [originalSupplierName, setOriginalSupplierName] = useState<string | null>(null);
   const [pendingSupplier, setPendingSupplier] = useState<any>(null);
   const [showSupplierChangeInfo, setShowSupplierChangeInfo] = useState(false);
+  const [existingStatus, setExistingStatus] = useState<string | null>(null);
 
   // --- State Management ---
   const [purchaseDetails, setPurchaseDetails] = useState({
@@ -237,6 +238,7 @@ const PurchaseForm = () => {
           }
 
           setPurchaseType(data.type || "DIRECT");
+          setExistingStatus(String(data.status || data.datas?.status || "").toUpperCase());
 
           // Read the version from the backend response
           setPurchaseVersion(data.version || "v1");
@@ -483,6 +485,11 @@ const PurchaseForm = () => {
       return;
     }
 
+    if (!purchaseDetails.invoiceNo || purchaseDetails.invoiceNo.trim() === '') {
+      showToast("Supplier Invoice # is mandatory.", "error");
+      return;
+    }
+
     if (products.length === 0 || !products[0].name) {
       showToast("Please add at least one product.", "error");
       return;
@@ -651,9 +658,7 @@ const PurchaseForm = () => {
           purchase_date: purchaseDetails.date,
           items: transformedProducts
             .filter((p: any) => {
-              // Only send items that have a real backend ID. Items without one
-              // (e.g. temp- rows from newly added lines during edit) would cause
-              // a backend conflict when the same product_id appears multiple times.
+              if (existingStatus === "DRAFT") return true;
               if (!p.id) return false;
               return true;
             })
@@ -676,7 +681,12 @@ const PurchaseForm = () => {
       }
 
       if (res) {
-        showToast(id ? "Purchase updated" : "Purchase created", "success");
+        showToast(
+          id
+            ? (draftStatus ? "Draft updated successfully" : "Purchase created successfully")
+            : (draftStatus ? "Draft saved successfully" : "Purchase created successfully"),
+          "success"
+        );
         if (draftStatus) {
           navigate("/purchase-history");
         } else {
@@ -693,30 +703,32 @@ const PurchaseForm = () => {
 
   // --- Header Actions ---
   useEffect(() => {
+    const isDraft = !id || existingStatus === "DRAFT";
     setBottomActions(
       <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300">
-        {!id && (
+        {isDraft && (
           <button
             type="button"
             onClick={() => handleSavePurchase(true)}
-            className="px-4 h-8 rounded-xl border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2 whitespace-nowrap overflow-hidden"
+            disabled={submitting}
+            className="px-4 h-8 rounded-xl border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2 whitespace-nowrap overflow-hidden disabled:opacity-50"
           >
             <Bookmark size={14} className="shrink-0" />
-            <span className="truncate">Save Draft</span>
+            <span className="truncate">{id && existingStatus === "DRAFT" ? "Update Draft" : "Save Draft"}</span>
           </button>
         )}
         <GradientButton
           icon={submitting ? <Loader className="h-4 w-4" /> : <Save size={16} />}
-          onClick={handleSavePurchase}
+          onClick={() => handleSavePurchase(false)}
           disabled={submitting}
           className="rounded-xl shadow-md text-xs px-8 h-8 flex items-center"
         >
-          {submitting ? "Processing..." : (id ? "Update Purchase" : "Confirm Purchase")}
+          {submitting ? "Processing..." : (id ? (existingStatus === "DRAFT" ? "Create Purchase" : "Update Purchase") : "Confirm Purchase")}
         </GradientButton>
       </div>
     );
     return () => setBottomActions(null);
-  }, [setBottomActions, submitting, id, handleSavePurchase]);
+  }, [setBottomActions, submitting, id, existingStatus, handleSavePurchase]);
 
   const handleAddNewProduct = useCallback((query: string) => {
     openQuickCreate("PRODUCT", (newProduct: any) => {
@@ -846,8 +858,9 @@ const PurchaseForm = () => {
                 </div>
 
                 <Input
-                  label="Supplier Invoice # (optional)"
+                  label="Supplier Invoice #"
                   tooltip="Enter the invoice number provided by the supplier for this purchase."
+                  required
                   placeholder="INV-2026-..."
                   value={purchaseDetails.invoiceNo}
                   onChange={(e) => setPurchaseDetails({ ...purchaseDetails, invoiceNo: e.target.value })}

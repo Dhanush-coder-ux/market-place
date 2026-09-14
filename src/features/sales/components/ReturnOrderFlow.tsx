@@ -63,9 +63,19 @@ const generateItems = (sale: SaleRecord, productMap: Record<string, string> = {}
     const productName = rawName;
     const gstRate = parseFloat(String(item.gst || "0").replace('%', '')) || 0;
 
-    // Check calculation_infos for the true base price, because item.sell_price may be incorrectly divided by 1+GST by the backend
-    const calcItem = calcInfos?.items?.find((ci: any) => ci.product_id === (item.inventory_id || (item as any).product_id));
-    let basePrice = calcItem ? calcItem.price : item.sell_price;
+    let basePrice = Number(item.sell_price || 0);
+    if (!basePrice) {
+      const calcItem = calcInfos?.items?.find((ci: any) => ci.product_id === (item.inventory_id || (item as any).product_id));
+      if (calcItem) {
+        basePrice = Number(calcItem.price || 0);
+        const enteredUnit = (item as any).entered_unit;
+        const subUnits = (item as any).unit_infos?.sub_units || [];
+        const matchedSub = subUnits.find((su: any) => su.name === enteredUnit || su.short_name === enteredUnit);
+        if (matchedSub && Number(matchedSub.factor) > 0) {
+          basePrice = basePrice / Number(matchedSub.factor);
+        }
+      }
+    }
 
     let finalUnitPrice = basePrice;
     if (gstType === "EXCLUSIVE") {
@@ -77,13 +87,17 @@ const generateItems = (sale: SaleRecord, productMap: Record<string, string> = {}
       inventory_id: item.inventory_id || (item as any).product_id || "",
       name: item.status === "REFUNDED" ? `(Refunded) ${productName}` : item.status === "EXCHANGED" ? `(Exchanged) ${productName}` : productName,
       sku: item.barcode?.trim() || (item.inventory_id || (item as any).product_id || "").slice(-6),
-      category: "General", quantity: item.quantity,
+      category: "General",
+      quantity: Number(item.quantity ?? (item as any).entered_qty ?? 1),
       returned_quantity: Number((item as any).returned_quantity ?? 0),
-      unitPrice: finalUnitPrice, buyPrice: item.buy_price,
+      unitPrice: finalUnitPrice,
+      buyPrice: item.buy_price,
       gst: item.gst || "0%",
       imageColor: ITEM_COLORS[i % ITEM_COLORS.length],
-      status: item.status, variant_id: item.variant_id,
-      batch_id: item.batch_id, serialno_id: item.serialno_id,
+      status: item.status,
+      variant_id: item.variant_id,
+      batch_id: item.batch_id,
+      serialno_id: item.serialno_id,
       serial_numbers: Array.isArray((item as any).serialno_infos) && (item as any).serialno_infos.length > 0 ? (item as any).serialno_infos : (item.serial_numbers || []),
       stocks_before: (item as any).stocks_before,
       unit: (item as any).unit_infos?.name || (item as any).unit_name || (item.unit !== undefined ? item.unit : ((item as any).entered_unit !== undefined ? (item as any).entered_unit : "")),
@@ -99,7 +113,7 @@ const fmt = (n: number) => `₹${n.toLocaleString("en-IN", { minimumFractionDigi
 export const getUnitConversionFactor = (item: any, selectedUnit: string): number => {
   if (!item || !selectedUnit || !item.unit_infos?.sub_units) return 1.0;
   if (selectedUnit === item.unit_infos.name) return 1.0;
-  const su = item.unit_infos.sub_units.find((s: any) => s.name === selectedUnit);
+  const su = item.unit_infos.sub_units.find((s: any) => s.name === selectedUnit || s.short_name === selectedUnit);
   return su && su.factor && Number(su.factor) > 0 ? Number(su.factor) : 1.0;
 };
 
@@ -332,7 +346,15 @@ const ItemSelector: React.FC<{ items: SaleItem[]; returnItems: Record<string, nu
                       </div>
                       <p className="font-mono text-[10px] text-slate-400 mt-0.5">{item.sku} · {item.category}</p>
                     </div>
-                    <p className="font-mono text-[11px] font-bold text-slate-800 flex-shrink-0">{fmt(item.unitPrice)}</p>
+                    {(() => {
+                      const curUnit = itemUnits[item.id] || item.entered_unit || item.unit;
+                      const curFactor = getUnitConversionFactor(item, curUnit);
+                      return (
+                        <p className="font-mono text-[11px] font-bold text-slate-800 flex-shrink-0">
+                          {fmt(item.unitPrice * curFactor)}{curUnit ? <span className="text-[9px] font-medium text-slate-400"> /{curUnit}</span> : null}
+                        </p>
+                      );
+                    })()}
                   </div>
                   {checked && (
                     <div className="animate-in fade-in slide-in-from-top-1 duration-200">

@@ -1,7 +1,6 @@
 import { Search, Filter, Users, X, AlertCircle, ExternalLink, Eye, Pencil, MoreVertical, Trash2, Mail, RefreshCw } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { StatCard } from '@/components/common/StatsCard';
-import { ReusableSelect } from '@/components/ui/ReusableSelect';
 import SkeletonLoader from "@/components/common/SkeletonLoader";
 import { GradientButton } from '@/components/ui/GradientButton';
 import { useApi } from '@/context/ApiContext';
@@ -31,7 +30,8 @@ export default function Employee() {
   const [employees, setEmployees] = useState<EmployeeRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState<string>('All');
+  const [fromDate, setFromDate] = useState<string>("");
+  const [toDate, setToDate] = useState<string>("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -197,19 +197,10 @@ export default function Employee() {
       });
     }
 
-    result = result.filter((emp: any) => {
-      if (!emp) return false;
-      const matchesRole = roleFilter === 'All' || emp.role === roleFilter;
-      return matchesRole;
-    });
-
     return result;
-  }, [employees, roleFilter, debouncedSearch]);
+  }, [employees, debouncedSearch]);
 
-  const roles = useMemo(() => {
-    const unique = new Set(employees.map(e => e.role).filter(Boolean));
-    return [{ label: 'All roles', value: 'All' }, ...Array.from(unique).map(r => ({ label: String(r), value: String(r) }))];
-  }, [employees]);
+  
 
   useEffect(() => {
     if (selectedEmployees.size > 1) {
@@ -283,10 +274,10 @@ export default function Employee() {
         </div>
         <button
           onClick={() => setIsFilterOpen(true)}
-          className={`h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0 ${roleFilter !== "All" ? "border-blue-200 text-blue-600 bg-blue-50/50" : "border-slate-200 text-slate-650 bg-white hover:bg-slate-50"}`}
+          className={`h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0 ${Boolean(fromDate || toDate) ? "border-blue-200 text-blue-600 bg-blue-50/50" : "border-slate-200 text-slate-650 bg-white hover:bg-slate-50"}`}
         >
           <Filter size={13} />
-          {roleFilter !== "All" && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />}
+          {Boolean(fromDate || toDate) && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />}
         </button>
         <ColumnPicker
           availableKeys={availableKeys}
@@ -302,18 +293,29 @@ export default function Employee() {
         isOpen={isFilterOpen}
         onClose={() => setIsFilterOpen(false)}
         onApply={() => {}}
-        onClear={() => setRoleFilter("All")}
+        onClear={() => { setFromDate(""); setToDate(""); }}
         title="Employee Filters"
       >
         <div className="space-y-4">
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Role</label>
-            <ReusableSelect
-              options={roles}
-              value={roleFilter}
-              onValueChange={setRoleFilter}
-              placeholder="Role"
-            />
+          <div className="flex items-center gap-2">
+            <div className="space-y-1.5 flex-1">
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">From</label>
+              <input
+                type="date"
+                value={fromDate}
+                onChange={e => setFromDate(e.target.value)}
+                className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+              />
+            </div>
+            <div className="space-y-1.5 flex-1">
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">To</label>
+              <input
+                type="date"
+                value={toDate}
+                onChange={e => setToDate(e.target.value)}
+                className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+              />
+            </div>
           </div>
         </div>
       </RightSidebarFilter>

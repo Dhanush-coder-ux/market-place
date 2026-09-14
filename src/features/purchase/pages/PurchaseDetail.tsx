@@ -3,7 +3,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   Printer, Building2, Calendar, Package,
   ReceiptText, ArrowLeft, FileText, CheckCircle2, Clock, Banknote, AlertCircle,
-  RotateCcw, X, ChevronRight, Info, Minus, Plus, CornerDownLeft
+  RotateCcw, X, ChevronRight, Info, Minus, Plus, CornerDownLeft, Pencil
 } from "lucide-react";
 import { toDisplayData } from "./PurchaseHistory";
 import type { DirectPurchaseData } from "./PurchaseHistory";
@@ -720,7 +720,16 @@ const PurchaseDetail = () => {
           ]}
           actions={
             <div className="flex items-center gap-2">
-              {po && po.purchaseType !== 'Purchase Return' && po.status !== 'cancelled' && (
+              {po && po.status?.toUpperCase() === 'DRAFT' && (
+                <button
+                  onClick={() => navigate(`/purchase/edit/${po.id}`)}
+                  className="h-8 px-3 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 font-bold text-[11px] transition-all shadow-sm flex items-center gap-1.5 active:scale-95"
+                  title="Edit Draft Purchase"
+                >
+                  <Pencil size={13} /> Edit Draft
+                </button>
+              )}
+              {po && po.purchaseType !== 'Purchase Return' && po.status?.toUpperCase() !== 'DRAFT' && po.status !== 'cancelled' && (
                 <button
                   onClick={() => setShowReturnDialog(true)}
                   className="h-8 px-3 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 font-bold text-[11px] transition-all shadow-sm flex items-center gap-1.5 active:scale-95"
@@ -1192,7 +1201,6 @@ const PurchaseDetail = () => {
                           <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Reason</th>
                           <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">GST Amount</th>
                           <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Return Value</th>
-                          <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Adjusted</th>
                           <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Cash Refund</th>
                         </tr>
                       </thead>
@@ -1216,7 +1224,7 @@ const PurchaseDetail = () => {
                             : 0;
                           const returnValue = Number(payInfo.return_value ?? ret.total_refund_amount ?? ret.return_value ?? 0);
                           const gstAmount = Number(ret.total_gst_amount ?? ret.gst_amount ?? ret.gst_total ?? payInfo.gst_amount ?? calculatedGst ?? 0);
-                          const adjusted = Number(payInfo.adjusted_against_outstanding ?? ret.adjusted_amount ?? 0);
+                          // const adjusted = Number(payInfo.adjusted_against_outstanding ?? ret.adjusted_amount ?? 0);
                           const cashRefund = Number(payInfo.cash_refund ?? ret.cash_refund ?? ret.total_refund_amount ?? 0);
                           const reason = payInfo.reason || ret.reason || "—";
                           const status = ret.status || "—";
@@ -1272,13 +1280,6 @@ const PurchaseDetail = () => {
                               </td>
                               <td className="px-5 py-4 text-right">
                                 <span className="text-xs font-black text-rose-700 tabular-nums">{fmt(returnValue)}</span>
-                              </td>
-                              <td className="px-5 py-4 text-right">
-                                {adjusted > 0 ? (
-                                  <span className="text-xs font-bold text-amber-600 tabular-nums">{fmt(adjusted)}</span>
-                                ) : (
-                                  <span className="text-xs text-slate-300">—</span>
-                                )}
                               </td>
                               <td className="px-5 py-4 text-right">
                                 {cashRefund > 0 ? (

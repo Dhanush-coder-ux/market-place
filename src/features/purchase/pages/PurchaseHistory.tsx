@@ -24,14 +24,11 @@ import { useBusinessApi } from "@/context/BusinessApiContext";
 import { useToast } from "@/context/ToastContext";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
 import { GroupedItemsDrawer } from "@/components/common/HistoryTables";
-import { ReusableSelect } from "@/components/ui/ReusableSelect";
-import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import { StatCard } from "@/components/common/StatsCard";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { AntBadge, PaymentStatusBadge } from "@/components/ui/AntBadge";
 import type { PurchaseRecord } from "@/types/api";
-import { useApi } from "@/context/ApiContext";
-import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import { SHOP_ID } from "@/services/endpoints";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import SkeletonLoader from "@/components/common/SkeletonLoader";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -194,7 +191,7 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
 
   const totalCost = (p as any).total_cost ?? (subtotal + totalGst);
   const additionalChargesTotal = otherCharge + transportCharge;
-  const grandTotal = totalCost + additionalChargesTotal;
+  const grandTotal = totalCost;
 
   const totoalItems = (p as any).item_infos?.total_pur_items ?? (p as any).total_items;
 
@@ -205,7 +202,9 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
     : ((p as any).paid_amount !== undefined && (p as any).paid_amount !== null
         ? Number((p as any).paid_amount)
         : Number(d2?.payment?.amountPaid ?? d2?.payment_info?.amountPaid ?? d2?.paid_amount ?? 0));
-  const outstanding = Math.max(0, grandTotal - paidAmount);
+  const outstanding = (p as any).outstanding_amount !== undefined && (p as any).outstanding_amount !== null
+    ? Number((p as any).outstanding_amount)
+    : Math.max(0, grandTotal - paidAmount);
 
   return {
     id: p.id || (p as any).purchase_id || "",
@@ -296,7 +295,7 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
     additional_charges_total: additionalChargesTotal,
     storage_location: d2?.storage_location || (p as any).storage_location || "",
     status: d2?.status ?? (p as any).status ?? "completed",
-    payment_status: (p as any).payment_status ?? "PENDING",
+    payment_status: (p as any).status === "DRAFT" ? "DRAFT" : ((p as any).payment_status ?? "PENDING"),
     returns: (p as any).returns || d2?.returns || (p as any).purchase_returns || d2?.purchase_returns || [],
     refund_amount: Number((p as any).refund_amount || (p as any).return?.refund_amount || 0),
     notes: (p as any).notes || d2?.notes || d2?.purchaseDetails?.referenceNo || "",
@@ -381,7 +380,7 @@ const GridCard = ({ po, selected, onClick }: { po: DirectPurchaseData; selected?
             )}
           </div>
           <PurchaseStatusBadge status={po.status} />
-          <PaymentStatusBadge status={po.payment_status} outstanding={po.outstanding} grandTotal={po.grand_total || po.total_cost} />
+          <PaymentStatusBadge status={po.status === "DRAFT" ? "DRAFT" : po.payment_status} outstanding={po.outstanding} grandTotal={po.grand_total || po.total_cost} />
           {po.purchaseType === "Purchase Return" && (
             <AntBadge variant="tag-returned" type="tag">Returned</AntBadge>
           )}
@@ -694,7 +693,7 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
                   {/* Payment Status */}
                   <td className="p-2.5 px-3 text-center">
                     <div className="flex flex-col items-center gap-1">
-                      <PaymentStatusBadge status={po.payment_status} outstanding={po.outstanding} grandTotal={po.grand_total || po.total_cost} />
+                      <PaymentStatusBadge status={po.status === "DRAFT" ? "DRAFT" : po.payment_status} outstanding={po.outstanding} grandTotal={po.grand_total || po.total_cost} />
                     </div>
                   </td>
 
@@ -808,7 +807,7 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
             else window.location.reload();
           } catch (err: any) {
             console.error("Failed to cancel purchase:", err);
-            const msg = err?.response?.data?.detail?.msg || err?.response?.data?.detail || "Failed to cancel purchase.";
+            const msg = err?.message || err?.detail?.description || err?.response?.data?.detail?.description || err?.response?.data?.detail?.msg || err?.response?.data?.detail || "Failed to cancel purchase.";
             showToast(typeof msg === 'string' ? msg : "Failed to cancel purchase.", "error");
           }
         }}
@@ -863,6 +862,23 @@ const PurchaseHistory = () => {
   const { setActions, setBottomActions } = useHeader();
   const [refreshKey, setRefreshKey] = useState(0);
 
+  useEffect(() => {
+    purchase.getPurchasesByShop(SHOP_ID, {
+      view: "PURCHASE_VIEW",
+      limit: "500",
+      offset: "1"
+    }).then((res) => {
+      if (res) {
+        const itemsRaw = Array.isArray(res?.data) ? res.data : (res?.data?.purchases ?? res?.data?.datas ?? []);
+        const parsedItems = itemsRaw.map(toDisplayData);
+        const total = parsedItems.length;
+        const outstanding = parsedItems.filter((p: any) => (p.outstanding || 0) > 0).length;
+        const returns = parsedItems.filter((p: any) => p.returns && p.returns.length > 0).length;
+        setSummaryStats({ total, outstanding, returns });
+      }
+    }).catch(() => {});
+  }, [purchase, refreshKey]);
+
   const handleOpenNewTab = () => {
     window.open(`${window.location.pathname}?mode=clean`, "_blank", "noopener,noreferrer");
   };
@@ -895,22 +911,16 @@ const PurchaseHistory = () => {
   }, [setActions, isCleanMode, setRefreshKey]);
 
   const [activeKpi, setActiveKpi] = useState("All Purchases");
+  const [summaryStats, setSummaryStats] = useState<{ total: number; outstanding: number; returns: number }>({
+    total: 0,
+    outstanding: 0,
+    returns: 0,
+  });
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
-  const { getData } = useApi();
-  const [analyticsStats, setAnalyticsStats] = useState<any>(null);
 
-  useEffect(() => {
-    getData(ENDPOINTS.ANALYTICS_PURCHASE_OVERALL, { shop_id: SHOP_ID })
-      .then((res) => {
-        const data = res?.data ?? res;
-        if (data) {
-          setAnalyticsStats({ overview: { purchase: data } });
-        }
-      })
-      .catch(() => { });
-  }, [getData]);
+
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
     return () => clearTimeout(timer);
@@ -939,6 +949,7 @@ const PurchaseHistory = () => {
   };
 
   const [showBulkCancelConfirm, setShowBulkCancelConfirm] = useState(false);
+  const { showToast } = useToast();
 
   const handleBulkCancel = () => {
     if (selectedPurchases.size === 0) return;
@@ -950,12 +961,13 @@ const PurchaseHistory = () => {
       for (const id of Array.from(selectedPurchases)) {
         await purchase.cancelPurchase(SHOP_ID, id);
       }
-      alert("Selected purchases cancelled successfully");
+      showToast("Selected purchases cancelled successfully.", "success");
       setSelectedPurchases(new Set());
       setRefreshKey(prev => prev + 1);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to cancel purchases:", err);
-      alert("Failed to cancel some purchases");
+      const msg = err?.message || err?.detail?.description || err?.response?.data?.detail?.description || err?.response?.data?.detail?.msg || err?.response?.data?.detail || "Failed to cancel some purchases.";
+      showToast(typeof msg === 'string' ? msg : "Failed to cancel some purchases.", "error");
     }
   };
 
@@ -987,14 +999,14 @@ const PurchaseHistory = () => {
     }
   }, [selectedPurchases, setBottomActions]);
 
-  const activeFiltersCount = [filterVendor, fromDate, toDate, filterStatus, filterPaymentMethod].filter(Boolean).length;
+  const activeFiltersCount = [fromDate, toDate, filterStatus].filter(Boolean).length;
 
   const resetFilters = () => {
     setFilterVendor("");
     setFromDate("");
     setToDate("");
-    setSearchTerm("");
     setFilterStatus("");
+    setSearchTerm("");
     setFilterPaymentMethod("");
   };
 
@@ -1008,7 +1020,7 @@ const PurchaseHistory = () => {
     if (filters.supplier_id) params.supplier_id = filters.supplier_id;
     if (filters.fromDate) params.from_date = filters.fromDate;
     if (filters.toDate) params.to_date = filters.toDate;
-    if (filters.payment_status) params.payment_status = filters.payment_status;
+    if (filters.status) params.status = filters.status;
     if (filters.payment_method) params.payment_method = filters.payment_method;
     
     if (filters.activeKpi === "Outstanding Payments") {
@@ -1037,7 +1049,7 @@ const PurchaseHistory = () => {
     supplier_id: filterVendor,
     fromDate,
     toDate,
-    payment_status: filterStatus,
+    status: filterStatus,
     payment_method: filterPaymentMethod,
     activeKpi,
     refreshKey
@@ -1053,7 +1065,21 @@ const PurchaseHistory = () => {
     let result = items as DirectPurchaseData[];
 
     if (filterStatus) {
-      result = result.filter(po => po.payment_status?.toUpperCase() === filterStatus.toUpperCase());
+      const target = filterStatus.toUpperCase();
+      result = result.filter(po => {
+        const s = (po.status || "").toUpperCase();
+        const ps = (po.payment_status || "").toUpperCase();
+        if (target === "CANCELED" || target === "CANCELLED") {
+          return s === "CANCELED" || s === "CANCELLED" || ps === "CANCELED" || ps === "CANCELLED";
+        }
+        if (target === "DRAFT") {
+          return s === "DRAFT" || ps === "DRAFT";
+        }
+        if (target === "COMPLETED") {
+          return s === "COMPLETED" || (!["DRAFT", "CANCELED", "CANCELLED"].includes(s));
+        }
+        return s === target || ps === target;
+      });
     }
 
     if (filterPaymentMethod) {
@@ -1079,7 +1105,7 @@ const PurchaseHistory = () => {
           <div className="flex gap-3 pb-1 overflow-x-auto scrollbar-none">
             <StatCard
               label="All Purchases"
-              value={String(analyticsStats?.overview?.purchase?.total_purchase || items.length)}
+              value={String(summaryStats.total)}
               icon={<ReceiptText size={18} />}
               iconBg="bg-blue-50"
               iconColor="text-blue-600"
@@ -1089,22 +1115,22 @@ const PurchaseHistory = () => {
             />
             <StatCard
               label="Outstanding Payments"
-              value={String(items.filter((p: any) => (p.outstanding || 0) > 0).length)}
+              value={String(summaryStats.outstanding)}
               icon={<Calendar size={18} />}
               iconBg="bg-amber-50"
               iconColor="text-amber-500"
               subValue="Purchases with outstanding > 0"
-              onClick={() => setActiveKpi("Outstanding Payments")}
+              onClick={() => setActiveKpi(prev => prev === "Outstanding Payments" ? "All Purchases" : "Outstanding Payments")}
               className={activeKpi === "Outstanding Payments" ? "ring-2 ring-amber-400 border-transparent shadow-sm" : ""}
             />
             <StatCard
               label="Purchase Returns"
-              value={String(items.filter((p: any) => p.returns && p.returns.length > 0).length)}
+              value={String(summaryStats.returns)}
               icon={<RotateCw size={18} />}
               iconBg="bg-rose-50"
               iconColor="text-rose-550"
               subValue="Purchases with linked returns tag"
-              onClick={() => setActiveKpi("Purchase Returns")}
+              onClick={() => setActiveKpi(prev => prev === "Purchase Returns" ? "All Purchases" : "Purchase Returns")}
               className={activeKpi === "Purchase Returns" ? "ring-2 ring-rose-400 border-transparent shadow-sm" : ""}
             />
           </div>
@@ -1154,73 +1180,11 @@ const PurchaseHistory = () => {
         <RightSidebarFilter
           isOpen={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
-          onApply={() => { }}
+          onApply={() => {}}
           onClear={resetFilters}
           title="Purchase Order Filters"
         >
           <div className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Payment Status</label>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setFilterStatus("")}
-                  className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${!filterStatus ? "border-slate-800 bg-slate-800 text-white" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
-                >
-                  All
-                </button>
-                <button
-                  onClick={() => setFilterStatus("COMPLETED")}
-                  className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${filterStatus === "COMPLETED" ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
-                >
-                  Completed
-                </button>
-                <button
-                  onClick={() => setFilterStatus("PARTIALY-PAID")}
-                  className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${filterStatus === "PARTIALY-PAID" ? "border-amber-500 bg-amber-50 text-amber-700" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
-                >
-                  Partial
-                </button>
-                <button
-                  onClick={() => setFilterStatus("PENDING")}
-                  className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${filterStatus === "PENDING" ? "border-rose-500 bg-rose-50 text-rose-700" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
-                >
-                  Pending
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Payment Method</label>
-              <ReusableSelect
-                options={[
-                  { label: "All Methods", value: "" },
-                  { label: "Cash", value: "CASH" },
-                  { label: "UPI", value: "UPI" },
-                  { label: "Bank Transfer", value: "BANK" }
-                ]}
-                value={filterPaymentMethod}
-                onValueChange={setFilterPaymentMethod}
-                placeholder="Method"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Vendor</label>
-              <SearchSelect
-                labelKey="name"
-                valueKey="id"
-                fetchOptions={async (q) => {
-                  const { supplierApi } = await import("@/services/api/supplier");
-                  return await supplierApi.searchSuppliers(q);
-                }}
-                options={filterVendor ? [{ id: filterVendor, name: "Selected Vendor" }] : []}
-                value={filterVendor}
-                onChange={(val) => setFilterVendor(val ? String(val) : "")}
-                placeholder="Search Supplier..."
-                className="w-full h-9 bg-slate-50 border border-slate-200"
-              />
-            </div>
-
             <div className="flex items-center gap-2">
               <div className="space-y-1.5 flex-1">
                 <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">From</label>
@@ -1239,6 +1203,40 @@ const PurchaseHistory = () => {
                   onChange={e => setToDate(e.target.value)}
                   className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
                 />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Purchase Status</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setFilterStatus("")}
+                  className={`h-9 rounded-md text-xs font-semibold border transition-all ${!filterStatus ? "border-slate-800 bg-slate-800 text-white" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
+                >
+                  All Statuses
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterStatus("COMPLETED")}
+                  className={`h-9 rounded-md text-xs font-semibold border transition-all ${filterStatus === "COMPLETED" ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
+                >
+                  Completed
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterStatus("DRAFT")}
+                  className={`h-9 rounded-md text-xs font-semibold border transition-all ${filterStatus === "DRAFT" ? "border-slate-600 bg-slate-100 text-slate-800 font-bold" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
+                >
+                  Draft
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterStatus("CANCELED")}
+                  className={`h-9 rounded-md text-xs font-semibold border transition-all ${filterStatus === "CANCELED" ? "border-rose-500 bg-rose-50 text-rose-700" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
+                >
+                  Canceled
+                </button>
               </div>
             </div>
           </div>

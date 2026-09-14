@@ -40,6 +40,10 @@ const CustomerList = () => {
 
   const { getData, deleteData } = useApi();
   const [analyticsStats, setAnalyticsStats] = useState<any>(null);
+  const [summaryStats, setSummaryStats] = useState<{ total: number; outstanding: number }>({
+    total: 0,
+    outstanding: 0,
+  });
   const [selectedCustomerForPayment, setSelectedCustomerForPayment] = useState<any>(null);
 
   useEffect(() => {
@@ -51,7 +55,23 @@ const CustomerList = () => {
         }
       })
       .catch(() => {});
-  }, [getData, refreshKey]);
+
+    customer.getCustomersByShopId(SHOP_ID, {
+      shop_id: SHOP_ID,
+      limit: "500",
+      offset: "1"
+    }).then((res) => {
+      if (res && res.data) {
+        const dataList = Array.isArray(res.data) ? res.data : (res.data.datas ?? []);
+        const total = dataList.length;
+        const outstanding = dataList.filter((c: any) => {
+          const amt = c.outstanding_infos?.amount ?? c.outstanding ?? (typeof c.outstanding_infos === 'number' ? c.outstanding_infos : 0);
+          return Number(amt) > 0;
+        }).length;
+        setSummaryStats({ total, outstanding });
+      }
+    }).catch(() => {});
+  }, [getData, customer, refreshKey]);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
@@ -132,7 +152,7 @@ const CustomerList = () => {
     limit: 50
   });
 
-  const activeFilters = [fromDate, toDate, filterOutstanding !== "All"].filter(Boolean).length;
+  const activeFilters = [fromDate, toDate].filter(Boolean).length;
   const clearAll = () => { setFromDate(""); setToDate(""); setSearchTerm(""); setFilterOutstanding("All"); };
 
   /* ── Row Selection ── */
@@ -227,7 +247,7 @@ const CustomerList = () => {
       <div className="flex gap-3 pb-1 overflow-x-auto scrollbar-none">
         <StatCard
           label="All Customers"
-          value={analyticsStats?.total_customers ?? filteredCustomers.length}
+          value={analyticsStats?.total_customers ?? summaryStats.total}
           icon={<Users size={18} />}
           iconBg="bg-blue-50"
           iconColor="text-blue-600"
@@ -237,12 +257,12 @@ const CustomerList = () => {
         />
         <StatCard
           label="Outstanding Due"
-          value={String(analyticsStats?.outstanding_customers_count ?? filteredCustomers.filter((c: any) => (c.outstanding_infos?.amount ?? c.outstanding ?? 0) > 0).length)}
+          value={String(analyticsStats?.outstanding_customers_count ?? summaryStats.outstanding)}
           icon={<AlertCircle size={18} />}
           iconBg="bg-rose-50"
           iconColor="text-rose-500"
           subValue="Customers with unpaid balances"
-          onClick={() => setFilterOutstanding("Outstanding")}
+          onClick={() => setFilterOutstanding(prev => prev === "Outstanding" ? "All" : "Outstanding")}
           className={filterOutstanding === "Outstanding" ? "ring-2 ring-rose-400 border-transparent shadow-sm" : ""}
         />
       </div>
@@ -305,19 +325,6 @@ const CustomerList = () => {
                 className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-755 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
               />
             </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Outstanding Status</label>
-            <select
-              value={filterOutstanding}
-              onChange={e => setFilterOutstanding(e.target.value)}
-              className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
-            >
-              <option value="All">All Statuses</option>
-              <option value="Outstanding">Has Outstanding</option>
-              <option value="Cleared">Cleared</option>
-            </select>
           </div>
         </div>
       </RightSidebarFilter>

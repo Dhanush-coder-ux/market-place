@@ -37,11 +37,11 @@ export function TypeBadge({ type, labelOverride, icon: Icon }: { type: string, l
   let variant: any = "tx-adjustment";
   let label = "Adjustment";
   
-  if (t.includes("PURCHASE_RETURN")) { variant = "tx-purchase-return"; label = "Purchase Return"; }
-  else if (t.includes("PURCHASE_CANCEL")) { variant = "tx-purchase-return"; label = "Purchase Cancel"; }
-  else if (t.includes("SALES_RETURN") || t.includes("SALE_RETURN")) { variant = "tx-sales-return"; label = "Sales Return"; }
-  else if (t.includes("PURCHASE_UPDATE")) { variant = "tx-purchase"; label = "Purchase Update"; }
-  else if (t.includes("PO_PURCHASE") || t.includes("STOCK_UPDATE")) { variant = "tx-purchase"; label = "PO Purchase"; }
+  if (t.includes("PURCHASE_RETURN") || t.includes("PURCHASE RETURN")) { variant = "tx-purchase-return"; label = "Purchase Return"; }
+  else if (t.includes("PURCHASE_CANCEL") || t.includes("PURCHASE CANCEL")) { variant = "tx-purchase-return"; label = "Purchase Cancel"; }
+  else if (t.includes("SALES_RETURN") || t.includes("SALE_RETURN") || t.includes("SALES RETURN") || t.includes("SALE RETURN")) { variant = "tx-sales-return"; label = "Sales Return"; }
+  else if (t.includes("PURCHASE_UPDATE") || t.includes("PURCHASE UPDATE")) { variant = "tx-purchase"; label = "Purchase Update"; }
+  else if (t.includes("PO_PURCHASE") || t.includes("STOCK_UPDATE") || t.includes("PO PURCHASE") || t.includes("STOCK UPDATE")) { variant = "tx-purchase"; label = "PO Purchase"; }
   else if (t.includes("PURCHASE") || t === "DIRECT") { variant = "tx-purchase"; label = "Purchase"; }
   else if (t.includes("SALES")) { variant = "tx-sales"; label = "Sales"; }
   else if (t === "TRANSFER") { variant = "tx-opening"; label = "Transfer"; }

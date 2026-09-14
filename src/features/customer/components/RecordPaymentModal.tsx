@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Modal } from "@/components/common/SuperUI";
 import { Wallet, Loader2 } from "lucide-react";
 import { useToast } from "@/context/ToastContext";
@@ -32,6 +32,7 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
 
   // Orders state
   const [orders, setOrders] = useState<any[]>([]);
+  const [clearingHistories, setClearingHistories] = useState<any[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
 
   const maxOutstanding = Number(customer?.outstanding_infos?.amount ?? customer?.outstanding ?? (customer as any)?.credit_infos?.outstanding ?? customer?.datas?.outstanding_balance ?? 0);
@@ -39,18 +40,25 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
   useEffect(() => {
     if (show && customer?.id) {
       setOrdersLoading(true);
-      getData(`${ENDPOINTS.ORDERS}/by/customer/${SHOP_ID}/${customer.id}`)
-        .then((res: any) => {
-          if (res && res.data) {
-            let actualData = res.data;
+      Promise.all([
+        getData(`${ENDPOINTS.ORDERS}/by/customer/${SHOP_ID}/${customer.id}`),
+        customerApi.getClearingHistoryById(SHOP_ID, customer.id).catch(() => null)
+      ])
+        .then(([ordersRes, clrRes]: [any, any]) => {
+          if (ordersRes && ordersRes.data) {
+            let actualData = ordersRes.data;
             if (typeof actualData === 'object' && !Array.isArray(actualData) && 'datas' in actualData) {
               actualData = actualData.datas;
             }
             const fetchedOrders = Array.isArray(actualData) ? actualData : [actualData];
-
-            // Try to filter to only outstanding, or just show all if we can't tell
-            // For now, let's just show all recent orders since they can have balances.
             setOrders(fetchedOrders);
+          }
+          if (clrRes && clrRes.data) {
+            let actualClr = clrRes.data;
+            if (typeof actualClr === 'object' && !Array.isArray(actualClr) && 'datas' in actualClr) {
+              actualClr = actualClr.datas;
+            }
+            setClearingHistories(Array.isArray(actualClr) ? actualClr : [actualClr]);
           }
           setOrdersLoading(false);
         })
@@ -62,9 +70,50 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
       setClearAmount("");
       setNotes("");
       setPaymentMethod("CASH");
+      setClearingHistories([]);
     }
-  }, [show, customer?.id, getData]);
+  }, [show, customer?.id, getData, customerApi]);
 
+  // Build map of already cleared amounts per invoice/order
+  const clearedMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    clearingHistories.forEach((h: any) => {
+      const isInitialBilled = String(h.additional_infos?.notes || h.notes || '').toLowerCase().includes('billed (on credit)');
+      if (isInitialBilled) return;
+
+      const inv = String(h.invoice_no || h.additional_infos?.invoice_no || h.additional_infos?.entity_id || h.entity_id || '').trim().toUpperCase();
+      let amt = Number(h.additional_infos?.cleared_amount ?? 0);
+      if (!amt && h.payment_infos && Array.isArray(h.payment_infos)) {
+        amt = h.payment_infos.reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0);
+      }
+      if (!amt && h.cleared_infos) {
+        const before = Number(h.cleared_infos.outstanding_before || 0);
+        const after = Number(h.cleared_infos.outstanding_after || 0);
+        if (before > after) amt = before - after;
+      }
+      if (inv && amt > 0) {
+        map[inv] = (map[inv] || 0) + amt;
+      }
+    });
+    return map;
+  }, [clearingHistories]);
+
+  // Compute outstanding balance for an individual order
+  const getOrderOutstanding = (o: any) => {
+    const orderUiId = String(o.ui_id || '').trim().toUpperCase();
+    const orderId = String(o.id || '').trim().toUpperCase();
+
+    const payInfos = typeof o.payment_infos === 'object' && o.payment_infos ? o.payment_infos : {};
+    const onCredit = Number(payInfos.ON_CREDIT ?? payInfos.on_credit ?? 0);
+    const nonCreditPaid = Object.entries(payInfos).reduce((s, [k, v]) => (!['ON_CREDIT', 'on_credit'].includes(k) ? s + Number(v || 0) : s), 0);
+    const orderTotal = Number(o.calculation_infos?.total ?? o.total_sellprice ?? o.grand_total ?? o.total_amount ?? 0);
+
+    const initialDue = onCredit > 0 ? onCredit : (orderTotal > 0 ? Math.max(0, orderTotal - nonCreditPaid) : Number(o.pending_amount || 0));
+    const clearedSoFar = (orderUiId ? (clearedMap[orderUiId] || 0) : 0) + (orderId && orderId !== orderUiId ? (clearedMap[orderId] || 0) : 0);
+
+    const remaining = Math.max(0, initialDue - clearedSoFar);
+    return maxOutstanding > 0 ? Math.min(remaining, maxOutstanding) : remaining;
+  };
 
   const handleClose = () => {
     onClose();
@@ -162,13 +211,19 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
                   (o.ui_id && o.ui_id.toLowerCase().includes(clearSearch.toLowerCase())) ||
                   (o.id && o.id.toLowerCase().includes(clearSearch.toLowerCase()))
                 ).map(o => {
-                  const total = Number(o.calculation_infos?.total ?? o.total_sellprice ?? o.grand_total ?? o.total_amount ?? 0);
+                  const orderOutstanding = getOrderOutstanding(o);
                   const date = o.created_at || o.date ? new Date(o.created_at || o.date).toLocaleDateString() : 'Unknown Date';
 
                   return (
                     <div
                       key={o.id}
-                      onClick={() => setSelectedOrder(o)}
+                      onClick={() => {
+                        setSelectedOrder(o);
+                        const defaultFill = Math.min(orderOutstanding, maxOutstanding);
+                        if (defaultFill > 0) {
+                          setClearAmount(round2(defaultFill).toString());
+                        }
+                      }}
                       className="p-3 bg-white border border-slate-200 hover:border-blue-400 rounded-lg cursor-pointer transition-all shadow-sm flex justify-between items-center group"
                     >
                       <div>
@@ -176,8 +231,10 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
                         <p className="text-[10px] text-slate-500 mt-0.5">{date}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-[10px] font-bold text-slate-400 mb-0.5">Total</p>
-                        <p className="text-sm font-black text-rose-500">₹{total.toLocaleString()}</p>
+                        <p className="text-[10px] font-bold text-slate-400 mb-0.5">Outstanding</p>
+                        <p className={`text-sm font-black ${orderOutstanding > 0 ? "text-rose-500" : "text-emerald-600"}`}>
+                          ₹{orderOutstanding.toLocaleString()}
+                        </p>
                       </div>
                     </div>
                   );
@@ -259,12 +316,12 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
 
             <div className="space-y-1.5">
               <label className="text-[10px] font-semibold text-slate-400 ml-1">Notes (Optional)</label>
-              <input
-                type="text"
+              <textarea
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
-                placeholder="Transaction ID, remarks, etc."
-                className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm"
+                placeholder="Add any payment reference or internal note..."
+                rows={2}
+                className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 resize-none transition-all placeholder:text-slate-300"
               />
             </div>
           </div>

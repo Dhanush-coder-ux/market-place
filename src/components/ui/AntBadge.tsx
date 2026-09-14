@@ -92,6 +92,10 @@ export const PaymentStatusBadge: React.FC<{
 }> = ({ status, outstanding, grandTotal, className }) => {
   let displayStatus = (status || "UNPAID").toUpperCase();
 
+  if (displayStatus === "DRAFT") {
+    return <AntBadge variant="ps-draft" type="pill" dot className={className}>DRAFT</AntBadge>;
+  }
+
   if (displayStatus !== "CANCELLED" && displayStatus !== "CANCELED" && displayStatus !== "CANCEL") {
     if (outstanding !== undefined && grandTotal !== undefined && grandTotal > 0) {
       if (outstanding <= 0) {
@@ -115,6 +119,8 @@ export const PaymentStatusBadge: React.FC<{
     variant = "pay-partial";
   } else if (displayStatus === "UNPAID" || displayStatus === "DUE" || displayStatus === "PENDING") {
     variant = "pay-pending";
+  } else if (displayStatus === "DRAFT") {
+    variant = "ps-draft";
   } else if (displayStatus === "CANCELLED" || displayStatus === "CANCELED" || displayStatus === "CANCEL") {
     variant = "ps-cancelled";
     displayStatus = "CANCELLED";

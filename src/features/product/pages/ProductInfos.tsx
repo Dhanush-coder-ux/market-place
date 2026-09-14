@@ -15,7 +15,6 @@ import { useToast } from "@/context/ToastContext";
 import { ColumnPicker } from "@/components/common/ColumnPicker";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { GradientButton } from "@/components/ui/GradientButton";
-import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { StatCard } from "@/components/common/StatsCard";
 import SkeletonLoader from "@/components/common/SkeletonLoader";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
@@ -884,15 +883,15 @@ const ProductInfos = () => {
 
   const [products, setProducts] = useState<InventoryRecord[]>([]);
   const [activeKpi, setActiveKpi] = useState("All Products");
+  const [summaryStats, setSummaryStats] = useState<{ total: number; inactive: number; nonTracking: number }>({
+    total: 0,
+    inactive: 0,
+    nonTracking: 0,
+  });
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [filters, setFilters] = useState({
-    status: "All",
-    category: "All",
-    brand: "All",
-    type: "All",
-    visibility: "All"
-  });
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -900,6 +899,20 @@ const ProductInfos = () => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
     return () => clearTimeout(timer);
   }, [searchTerm]);
+
+  useEffect(() => {
+    getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}`, { shop_id: SHOP_ID, limit: "500", offset: "1" }).then((res) => {
+      if (res) {
+        const data: InventoryRecord[] = Array.isArray(res?.data)
+          ? res.data
+          : (res?.data?.inventories ?? (Array.isArray(res?.datas) ? res.datas : (res?.datas?.inventories ?? [])));
+        const total = data.length;
+        const inactive = data.filter((p: any) => p.is_active === false).length;
+        const nonTracking = data.filter((p: any) => p.track_stock === false || p.is_stock_tracked === false || p.type === "service").length;
+        setSummaryStats({ total, inactive, nonTracking });
+      }
+    }).catch(() => {});
+  }, [refreshKey, getData]);
 
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -962,9 +975,7 @@ const ProductInfos = () => {
     if (activeKpi === "Inactive Products") params.exclude_active = "true";
     if (activeKpi === "Stock Not Tracking") params.exclude_tracking = "true";
 
-    if (filters.status === "In stock") params.stock_status = "in_stock";
-    if (filters.status === "Low stock") params.stock_status = "low";
-    if (filters.status === "Out of stock") params.stock_status = "out_of_stock";
+
 
     getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}`, params, { cacheKey: "products-list" }).then(
       (res) => {
@@ -994,7 +1005,7 @@ const ProductInfos = () => {
         }
       }
     );
-  }, [refreshKey, debouncedSearch, filters.status, activeKpi, getData]);
+  }, [refreshKey, debouncedSearch, activeKpi, getData]);
 
   const toggleSelectProduct = (id: string) => {
     setSelectedProducts(prev => {
@@ -1097,18 +1108,22 @@ const ProductInfos = () => {
     }
   }, [selectedProducts, setBottomActions, navigate]);
 
-  const categories = useMemo(() => {
-    const cats = new Set(products.map((p: any) => p.category_infos?.name || p.additional_infos?.category || p.datas?.category || p.category || p.category_id).filter(Boolean));
-    return ["All", ...Array.from(cats)];
-  }, [products]);
-
-  const brands = useMemo(() => {
-    const brs = new Set(products.map((p: any) => p.brand || p.additional_infos?.brand || p.datas?.brand || p.brand).filter(Boolean));
-    return ["All", ...Array.from(brs)];
-  }, [products]);
-
   const filteredProducts = useMemo(() => {
     let result = products;
+    if (fromDate) {
+      const from = new Date(fromDate).getTime();
+      result = result.filter((p: any) => {
+        const d = new Date(p.created_at || p.date).getTime();
+        return !isNaN(d) && d >= from;
+      });
+    }
+    if (toDate) {
+      const to = new Date(toDate).getTime() + 86400000;
+      result = result.filter((p: any) => {
+        const d = new Date(p.created_at || p.date).getTime();
+        return !isNaN(d) && d <= to;
+      });
+    }
 
     if (debouncedSearch) {
       const lowerSearch = debouncedSearch.toLowerCase();
@@ -1129,48 +1144,8 @@ const ProductInfos = () => {
       });
     }
 
-    if (filters.category !== "All") {
-      result = result.filter((p: any) => {
-        const cat = p.category_infos?.name || p.additional_infos?.category || p.datas?.category || p.category || p.category_id;
-        return cat === filters.category;
-      });
-    }
-
-    if (filters.category !== "All") {
-      result = result.filter((p: any) => {
-        const cat = p.category_infos?.name || p.additional_infos?.category || p.datas?.category || p.category || p.category_id;
-        return cat === filters.category;
-      });
-    }
-
-    if (filters.brand !== "All") {
-      result = result.filter((p: any) => {
-        const br = p.brand || p.additional_infos?.brand || p.datas?.brand || p.brand;
-        return br === filters.brand;
-      });
-    }
-
-    if (filters.type !== "All") {
-      result = result.filter((p: any) => {
-        if (filters.type === "Has Variants") return p.type_infos?.has_variant;
-        if (filters.type === "Has Batches") return p.type_infos?.has_batch;
-        if (filters.type === "Has Serials") return p.type_infos?.has_serialno;
-        if (filters.type === "Simple") return !p.type_infos?.has_variant && !p.type_infos?.has_batch && !p.type_infos?.has_serialno;
-        return true;
-      });
-    }
-
-    if (filters.visibility !== "All") {
-      result = result.filter((p: any) => {
-        const isOnline = p.visible_online === true;
-        if (filters.visibility === "Online") return isOnline;
-        if (filters.visibility === "Offline") return !isOnline;
-        return true;
-      });
-    }
-
     return result;
-  }, [products, debouncedSearch, filters, activeKpi]);
+  }, [products, debouncedSearch, fromDate, toDate, activeKpi]);
 
   if (loading && products.length === 0 && !searchTerm && !debouncedSearch) {
     return (
@@ -1189,7 +1164,7 @@ const ProductInfos = () => {
           <StatCard
             icon={Package}
             label="All Products"
-            value={products.length.toString()}
+            value={summaryStats.total.toString()}
             subValue="total records"
             iconBg="bg-blue-50"
             iconColor="text-blue-600"
@@ -1199,21 +1174,21 @@ const ProductInfos = () => {
           <StatCard
             icon={Package}
             label="Inactive Products"
-            value={(products.filter((p: any) => p.is_active === false).length).toString()}
+            value={summaryStats.inactive.toString()}
             subValue="disabled items"
             iconBg="bg-slate-100"
             iconColor="text-slate-600"
-            onClick={() => setActiveKpi("Inactive Products")}
+            onClick={() => setActiveKpi(prev => prev === "Inactive Products" ? "All Products" : "Inactive Products")}
             className={activeKpi === "Inactive Products" ? "ring-2 ring-slate-400 border-transparent shadow-sm" : ""}
           />
           <StatCard
             icon={AlertCircle}
             label="Stock Not Tracking"
-            value={(products.filter((p: any) => p.track_stock === false || p.is_stock_tracked === false || p.type === "service").length).toString()}
+            value={summaryStats.nonTracking.toString()}
             subValue="untracked items"
             iconBg="bg-amber-50"
             iconColor="text-amber-500"
-            onClick={() => setActiveKpi("Stock Not Tracking")}
+            onClick={() => setActiveKpi(prev => prev === "Stock Not Tracking" ? "All Products" : "Stock Not Tracking")}
             className={activeKpi === "Stock Not Tracking" ? "ring-2 ring-amber-400 border-transparent shadow-sm" : ""}
           />
         </div>
@@ -1256,14 +1231,14 @@ const ProductInfos = () => {
         <button
           type="button"
           onClick={() => setIsFilterOpen(true)}
-          className={`h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0 ${Object.values(filters).some(v => v !== "All")
+          className={`h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0 ${Boolean(fromDate || toDate)
             ? "border-blue-200 text-blue-600 bg-blue-50/50"
             : "border-slate-200 text-slate-650 bg-white hover:bg-slate-50"
             }`}
           title="Filters"
         >
           <Filter size={13} />
-          {Object.values(filters).some(v => v !== "All") && (
+          {Boolean(fromDate || toDate) && (
             <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
           )}
         </button>
@@ -1289,75 +1264,29 @@ const ProductInfos = () => {
         isOpen={isFilterOpen}
         onClose={() => setIsFilterOpen(false)}
         onApply={() => setIsFilterOpen(false)}
-        onClear={() => setFilters({
-          status: "All",
-          category: "All",
-          brand: "All",
-          type: "All",
-          visibility: "All"
-        })}
+        onClear={() => { setFromDate(""); setToDate(""); }}
         title="Product Filters"
       >
         <div className="space-y-4">
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Stock Status</label>
-            <ReusableSelect
-              value={filters.status}
-              onValueChange={(val) => setFilters(prev => ({ ...prev, status: val }))}
-              options={[
-                { label: "All levels", value: "All" },
-                { label: "In stock", value: "In stock" },
-                { label: "Low stock", value: "Low stock" },
-                { label: "Out of stock", value: "Out of stock" },
-              ]}
-              placeholder="Status"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Category</label>
-            <ReusableSelect
-              value={filters.category}
-              onValueChange={(val) => setFilters(prev => ({ ...prev, category: val }))}
-              options={categories.map(c => ({ label: String(c), value: String(c) }))}
-              placeholder="Category"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Brand</label>
-            <ReusableSelect
-              value={filters.brand}
-              onValueChange={(val) => setFilters(prev => ({ ...prev, brand: val }))}
-              options={brands.map(b => ({ label: String(b), value: String(b) }))}
-              placeholder="Brand"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Product Type</label>
-            <ReusableSelect
-              value={filters.type}
-              onValueChange={(val) => setFilters(prev => ({ ...prev, type: val }))}
-              options={[
-                { label: "All Types", value: "All" },
-                { label: "Has Variants", value: "Has Variants" },
-                { label: "Has Batches", value: "Has Batches" },
-                { label: "Has Serials", value: "Has Serials" },
-                { label: "Simple Product", value: "Simple" },
-              ]}
-              placeholder="Product Type"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Visibility</label>
-            <ReusableSelect
-              value={filters.visibility}
-              onValueChange={(val) => setFilters(prev => ({ ...prev, visibility: val }))}
-              options={[
-                { label: "All Visibility", value: "All" },
-                { label: "Online Only", value: "Online" },
-                { label: "Offline Only", value: "Offline" },
-              ]}
-              placeholder="Visibility"
-            />
+          <div className="flex items-center gap-2">
+            <div className="space-y-1.5 flex-1">
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">From</label>
+              <input
+                type="date"
+                value={fromDate}
+                onChange={e => setFromDate(e.target.value)}
+                className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+              />
+            </div>
+            <div className="space-y-1.5 flex-1">
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">To</label>
+              <input
+                type="date"
+                value={toDate}
+                onChange={e => setToDate(e.target.value)}
+                className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+              />
+            </div>
           </div>
         </div>
       </RightSidebarFilter>

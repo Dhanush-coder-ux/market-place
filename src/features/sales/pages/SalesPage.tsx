@@ -19,7 +19,6 @@ import { ReturnModal } from "../components/ReturnOrderFlow";
 import { StatCard } from "@/components/common/StatsCard";
 import { AntBadge } from "@/components/ui/AntBadge";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
-import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 
 /* ═══════════════════════════════════════════════════════════════
@@ -324,6 +323,13 @@ const SalesListPage: React.FC = () => {
 
   /* ── Filters ── */
   const [analyticsStats, setAnalyticsStats] = useState<any>(null);
+  const [summaryStats, setSummaryStats] = useState<{ total: number; onlineAmount: number; onlineCount: number; offlineAmount: number; offlineCount: number }>({
+    total: 0,
+    onlineAmount: 0,
+    onlineCount: 0,
+    offlineAmount: 0,
+    offlineCount: 0
+  });
 
   useEffect(() => {
     api.getData(ENDPOINTS.ANALYTICS_SALES_OVERALL, { shop_id: SHOP_ID })
@@ -334,6 +340,32 @@ const SalesListPage: React.FC = () => {
         }
       })
       .catch(() => { });
+
+    api.getData(`${ENDPOINTS.ORDERS}/${SHOP_ID}`, { limit: "500", offset: "1" }).then((res) => {
+      const dataList = Array.isArray(res?.data) ? res.data : (res?.data?.datas ?? []);
+      let onlineAmt = 0;
+      let onlineCnt = 0;
+      let offlineAmt = 0;
+      let offlineCnt = 0;
+      dataList.forEach((s: any) => {
+        const total = s.total_sellprice ?? s.calculation_infos?.total ?? s.total ?? 0;
+        const isOnline = s.origin === "ONLINE" || s.origin === "Online Sales";
+        if (isOnline) {
+          onlineAmt += total;
+          onlineCnt++;
+        } else {
+          offlineAmt += total;
+          offlineCnt++;
+        }
+      });
+      setSummaryStats({
+        total: dataList.length,
+        onlineAmount: onlineAmt,
+        onlineCount: onlineCnt,
+        offlineAmount: offlineAmt,
+        offlineCount: offlineCnt
+      });
+    }).catch(() => {});
   }, [api.getData]);
 
   const filters = useMemo(() => ({
@@ -346,7 +378,7 @@ const SalesListPage: React.FC = () => {
     activeKpi,
   }), [debouncedSearch, filterOrigin, filterPayment, filterStatus, fromDate, toDate, activeKpi]);
 
-  const { items, loading, loadingMore, stats, totalCount, lastElementRef, reload } = useInfiniteScroll({
+  const { items, loading, loadingMore, totalCount, lastElementRef, reload } = useInfiniteScroll({
     fetchPage,
     filters,
     limit: 50
@@ -364,7 +396,7 @@ const SalesListPage: React.FC = () => {
     return items as any[];
   }, [items]);
 
-  const activeFilters = [filterOrigin, filterPayment, filterStatus, fromDate, toDate].filter(Boolean).length;
+  const activeFilters = [fromDate, toDate].filter(Boolean).length;
   const clearAll = () => {
     setFilterOrigin("");
     setFilterPayment("");
@@ -397,7 +429,7 @@ const SalesListPage: React.FC = () => {
         <div className="flex gap-3 pb-1 overflow-x-auto scrollbar-none">
           <StatCard
             label="Total Orders"
-            value={analyticsStats?.overview?.sales?.total_sales ?? stats?.total_orders ?? 0}
+            value={analyticsStats?.overview?.sales?.total_sales ?? summaryStats.total}
             icon={<TrendingUp size={18} />}
             iconBg="bg-blue-50"
             iconColor="text-blue-600"
@@ -407,24 +439,24 @@ const SalesListPage: React.FC = () => {
           />
           <StatCard
             label="Online Sales"
-            value={(analyticsStats?.overview?.sales?.total_online_sales_amount ?? 0).toLocaleString()}
+            value={(analyticsStats?.overview?.sales?.total_online_sales_amount ?? summaryStats.onlineAmount).toLocaleString()}
             prefix="₹"
             icon={<Globe size={18} />}
             iconBg="bg-rose-50"
             iconColor="text-rose-500"
-            subValue={`${analyticsStats?.overview?.sales?.total_online_sales ?? 0} Orders`}
-            onClick={() => setActiveKpi("Online Sales")}
+            subValue={`${analyticsStats?.overview?.sales?.total_online_sales ?? summaryStats.onlineCount} Orders`}
+            onClick={() => setActiveKpi(prev => prev === "Online Sales" ? "Total Orders" : "Online Sales")}
             className={activeKpi === "Online Sales" ? "ring-2 ring-rose-400 border-transparent shadow-sm" : ""}
           />
           <StatCard
             label="Offline Sales"
-            value={(analyticsStats?.overview?.sales?.total_offline_sales_amount ?? 0).toLocaleString()}
+            value={(analyticsStats?.overview?.sales?.total_offline_sales_amount ?? summaryStats.offlineAmount).toLocaleString()}
             prefix="₹"
             icon={<Store size={18} />}
             iconBg="bg-indigo-50"
             iconColor="text-indigo-500"
-            subValue={`${analyticsStats?.overview?.sales?.total_offline_sales ?? 0} Orders`}
-            onClick={() => setActiveKpi("Offline Sales")}
+            subValue={`${analyticsStats?.overview?.sales?.total_offline_sales ?? summaryStats.offlineCount} Orders`}
+            onClick={() => setActiveKpi(prev => prev === "Offline Sales" ? "Total Orders" : "Offline Sales")}
             className={activeKpi === "Offline Sales" ? "ring-2 ring-indigo-400 border-transparent shadow-sm" : ""}
           />
         </div>
@@ -474,51 +506,6 @@ const SalesListPage: React.FC = () => {
         title="Sales Filters"
       >
         <div className="space-y-4">
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Origin</label>
-            <ReusableSelect
-              options={[
-                { label: "All Origins", value: "" },
-                { label: "Offline", value: "Offline" },
-                { label: "Online", value: "Online" },
-                { label: "Offline Return", value: "Offline Return" }
-              ]}
-              value={filterOrigin}
-              onValueChange={setFilterOrigin}
-              placeholder="Origin"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Payment Method</label>
-            <ReusableSelect
-              options={[
-                { label: "All Payment Methods", value: "" },
-                { label: "Cash", value: "Cash" },
-                { label: "Card", value: "Card" },
-                { label: "UPI", value: "UPI" }
-              ]}
-              value={filterPayment}
-              onValueChange={setFilterPayment}
-              placeholder="Payment Method"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Status</label>
-            <ReusableSelect
-              options={[
-                { label: "All Statuses", value: "" },
-                { label: "Completed", value: "Completed" },
-                { label: "Pending", value: "Pending" },
-                { label: "Cancelled", value: "Cancelled" }
-              ]}
-              value={filterStatus}
-              onValueChange={setFilterStatus}
-              placeholder="Status"
-            />
-          </div>
-
           <div className="flex items-center gap-2">
             <div className="space-y-1.5 flex-1">
               <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">From</label>

@@ -106,14 +106,14 @@ export default function SupplierDetail() {
   const [selectedPurchase, setSelectedPurchase] = useState<any>(null);
   const [clearAmount, setClearAmount] = useState<string>('');
   const [clearPaymentMethod, setClearPaymentMethod] = useState<'CASH' | 'CARD' | 'UPI' | 'BANK'>('CASH');
-  const [clearReferenceNo, setClearReferenceNo] = useState<string>('');
+  const [clearNotes, setClearNotes] = useState<string>('');
   const [clearSaving, setClearSaving] = useState(false);
 
   const fetchOutstandingPurchases = useCallback(async () => {
     if (!id) return;
     setClearLoading(true);
     try {
-      const res = await purchaseApi.getPurchasesBySupplier(SHOP_ID, id, { outstanding: true });
+      const res = await purchaseApi.getPurchasesBySupplier(SHOP_ID, id, { outstanding: true, exclude_cancel: "true", exclude_draft: "true" });
       let purList = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
       if (res?.data?.datas) purList = res.data.datas;
       
@@ -132,9 +132,7 @@ export default function SupplierDetail() {
       const amountToPay = Number(clearAmount);
       const purchaseId = selectedPurchase.purchase_id || selectedPurchase.id;
       const invoiceNo = selectedPurchase.invoice_no || selectedPurchase.ui_id;
-      const notesStr = clearReferenceNo.trim() 
-        ? `${clearPaymentMethod} - ${clearReferenceNo.trim()}` 
-        : `Payment for purchase ${invoiceNo}`;
+      const notesStr = clearNotes.trim() || `Payment for purchase ${invoiceNo}`;
 
       // Call supplierApi.updateOutstanding to update supplier balance, record in ledger history, and reflect in purchase
       await supplierApi.updateOutstanding({
@@ -156,7 +154,7 @@ export default function SupplierDetail() {
       refreshSupplierData();
 
       if (activeTab === 1) {
-        getData(`${ENDPOINTS.PURCHASES}/by/supplier/${SHOP_ID}/${id}`, { exclude_cancel: "true" }).then((r: any) => {
+        getData(`${ENDPOINTS.PURCHASES}/by/supplier/${SHOP_ID}/${id}`, { exclude_cancel: "true", exclude_draft: "true" }).then((r: any) => {
            setPurchases(r?.data ? (Array.isArray(r.data) ? r.data : [r.data]) : []);
         });
       } else if (activeTab === 2) {
@@ -205,7 +203,7 @@ export default function SupplierDetail() {
             setSelectedPurchase(null);
             setClearAmount('');
             setClearPaymentMethod('CASH');
-            setClearReferenceNo('');
+            setClearNotes('');
             setClearSearch('');
           }}
           className="px-6 h-8 border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg text-xs font-bold transition-colors shadow-sm"
@@ -254,7 +252,7 @@ export default function SupplierDetail() {
   useEffect(() => {
     if (!id || activeTab !== 1) return;
     setPurLoading(true);
-    getData(`${ENDPOINTS.PURCHASES}/by/supplier/${SHOP_ID}/${id}`, { exclude_cancel: "true" }).then((res: any) => {
+    getData(`${ENDPOINTS.PURCHASES}/by/supplier/${SHOP_ID}/${id}`, { exclude_cancel: "true", exclude_draft: "true" }).then((res: any) => {
       setPurchases(res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : []);
       setPurLoading(false);
     }).catch(() => setPurLoading(false));
@@ -724,7 +722,7 @@ export default function SupplierDetail() {
                               </td>
                               <td className="px-4 py-3 whitespace-nowrap">
                                 <span className={`text-[11px] font-black px-2.5 py-1 rounded-md uppercase tracking-wider flex items-center w-fit ${isRefund ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
-                                  {h.payment_method || h.method || "CASH"}
+                                  {String(h.payment_method || h.method || "CASH").replace(/_REFUND$/i, "").replace(/REFUND/i, "").replace(/_/g, " ").trim() || "CASH"}
                                 </span>
                               </td>
                               <td className="px-4 py-3 text-xs font-medium text-slate-500 whitespace-normal break-words" title={h.notes}>
@@ -881,7 +879,7 @@ export default function SupplierDetail() {
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Selected Purchase</p>
                     <p className="text-sm font-bold text-slate-800 mt-0.5">{selectedPurchase.invoice_no || selectedPurchase.ui_id}</p>
                   </div>
-                  <button onClick={() => { setSelectedPurchase(null); setClearAmount(''); setClearPaymentMethod('CASH'); setClearReferenceNo(''); }} className="text-xs text-blue-600 font-bold hover:underline">Change</button>
+                  <button onClick={() => { setSelectedPurchase(null); setClearAmount(''); setClearPaymentMethod('CASH'); setClearNotes(''); }} className="text-xs text-blue-600 font-bold hover:underline">Change</button>
                 </div>
 
                 <div>
@@ -936,27 +934,26 @@ export default function SupplierDetail() {
                          </div>
                        </div>
 
-                       {clearPaymentMethod !== 'CASH' && (
-                         <div>
-                           <label className="block text-xs font-semibold text-slate-600 mb-1.5">
-                             Reference / Txn No. <span className="text-slate-400 text-[10px] font-normal">(Optional)</span>
-                           </label>
-                           <input
-                             type="text"
-                             value={clearReferenceNo}
-                             onChange={(e) => setClearReferenceNo(e.target.value)}
-                             className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm"
-                             placeholder={`Enter ${clearPaymentMethod} reference or transaction ID`}
-                           />
-                         </div>
-                       )}
+
+                       <div>
+                         <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+                           Notes <span className="text-slate-400 text-[10px] font-normal">(Optional)</span>
+                         </label>
+                         <textarea
+                           value={clearNotes}
+                           onChange={(e) => setClearNotes(e.target.value)}
+                           rows={2}
+                           className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm resize-none"
+                           placeholder="Add payment notes or remarks..."
+                         />
+                       </div>
                      </div>
                    );
                 })()}
 
                 <div className="pt-4 flex justify-end gap-2 border-t border-slate-200">
                   <button
-                    onClick={() => { setSelectedPurchase(null); setClearAmount(''); setClearPaymentMethod('CASH'); setClearReferenceNo(''); }}
+                    onClick={() => { setSelectedPurchase(null); setClearAmount(''); setClearPaymentMethod('CASH'); setClearNotes(''); }}
                     className="h-9 px-4 text-xs font-bold text-slate-600 hover:bg-slate-200 bg-slate-100 rounded-lg transition-colors border border-slate-200"
                   >
                     Back

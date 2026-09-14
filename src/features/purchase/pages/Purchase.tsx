@@ -11,7 +11,6 @@ import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import type { PurchaseRecord } from "@/types/api";
 import { useHeader } from "@/context/HeaderContext";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
-import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { GradientButton } from "@/components/ui/GradientButton";
 
 interface Column {
@@ -104,16 +103,17 @@ const PurchaseHistoryTab = () => {
   const [refreshKey] = useState(0);
   const [selectedPurchase, setSelectedPurchase] = useState<PurchaseRecord | null>(null);
 
-  const [filterSupplier, setFilterSupplier] = useState("");
-  const [filterDate, setFilterDate] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
-  const suppliersList = useMemo(() => Array.from(new Set(purchases.map(p => String(p.datas?.supplier ?? p.datas?.supplier_name ?? "")))).filter(Boolean), [purchases]);
-  const activeFiltersCount = [filterSupplier, filterDate].filter(Boolean).length;
+  const activeFiltersCount = [fromDate, toDate, filterStatus].filter(Boolean).length;
 
   const resetFilters = () => {
-    setFilterSupplier("");
-    setFilterDate("");
+    setFromDate("");
+    setToDate("");
+    setFilterStatus("");
   };
 
   useEffect(() => {
@@ -138,11 +138,25 @@ const PurchaseHistoryTab = () => {
 
   const filteredPurchases = useMemo(() => {
     return purchases.filter(p => {
-      const matchesSupplier = !filterSupplier || String(p.datas?.supplier ?? p.datas?.supplier_name ?? "") === filterSupplier;
-      const matchesDate = !filterDate || String(p.datas?.purchase_date ?? p.date ?? "").includes(filterDate);
-      return matchesSupplier && matchesDate;
+      const pDateStr = (p as any).datas?.purchase_date ?? (p as any).date ?? (p as any).created_at ?? "";
+      if (fromDate) {
+        const from = new Date(fromDate).getTime();
+        const pDate = new Date(pDateStr).getTime();
+        if (!isNaN(pDate) && pDate < from) return false;
+      }
+      if (toDate) {
+        const to = new Date(toDate).getTime() + 86400000;
+        const pDate = new Date(pDateStr).getTime();
+        if (!isNaN(pDate) && pDate > to) return false;
+      }
+      if (filterStatus) {
+        const st = String((p as any).datas?.status ?? (p as any).status ?? "").toUpperCase();
+        if (filterStatus === "CANCELED" && !["CANCELED", "CANCELLED"].includes(st)) return false;
+        if (filterStatus !== "CANCELED" && st !== filterStatus.toUpperCase()) return false;
+      }
+      return true;
     });
-  }, [purchases, filterSupplier, filterDate]);
+  }, [purchases, fromDate, toDate, filterStatus]);
 
   useEffect(() => {
     const params: Record<string, string> = {
@@ -255,27 +269,59 @@ const PurchaseHistoryTab = () => {
         title="Purchase Invoice Filters"
       >
         <div className="space-y-4">
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Supplier</label>
-            <ReusableSelect
-              options={[
-                { label: "All Suppliers", value: "" },
-                ...suppliersList.map(supp => ({ label: supp, value: supp }))
-              ]}
-              value={filterSupplier}
-              onValueChange={setFilterSupplier}
-              placeholder="Supplier"
-            />
+          <div className="flex items-center gap-2">
+            <div className="space-y-1.5 flex-1">
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">From</label>
+              <input
+                type="date"
+                value={fromDate}
+                onChange={e => setFromDate(e.target.value)}
+                className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+              />
+            </div>
+            <div className="space-y-1.5 flex-1">
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">To</label>
+              <input
+                type="date"
+                value={toDate}
+                onChange={e => setToDate(e.target.value)}
+                className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+              />
+            </div>
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Purchase Date</label>
-            <input
-              type="date"
-              value={filterDate}
-              onChange={e => setFilterDate(e.target.value)}
-              className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
-            />
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Purchase Status</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setFilterStatus("")}
+                className={`h-9 rounded-md text-xs font-semibold border transition-all ${!filterStatus ? "border-slate-800 bg-slate-800 text-white" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
+              >
+                All Statuses
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterStatus("COMPLETED")}
+                className={`h-9 rounded-md text-xs font-semibold border transition-all ${filterStatus === "COMPLETED" ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
+              >
+                Completed
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterStatus("DRAFT")}
+                className={`h-9 rounded-md text-xs font-semibold border transition-all ${filterStatus === "DRAFT" ? "border-slate-600 bg-slate-100 text-slate-800 font-bold" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
+              >
+                Draft
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterStatus("CANCELED")}
+                className={`h-9 rounded-md text-xs font-semibold border transition-all ${filterStatus === "CANCELED" ? "border-rose-500 bg-rose-50 text-rose-700" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
+              >
+                Canceled
+              </button>
+            </div>
           </div>
         </div>
       </RightSidebarFilter>

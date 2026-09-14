@@ -192,7 +192,6 @@ const AnalyticsDashboard = () => {
 
 
   const [selectedSupplier, setSelectedSupplier] = useState<string>("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [customCategories, setCustomCategories] = useState<string[]>([]);
   const [productsList, setProductsList] = useState<any[]>([]);
@@ -223,6 +222,7 @@ const AnalyticsDashboard = () => {
       } catch (e) { }
     };
 
+    fetchSuppliers();
     const fetchCustomCategories = async () => {
       try {
         const res = await apiClient.get(`${ENDPOINTS.SHOP_CATEGORIES}`, { shop_id: SHOP_ID });
@@ -233,14 +233,8 @@ const AnalyticsDashboard = () => {
         }
       } catch (e) { }
     };
-
-    fetchSuppliers();
     fetchCustomCategories();
   }, []);
-
-  const allCategories = useMemo(() => {
-    return Array.from(new Set(customCategories));
-  }, [customCategories]);
 
   // ── Compute dates ──
   const dateRange = useMemo(() => {
@@ -264,7 +258,6 @@ const AnalyticsDashboard = () => {
         end_date: formatDateParam(dateRange.end),
       };
       if (selectedSupplier) queryParams.supplier_id = selectedSupplier;
-      if (selectedCategory) queryParams.category = selectedCategory;
 
       const res = await analytics.getUnifiedDashboard(queryParams);
       if (res) {
@@ -275,13 +268,13 @@ const AnalyticsDashboard = () => {
     } finally {
       setLoading(false);
     }
-  }, [analytics, dateRange, selectedSupplier, selectedCategory]);
+  }, [analytics, dateRange, selectedSupplier]);
 
   useEffect(() => {
     if (activeRange !== "custom" || (customStart && customEnd)) {
       fetchStats();
     }
-  }, [fetchStats, activeRange, customStart, customEnd, selectedSupplier, selectedCategory]);
+  }, [fetchStats, activeRange, customStart, customEnd, selectedSupplier]);
 
   // Automatically refresh dashboard data when sync notification is received
   useEffect(() => {
@@ -550,21 +543,7 @@ const AnalyticsDashboard = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-500">Category:</span>
-              <div className="w-48">
-                <ReusableSelect
-                  value={selectedCategory}
-                  onValueChange={setSelectedCategory}
-                  options={[
-                    { label: "All Categories", value: "" },
-                    ...allCategories.map((c) => ({ label: c, value: c })),
-                  ]}
-                  placeholder="All Categories"
-                  className="h-8.5 py-0 px-3 min-h-0 text-xs font-medium bg-white"
-                />
-              </div>
-            </div>
+
           </div>
         </div>
 

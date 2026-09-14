@@ -15,7 +15,6 @@ import { useQuickCreate } from "@/features/common/QuickCreate/QuickCreateContext
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
 import SkeletonLoader from "@/components/common/SkeletonLoader";
 import ActionMenu, { ActionMenuItem } from "@/components/common/ActionMenu";
-import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { getSupplierOutstanding } from "../type";
 
 
@@ -151,11 +150,7 @@ const Supplier = () => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   
-  const activeFilters = [
-    fromDate,
-    toDate,
-    Object.values(filters).some(v => v !== "All") ? "true" : ""
-  ].filter(Boolean).length;
+  const activeFilters = [fromDate, toDate].filter(Boolean).length;
 
   // Dynamic Column State
   const [availableKeys, setAvailableKeys] = useState<string[]>([]);
@@ -333,21 +328,6 @@ const Supplier = () => {
     });
   }, [refreshKey, debouncedSearch, fromDate, toDate, filters.status]);
 
-  const types = useMemo(() => {
-    const s = new Set(suppliers.map((sup: any) => sup.additional_infos?.type || sup.datas?.type).filter(Boolean));
-    return ["All", ...Array.from(s)];
-  }, [suppliers]);
-
-  const cities = useMemo(() => {
-    const s = new Set(suppliers.map((sup: any) => sup.additional_infos?.city || sup.datas?.address?.city || sup.location_infos?.city).filter(Boolean));
-    return ["All", ...Array.from(s)];
-  }, [suppliers]);
-
-  const states = useMemo(() => {
-    const s = new Set(suppliers.map((sup: any) => sup.location_infos?.state || sup.datas?.address?.state).filter(Boolean));
-    return ["All", ...Array.from(s)];
-  }, [suppliers]);
-
   const filteredSuppliers = useMemo(() => {
     let result = suppliers;
 
@@ -516,60 +496,10 @@ const Supplier = () => {
         isOpen={isFilterOpen}
         onClose={() => setIsFilterOpen(false)}
         onApply={() => setIsFilterOpen(false)}
-        onClear={() => { setFromDate(""); setToDate(""); setFilters({ status: "All", type: "All", city: "All", state: "All" }); }}
+        onClear={() => { setFromDate(""); setToDate(""); }}
         title="Supplier Filters"
       >
         <div className="space-y-4">
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Payment Status</label>
-            <div className="flex gap-2">
-              <button 
-                onClick={() => setFilters(prev => ({ ...prev, status: "All" }))}
-                className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${filters.status === "All" ? "border-slate-800 bg-slate-800 text-white" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
-              >
-                All
-              </button>
-              <button 
-                onClick={() => setFilters(prev => ({ ...prev, status: "Outstanding" }))}
-                className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${filters.status === "Outstanding" ? "border-rose-500 bg-rose-50 text-rose-700" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
-              >
-                Outstanding
-              </button>
-              <button 
-                onClick={() => setFilters(prev => ({ ...prev, status: "Cleared" }))}
-                className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${filters.status === "Cleared" ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
-              >
-                Cleared
-              </button>
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Supplier Type</label>
-            <ReusableSelect
-              value={filters.type}
-              onValueChange={(val: string) => setFilters(prev => ({ ...prev, type: val }))}
-              options={types.map((t: any) => ({ label: String(t), value: String(t) }))}
-              placeholder="Supplier Type"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">City</label>
-            <ReusableSelect
-              value={filters.city}
-              onValueChange={(val: string) => setFilters(prev => ({ ...prev, city: val }))}
-              options={cities.map((c: any) => ({ label: String(c), value: String(c) }))}
-              placeholder="City"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">State</label>
-            <ReusableSelect
-              value={filters.state}
-              onValueChange={(val: string) => setFilters(prev => ({ ...prev, state: val }))}
-              options={states.map((s: any) => ({ label: String(s), value: String(s) }))}
-              placeholder="State"
-            />
-          </div>
           <div className="flex items-center gap-2">
             <div className="space-y-1.5 flex-1">
               <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">From</label>

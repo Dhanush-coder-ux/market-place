@@ -36,7 +36,6 @@ import { StatCard } from "@/components/common/StatsCard";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
-import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { AntBadge } from "@/components/ui/AntBadge";
 // --- Types (unchanged) ---
 export interface VariantAttribute {
@@ -862,12 +861,40 @@ const InventoryPage = () => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  useEffect(() => {
+    getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}`, {
+      active: "true",
+      limit: "500",
+      offset: "1",
+      exclude_non_tracking: "true"
+    }).then((res) => {
+      if (res && res.data) {
+        const itemsRaw: any[] = Array.isArray(res.data) ? res.data : (res.data.inventories || res.data.datas || []);
+        const available = itemsRaw.length;
+        const low = itemsRaw.filter((p: InventoryItem) => {
+          const stock = calculateProductStock(p);
+          const rp = Number(
+            (p as any).reorder_point_infos?.reorder_point ?? (p as any).reorder_point ?? p.datas?.reorder_point ?? 10
+          );
+          return stock <= rp && stock > 0;
+        }).length;
+        const outOfStock = itemsRaw.filter((p: InventoryItem) => calculateProductStock(p) === 0).length;
+        setSummaryStats({ available, low, outOfStock });
+      }
+    }).catch(() => {});
+  }, [getData, refreshKey]);
+
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [stockStatus, setStockStatus] = useState<string>("");
+  const [summaryStats, setSummaryStats] = useState<{ available: number; low: number; outOfStock: number }>({
+    available: 0,
+    low: 0,
+    outOfStock: 0,
+  });
   const [filtersState, setFiltersState] = useState({
     category: "All",
     brand: "All",
@@ -887,18 +914,8 @@ const InventoryPage = () => {
     });
   };
 
-  const [analyticsStats, setAnalyticsStats] = useState<any>(null);
 
-  useEffect(() => {
-    getData(ENDPOINTS.ANALYTICS_PRODINV_OVERALL, { shop_id: SHOP_ID })
-      .then((res) => {
-        const data = res?.data ?? res;
-        if (data) {
-          setAnalyticsStats({ overview: { inventory: data } });
-        }
-      })
-      .catch(() => { });
-  }, [getData]);
+
 
   const handleBulkDelete = async () => {
     if (selectedItems.size === 0) return;
@@ -955,12 +972,7 @@ const InventoryPage = () => {
     }
   }, [selectedItems, setBottomActions, navigate]);
 
-  const activeFiltersCount = [
-    fromDate,
-    toDate,
-    stockStatus,
-    Object.values(filtersState).some(v => v !== "All") ? "true" : ""
-  ].filter(Boolean).length;
+  const activeFiltersCount = [fromDate, toDate].filter(Boolean).length;
 
   const resetFilters = () => {
     setFromDate("");
@@ -1027,21 +1039,11 @@ const InventoryPage = () => {
     refreshKey
   }), [debouncedSearch, fromDate, toDate, stockStatus, refreshKey]);
 
-  const { items: inventory, loading, loadingMore, stats: overallStats, totalCount, lastElementRef } = useInfiniteScroll({
+  const { items: inventory, loading, loadingMore, totalCount, lastElementRef } = useInfiniteScroll({
     fetchPage,
     filters,
     limit: 50
   });
-
-  const categories = useMemo(() => {
-    const s = new Set(inventory.map((item: any) => item.category_infos?.name || item.datas?.category || item.category).filter(Boolean));
-    return ["All", ...Array.from(s)];
-  }, [inventory]);
-
-  const brands = useMemo(() => {
-    const s = new Set(inventory.map((item: any) => item.brand || item.datas?.brand).filter(Boolean));
-    return ["All", ...Array.from(s)];
-  }, [inventory]);
 
   const filteredInventory = useMemo(() => {
     let result = inventory as InventoryItem[];
@@ -1089,24 +1091,7 @@ const InventoryPage = () => {
 
 
 
-  const stats = useMemo(() => {
-    const total = filteredInventory.length;
-    const lowStock = filteredInventory.filter((p: InventoryItem) => {
-      const stock = calculateProductStock(p);
-      const rp = Number(
-        (p as any).reorder_point_infos?.reorder_point ?? (p as any).reorder_point ?? p.datas?.reorder_point ?? 10
-      );
-      return stock <= rp;
-    }).length;
-    const categories = new Set(
-      inventory.map((i) => i.datas?.category || i.category)
-    ).size;
-    const barcodes = inventory.reduce(
-      (acc, curr) => acc + (curr.variants?.length || 1),
-      0
-    );
-    return { total, lowStock, categories, barcodes };
-  }, [filteredInventory, inventory]);
+
 
   const toggleExpand = useCallback((id: string) => {
     setExpandedRows((prev) => {
@@ -1134,7 +1119,7 @@ const InventoryPage = () => {
           <StatCard
             icon={Package}
             label="Available Stock"
-            value={(analyticsStats?.overview?.inventory?.total_active_products ?? Math.max(Number(overallStats?.total_product_count || 0), stats.total)).toString()}
+            value={summaryStats.available.toString()}
             subValue="All stocked products"
             iconBg="bg-blue-50"
             iconColor="text-blue-600"
@@ -1144,7 +1129,7 @@ const InventoryPage = () => {
           <StatCard
             icon={AlertTriangle}
             label="Low Stock"
-            value={(analyticsStats?.overview?.inventory?.total_low_stocks ?? overallStats?.low_stocks_count ?? stats.lowStock).toString()}
+            value={summaryStats.low.toString()}
             subValue="Low stock only"
             iconBg="bg-amber-50"
             iconColor="text-amber-500"
@@ -1154,7 +1139,7 @@ const InventoryPage = () => {
           <StatCard
             icon={AlertCircle}
             label="Out of Stock"
-            value={(analyticsStats?.overview?.inventory?.total_no_stocks ?? overallStats?.no_stocks_count ?? inventory.filter((p: InventoryItem) => calculateProductStock(p) === 0).length).toString()}
+            value={summaryStats.outOfStock.toString()}
             subValue="Zero stock only"
             iconBg="bg-red-50"
             iconColor="text-red-500"
@@ -1238,90 +1223,6 @@ const InventoryPage = () => {
                 onChange={e => setToDate(e.target.value)}
                 className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
               />
-            </div>
-          </div>
-
-          <div className="space-y-1.5 pt-2">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Stock Status</label>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setStockStatus("")}
-                className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${stockStatus === "" ? "border-slate-800 bg-slate-800 text-white" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
-              >
-                All
-              </button>
-              <button
-                onClick={() => setStockStatus("low")}
-                className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${stockStatus === "low" ? "border-amber-500 bg-amber-50 text-amber-700" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
-              >
-                Low Stock
-              </button>
-              <button
-                onClick={() => setStockStatus("out_of_stock")}
-                className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${stockStatus === "out_of_stock" ? "border-red-500 bg-red-50 text-red-700" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
-              >
-                Out of Stock
-              </button>
-            </div>
-          </div>
-
-          <div className="space-y-1.5 pt-2">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Category</label>
-            <ReusableSelect
-              value={filtersState.category}
-              onValueChange={(val: string) => setFiltersState(prev => ({ ...prev, category: val }))}
-              options={categories.map(c => ({ label: String(c), value: String(c) }))}
-              placeholder="Select Category"
-            />
-          </div>
-
-          <div className="space-y-1.5 pt-2">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Brand</label>
-            <ReusableSelect
-              value={filtersState.brand}
-              onValueChange={(val: string) => setFiltersState(prev => ({ ...prev, brand: val }))}
-              options={brands.map(b => ({ label: String(b), value: String(b) }))}
-              placeholder="Select Brand"
-            />
-          </div>
-
-          <div className="space-y-1.5 pt-2">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Product Type</label>
-            <ReusableSelect
-              value={filtersState.type}
-              onValueChange={(val: string) => setFiltersState(prev => ({ ...prev, type: val }))}
-              options={[
-                { label: "All", value: "All" },
-                { label: "Simple Product", value: "Simple" },
-                { label: "With Variants", value: "Variants" },
-                { label: "With Batches", value: "Batches" },
-                { label: "With Serials", value: "Serials" }
-              ]}
-              placeholder="Product Type"
-            />
-          </div>
-
-          <div className="space-y-1.5 pt-2">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Visibility</label>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setFiltersState(prev => ({ ...prev, visibility: "All" }))}
-                className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${filtersState.visibility === "All" ? "border-slate-800 bg-slate-800 text-white" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
-              >
-                All
-              </button>
-              <button
-                onClick={() => setFiltersState(prev => ({ ...prev, visibility: "Online" }))}
-                className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${filtersState.visibility === "Online" ? "border-blue-500 bg-blue-50 text-blue-700" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
-              >
-                Online
-              </button>
-              <button
-                onClick={() => setFiltersState(prev => ({ ...prev, visibility: "Offline" }))}
-                className={`flex-1 h-9 rounded-md text-xs font-semibold border transition-all ${filtersState.visibility === "Offline" ? "border-slate-400 bg-slate-100 text-slate-700" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
-              >
-                Offline
-              </button>
             </div>
           </div>
         </div>

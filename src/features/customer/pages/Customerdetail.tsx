@@ -719,7 +719,7 @@ export default function CustomerDetail() {
                                         ))}
                                       </div>
                                     </td>
-                                    <td className="px-4 py-3 text-[10px] font-medium text-slate-500 max-w-[150px] truncate" title={h.notes}>
+                                    <td className="px-4 py-3 text-[10px] font-medium text-slate-500 whitespace-normal break-words" title={h.notes}>
                                       {h.notes || "—"}
                                     </td>
                                     <td className="px-4 py-3 whitespace-nowrap text-right">

@@ -727,7 +727,7 @@ export default function SupplierDetail() {
                                   {h.payment_method || h.method || "CASH"}
                                 </span>
                               </td>
-                              <td className="px-4 py-3 text-xs font-medium text-slate-500 max-w-xs truncate" title={h.notes}>
+                              <td className="px-4 py-3 text-xs font-medium text-slate-500 whitespace-normal break-words" title={h.notes}>
                                 {isRefund && !h.notes ? "Supplier refund" : (h.notes || (isRefund ? "Supplier refund" : "—"))}
                               </td>
                             </tr>

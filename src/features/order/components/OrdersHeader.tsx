@@ -5,7 +5,6 @@ import {
   ListFilter,
   Inbox,
   CheckCircle,
-  Truck,
   PackageCheck,
   XCircle
 } from "lucide-react";

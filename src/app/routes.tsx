@@ -9,7 +9,7 @@ import { RefreshCw, AlertCircle } from "lucide-react";
 function lazyRetry<T extends React.ComponentType<any>>(
   factory: () => Promise<{ default: T } | { [key: string]: any }>
 ): React.LazyExoticComponent<T> {
-  return lazyRetry(async () => {
+  return React.lazy(async () => {
     try {
       const module = await factory();
       if ('default' in module && module.default) {

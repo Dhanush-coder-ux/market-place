@@ -96,6 +96,7 @@ const PurchaseForm = () => {
   const { openQuickCreate } = useQuickCreate();
   const [soldStockWarnings, setSoldStockWarnings] = useState<string[]>([]);
   const [originalSupplierId, setOriginalSupplierId] = useState<string | null>(null);
+  const [originalSupplierName, setOriginalSupplierName] = useState<string | null>(null);
   const [pendingSupplier, setPendingSupplier] = useState<any>(null);
   const [showSupplierChangeInfo, setShowSupplierChangeInfo] = useState(false);
 
@@ -199,6 +200,7 @@ const PurchaseForm = () => {
           const loadedSupplierId = data.supplier?.supplier_id || data.supplier?.id || data.supplier_id || "";
           const loadedSupplierName = data.supplier?.supplier_name || data.supplier?.name || data.supplier_name || "";
           setOriginalSupplierId(loadedSupplierId);
+          setOriginalSupplierName(loadedSupplierName || "Unknown Supplier");
 
           setPurchaseDetails(data.purchaseDetails || {
             supplier: loadedSupplierId,
@@ -211,10 +213,12 @@ const PurchaseForm = () => {
             supplierApi.getById(SHOP_ID, loadedSupplierId).then((supRes: any) => {
               if (supRes && (supRes.data || supRes.id)) {
                 const supData = supRes.data ? (Array.isArray(supRes.data) ? supRes.data[0] : supRes.data) : supRes;
+                const name = supData.name || supData.supplier_name || loadedSupplierName || "Unknown Supplier";
+                setOriginalSupplierName(name);
                 setSupplierDetails({
                   ...supData,
                   id: loadedSupplierId,
-                  name: supData.name || supData.supplier_name || loadedSupplierName || "Unknown Supplier"
+                  name: name
                 });
               } else {
                 setSupplierDetails({
@@ -1237,7 +1241,7 @@ const PurchaseForm = () => {
           setPendingSupplier(null);
         }}
         title="Supplier Changed"
-        description="The purchase data will now be shown for this supplier."
+        description={`This purchase, including its products, stock, and payment entries, will be moved from ${originalSupplierName || 'the original supplier'} to ${pendingSupplier?.opt?.name || pendingSupplier?.opt?.supplier_name || 'the new supplier'}. It will no longer be associated with ${originalSupplierName || 'the original supplier'}.`}
         confirmText="Proceed"
         cancelText="Cancel"
         type="info"

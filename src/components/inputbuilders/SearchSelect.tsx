@@ -202,6 +202,7 @@ export function SearchSelect<T extends BaseOption>({
         placeholder={placeholder}
         disabled={disabled}
         options={formattedOptions}
+        listHeight={350}
         onSearch={onSearch}
         onChange={handleChange}
         filterOption={

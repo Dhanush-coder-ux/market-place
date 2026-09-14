@@ -58,7 +58,7 @@ export const supplierApi = {
     try {
       const response = await apiClient.get(
         `${ENDPOINTS.SUPPLIERS}/by/shop/${SHOP_ID}`,
-        { q: query, limit: '10' }
+        { q: query, limit: '100' }
       );
       const rawData = response?.data || [];
       const suppliers = Array.isArray(rawData) ? rawData : (rawData?.datas ?? []);

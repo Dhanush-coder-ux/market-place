@@ -9,6 +9,7 @@ const statusConfig: Record<string, string> = {
   PENDING: "pay-pending",
   PROCESSING: "lb-brand",
   COMPLETED: "ps-completed",
+  ACCEPTED: "ps-completed",
   CANCELED: "ps-cancelled",
   REFUNDED: "ps-cancelled",
   EXCHANGED: "tx-adjustment",
@@ -87,11 +88,8 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
             <ReusableSelect
               options={[
                 { label: "Pending", value: "PENDING" },
-                { label: "Processing", value: "PROCESSING" },
-                { label: "Completed", value: "COMPLETED" },
+                { label: "Accepted", value: "ACCEPTED" },
                 { label: "Canceled", value: "CANCELED" },
-                { label: "Refunded", value: "REFUNDED" },
-                { label: "Exchanged", value: "EXCHANGED" },
                 { label: "Delivered", value: "DELIVERED" },
               ]}
               value={order.status}
@@ -169,11 +167,8 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
           <ReusableSelect
             options={[
               { label: "Pending", value: "PENDING" },
-              { label: "Processing", value: "PROCESSING" },
-              { label: "Completed", value: "COMPLETED" },
+              { label: "Accepted", value: "ACCEPTED" },
               { label: "Canceled", value: "CANCELED" },
-              { label: "Refunded", value: "REFUNDED" },
-              { label: "Exchanged", value: "EXCHANGED" },
               { label: "Delivered", value: "DELIVERED" },
             ]}
             value={order.status}

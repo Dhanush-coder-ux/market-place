@@ -151,8 +151,8 @@ const Order = () => {
   const filteredOrders = onlineOrders;
   const totalOrders = onlineOrders.length;
   const pending = onlineOrders.filter((o) => o.status === "PENDING").length;
-  const processing = onlineOrders.filter((o) => o.status === "PROCESSING").length;
-  const completed = onlineOrders.filter((o) => o.status === "COMPLETED").length;
+  const accepted = onlineOrders.filter((o) => o.status === "ACCEPTED").length;
+  const delivered = onlineOrders.filter((o) => o.status === "DELIVERED").length;
 
   return (
     <div className="h-full overflow-y-auto bg-slate-50/60 font-sans pb-10">
@@ -162,8 +162,8 @@ const Order = () => {
           <div className="flex gap-4 min-w-max">
             <StatCard label="Total Orders" value={totalOrders} icon={Package} iconBg="bg-slate-100" iconColor="text-slate-600" />
             <StatCard label="Pending" value={pending} icon={Inbox} iconBg="bg-amber-50" iconColor="text-amber-600" />
-            <StatCard label="Processing" value={processing} icon={CheckCircle} iconBg="bg-blue-50" iconColor="text-blue-600" />
-            <StatCard label="Completed" value={completed} icon={PackageCheck} iconBg="bg-emerald-50" iconColor="text-emerald-600" />
+            <StatCard label="Accepted" value={accepted} icon={CheckCircle} iconBg="bg-blue-50" iconColor="text-blue-600" />
+            <StatCard label="Delivered" value={delivered} icon={PackageCheck} iconBg="bg-emerald-50" iconColor="text-emerald-600" />
           </div>
         </div>
 

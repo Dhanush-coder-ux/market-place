@@ -296,7 +296,7 @@ const SalesListPage: React.FC = () => {
       stats: fetchedStats,
       total: res?.data?.total_count || normalized.length
     };
-  }, [api]);
+  }, [api.getData]);
 
 
   const fetchDetails = async () => {
@@ -334,7 +334,7 @@ const SalesListPage: React.FC = () => {
         }
       })
       .catch(() => { });
-  }, [api]);
+  }, [api.getData]);
 
   const filters = useMemo(() => ({
     search: debouncedSearch,

@@ -27,7 +27,7 @@ import SkeletonLoader from "@/components/common/SkeletonLoader";
 
 // ─── Types & Interfaces ──────────────────────────────────────────────────────
 
-export type MovementType = "OPENING" | "PURCHASE" | "PURCHASE_UPDATE" | "SALES" | "TRANSFER" | "STOCK_ADJUSTMENT" | "PO_PURCHASE" | "PRODUCTION" | "SALE_RETURN";
+export type MovementType = "OPENING" | "PURCHASE" | "PURCHASE_UPDATE" | "PURCHASE_CANCEL" | "SALES" | "TRANSFER" | "STOCK_ADJUSTMENT" | "PO_PURCHASE" | "PRODUCTION" | "SALE_RETURN";
 export type StatusType = "Completed" | "Pending";
 
 export interface Movement {

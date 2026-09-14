@@ -14,10 +14,9 @@ import {
 const pipelineTabs = [
   { label: "All Orders", value: "ALL", icon: ListFilter },
   { label: "Pending", value: "PENDING", icon: Inbox },
-  { label: "Processing", value: "PROCESSING", icon: CheckCircle },
-  { label: "Completed", value: "COMPLETED", icon: PackageCheck },
-  { label: "Cancelled", value: "CANCELED", icon: XCircle },
-  { label: "Refunded", value: "REFUNDED", icon: Truck },
+  { label: "Accepted", value: "ACCEPTED", icon: CheckCircle },
+  { label: "Delivered", value: "DELIVERED", icon: PackageCheck },
+  { label: "Canceled", value: "CANCELED", icon: XCircle },
 ];
 
 const OrdersHeader: React.FC<OrdersHeaderProps> = ({

@@ -247,10 +247,16 @@ const PurchaseForm = () => {
 
           // Populate payment info
           const firstPayment = data.payment_infos?.[0];
+          const totalPaidAmount = Array.isArray(data.payment_infos) && data.payment_infos.length > 0
+            ? data.payment_infos.reduce((acc: number, cur: any) => acc + (Number(cur?.amount) || 0), 0)
+            : (data.paid_amount !== undefined && data.paid_amount !== null
+                ? data.paid_amount
+                : (firstPayment?.amount ?? ""));
+
           setPayment({
-            method: firstPayment?.method || "NONE",
-            amountPaid: firstPayment?.amount ?? "",
-            referenceNo: firstPayment?.reference_no ?? ""
+            method: firstPayment?.method || (Number(totalPaidAmount) > 0 ? "CASH" : "NONE"),
+            amountPaid: totalPaidAmount === 0 || totalPaidAmount === "0" ? "" : totalPaidAmount,
+            referenceNo: firstPayment?.reference_no ?? firstPayment?.ref_no ?? firstPayment?.transaction_no ?? data.notes ?? ""
           });
 
           // Populate cost method

@@ -198,12 +198,14 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
 
   const totoalItems = (p as any).item_infos?.total_pur_items ?? (p as any).total_items;
 
-  const paymentInfoObj = Array.isArray((p as any).payment_infos) ? (p as any).payment_infos[0] : null;
-  const paidAmount = Number(paymentInfoObj?.amount ?? (p as any).paid_amount ?? d2?.payment?.amountPaid ?? d2?.payment_info?.amountPaid ?? d2?.paid_amount ?? 0);
-  const outstanding = (p as any).outstanding_amount !== undefined ? Number((p as any).outstanding_amount) : Math.max(
-    0,
-    grandTotal - paidAmount
-  );
+  const paymentsList = Array.isArray((p as any).payment_infos) ? (p as any).payment_infos : [];
+  const sumFromPayments = paymentsList.reduce((acc: number, cur: any) => acc + (Number(cur?.amount) || 0), 0);
+  const paidAmount = paymentsList.length > 0
+    ? sumFromPayments
+    : ((p as any).paid_amount !== undefined && (p as any).paid_amount !== null
+        ? Number((p as any).paid_amount)
+        : Number(d2?.payment?.amountPaid ?? d2?.payment_info?.amountPaid ?? d2?.paid_amount ?? 0));
+  const outstanding = Math.max(0, grandTotal - paidAmount);
 
   return {
     id: p.id || (p as any).purchase_id || "",

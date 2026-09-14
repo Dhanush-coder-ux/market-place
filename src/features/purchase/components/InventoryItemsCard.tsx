@@ -807,17 +807,17 @@ export const InventoryItemsCard = ({
 
         {/* Product Table */}
         <div className="overflow-x-auto custom-scrollbar w-full" style={{ position: 'relative' }}>
-          <table className="min-w-[1120px] w-full border-collapse whitespace-nowrap" style={{ tableLayout: 'fixed' }}>
+          <table className="min-w-[1260px] w-full border-collapse whitespace-nowrap" style={{ tableLayout: 'fixed' }}>
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-200 sticky top-0 z-10">
                 <th className="py-2.5 px-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '45px' }}>#</th>
                 <th className="py-2.5 px-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '270px' }}>Item Description *</th>
                 <th className="py-2.5 px-2 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '110px' }}>Qty / Unit *</th>
                 <th className="py-2.5 px-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '160px' }}>{type === "PURCHASE" ? "Buy Price / Unit *" : "Material Cost *"}</th>
-                <th className="py-2.5 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '100px' }}>Subtotal</th>
-                <th className="py-2.5 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '90px' }}>Allocated</th>
+                <th className="py-2.5 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '130px' }}>Subtotal</th>
+                <th className="py-2.5 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '120px' }}>Allocated</th>
                 <th className="py-2.5 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '85px' }}>Tax (GST)</th>
-                <th className="py-2.5 px-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '240px' }}>Pricing & Margin / Unit (optional)</th>
+                <th className="py-2.5 px-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '260px' }}>Pricing & Margin / Unit (optional)</th>
                 <th className="py-2.5 px-3 text-right text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '90px' }}>Actions</th>
               </tr>
             </thead>
@@ -1036,11 +1036,11 @@ export const InventoryItemsCard = ({
                       </td>
 
                       {/* Subtotal */}
-                      <td className="py-2.5 px-2 align-top">
-                        <div className="flex flex-col">
-                          <span className="text-xs font-black text-slate-800 tabular-nums">₹{rowTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      <td className="py-2.5 px-2 align-top overflow-hidden">
+                        <div className="flex flex-col w-full">
+                          <span className="text-xs font-black text-slate-800 tabular-nums truncate" title={`₹${rowTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}>₹{rowTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                           {q > 0 && (
-                            <span className="text-[9.5px] text-slate-400 font-semibold mt-1">
+                            <span className="text-[9.5px] text-slate-400 font-semibold mt-1 truncate" title={`Total: ₹${rowGrandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}>
                               Total: <span className="text-slate-600 font-bold">₹{rowGrandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                             </span>
                           )}
@@ -1048,13 +1048,13 @@ export const InventoryItemsCard = ({
                       </td>
 
                       {/* Allocated */}
-                      <td className="py-2.5 px-2 align-top">
-                        <div className="h-9 flex items-center gap-1.5 flex-wrap">
-                          <span className="text-xs font-black text-slate-800 tabular-nums">
+                      <td className="py-2.5 px-2 align-top overflow-hidden">
+                        <div className="h-9 flex flex-col justify-center gap-0.5 w-full">
+                          <span className="text-xs font-black text-slate-800 tabular-nums truncate" title={`₹${allocTotal > 0 ? allocTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}`}>
                             ₹{allocTotal > 0 ? allocTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
                           </span>
                           {allocPerUnit > 0 && (
-                            <span className="text-[9px] text-blue-500 font-bold whitespace-nowrap">
+                            <span className="text-[9px] text-blue-500 font-bold whitespace-nowrap truncate" title={`(+₹${allocPerUnit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/u)`}>
                               (+₹{allocPerUnit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/u)
                             </span>
                           )}
@@ -1086,7 +1086,7 @@ export const InventoryItemsCard = ({
                       </td>
 
                       {/* Pricing & Margin */}
-                      <td className="py-2.5 px-2 align-top">
+                      <td className="py-2.5 px-2 align-top pr-6">
                         <div className="flex flex-col gap-1.5">
                           <div className="flex items-center gap-2">
                             <div className="flex bg-slate-100 rounded-lg p-0.5 shrink-0">
@@ -1123,9 +1123,9 @@ export const InventoryItemsCard = ({
                                 placeholder={product.marginType === "sellingPrice" ? "Price" : "Margin"}
                               />
                             </div>
-                            <div className="flex items-center gap-1 px-1.5 py-1 bg-emerald-50/50 border border-emerald-100 rounded-md shrink-0">
-                              <span className="text-[9px] font-black text-emerald-600 uppercase tracking-tighter">SP</span>
-                              <span className="text-[11px] font-black text-emerald-700 tabular-nums">
+                            <div className="flex items-center gap-1 px-1.5 py-1 bg-emerald-50/50 border border-emerald-100 rounded-md shrink-0 max-w-[100px]" title={`₹${computedSellPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}>
+                              <span className="text-[9px] font-black text-emerald-600 uppercase tracking-tighter shrink-0">SP</span>
+                              <span className="text-[11px] font-black text-emerald-700 tabular-nums truncate">
                                 ₹{computedSellPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </span>
                             </div>

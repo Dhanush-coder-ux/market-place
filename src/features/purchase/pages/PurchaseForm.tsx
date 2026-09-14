@@ -1120,9 +1120,9 @@ const PurchaseForm = () => {
                 </div>
 
                 <div className="pt-4 border-t-2 border-slate-200/50 mb-6">
-                  <div className="flex justify-between items-end">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Grand Total</span>
-                    <span className="text-2xl font-black text-slate-900 tracking-tight tabular-nums">₹{stats.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <div className="flex justify-between items-end gap-2">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Grand Total</span>
+                    <span className="text-2xl font-black text-slate-900 tracking-tight tabular-nums truncate" title={`₹${stats.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}>₹{stats.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                 </div>
 
@@ -1202,9 +1202,9 @@ const PurchaseForm = () => {
 
                   {/* Outstanding Amount */}
                   <div className="flex flex-col gap-2">
-                    <div className={`h-11 px-4 rounded-lg border shadow-sm flex items-center justify-between transition-colors ${stats.outstanding > 0 ? "bg-rose-50 border-rose-200" : "bg-slate-50 border-slate-200"}`}>
-                      <span className={`text-[10px] font-bold uppercase tracking-wider ${stats.outstanding > 0 ? "text-rose-400" : "text-slate-400"}`}>Outstanding</span>
-                      <span className={`text-lg font-semibold tabular-nums ${stats.outstanding > 0 ? "text-rose-600" : "text-slate-600"}`}>
+                    <div className={`h-11 px-4 rounded-lg border shadow-sm flex items-center justify-between gap-2 transition-colors ${stats.outstanding > 0 ? "bg-rose-50 border-rose-200" : "bg-slate-50 border-slate-200"}`}>
+                      <span className={`text-[10px] font-bold uppercase tracking-wider shrink-0 ${stats.outstanding > 0 ? "text-rose-400" : "text-slate-400"}`}>Outstanding</span>
+                      <span className={`text-lg font-semibold tabular-nums truncate ${stats.outstanding > 0 ? "text-rose-600" : "text-slate-600"}`} title={`₹${stats.outstanding.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}>
                         ₹{stats.outstanding.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     </div>

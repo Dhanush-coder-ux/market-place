@@ -287,7 +287,7 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
     paid_amount: paidAmount,
     outstanding: outstanding,
     purchaseType: typeMap[p.type] ?? "Purchase",
-    paymentMethod: String(paymentInfoObj?.method ?? d2?.payment?.method ?? d2?.payment_method ?? "—"),
+    paymentMethod: String(paymentsList[0]?.method ?? d2?.payment_info?.method ?? d2?.payment?.method ?? d2?.payment_method ?? "—"),
     charges: {
       other: otherCharge,
       transport: transportCharge,

@@ -198,46 +198,9 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
       let newShopId = currentShopId;
       let isNewShop = false;
 
-      // 1. Create or Update Shop
+      // 1. Create or Update Shop (backend updateShop automatically handles upsert and deduplication)
       if (currentShopId && currentShopId !== "string") {
         await shop.updateShop({ id: currentShopId, ...fullPayload, visible_online: true });
-
-        // Clean sweep: delete all existing operating hours, then recreate them
-        const currentOhRes = await shop.getOperatingHours(currentShopId);
-        if (currentOhRes?.data && Array.isArray(currentOhRes.data)) {
-          const ohDeletePromises = currentOhRes.data.map((h: any) => 
-            shop.deleteOperatingHours(h.id).catch(e => console.error("Failed to delete", h.id, e))
-          );
-          await Promise.all(ohDeletePromises);
-        }
-
-        const ohPromises = form.operatingHours.map(oh => {
-          return shop.createOperatingHours(currentShopId, oh);
-        });
-
-        // Safely update delivery options using PUT by ID
-        const doPromises = Object.entries(form.deliveryOptions).map(([key, d]) => {
-          const type = key === "instant" ? "INSTANT" : key === "standard" ? "STANDARD" : key === "pickuponly" ? "PICKUP_ONLY" : "NATIONWIDE";
-          const dPayload = {
-            type,
-            speed: d.speed,
-            free_shipping_amount: d.freeThreshold,
-            radius: d.radius,
-            min_order_amount: d.minOrderAmount,
-            charge_per_km: d.chargePerKm,
-            delivery_by: d.partners ? "PARTNERS" : "INHOUSE",
-            enabled: d.enabled
-          };
-          
-          if (d.id) {
-            return shop.updateDeliveryOption(d.id, { ...dPayload, id: d.id });
-          } else if (d.enabled) {
-            return shop.createDeliveryOption(currentShopId, dPayload);
-          }
-          return Promise.resolve();
-        });
-
-        await Promise.all([...ohPromises, ...doPromises]);
       } else {
         const res = await shop.createShop({ ...fullPayload, visible_online: true });
         newShopId = res.data?.id || res.id;

@@ -12,7 +12,6 @@ import {
   PowerOff,
 } from "lucide-react";
 import { shopApi } from "@/services/api/shop";
-import { useNavigate } from "react-router-dom";
 import { ShopProfileForm } from "../../Setting/pages/ShopProfileForm";
 import OperatingHours from "../pages/OperatingHours";
 import DeliveryPreferences from "../pages/Deliveryinfo";
@@ -28,7 +27,6 @@ interface SidebarItem {
 }
 
 export function StoreSettingsLayout({ shop }: { shop: any }) {
-  const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState<SettingSection>("details");
   const { showToast } = useToast();
   const [turningOff, setTurningOff] = useState(false);
@@ -39,7 +37,7 @@ export function StoreSettingsLayout({ shop }: { shop: any }) {
     try {
       await shopApi.updateShop({ id: shop.id, visible_online: false });
       showToast("Digital store has been turned off", "success");
-      navigate("/setup-digital-store", { replace: true });
+      if (shop) shop.visible_online = false;
     } catch (e: any) {
       showToast(e?.message || "Failed to turn off store", "error");
     } finally {

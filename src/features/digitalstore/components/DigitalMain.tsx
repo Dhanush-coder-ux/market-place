@@ -259,7 +259,7 @@ const DigitalMain = () => {
       await shopApi.updateShop({ id: shop.id, visible_online: false });
       showToast("Digital store turned off", "success");
       setShowTurnOffConfirm(false);
-      navigate("/setup-digital-store", { replace: true });
+      setShop((prev) => (prev ? { ...prev, visible_online: false } : null));
     } catch (err: any) {
       showToast(err?.message || "Failed to turn off digital store", "error");
     } finally {
@@ -280,7 +280,15 @@ const DigitalMain = () => {
 
         if (shopRes.status === "fulfilled" && (shopRes.value?.data || shopRes.value)) {
           const data = shopRes.value?.data ?? shopRes.value;
-          if (!data.visible_online) {
+          const isConfigured =
+            data.can_show_digital_store_dashboard === true ||
+            data.is_digital_store_configured === true ||
+            data.has_operating_hours === true ||
+            data.has_delivery_options === true ||
+            (Array.isArray(data.operating_hours) && data.operating_hours.length > 0) ||
+            (Array.isArray(data.delivery_options) && data.delivery_options.length > 0);
+
+          if (!data.visible_online && !isConfigured) {
             navigate("/setup-digital-store", { replace: true });
             return;
           }

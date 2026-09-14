@@ -231,9 +231,15 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
     "Online Orders": "ONLINE_ORDERS",
   };
 
-  const isCurrentShopOnline = useMemo(() => {
-    const active = shops.find((s: any) => s.id === currentShopId);
-    return active?.visible_online === true;
+  const isCurrentShopConfigured = useMemo(() => {
+    const active: any = shops.find((s: any) => s.id === currentShopId);
+    if (!active) return false;
+    if (active.visible_online === true) return true;
+    if (active.can_show_digital_store_dashboard === true) return true;
+    if (active.is_digital_store_configured === true) return true;
+    const hasHours = Array.isArray(active.operating_hours) && active.operating_hours.length > 0;
+    const hasDelivery = Array.isArray(active.delivery_options) && active.delivery_options.length > 0;
+    return hasHours || hasDelivery;
   }, [shops, currentShopId]);
 
   const filteredLinks: SidebarLink[] = useMemo(() => {
@@ -247,7 +253,7 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
       .map((link) => {
         let updatedLink = { ...link };
         if (link.name === "Digital Store") {
-          updatedLink.path = isCurrentShopOnline ? "/profile" : "/setup-digital-store";
+          updatedLink.path = isCurrentShopConfigured ? "/profile" : "/setup-digital-store";
         }
 
         if (!updatedLink.subLinks) return updatedLink;
@@ -264,7 +270,7 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
 
         return { ...updatedLink, subLinks: visibleSubItems };
       });
-  }, [links, settings, allowedModules, isCurrentShopOnline]);
+  }, [links, settings, allowedModules, isCurrentShopConfigured]);
 
   const handleHover = useCallback(
     (link: SidebarLink | null, top: number) => setHoveredItem(link ? { link, top } : null),

@@ -1192,7 +1192,6 @@ const PurchaseDetail = () => {
                           <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Reason</th>
                           <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">GST Amount</th>
                           <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Return Value</th>
-                          <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Adjusted</th>
                           <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Cash Refund</th>
                         </tr>
                       </thead>
@@ -1216,7 +1215,7 @@ const PurchaseDetail = () => {
                             : 0;
                           const returnValue = Number(payInfo.return_value ?? ret.total_refund_amount ?? ret.return_value ?? 0);
                           const gstAmount = Number(ret.total_gst_amount ?? ret.gst_amount ?? ret.gst_total ?? payInfo.gst_amount ?? calculatedGst ?? 0);
-                          const adjusted = Number(payInfo.adjusted_against_outstanding ?? ret.adjusted_amount ?? 0);
+                          // const adjusted = Number(payInfo.adjusted_against_outstanding ?? ret.adjusted_amount ?? 0);
                           const cashRefund = Number(payInfo.cash_refund ?? ret.cash_refund ?? ret.total_refund_amount ?? 0);
                           const reason = payInfo.reason || ret.reason || "—";
                           const status = ret.status || "—";
@@ -1272,13 +1271,6 @@ const PurchaseDetail = () => {
                               </td>
                               <td className="px-5 py-4 text-right">
                                 <span className="text-xs font-black text-rose-700 tabular-nums">{fmt(returnValue)}</span>
-                              </td>
-                              <td className="px-5 py-4 text-right">
-                                {adjusted > 0 ? (
-                                  <span className="text-xs font-bold text-amber-600 tabular-nums">{fmt(adjusted)}</span>
-                                ) : (
-                                  <span className="text-xs text-slate-300">—</span>
-                                )}
                               </td>
                               <td className="px-5 py-4 text-right">
                                 {cashRefund > 0 ? (

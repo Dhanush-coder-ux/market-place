@@ -483,6 +483,11 @@ const PurchaseForm = () => {
       return;
     }
 
+    if (!purchaseDetails.invoiceNo || purchaseDetails.invoiceNo.trim() === '') {
+      showToast("Supplier Invoice # is mandatory.", "error");
+      return;
+    }
+
     if (products.length === 0 || !products[0].name) {
       showToast("Please add at least one product.", "error");
       return;
@@ -845,8 +850,9 @@ const PurchaseForm = () => {
                 </div>
 
                 <Input
-                  label="Supplier Invoice # (optional)"
+                  label="Supplier Invoice #"
                   tooltip="Enter the invoice number provided by the supplier for this purchase."
+                  required
                   placeholder="INV-2026-..."
                   value={purchaseDetails.invoiceNo}
                   onChange={(e) => setPurchaseDetails({ ...purchaseDetails, invoiceNo: e.target.value })}

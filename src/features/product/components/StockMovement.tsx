@@ -97,6 +97,11 @@ const StockMovementTab = ({ inventoryId, product }: StockMovementTabProps) => {
               if (word.toUpperCase() === 'PO') return 'PO';
               return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
             }).join(' ');
+            
+            // Remove "Offline" prefix for Offline Purchase Returns
+            if (displayType.toLowerCase().includes('offline purchase return')) {
+              displayType = displayType.replace(/Offline /i, '').trim();
+            }
           }
 
           let source = "stock";

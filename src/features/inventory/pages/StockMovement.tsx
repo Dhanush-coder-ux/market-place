@@ -764,8 +764,9 @@ export default function StockMovementPage() {
     return { calculatedIn: inSum, calculatedOut: outSum };
   }, [filtered]);
 
-  const totalIn = analyticsStats?.overview?.stock_adjustment?.total_stockmovadj_increments ?? calculatedIn;
-  const totalOut = analyticsStats?.overview?.stock_adjustment?.total_stockmovadj_decrements ?? calculatedOut;
+  const totalIn = filtered.length > 0 ? calculatedIn : (analyticsStats?.overview?.stock_adjustment?.total_stockmovadj_increments ?? calculatedIn);
+  const totalOut = filtered.length > 0 ? calculatedOut : (analyticsStats?.overview?.stock_adjustment?.total_stockmovadj_decrements ?? calculatedOut);
+  const totalCount = filtered.length > 0 ? filtered.length : (analyticsStats?.overview?.stock_adjustment?.total_stockmovadj ?? filtered.length);
 
   function toggleSort(field: "date" | "qty") {
     if (sortField === field) setSortDir(d => d === "asc" ? "desc" : "asc");
@@ -811,7 +812,7 @@ export default function StockMovementPage() {
         <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-none">
           <StatCard
             label="All Movements"
-            value={(analyticsStats?.overview?.stock_adjustment?.total_stockmovadj ?? filtered.length).toString()}
+            value={totalCount.toString()}
             icon={Activity}
             iconBg="bg-blue-50"
             iconColor="text-blue-600"

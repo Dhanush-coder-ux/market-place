@@ -527,6 +527,7 @@ export default function StockMovementPage() {
     });
   };
 
+  const [directionFilter, setDirectionFilter] = useState<"ALL" | "IN" | "OUT">("ALL");
   const [analyticsStats, setAnalyticsStats] = useState<any>(null);
 
   useEffect(() => {
@@ -737,17 +738,34 @@ export default function StockMovementPage() {
     });
 
     return result;
-  }, [filtered, debouncedSearch, typeFilter, dateFrom, dateTo, sortField, sortDir]);
+  }, [filtered, directionFilter, debouncedSearch, typeFilter, dateFrom, dateTo, sortField, sortDir]);
 
   const dynamicTypes = useMemo(() => {
     const s = new Set(filtered.map(m => m.type).filter(Boolean));
     return ["All", ...Array.from(s)];
   }, [filtered]);
 
-  const today = new Date().toISOString().slice(0, 10);
-  const todayMvts = filtered.filter(m => fmtDate(m.date) === today);
-  const totalIn = todayMvts.filter(m => ["PURCHASE", "PO_PURCHASE", "PURCHASE_UPDATE"].includes(m.type)).reduce((s, m) => s + m.qty, 0);
-  const totalOut = todayMvts.filter(m => m.type === "SALES").reduce((s, m) => s + Math.abs(m.qty), 0);
+  const { calculatedIn, calculatedOut } = useMemo(() => {
+    let inSum = 0;
+    let outSum = 0;
+    filtered.forEach((m) => {
+      if (m.productsList && m.productsList.length > 0) {
+        m.productsList.forEach((p: any) => {
+          const q = Number(p.qty) || 0;
+          if (q > 0) inSum += q;
+          else if (q < 0) outSum += Math.abs(q);
+        });
+      } else {
+        const q = Number(m.qty) || 0;
+        if (q > 0) inSum += q;
+        else if (q < 0) outSum += Math.abs(q);
+      }
+    });
+    return { calculatedIn: inSum, calculatedOut: outSum };
+  }, [filtered]);
+
+  const totalIn = analyticsStats?.overview?.stock_adjustment?.total_stockmovadj_increments ?? calculatedIn;
+  const totalOut = analyticsStats?.overview?.stock_adjustment?.total_stockmovadj_decrements ?? calculatedOut;
 
   function toggleSort(field: "date" | "qty") {
     if (sortField === field) setSortDir(d => d === "asc" ? "desc" : "asc");
@@ -755,7 +773,7 @@ export default function StockMovementPage() {
   }
 
   function resetFilters() {
-    setSearch(""); setTypeFilter("All"); setStatus("All"); setWH("All Locations"); setDateFrom(""); setDateTo("");
+    setDirectionFilter("ALL"); setSearch(""); setTypeFilter("All"); setStatus("All"); setWH("All Locations"); setDateFrom(""); setDateTo("");
   }
 
 
@@ -795,25 +813,33 @@ export default function StockMovementPage() {
             label="All Movements"
             value={(analyticsStats?.overview?.stock_adjustment?.total_stockmovadj ?? filtered.length).toString()}
             icon={Activity}
-            iconBg="bg-[var(--mv-sales-bg)]"
-            iconColor="text-[var(--mv-sales-tx)]"
+            iconBg="bg-blue-50"
+            iconColor="text-blue-600"
             subValue="Every stock movement"
+            onClick={() => setDirectionFilter("ALL")}
+            className={directionFilter === "ALL" ? "ring-2 ring-blue-500 border-blue-400 bg-blue-50/20" : "hover:border-blue-200"}
           />
           <StatCard
             label="Stock In"
-            value={`+${analyticsStats?.overview?.stock_adjustment?.total_stockmovadj_increments ?? totalIn}`}
+            value={`+${totalIn}`}
             icon={TrendingUp}
-            iconBg="bg-[var(--mv-sales-bg)]"
-            iconColor="text-[var(--ps-completed-tx)]"
+            iconBg="bg-emerald-50"
+            iconColor="text-emerald-600"
+            valueColor="text-emerald-600 font-bold"
             subValue="Purchase, Opening Stock, Sales Return, Positive Adjustment"
+            onClick={() => setDirectionFilter(prev => prev === "IN" ? "ALL" : "IN")}
+            className={directionFilter === "IN" ? "ring-2 ring-emerald-500 border-emerald-400 bg-emerald-50/20" : "hover:border-emerald-200"}
           />
           <StatCard
             label="Stock Out"
-            value={`-${analyticsStats?.overview?.stock_adjustment?.total_stockmovadj_decrements ?? totalOut}`}
+            value={`-${totalOut}`}
             icon={TrendingDown}
-            iconBg="bg-[var(--mv-sales-bg)]"
-            iconColor="text-[var(--ps-cancel-tx)]"
+            iconBg="bg-rose-50"
+            iconColor="text-rose-600"
+            valueColor="text-rose-600 font-bold"
             subValue="Sales, Purchase Return, Damage or Negative Adjustment"
+            onClick={() => setDirectionFilter(prev => prev === "OUT" ? "ALL" : "OUT")}
+            className={directionFilter === "OUT" ? "ring-2 ring-rose-500 border-rose-400 bg-rose-50/20" : "hover:border-rose-200"}
           />
         </div>
       )}

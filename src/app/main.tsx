@@ -1,3 +1,14 @@
+// Handle dynamic import / chunk load failures when a new version is deployed
+window.addEventListener('vite:preloadError', (event) => {
+  event.preventDefault();
+  const lastReload = sessionStorage.getItem('vite_chunk_reload');
+  const now = Date.now();
+  if (!lastReload || now - parseInt(lastReload, 10) > 10000) {
+    sessionStorage.setItem('vite_chunk_reload', String(now));
+    window.location.reload();
+  }
+});
+
 import { createRoot } from 'react-dom/client'
 import App from './App'
 import { PurchaseSettingsProvider } from '@/context/PurchaseContext';

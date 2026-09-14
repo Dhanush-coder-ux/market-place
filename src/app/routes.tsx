@@ -1,89 +1,168 @@
 import React, { Suspense } from "react";
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, useRouteError, useNavigate } from "react-router-dom";
 import Loader from "@/components/common/Loader";
+import { RefreshCw, AlertCircle } from "lucide-react";
+
+/**
+ * Lazy load with automatic retry for deployment chunk updates
+ */
+function lazyRetry<T extends React.ComponentType<any>>(
+  factory: () => Promise<{ default: T } | { [key: string]: any }>
+): React.LazyExoticComponent<T> {
+  return lazyRetry(async () => {
+    try {
+      const module = await factory();
+      if ('default' in module && module.default) {
+        return { default: module.default as T };
+      }
+      return module as { default: T };
+    } catch (error: any) {
+      const isChunkError =
+        error?.message?.includes('Failed to fetch dynamically imported module') ||
+        error?.message?.includes('Loading chunk') ||
+        error?.name === 'ChunkLoadError' ||
+        error?.name === 'TypeError';
+
+      const lastReload = sessionStorage.getItem('chunk_retry_timestamp');
+      const now = Date.now();
+      if (isChunkError && (!lastReload || now - parseInt(lastReload, 10) > 10000)) {
+        sessionStorage.setItem('chunk_retry_timestamp', String(now));
+        window.location.reload();
+        return new Promise(() => {});
+      }
+      throw error;
+    }
+  });
+}
+
+function RouteErrorBoundary() {
+  const error: any = useRouteError();
+  const navigate = useNavigate();
+  const isChunkError =
+    error?.message?.includes('Failed to fetch dynamically imported module') ||
+    error?.message?.includes('Loading chunk') ||
+    error?.name === 'ChunkLoadError';
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6" style={{ fontFamily: "Inter, sans-serif" }}>
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-xl p-8 max-w-md w-full text-center space-y-4 animate-in fade-in zoom-in-95 duration-200">
+        <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto shadow-sm">
+          {isChunkError ? <RefreshCw size={26} className="animate-spin" /> : <AlertCircle size={26} className="text-red-500" />}
+        </div>
+        <div className="space-y-1">
+          <h2 className="text-lg font-bold text-slate-800">
+            {isChunkError ? "App Update Detected" : "Something went wrong"}
+          </h2>
+          <p className="text-xs text-slate-500 leading-relaxed">
+            {isChunkError
+              ? "A new version of the app has been deployed. Please reload to continue."
+              : error?.message || "An unexpected error occurred while loading this page."}
+          </p>
+        </div>
+        <div className="pt-2 flex gap-3 justify-center">
+          <button
+            onClick={() => window.location.reload()}
+            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-all cursor-pointer"
+          >
+            <RefreshCw size={14} /> Reload Page
+          </button>
+          {!isChunkError && (
+            <button
+              onClick={() => navigate("/dashboard")}
+              className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition-all cursor-pointer"
+            >
+              Go to Dashboard
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 // ─── Route-level Suspense fallback ───────────────────────────────────────────
 // Every lazy import gets this same lightweight spinner. The Loader component
 // should be a simple CSS spinner with NO heavy dependencies.
 
 // ─── Layout & Auth ───────────────────────────────────────────────────────────
-const MainLayout = React.lazy(() => import("../components/layouts/MainLayout"));
-const Login = React.lazy(() => import("../features/auth/pages/Login"));
-const AuthCallback = React.lazy(() => import("../features/auth/pages/AuthCallback"));
-const ShopSelect = React.lazy(() => import("../features/auth/pages/ShopSelect"));
+const MainLayout = lazyRetry(() => import("../components/layouts/MainLayout"));
+const Login = lazyRetry(() => import("../features/auth/pages/Login"));
+const AuthCallback = lazyRetry(() => import("../features/auth/pages/AuthCallback"));
+const ShopSelect = lazyRetry(() => import("../features/auth/pages/ShopSelect"));
 
 // ─── Dashboard ───────────────────────────────────────────────────────────────
-const AnalyticsDashboard = React.lazy(() => import("@/features/dashboard/pages/AnalyticDashboard"));
+const AnalyticsDashboard = lazyRetry(() => import("@/features/dashboard/pages/AnalyticDashboard"));
 
 // ─── Profile & Settings ──────────────────────────────────────────────────────
-const ProfileSettingsPage = React.lazy(() =>
+const ProfileSettingsPage = lazyRetry(() =>
   import("@/features/Setting/pages/ProfileSettingPage").then(m => ({ default: m.ProfileSettingsPage }))
 );
-const ProfileForm = React.lazy(() => import("../features/profile/pages/ProfileForm"));
+const ProfileForm = lazyRetry(() => import("../features/profile/pages/ProfileForm"));
 
 // ─── Products ────────────────────────────────────────────────────────────────
-const ProductInfos = React.lazy(() => import("@/features/product/pages/ProductInfos"));
-const ProductSearch = React.lazy(() => import("@/features/product/pages/ProductSearch"));
-const ProductDetail = React.lazy(() => import("@/features/product/pages/ProductDetail"));
-const ProductForm = React.lazy(() => import("@/features/product/pages/ProductForm"));
-// const ProductDraftsPage = React.lazy(() => import("../features/product/pages/ProductDraftsPage"));
+const ProductInfos = lazyRetry(() => import("@/features/product/pages/ProductInfos"));
+const ProductSearch = lazyRetry(() => import("@/features/product/pages/ProductSearch"));
+const ProductDetail = lazyRetry(() => import("@/features/product/pages/ProductDetail"));
+const ProductForm = lazyRetry(() => import("@/features/product/pages/ProductForm"));
+// const ProductDraftsPage = lazyRetry(() => import("../features/product/pages/ProductDraftsPage"));
 
 // ─── Purchase ────────────────────────────────────────────────────────────────
-const PurchaseDetail = React.lazy(() => import("@/features/purchase/pages/PurchaseDetail"));
-const PurchaseSearch = React.lazy(() => import("@/features/purchase/pages/PurchaseSearch"));
-const PurchaseForm = React.lazy(() => import("@/features/purchase/pages/PurchaseForm"));
-const PurchaseHistory = React.lazy(() => import("@/features/purchase/pages/PurchaseHistory"));
-// const PurchaseDraftsPage = React.lazy(() => import("@/features/purchase/pages/PurchaseDraftsPage"));
-const GRNListView = React.lazy(() => import("@/features/purchase/pages/GrnListView"));
-const GRNForm = React.lazy(() => import("@/features/purchase/pages/GrnForm"));
-const ReceiveGoodsPage = React.lazy(() => import("@/features/purchase/pages/ReceiveGoodsForm"));
-const ProductionForm = React.lazy(() => import("@/features/purchase/pages/ProductionForm"));
+const PurchaseDetail = lazyRetry(() => import("@/features/purchase/pages/PurchaseDetail"));
+const PurchaseSearch = lazyRetry(() => import("@/features/purchase/pages/PurchaseSearch"));
+const PurchaseForm = lazyRetry(() => import("@/features/purchase/pages/PurchaseForm"));
+const PurchaseHistory = lazyRetry(() => import("@/features/purchase/pages/PurchaseHistory"));
+// const PurchaseDraftsPage = lazyRetry(() => import("@/features/purchase/pages/PurchaseDraftsPage"));
+const GRNListView = lazyRetry(() => import("@/features/purchase/pages/GrnListView"));
+const GRNForm = lazyRetry(() => import("@/features/purchase/pages/GrnForm"));
+const ReceiveGoodsPage = lazyRetry(() => import("@/features/purchase/pages/ReceiveGoodsForm"));
+const ProductionForm = lazyRetry(() => import("@/features/purchase/pages/ProductionForm"));
 
 // ─── Supplier ────────────────────────────────────────────────────────────────
-const Supplier = React.lazy(() => import("@/features/supplier/pages/Supplier"));
-const SupplierSearch = React.lazy(() => import("@/features/supplier/pages/SupplierSearch"));
-const SupplierDetail = React.lazy(() => import("@/features/supplier/pages/SupplierDetail"));
-const SupplierForm = React.lazy(() => import("@/features/supplier/pages/SupplierForm"));
-// const SupplierDraftsPage = React.lazy(() => import("@/features/supplier/pages/SupplierDraftsPage"));
+const Supplier = lazyRetry(() => import("@/features/supplier/pages/Supplier"));
+const SupplierSearch = lazyRetry(() => import("@/features/supplier/pages/SupplierSearch"));
+const SupplierDetail = lazyRetry(() => import("@/features/supplier/pages/SupplierDetail"));
+const SupplierForm = lazyRetry(() => import("@/features/supplier/pages/SupplierForm"));
+// const SupplierDraftsPage = lazyRetry(() => import("@/features/supplier/pages/SupplierDraftsPage"));
 
 // ─── Employee ────────────────────────────────────────────────────────────────
-const Employee = React.lazy(() => import("../features/employee/pages/Employee"));
-const EmployeeSearch = React.lazy(() => import("../features/employee/pages/EmployeeSearch"));
-const EmployeeForm = React.lazy(() => import("../features/employee/pages/EmployeeForm"));
-const EmployeeDetail = React.lazy(() => import("../features/employee/pages/EmployeeDetail"));
-// const EmployeeDraftsPage = React.lazy(() => import("../features/employee/pages/EmployeeDraftsPage"));
-const EmployeeVerifyPage = React.lazy(() => import("../features/employee/pages/EmployeeVerifyPage"));
+const Employee = lazyRetry(() => import("../features/employee/pages/Employee"));
+const EmployeeSearch = lazyRetry(() => import("../features/employee/pages/EmployeeSearch"));
+const EmployeeForm = lazyRetry(() => import("../features/employee/pages/EmployeeForm"));
+const EmployeeDetail = lazyRetry(() => import("../features/employee/pages/EmployeeDetail"));
+// const EmployeeDraftsPage = lazyRetry(() => import("../features/employee/pages/EmployeeDraftsPage"));
+const EmployeeVerifyPage = lazyRetry(() => import("../features/employee/pages/EmployeeVerifyPage"));
 
 // ─── Inventory ───────────────────────────────────────────────────────────────
-const Inventory = React.lazy(() => import("../features/inventory/pages/Inventory"));
-const StockMovementPage = React.lazy(() => import("../features/inventory/pages/StockMovement"));
-const StockMovementDetail = React.lazy(() => import("../features/inventory/pages/StockMovementDetail"));
-const StockAdjustmentForm = React.lazy(() => import("../features/inventory/pages/StockAdjusstment"));
-// const StockAdjustmentDraftsPage = React.lazy(() => import("../features/inventory/pages/StockAdjustmentDraftsPage"));
+const Inventory = lazyRetry(() => import("../features/inventory/pages/Inventory"));
+const StockMovementPage = lazyRetry(() => import("../features/inventory/pages/StockMovement"));
+const StockMovementDetail = lazyRetry(() => import("../features/inventory/pages/StockMovementDetail"));
+const StockAdjustmentForm = lazyRetry(() => import("../features/inventory/pages/StockAdjusstment"));
+// const StockAdjustmentDraftsPage = lazyRetry(() => import("../features/inventory/pages/StockAdjustmentDraftsPage"));
 
 // ─── Customers ───────────────────────────────────────────────────────────────
-const CustomerSearch = React.lazy(() => import("@/features/customer/pages/CustomerSearch"));
-const CustomerList = React.lazy(() => import("@/features/customer/pages/CustomerList"));
-const CustomerDetail = React.lazy(() => import("@/features/customer/pages/Customerdetail"));
-const CustomerBalanceSummary = React.lazy(() => import("@/features/customer/pages/CustomerBalanceSummary"));
-const CustomerFormPage = React.lazy(() => import("@/features/customer/pages/CustomerFormPage"));
-// const CustomerDraftsPage = React.lazy(() => import("@/features/customer/pages/CustomerDraftsPage"));
+const CustomerSearch = lazyRetry(() => import("@/features/customer/pages/CustomerSearch"));
+const CustomerList = lazyRetry(() => import("@/features/customer/pages/CustomerList"));
+const CustomerDetail = lazyRetry(() => import("@/features/customer/pages/Customerdetail"));
+const CustomerBalanceSummary = lazyRetry(() => import("@/features/customer/pages/CustomerBalanceSummary"));
+const CustomerFormPage = lazyRetry(() => import("@/features/customer/pages/CustomerFormPage"));
+// const CustomerDraftsPage = lazyRetry(() => import("@/features/customer/pages/CustomerDraftsPage"));
 
 // ─── Sales & Orders ──────────────────────────────────────────────────────────
-const SalesListPage = React.lazy(() => import("@/features/sales/pages/SalesPage"));
-const SaleDetailPage = React.lazy(() => import("@/features/sales/pages/SaleDetailPage"));
-const SaleSearch = React.lazy(() => import("@/features/sales/pages/SaleSearch"));
-const ReturnPage = React.lazy(() => import("@/features/sales/pages/ReturnPage"));
-const Order = React.lazy(() => import("../features/order/pages/Order"));
-const DeliveryVerifyPage = React.lazy(() => import("../features/order/pages/DeliveryVerifyPage"));
-const Billing = React.lazy(() => import("../features/billing/pages/Billing"));
+const SalesListPage = lazyRetry(() => import("@/features/sales/pages/SalesPage"));
+const SaleDetailPage = lazyRetry(() => import("@/features/sales/pages/SaleDetailPage"));
+const SaleSearch = lazyRetry(() => import("@/features/sales/pages/SaleSearch"));
+const ReturnPage = lazyRetry(() => import("@/features/sales/pages/ReturnPage"));
+const Order = lazyRetry(() => import("../features/order/pages/Order"));
+const DeliveryVerifyPage = lazyRetry(() => import("../features/order/pages/DeliveryVerifyPage"));
+const Billing = lazyRetry(() => import("../features/billing/pages/Billing"));
 
 // ─── Digital Store ───────────────────────────────────────────────────────────
-const StoreSetupForm = React.lazy(() => import("@/features/digitalstore/pages/DigitalStoreForm"));
-const DigitalMain = React.lazy(() => import("@/features/digitalstore/components/DigitalMain"));
+const StoreSetupForm = lazyRetry(() => import("@/features/digitalstore/pages/DigitalStoreForm"));
+const DigitalMain = lazyRetry(() => import("@/features/digitalstore/components/DigitalMain"));
 
 // ─── Notifications ───────────────────────────────────────────────────────────
-const NotificationsPage = React.lazy(() => import("@/features/notifications/pages/NotificationsPage"));
+const NotificationsPage = lazyRetry(() => import("@/features/notifications/pages/NotificationsPage"));
 
 // ─── Shared route Suspense wrapper ───────────────────────────────────────────
 // Wraps each route-level component so navigation shows a per-page spinner
@@ -98,6 +177,7 @@ const Page = ({ children }: { children: React.ReactNode }) => (
 export const router = createBrowserRouter([
   {
     path: '/',
+    errorElement: <RouteErrorBoundary />,
     element: (
       <Suspense fallback={<Loader />}>
         <MainLayout />

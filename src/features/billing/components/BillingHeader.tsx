@@ -99,6 +99,7 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
   const balanceAmount = useMemo(() => round2(finalAmount - paidAmount), [finalAmount, paidAmount]);
 
   const handleGenerateInvoice = () => {
+    if (!customerData) return;
     if (totalQty === 0) return alert("Cart is empty");
     setShowInvoice(true);
   };
@@ -368,8 +369,9 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
 
           <button
             onClick={handleGenerateInvoice}
-            disabled={totalQty === 0 || isSubmitting}
-            className={`flex-1 h-11 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-200 ${totalQty === 0 || isSubmitting
+            disabled={totalQty === 0 || isSubmitting || !customerData}
+            title={!customerData ? "Select a customer to generate an invoice" : undefined}
+            className={`flex-1 h-11 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-200 ${totalQty === 0 || isSubmitting || !customerData
                 ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed shadow-none"
                 : "text-blue-500 border-blue-400 border-2 hover:bg-blue-500 hover:text-white shadow-lg shadow-blue-500/20 active:scale-97"
               }`}

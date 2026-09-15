@@ -33,7 +33,7 @@ const CustomerSearch = () => {
   const fetchCustomers = async (q: string) => {
 
     try {
-      const res = await customerApi.getCustomersByShopId(SHOP_ID, { limit: '8', offset: '1', q });
+      const res = await customerApi.getCustomersByShopId(localStorage.getItem('shop_id') || SHOP_ID, { limit: '8', offset: '1', q });
       let actualData = res?.data;
       if (actualData && typeof actualData === 'object' && !Array.isArray(actualData) && 'datas' in actualData) {
         actualData = actualData.datas;
@@ -125,11 +125,11 @@ export default function CustomerDetail() {
 
   const fetchCustomerDetail = () => {
     if (!id) return;
-    getData(`${ENDPOINTS.CUSTOMERS}/by/id/${SHOP_ID}/${id}`).then((res) => {
+    getData(`${ENDPOINTS.CUSTOMERS}/by/id/${localStorage.getItem('shop_id') || SHOP_ID}/${id}`).then((res) => {
       if (res) setCustomer(Array.isArray(res.data) ? res.data[0] : res.data);
     });
     setOrdersLoading(true);
-    getData(`${ENDPOINTS.ORDERS}/by/customer/${SHOP_ID}/${id}`, undefined, { cacheKey: `customer-orders-${id}-${Date.now()}` }).then((res) => {
+    getData(`${ENDPOINTS.ORDERS}/by/customer/${localStorage.getItem('shop_id') || SHOP_ID}/${id}`, undefined, { cacheKey: `customer-orders-${id}-${Date.now()}` }).then((res) => {
       console.log('ORDERS RAW RES:', res);
       if (res && res.data) {
         let actualData = res.data;
@@ -149,7 +149,7 @@ export default function CustomerDetail() {
       }
     });
     setClearingLoading(true);
-    customerApi.getClearingHistoryById(SHOP_ID, id).then((res) => {
+    customerApi.getClearingHistoryById(localStorage.getItem('shop_id') || SHOP_ID, id).then((res) => {
       if (res && res.data) {
         let actualData = res.data;
         if (typeof actualData === 'object' && !Array.isArray(actualData) && 'datas' in actualData) {
@@ -179,12 +179,12 @@ export default function CustomerDetail() {
   useEffect(() => {
     if (!id) return;
     setRecordLoading(true);
-    customerApi.getCustomerById(SHOP_ID, id).then((res) => {
+    customerApi.getCustomerById(localStorage.getItem('shop_id') || SHOP_ID, id).then((res) => {
       if (res) setCustomer(Array.isArray(res.data) ? res.data[0] : res.data);
       setRecordLoading(false);
     });
     // Also fetch orders to compute stats on initial load
-    getData(`${ENDPOINTS.ORDERS}/by/customer/${SHOP_ID}/${id}`, undefined, { cacheKey: `customer-orders-init-${id}-${Date.now()}` }).then((res) => {
+    getData(`${ENDPOINTS.ORDERS}/by/customer/${localStorage.getItem('shop_id') || SHOP_ID}/${id}`, undefined, { cacheKey: `customer-orders-init-${id}-${Date.now()}` }).then((res) => {
       if (res && res.data) {
         let actualData = res.data;
         if (typeof actualData === 'object' && !Array.isArray(actualData) && 'datas' in actualData) {
@@ -201,7 +201,7 @@ export default function CustomerDetail() {
   useEffect(() => {
     if (activeTab === 1 && id) { // Index 1 is Purchases
       setOrdersLoading(true);
-      getData(`${ENDPOINTS.ORDERS}/by/customer/${SHOP_ID}/${id}`, undefined, { cacheKey: `customer-orders-${id}-${Date.now()}` }).then((res) => {
+      getData(`${ENDPOINTS.ORDERS}/by/customer/${localStorage.getItem('shop_id') || SHOP_ID}/${id}`, undefined, { cacheKey: `customer-orders-${id}-${Date.now()}` }).then((res) => {
         if (res && res.data) {
           let actualData = res.data;
           if (typeof actualData === 'object' && !Array.isArray(actualData) && 'datas' in actualData) {
@@ -222,7 +222,7 @@ export default function CustomerDetail() {
   useEffect(() => {
     if (activeTab === 2 && id) { // Index 2 is Clearing History
       setClearingLoading(true);
-      customerApi.getClearingHistoryById(SHOP_ID, id).then((res) => {
+      customerApi.getClearingHistoryById(localStorage.getItem('shop_id') || SHOP_ID, id).then((res) => {
         if (res && res.data) {
           let actualData = res.data;
           if (typeof actualData === 'object' && !Array.isArray(actualData) && 'datas' in actualData) {
@@ -240,8 +240,8 @@ export default function CustomerDetail() {
     if (!id) return;
     setCfLoading(true);
     Promise.all([
-      customerCustomFieldsApi.getAllFields(SHOP_ID),
-      customerCustomFieldsApi.getValuesByCustomer(SHOP_ID, id)
+      customerCustomFieldsApi.getAllFields(localStorage.getItem('shop_id') || SHOP_ID),
+      customerCustomFieldsApi.getValuesByCustomer(localStorage.getItem('shop_id') || SHOP_ID, id)
     ]).then(([defs, vals]) => {
       setCustomFieldDefs(defs);
       setCustomFieldValues(vals);
@@ -253,7 +253,7 @@ export default function CustomerDetail() {
     setCfSaving(true);
     try {
       await customerCustomFieldsApi.upsertValue({
-        shop_id: SHOP_ID,
+        shop_id: localStorage.getItem('shop_id') || SHOP_ID,
         customer_id: id,
         value_infos: [{
           field_id: fieldId,
@@ -267,7 +267,7 @@ export default function CustomerDetail() {
           updated[existing] = { ...updated[existing], value: editingValue };
           return updated;
         }
-        return [...prev, { shop_id: SHOP_ID, customer_id: id, field_id: fieldId, value: editingValue }];
+        return [...prev, { shop_id: localStorage.getItem('shop_id') || SHOP_ID, customer_id: id, field_id: fieldId, value: editingValue }];
       });
       showToast('Custom field updated', 'success');
     } catch {
@@ -284,7 +284,7 @@ export default function CustomerDetail() {
 
     setDeleting(true);
     try {
-      const res = await customerApi.deleteCustomer(SHOP_ID, targetId);
+      const res = await customerApi.deleteCustomer(localStorage.getItem('shop_id') || SHOP_ID, targetId);
       if (res) {
         showToast("Customer deleted successfully!", "success");
         setTimeout(() => navigate("/customers-Summary"), 1500);

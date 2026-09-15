@@ -111,6 +111,8 @@ export const ENDPOINTS = {
 // Dynamically loaded from local storage or defaults to the actual shop in the DB
 export let SHOP_ID = localStorage.getItem("shop_id") || "string";
 
+export const getShopId = (): string => localStorage.getItem("shop_id") || SHOP_ID || "";
+
 export const setShopId = (id: string) => {
   SHOP_ID = id;
   localStorage.setItem("shop_id", id);

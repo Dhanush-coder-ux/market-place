@@ -26,7 +26,7 @@ const CustomerSearch = () => {
 
   const fetchSearchOptions = async (q: string) => {
     try {
-      const res = await customer.getCustomersByShopId(SHOP_ID, { limit: '10', q });
+      const res = await customer.getCustomersByShopId(localStorage.getItem('shop_id') || SHOP_ID, { limit: '10', q });
       const rawData = res?.data || [];
       const list = Array.isArray(rawData) ? rawData : (rawData.datas ?? [rawData]);
       return list.map((c: any) => ({

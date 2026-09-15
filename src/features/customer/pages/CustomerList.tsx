@@ -47,7 +47,7 @@ const CustomerList = () => {
   const [selectedCustomerForPayment, setSelectedCustomerForPayment] = useState<any>(null);
 
   useEffect(() => {
-    getData(ENDPOINTS.ANALYTICS_CUSTOMER_OVERALL, { shop_id: SHOP_ID })
+    getData(ENDPOINTS.ANALYTICS_CUSTOMER_OVERALL, { shop_id: localStorage.getItem('shop_id') || SHOP_ID })
       .then((res) => {
         const data = res?.data ?? res;
         if (data) {
@@ -56,8 +56,8 @@ const CustomerList = () => {
       })
       .catch(() => {});
 
-    customer.getCustomersByShopId(SHOP_ID, {
-      shop_id: SHOP_ID,
+    customer.getCustomersByShopId(localStorage.getItem('shop_id') || SHOP_ID, {
+      shop_id: localStorage.getItem('shop_id') || SHOP_ID,
       limit: "500",
       offset: "1"
     }).then((res) => {
@@ -109,7 +109,7 @@ const CustomerList = () => {
   /* ── Fetch Page ── */
   const fetchPage = useCallback(async (limit: number, offset: number, filters: any) => {
     const params: any = {
-      shop_id: SHOP_ID,
+      shop_id: localStorage.getItem('shop_id') || SHOP_ID,
       limit: limit.toString(),
       offset: offset.toString()
     };
@@ -120,7 +120,7 @@ const CustomerList = () => {
     if (filters.filterOutstanding === "Outstanding") params.exclude_non_outstanding = true;
     if (filters.filterOutstanding === "Cleared") params.exclude_outstanding = true;
 
-    const res = await customer.getCustomersByShopId(SHOP_ID, params);
+    const res = await customer.getCustomersByShopId(localStorage.getItem('shop_id') || SHOP_ID, params);
 
     let fetchedStats = null;
     if (res?.data?.overall_datas) {
@@ -177,7 +177,7 @@ const CustomerList = () => {
     if (!window.confirm(`Are you sure you want to delete these ${selectedCustomers.size} customers?`)) return;
     try {
       for (const id of Array.from(selectedCustomers)) {
-        await deleteData(`${ENDPOINTS.CUSTOMERS}/${SHOP_ID}/${id}`);
+        await deleteData(`${ENDPOINTS.CUSTOMERS}/${localStorage.getItem('shop_id') || SHOP_ID}/${id}`);
       }
       showToast("Selected customers deleted successfully", "success");
       setSelectedCustomers(new Set());
@@ -190,7 +190,7 @@ const CustomerList = () => {
   const handleDeleteCustomer = async (id: string) => {
     if (!window.confirm("Are you sure you want to delete this customer?")) return;
     try {
-      await deleteData(`${ENDPOINTS.CUSTOMERS}/${SHOP_ID}/${id}`);
+      await deleteData(`${ENDPOINTS.CUSTOMERS}/${localStorage.getItem('shop_id') || SHOP_ID}/${id}`);
       showToast("Customer deleted successfully", "success");
       setSelectedCustomers(prev => {
         const next = new Set(prev);

@@ -87,9 +87,9 @@ const CustomerFormPage = () => {
       return;
     }
     try {
-      await customerCustomFieldsApi.deleteField(SHOP_ID, field.id);
+      await customerCustomFieldsApi.deleteField((localStorage.getItem('shop_id') || SHOP_ID), field.id);
       showToast("Custom field deleted successfully", "success");
-      const fields = await customerCustomFieldsApi.getAllFields(SHOP_ID);
+      const fields = await customerCustomFieldsApi.getAllFields(localStorage.getItem('shop_id') || SHOP_ID);
       setCustomFieldDefs(fields);
     } catch (err: any) {
       const msg = err?.detail?.description || err?.detail?.msg || err?.message || "Failed to delete custom field";
@@ -154,7 +154,7 @@ const CustomerFormPage = () => {
 
   // Load Custom Field definitions
   useEffect(() => {
-    customerCustomFieldsApi.getAllFields(SHOP_ID).then((fields) => {
+    customerCustomFieldsApi.getAllFields(localStorage.getItem('shop_id') || SHOP_ID).then((fields) => {
       setCustomFieldDefs(fields);
     });
   }, []);
@@ -163,7 +163,7 @@ const CustomerFormPage = () => {
   useEffect(() => {
     if (id) {
       const fetchCustomer = async () => {
-        const res = await customer.getCustomerById(SHOP_ID, id);
+        const res = await customer.getCustomerById(localStorage.getItem('shop_id') || SHOP_ID, id);
         if (res && res.data) {
           const cust = Array.isArray(res.data) ? res.data[0] : res.data;
           const datas = cust.datas || {};
@@ -200,7 +200,7 @@ const CustomerFormPage = () => {
 
 
       const fetchCustomFieldValues = async () => {
-        const vals = await customerCustomFieldsApi.getValuesByCustomer(SHOP_ID, id);
+        const vals = await customerCustomFieldsApi.getValuesByCustomer(localStorage.getItem('shop_id') || SHOP_ID, id);
         const record: Record<string, string> = {};
         vals.forEach((v) => {
           record[v.field_id] = v.value;
@@ -266,7 +266,7 @@ const CustomerFormPage = () => {
     console.log("Customer handleSubmit - customFieldDefs:", customFieldDefs);
 
     const payload: any = {
-      shop_id: SHOP_ID,
+      shop_id: localStorage.getItem('shop_id') || SHOP_ID,
       name: `${formData.first_name} ${formData.last_name}`.trim(),
       contact_infos: {
         email: formData.email || undefined,
@@ -322,7 +322,7 @@ const CustomerFormPage = () => {
 
           if (valueInfos.length > 0) {
             await customerCustomFieldsApi.upsertValue({
-              shop_id: SHOP_ID,
+              shop_id: localStorage.getItem('shop_id') || SHOP_ID,
               customer_id: savedCustomerId,
               value_infos: valueInfos,
             });
@@ -357,7 +357,7 @@ const CustomerFormPage = () => {
     try {
       if (editingFieldId) {
         await customerCustomFieldsApi.updateField({
-          shop_id: SHOP_ID,
+          shop_id: localStorage.getItem('shop_id') || SHOP_ID,
           field_id: editingFieldId,
           label_name: newFieldLabel.trim(),
           type: newFieldHasValues ? null : newFieldType,
@@ -371,7 +371,7 @@ const CustomerFormPage = () => {
           return;
         }
         await customerCustomFieldsApi.createField({
-          shop_id: SHOP_ID,
+          shop_id: localStorage.getItem('shop_id') || SHOP_ID,
           field_infos: [{
             field_name: newFieldName.trim(),
             label_name: newFieldLabel.trim(),
@@ -382,7 +382,7 @@ const CustomerFormPage = () => {
         });
         showToast("Custom field created successfully", "success");
       }
-      const fields = await customerCustomFieldsApi.getAllFields(SHOP_ID);
+      const fields = await customerCustomFieldsApi.getAllFields(localStorage.getItem('shop_id') || SHOP_ID);
       setCustomFieldDefs(fields);
       setNewFieldName("");
       setNewFieldLabel("");

@@ -41,8 +41,8 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
     if (show && customer?.id) {
       setOrdersLoading(true);
       Promise.all([
-        getData(`${ENDPOINTS.ORDERS}/by/customer/${SHOP_ID}/${customer.id}`),
-        customerApi.getClearingHistoryById(SHOP_ID, customer.id).catch(() => null)
+        getData(`${ENDPOINTS.ORDERS}/by/customer/${localStorage.getItem('shop_id') || SHOP_ID}/${customer.id}`),
+        customerApi.getClearingHistoryById(localStorage.getItem('shop_id') || SHOP_ID, customer.id).catch(() => null)
       ])
         .then(([ordersRes, clrRes]: [any, any]) => {
           if (ordersRes && ordersRes.data) {
@@ -131,7 +131,7 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
     setIsClearing(true);
 
     const payload = {
-      shop_id: SHOP_ID,
+      shop_id: localStorage.getItem('shop_id') || SHOP_ID,
       customer_id: customer.id,
       id: customer.id,
       payment_infos: [{

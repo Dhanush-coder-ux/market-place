@@ -78,7 +78,7 @@ export default function CustomerBalanceSummary() {
     if (fromDate) params.from_date = fromDate;
     if (toDate) params.to_date = toDate;
 
-    customer.getCustomersByShopId(SHOP_ID, params).then((res) => {
+    customer.getCustomersByShopId(localStorage.getItem('shop_id') || SHOP_ID, params).then((res) => {
       if (res) {
         let actualData = res.data;
         if (actualData && typeof actualData === 'object' && !Array.isArray(actualData) && 'datas' in actualData) {
@@ -113,7 +113,7 @@ export default function CustomerBalanceSummary() {
   const handleDelete = async () => {
     if (!customerToDelete) return;
     try {
-      await customer.deleteCustomer(SHOP_ID, customerToDelete.id);
+      await customer.deleteCustomer(localStorage.getItem('shop_id') || SHOP_ID, customerToDelete.id);
       showToast("Customer deleted successfully", "success");
       setRefreshKey(prev => prev + 1);
     } catch (err: any) {

@@ -296,7 +296,7 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
     additional_charges_total: additionalChargesTotal,
     storage_location: d2?.storage_location || (p as any).storage_location || "",
     status: d2?.status ?? (p as any).status ?? "completed",
-    payment_status: (p as any).status === "DRAFT" ? "DRAFT" : ((p as any).payment_status ?? "PENDING"),
+    payment_status: ((p as any).status?.toUpperCase() === "DRAFT" || d2?.status?.toUpperCase() === "DRAFT" || (p as any).payment_status?.toUpperCase() === "DRAFT") ? "DRAFT" : ((p as any).payment_status ?? "PENDING"),
     returns: (p as any).returns || d2?.returns || (p as any).purchase_returns || d2?.purchase_returns || [],
     refund_amount: Number((p as any).refund_amount || (p as any).return?.refund_amount || 0),
     notes: (p as any).notes || d2?.notes || d2?.purchaseDetails?.referenceNo || "",

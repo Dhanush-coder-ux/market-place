@@ -741,11 +741,13 @@ const PurchaseDetail = () => {
             },
             (po.status || "").toLowerCase() === 'cancelled' || (po.status || "").toLowerCase() === 'canceled' || (po.payment_status || "").toLowerCase() === 'cancelled' || (po.payment_status || "").toLowerCase() === 'canceled'
               ? { text: "Cancelled", variant: "ps-cancelled", dotColor: "bg-[var(--ps-cancelled-dot)]" }
-              : po.outstanding && po.outstanding > 0
-                ? (po.paid_amount === 0
-                  ? { text: "Unpaid", variant: "pay-pending", dotColor: "bg-[var(--pay-pending-dot)]" }
-                  : { text: "Partially paid", variant: "pay-partial", dotColor: "bg-[var(--pay-partial-dot)]" })
-                : { text: "Paid", variant: "pay-paid", dotColor: "bg-[var(--pay-paid-dot)]" },
+              : (po.status || "").toLowerCase() === 'draft' || (po.payment_status || "").toLowerCase() === 'draft'
+                ? { text: "Draft", variant: "draft", dotColor: "bg-[var(--ps-draft-dot)]" }
+                : po.outstanding && po.outstanding > 0
+                  ? (po.paid_amount === 0
+                    ? { text: "Unpaid", variant: "pay-pending", dotColor: "bg-[var(--pay-pending-dot)]" }
+                    : { text: "Partially paid", variant: "pay-partial", dotColor: "bg-[var(--pay-partial-dot)]" })
+                  : { text: "Paid", variant: "pay-paid", dotColor: "bg-[var(--pay-paid-dot)]" },
             ...(((po.returns?.length || 0) > 0 || ((po as any).purchase_returns?.length || 0) > 0)
               ? [{ text: "Returned", variant: "tx-sales-return" }]
               : [])
@@ -929,7 +931,11 @@ const PurchaseDetail = () => {
                     <div className="space-y-3">
                       <div className="flex justify-between items-center pb-2 border-b border-slate-100/50">
                         <span className="text-[11px] font-medium text-slate-400 uppercase tracking-tight">Status</span>
-                        {outstanding && outstanding > 0 ? (
+                        {(po.status || "").toUpperCase() === "DRAFT" || (po.payment_status || "").toUpperCase() === "DRAFT" ? (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[var(--ps-draft-bg)] text-[var(--ps-draft-tx)] border border-[var(--ps-draft-bd)]">Draft</span>
+                        ) : (po.status || "").toUpperCase() === "CANCELLED" || (po.status || "").toUpperCase() === "CANCELED" || (po.payment_status || "").toUpperCase() === "CANCELLED" || (po.payment_status || "").toUpperCase() === "CANCELED" ? (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[var(--ps-cancelled-bg)] text-[var(--ps-cancelled-tx)] border border-[var(--ps-cancelled-bd)]">Cancelled</span>
+                        ) : outstanding && outstanding > 0 ? (
                           po.paid_amount === 0 ? (
                             <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[var(--pay-pending-bg)] text-[var(--pay-pending-tx)] border border-[var(--pay-pending-bd)]">Pending</span>
                           ) : (

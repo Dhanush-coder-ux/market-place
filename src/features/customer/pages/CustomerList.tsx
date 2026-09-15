@@ -58,7 +58,7 @@ const CustomerList = () => {
 
     customer.getCustomersByShopId(localStorage.getItem('shop_id') || SHOP_ID, {
       shop_id: localStorage.getItem('shop_id') || SHOP_ID,
-      limit: "500",
+      limit: "100",
       offset: "1"
     }).then((res) => {
       if (res && res.data) {

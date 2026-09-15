@@ -908,7 +908,7 @@ const ProductInfos = () => {
           : (res?.data?.inventories ?? (Array.isArray(res?.datas) ? res.datas : (res?.datas?.inventories ?? [])));
         const total = data.length;
         const inactive = data.filter((p: any) => p.is_active === false).length;
-        const nonTracking = data.filter((p: any) => p.track_stock === false || p.is_stock_tracked === false || p.type === "service").length;
+        const nonTracking = data.filter((p: any) => p.have_tracking === false || p.track_stock === false || p.is_stock_tracked === false || p.type === "service").length;
         setSummaryStats({ total, inactive, nonTracking });
       }
     }).catch(() => {});
@@ -1142,6 +1142,12 @@ const ProductInfos = () => {
           barcode.includes(lowerSearch)
         );
       });
+    }
+
+    if (activeKpi === "Inactive Products") {
+      result = result.filter((p: any) => p.is_active === false);
+    } else if (activeKpi === "Stock Not Tracking") {
+      result = result.filter((p: any) => p.have_tracking === false || p.track_stock === false || p.is_stock_tracked === false || p.type === "service");
     }
 
     return result;

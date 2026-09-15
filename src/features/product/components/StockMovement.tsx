@@ -98,8 +98,8 @@ const StockMovementTab = ({ inventoryId, product }: StockMovementTabProps) => {
               return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
             }).join(' ');
             
-            // Remove "Offline" prefix for Offline Purchase Returns
-            if (displayType.toLowerCase().includes('offline purchase return')) {
+            // Remove "Offline" prefix for Offline Purchase/Sales Returns
+            if (displayType.toLowerCase().includes('offline') && displayType.toLowerCase().includes('return')) {
               displayType = displayType.replace(/Offline /i, '').trim();
             }
           }

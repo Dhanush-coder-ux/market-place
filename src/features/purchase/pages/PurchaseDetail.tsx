@@ -698,8 +698,8 @@ const PurchaseDetail = () => {
           badges={[
             {
               text: (po.status || "Completed").toUpperCase(),
-              variant: (po.status || "Completed").toLowerCase() === 'draft' ? "draft" : "vendor",
-              dotColor: "bg-[var(--mv-purchase-dot)]"
+              variant: ((po.status || "").toLowerCase() === 'canceled' || (po.status || "").toLowerCase() === 'cancelled') ? "ps-cancelled" : (po.status || "Completed").toLowerCase() === 'draft' ? "draft" : "vendor",
+              dotColor: ((po.status || "").toLowerCase() === 'canceled' || (po.status || "").toLowerCase() === 'cancelled') ? "bg-[var(--ps-cancelled-dot)]" : "bg-[var(--mv-purchase-dot)]"
             },
             (po.status || "").toLowerCase() === 'cancelled' || (po.status || "").toLowerCase() === 'canceled' || (po.payment_status || "").toLowerCase() === 'cancelled' || (po.payment_status || "").toLowerCase() === 'canceled'
               ? { text: "Cancelled", variant: "ps-cancelled", dotColor: "bg-[var(--ps-cancelled-dot)]" }

@@ -74,7 +74,14 @@ const formatStockValue = (val: number | null | undefined) => {
   if (val === null || val === undefined || isNaN(Number(val))) return '—';
   const n = Number(val);
   if (Math.abs(n % 1) < 0.0001) return Math.round(n).toString();
-  return Number(n.toFixed(2)).toString();
+  return Number(n.toFixed(2)).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+};
+
+const formatStatQty = (val: any) => {
+  if (val === null || val === undefined || isNaN(Number(val))) return '0';
+  const n = Number(val);
+  if (Math.abs(n % 1) < 0.0001) return Math.round(n).toString();
+  return Number(n.toFixed(2)).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 };
 
 // Fixed styling helper to accommodate all MovementTypes
@@ -565,8 +572,8 @@ export default function StockMovementPage() {
         });
         setSummaryStats({
           total: rawList.length,
-          totalIn: inSum,
-          totalOut: outSum
+          totalIn: Number(inSum.toFixed(2)),
+          totalOut: Number(outSum.toFixed(2))
         });
       }
     }).catch(() => {});
@@ -835,7 +842,7 @@ export default function StockMovementPage() {
           />
           <StatCard
             label="Stock In"
-            value={`+${analyticsStats?.overview?.stock_adjustment?.total_stockmovadj_increments ?? summaryStats.totalIn}`}
+            value={`+${formatStatQty(analyticsStats?.overview?.stock_adjustment?.total_stockmovadj_increments ?? summaryStats.totalIn)}`}
             icon={TrendingUp}
             iconBg="bg-emerald-50"
             iconColor="text-emerald-600"
@@ -846,7 +853,7 @@ export default function StockMovementPage() {
           />
           <StatCard
             label="Stock Out"
-            value={`-${analyticsStats?.overview?.stock_adjustment?.total_stockmovadj_decrements ?? summaryStats.totalOut}`}
+            value={`-${formatStatQty(analyticsStats?.overview?.stock_adjustment?.total_stockmovadj_decrements ?? summaryStats.totalOut)}`}
             icon={TrendingDown}
             iconBg="bg-rose-50"
             iconColor="text-rose-600"

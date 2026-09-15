@@ -65,7 +65,7 @@ const generateItems = (sale: OrderResponse, productMap: Record<string, string> =
   return (sale?.items || []).map((i: any) => {
     // Attempt to find matching calc item for subunit pricing/qty details
     const calc = calcItems.find((ci: any) => ci.product_id === i.product_id || ci.product_id === i.inventory_id);
-    let basePrice = calc?.price ?? i.sell_price ?? 0;
+    let basePrice = calc?.price ?? i.sell_price ?? (i.total_amount && i.quantity ? i.total_amount / i.quantity : 0);
     
     let unitPrice = basePrice;
     if (includeGst) {
@@ -130,7 +130,7 @@ const SaleDetailPage: React.FC = () => {
         if (found) {
           setSale({
             ...found,
-            total_sellprice: found.total_sellprice ?? found.calculation_infos?.total ?? found.total ?? 0,
+            total_sellprice: Number(found.total_sellprice ?? found.calculation_infos?.total ?? found.calculation_infos?.grand_total ?? found.item_infos?.total_order_amount ?? found.total_amount ?? (Array.isArray(found.items) ? found.items.reduce((s: number, item: any) => s + (Number(item.total_amount) || ((Number(item.sell_price) || 0) * (Number(item.quantity) || 1))), 0) : 0) ?? found.total ?? 0),
             status: found.status ? found.status.charAt(0).toUpperCase() + found.status.slice(1).toLowerCase() : "Completed",
             origin: found.origin === "OFFLINE" ? "Sales" : found.origin || "Sales",
           });

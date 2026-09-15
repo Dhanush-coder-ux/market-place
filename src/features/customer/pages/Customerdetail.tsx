@@ -192,7 +192,7 @@ export default function CustomerDetail() {
         }
         const orders = Array.isArray(actualData) ? actualData : [actualData];
         const salesCount = orders.length;
-        const salesValue = orders.reduce((sum: number, o: any) => sum + (o.total_sellprice || 0), 0);
+        const salesValue = orders.reduce((sum: number, o: any) => sum + (Number(o.total_sellprice ?? o.calculation_infos?.total ?? o.item_infos?.total_order_amount ?? o.total_amount ?? o.total ?? 0)), 0);
         setStats({ total_sales_count: salesCount, total_sales_value: salesValue });
       }
     });
@@ -211,7 +211,7 @@ export default function CustomerDetail() {
           setCustomerOrders(orders);
           // Compute stats from the fetched orders
           const salesCount = orders.length;
-          const salesValue = orders.reduce((sum: number, o: any) => sum + (o.total_sellprice || 0), 0);
+          const salesValue = orders.reduce((sum: number, o: any) => sum + (Number(o.total_sellprice ?? o.calculation_infos?.total ?? o.item_infos?.total_order_amount ?? o.total_amount ?? o.total ?? 0)), 0);
           setStats({ total_sales_count: salesCount, total_sales_value: salesValue });
         }
         setOrdersLoading(false);

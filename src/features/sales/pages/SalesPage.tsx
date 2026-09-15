@@ -162,7 +162,7 @@ const SalesListPage: React.FC = () => {
 
   useEffect(() => {
     if (selectedSale) {
-      const returnable = selectedSale.status === "Completed" && selectedSale.origin !== "Sales Return";
+      const returnable = (selectedSale.status === "Completed" || selectedSale.status === "Delivered") && selectedSale.origin !== "Sales Return" && selectedSale.origin !== "Offline Return";
       setBottomActions(
         <div className="flex items-center justify-between w-full animate-in fade-in slide-in-from-right-4 duration-300">
           <div className="flex items-center gap-3">
@@ -172,7 +172,7 @@ const SalesListPage: React.FC = () => {
             <div>
               <p className="text-[12px] font-bold text-slate-800 leading-tight">{selectedSale.ui_id}</p>
               <p className="text-[10px] font-semibold text-slate-400 font-mono">
-                {selectedSale.customer?.customer_name || (selectedSale.customer_id ? (customerMap[selectedSale.customer_id] || selectedSale.customer_id) : "Walk in Customer")}
+                {(selectedSale as any).customer_display_name || (selectedSale as any).online_details?.name || selectedSale.customer?.customer_name || (selectedSale.customer_id ? (customerMap[selectedSale.customer_id] || selectedSale.customer_id) : "Walk in Customer")}
               </p>
             </div>
           </div>
@@ -406,7 +406,7 @@ const SalesListPage: React.FC = () => {
     setSearch("");
   };
 
-  const filteredRevenue = useMemo(() => filtered.filter(s => s.status === "Completed").reduce((a, b) => a + b.total_sellprice, 0), [filtered]);
+  const filteredRevenue = useMemo(() => filtered.filter(s => s.status === "Completed" || s.status === "Delivered").reduce((a, b) => a + (b.total_sellprice || 0), 0), [filtered]);
 
   // Keep orders updated for Return Search (it relies on orders)
   useEffect(() => {

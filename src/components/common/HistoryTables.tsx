@@ -825,7 +825,7 @@ export function CustomerPurchasesTable({ rows, loading, onNavigateToSale }: Cust
                       year: 'numeric'
                     })
                     : '—';
-                  const total = Number(order.calculation_infos?.total ?? order.total_sellprice ?? order.grand_total ?? order.total_amount ?? 0);
+                  const total = Number(order.calculation_infos?.total ?? order.total_sellprice ?? order.item_infos?.total_order_amount ?? order.grand_total ?? order.total_amount ?? order.total ?? 0);
                   const products = order.items || order.products || order.datas?.items || order.datas?.products || [];
                   const itemCount = order.item_infos?.total_order_qty ?? order.total_quantity ?? order.datas?.total_quantity ?? products.length;
                   const unit = products[0]?.product?.unit || products[0]?.unit || products[0]?.datas?.unit || (itemCount === 1 ? "Item" : "Units");

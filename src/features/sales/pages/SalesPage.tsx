@@ -439,23 +439,21 @@ const SalesListPage: React.FC = () => {
           />
           <StatCard
             label="Online Sales"
-            value={(analyticsStats?.overview?.sales?.total_online_sales_amount ?? summaryStats.onlineAmount).toLocaleString()}
-            prefix="₹"
+            value={analyticsStats?.overview?.sales?.total_online_sales ?? summaryStats.onlineCount}
             icon={<Globe size={18} />}
             iconBg="bg-rose-50"
             iconColor="text-rose-500"
-            subValue={`${analyticsStats?.overview?.sales?.total_online_sales ?? summaryStats.onlineCount} Orders`}
+            subValue={`₹${(analyticsStats?.overview?.sales?.total_online_sales_amount ?? summaryStats.onlineAmount).toLocaleString()}`}
             onClick={() => setActiveKpi(prev => prev === "Online Sales" ? "Total Orders" : "Online Sales")}
             className={activeKpi === "Online Sales" ? "ring-2 ring-rose-400 border-transparent shadow-sm" : ""}
           />
           <StatCard
             label="Offline Sales"
-            value={(analyticsStats?.overview?.sales?.total_offline_sales_amount ?? summaryStats.offlineAmount).toLocaleString()}
-            prefix="₹"
+            value={analyticsStats?.overview?.sales?.total_offline_sales ?? summaryStats.offlineCount}
             icon={<Store size={18} />}
             iconBg="bg-indigo-50"
             iconColor="text-indigo-500"
-            subValue={`${analyticsStats?.overview?.sales?.total_offline_sales ?? summaryStats.offlineCount} Orders`}
+            subValue={`₹${(analyticsStats?.overview?.sales?.total_offline_sales_amount ?? summaryStats.offlineAmount).toLocaleString()}`}
             onClick={() => setActiveKpi(prev => prev === "Offline Sales" ? "Total Orders" : "Offline Sales")}
             className={activeKpi === "Offline Sales" ? "ring-2 ring-indigo-400 border-transparent shadow-sm" : ""}
           />

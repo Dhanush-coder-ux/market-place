@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Plus, X, Tag, Ruler, Pencil, Check } from "lucide-react";
+import { Plus, X, Tag, Ruler, Pencil, Check, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { SHOP_ID } from "@/services/endpoints";
 import { utilityApi } from "@/services/api/utility";
 
@@ -35,6 +35,12 @@ export const CustomListSettings: React.FC<CustomListSettingsProps> = ({ type }) 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  // Pagination & Search State
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+  const [search, setSearch] = useState("");
+  const [hasMore, setHasMore] = useState(false);
+
   // Inline Edit State
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -44,7 +50,7 @@ export const CustomListSettings: React.FC<CustomListSettingsProps> = ({ type }) 
   const [name, setName] = useState("");
   const [shortName, setShortName] = useState("");
   const [description, setDescription] = useState("");
-  const [subUnits, setSubUnits] = useState<{ name: string, factor: string }[]>([]);
+  const [subUnits, setSubUnits] = useState<{ name: string; factor: string }[]>([]);
 
   const title = type === "categories" ? "Product Categories" : "Measurement Units";
   const desc = type === "categories"
@@ -53,20 +59,23 @@ export const CustomListSettings: React.FC<CustomListSettingsProps> = ({ type }) 
   const Icon = type === "categories" ? Tag : Ruler;
   const singular = type === "categories" ? "category" : "unit";
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (targetPage = page, targetPageSize = pageSize) => {
     setLoading(true);
     try {
       const res = type === "categories"
-        ? await utilityApi.getShopCategories(SHOP_ID, { limit: "100", offset: "1" })
-        : await utilityApi.getShopUnits(SHOP_ID, { limit: "100", offset: "1" });
+        ? await utilityApi.getShopCategories(SHOP_ID, { limit: String(targetPageSize), offset: String(targetPage) })
+        : await utilityApi.getShopUnits(SHOP_ID, { limit: String(targetPageSize), offset: String(targetPage) });
 
-      setItems(normalizeItems(res));
+      const norm = normalizeItems(res);
+      setItems(norm);
+      setHasMore(norm.length === targetPageSize);
     } catch {
       setItems([]);
+      setHasMore(false);
     } finally {
       setLoading(false);
     }
-  }, [type]);
+  }, [type, page, pageSize]);
 
   useEffect(() => {
     fetchData();
@@ -175,9 +184,11 @@ export const CustomListSettings: React.FC<CustomListSettingsProps> = ({ type }) 
     }
   };
 
-  if (loading) {
-    return <div className="p-8 text-center text-sm text-slate-500">Loading {title}...</div>;
-  }
+  const filteredItems = items.filter((item) => {
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return item.name.toLowerCase().includes(q) || (item.shortName && item.shortName.toLowerCase().includes(q));
+  });
 
   return (
     <div className="bg-white md:rounded-lg border-y md:border border-slate-200 shadow-sm overflow-hidden">
@@ -194,7 +205,6 @@ export const CustomListSettings: React.FC<CustomListSettingsProps> = ({ type }) 
       </div>
 
       <div className="p-6 space-y-6">
-
         {isFormOpen ? (
           <div className="bg-slate-50/70 border border-slate-200 rounded-xl p-5 shadow-sm transition-all">
             <div className="flex justify-between items-center mb-4">
@@ -229,8 +239,6 @@ export const CustomListSettings: React.FC<CustomListSettingsProps> = ({ type }) 
                   </div>
                 )}
               </div>
-
-
 
               {type === "units" && (
                 <div className="pt-3 border-t border-slate-200 mt-2">
@@ -315,20 +323,49 @@ export const CustomListSettings: React.FC<CustomListSettingsProps> = ({ type }) 
         )}
 
         <div className="bg-slate-50/50 rounded-xl border border-slate-100 p-4">
-          <h3 className="text-xs font-bold text-slate-700 tracking-wide mb-3 flex items-center gap-2">
-            Current {title}
-            <span className="inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-black bg-slate-200 text-slate-600 rounded-full">
-              {items.length}
-            </span>
-          </h3>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <h3 className="text-xs font-bold text-slate-700 tracking-wide flex items-center gap-2">
+              Current {title}
+              <span className="inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-black bg-slate-200 text-slate-600 rounded-full">
+                {items.length}
+              </span>
+            </h3>
 
-          {items.length === 0 ? (
+            {/* Search filter */}
+            <div className="relative flex-1 max-w-xs">
+              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={`Search ${singular}s...`}
+                className="w-full pl-8 pr-7 py-1 bg-white border border-slate-200 rounded-lg text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100 transition-all shadow-sm"
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="py-12 text-center bg-white border border-slate-100 rounded-lg">
+              <div className="w-6 h-6 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-2" />
+              <p className="text-xs text-slate-400 font-medium">Loading {title.toLowerCase()}...</p>
+            </div>
+          ) : filteredItems.length === 0 ? (
             <div className="py-8 text-center bg-white border border-slate-100 rounded-lg">
-              <p className="text-[13px] font-medium text-slate-400">No items added yet.</p>
+              <p className="text-[13px] font-medium text-slate-400">
+                {search ? `No ${singular}s matching "${search}" on this page.` : "No items added yet."}
+              </p>
             </div>
           ) : (
             <div className="flex flex-wrap gap-2">
-              {items.map((item) => (
+              {filteredItems.map((item) => (
                 <div
                   key={item.id}
                   className="group flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg shadow-sm hover:border-blue-200 hover:bg-blue-50 transition-all"
@@ -388,6 +425,59 @@ export const CustomListSettings: React.FC<CustomListSettingsProps> = ({ type }) 
               ))}
             </div>
           )}
+
+          {/* Pagination Controls */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-slate-200/70 mt-4">
+            <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
+              <span>Per page:</span>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  const newSize = Number(e.target.value);
+                  setPageSize(newSize);
+                  setPage(1);
+                }}
+                className="h-7 px-2 bg-white border border-slate-200 rounded-md text-xs font-bold text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-sm"
+              >
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+                <option value={200}>200</option>
+                <option value={500}>500</option>
+              </select>
+              <span className="text-slate-300">•</span>
+              <span>
+                Page <strong className="text-slate-800">{page}</strong>
+                {items.length > 0 && (
+                  <span className="text-slate-400 ml-1">
+                    ({items.length} items loaded)
+                  </span>
+                )}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1 || loading}
+                className="h-8 px-3 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1 shadow-sm active:scale-95"
+              >
+                <ChevronLeft size={14} /> Prev
+              </button>
+
+              <div className="h-8 px-3 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 text-xs font-black flex items-center justify-center min-w-[32px]">
+                {page}
+              </div>
+
+              <button
+                onClick={() => setPage((p) => p + 1)}
+                disabled={!hasMore || loading}
+                className="h-8 px-3 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1 shadow-sm active:scale-95"
+              >
+                Next <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

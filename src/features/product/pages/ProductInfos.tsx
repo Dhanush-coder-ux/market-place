@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import {
   Package, Search, Filter, Trash2,
   ChevronDown, ChevronRight, Layers,
-  X, AlertCircle, Calendar, Hash, ExternalLink,
+  AlertCircle, Calendar, Hash, ExternalLink,
   Copy, Check, Pencil, Eye, MoreVertical, RefreshCw, History, Plus
 } from "lucide-react";
 import ActionMenu, { ActionMenuItem, ActionMenuDivider } from "@/components/common/ActionMenu";
@@ -914,6 +914,12 @@ const ProductInfos = () => {
     }).catch(() => {});
   }, [refreshKey, getData]);
 
+  useEffect(() => {
+    if (error) {
+      showToast(error, "error");
+      clearError();
+    }
+  }, [error, showToast, clearError]);
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<InventoryRecord | null>(null);
@@ -1022,21 +1028,23 @@ const ProductInfos = () => {
   const handleDelete = async () => {
     if (!productToDelete) return;
     try {
-      await deleteData(
+      const res = await deleteData(
         `${ENDPOINTS.INVENTORIES}/${SHOP_ID}/${productToDelete.id}`
       );
-      showToast("Product deleted successfully", "success");
-      setRefreshKey((prev: number) => prev + 1);
+      if (res) {
+        showToast("Product deleted successfully", "success");
+        setRefreshKey((prev: number) => prev + 1);
+        setSelectedProducts(prev => {
+          const next = new Set(prev);
+          next.delete(productToDelete.id);
+          return next;
+        });
+      }
     } catch (e: any) {
       showToast(e?.message || "Failed to delete product", "error");
     } finally {
       setIsDeleteDialogOpen(false);
       setProductToDelete(null);
-      setSelectedProducts(prev => {
-        const next = new Set(prev);
-        next.delete(productToDelete.id);
-        return next;
-      });
     }
   };
 
@@ -1200,21 +1208,7 @@ const ProductInfos = () => {
         </div>
       )}
 
-      {/* Error banner */}
-      {error && (
-        <div className="flex items-center justify-between px-4 py-2.5 bg-red-50 border border-red-100 rounded-lg text-red-600 text-[12px] font-medium">
-          <div className="flex items-center gap-2">
-            <AlertCircle size={14} className="text-red-400 shrink-0" />
-            <span>{error}</span>
-          </div>
-          <button
-            onClick={clearError}
-            className="text-red-300 hover:text-red-500 transition-colors p-1 rounded"
-          >
-            <X size={14} />
-          </button>
-        </div>
-      )}
+
 
       {/* Toolbar */}
       <div className="mt-2 bg-white border border-slate-100 rounded-lg p-2.5 px-3.5 flex flex-nowrap items-center gap-2 shadow-sm overflow-x-auto scrollbar-none">

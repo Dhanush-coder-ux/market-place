@@ -285,6 +285,16 @@ const Billing = () => {
         // Mark session as done so unmount cleanup doesn't cancel it
         sessionDoneRef.current = true;
 
+        const resolvedOrderId =
+          res?.data?.ui_id ||
+          res?.data?.order_id ||
+          res?.data?.id ||
+          res?.ui_id ||
+          res?.order_id ||
+          res?.id ||
+          (typeof res?.data === "string" ? res.data : undefined) ||
+          undefined;
+
         setSuccessDetails({
           items: [...items],
           payments: [...paymentsArg],
@@ -293,7 +303,7 @@ const Billing = () => {
           finalAmount,
           customerName: customerName || "Walk-in Customer",
           phone: phone || "",
-          orderId: res.data?.id || res.id || undefined,
+          orderId: resolvedOrderId,
         });
         showToast("Order confirmed successfully", "success");
       }

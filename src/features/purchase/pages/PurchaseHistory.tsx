@@ -16,6 +16,7 @@ import {
   Printer,
   Share2,
   XCircle,
+  Trash2,
   RotateCw
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -564,6 +565,7 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
   const { showToast } = useToast();
   const [drawerRecord, setDrawerRecord] = useState<any | null>(null);
   const [poToCancel, setPoToCancel] = useState<DirectPurchaseData | null>(null);
+  const [poToDelete, setPoToDelete] = useState<DirectPurchaseData | null>(null);
 
   return (
     <div className="bg-white border border-slate-100 rounded-lg shadow-sm overflow-hidden flex flex-col flex-1 min-h-0">
@@ -764,7 +766,18 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
                             <Share2 size={13} />
                             Record Payment
                           </DropdownMenuItem>
-                          {po.status?.toUpperCase() !== 'CANCELED' && po.status?.toUpperCase() !== 'CANCELLED' && (
+                          {po.status?.toUpperCase() === 'DRAFT' ? (
+                            <>
+                              <DropdownMenuSeparator className="border-t border-slate-100 my-1 h-0 bg-transparent" />
+                              <DropdownMenuItem
+                                onClick={() => setPoToDelete(po)}
+                                className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-red-650 hover:bg-red-50 cursor-pointer outline-none"
+                              >
+                                <Trash2 size={13} />
+                                Delete draft
+                              </DropdownMenuItem>
+                            </>
+                          ) : po.status?.toUpperCase() !== 'CANCELED' && po.status?.toUpperCase() !== 'CANCELLED' && (
                             <>
                               <DropdownMenuSeparator className="border-t border-slate-100 my-1 h-0 bg-transparent" />
                               <DropdownMenuItem
@@ -795,13 +808,37 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
         </span>
       </div>
       <GroupedItemsDrawer record={drawerRecord} onClose={() => setDrawerRecord(null)} type="purchase" />
+            <ConfirmDialog
+        isOpen={!!poToDelete}
+        onClose={() => setPoToDelete(null)}
+        onConfirm={async () => {
+          if (!poToDelete) return;
+          try {
+            const activeShopId = localStorage.getItem("shop_id") || SHOP_ID;
+            await purchase.deletePurchase(activeShopId, poToDelete.id);
+            showToast("Draft purchase deleted successfully.", "success");
+            setPoToDelete(null);
+            if (onRefresh) onRefresh();
+            else window.location.reload();
+          } catch (err: any) {
+            console.error("Failed to delete purchase:", err);
+            const msg = err?.message || err?.detail?.description || err?.response?.data?.detail?.description || err?.response?.data?.detail?.msg || err?.response?.data?.detail || "Failed to delete draft purchase.";
+            showToast(typeof msg === 'string' ? msg : "Failed to delete draft purchase.", "error");
+          }
+        }}
+        title="Delete Draft Purchase"
+        message="Are you sure you want to permanently delete this draft purchase? This action cannot be undone."
+        confirmText="Delete Draft"
+        cancelText="Cancel"
+        variant="danger"
+      />
       <ConfirmDialog
         isOpen={!!poToCancel}
         onClose={() => setPoToCancel(null)}
         onConfirm={async () => {
           if (!poToCancel) return;
           try {
-            await purchase.cancelPurchase(SHOP_ID, poToCancel.id);
+            await purchase.cancelPurchase(localStorage.getItem('shop_id') || SHOP_ID, poToCancel.id);
             showToast("Purchase cancelled successfully.", "success");
             if (onRefresh) onRefresh();
             else window.location.reload();
@@ -863,7 +900,7 @@ const PurchaseHistory = () => {
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    purchase.getPurchasesByShop(SHOP_ID, {
+    purchase.getPurchasesByShop(localStorage.getItem('shop_id') || SHOP_ID, {
       view: "PURCHASE_VIEW",
       limit: "500",
       offset: "1"
@@ -959,7 +996,7 @@ const PurchaseHistory = () => {
   const performBulkCancel = async () => {
     try {
       for (const id of Array.from(selectedPurchases)) {
-        await purchase.cancelPurchase(SHOP_ID, id);
+        await purchase.cancelPurchase(localStorage.getItem('shop_id') || SHOP_ID, id);
       }
       showToast("Selected purchases cancelled successfully.", "success");
       setSelectedPurchases(new Set());
@@ -1031,7 +1068,7 @@ const PurchaseHistory = () => {
       params.exclude_non_return = true;
     }
 
-    const res = await purchase.getPurchasesByShop(SHOP_ID, params);
+    const res = await purchase.getPurchasesByShop(localStorage.getItem('shop_id') || SHOP_ID, params);
 
     const itemsRaw = res ? (Array.isArray(res?.data) ? res.data : (res?.data?.purchases ?? res?.data?.datas ?? [])) : [];
     const parsedItems = itemsRaw.map(toDisplayData);

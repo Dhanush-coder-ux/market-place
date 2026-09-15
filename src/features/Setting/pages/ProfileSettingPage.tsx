@@ -16,6 +16,8 @@ import { ActivityLogPage } from "@/features/Setting/pages/ActivityLogPage";
 import { CustomListSettings } from "@/features/Setting/pages/CustomListSettings";
 import { ShopProfileForm } from "@/features/Setting/pages/ShopProfileForm";
 import { BusinessCategorySettings } from "@/features/Setting/pages/BusinessCategorySettings";
+import { SubscriptionSettingsTab } from "@/features/subscription/components/SubscriptionSettingsTab";
+import { CreditCard } from "lucide-react";
 import { usePurchaseSettings } from "@/context/PurchaseContext";
 import { shopApi } from "@/services/api/shop";
 import { SHOP_ID } from "@/services/endpoints";
@@ -51,6 +53,13 @@ const MENU_ITEMS = [
     icon: Percent,
     description: "Registered / Non-registered",
     accent: "amber",
+  },
+  {
+    id: "subscription",
+    label: "Plans & Billing",
+    icon: CreditCard,
+    description: "Subscription, limits & Razorpay payments",
+    accent: "blue",
   },
   {
     id: "activity",
@@ -146,6 +155,9 @@ export const ProfileSettingsPage = () => {
     );
 
     switch (activeTab) {
+      case "subscription":
+        return wrapper(<SubscriptionSettingsTab />);
+
       case "shopprofile":
         return <ShopProfileForm />;
 

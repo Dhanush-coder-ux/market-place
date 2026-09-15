@@ -99,6 +99,7 @@ const ProfileSettingsPage = lazyRetry(() =>
   import("@/features/Setting/pages/ProfileSettingPage").then(m => ({ default: m.ProfileSettingsPage }))
 );
 const ProfileForm = lazyRetry(() => import("../features/profile/pages/ProfileForm"));
+const PricingPlansPage = lazyRetry(() => import("@/features/subscription/pages/PricingPlansPage"));
 
 // ─── Products ────────────────────────────────────────────────────────────────
 const ProductInfos = lazyRetry(() => import("@/features/product/pages/ProductInfos"));
@@ -241,6 +242,8 @@ export const router = createBrowserRouter([
 
       // Settings
       { path: '/settings', element: <Page><ProfileSettingsPage /></Page> },
+      { path: '/pricing', element: <Page><PricingPlansPage /></Page> },
+      { path: '/subscription', element: <Page><PricingPlansPage /></Page> },
       { path: '/settings/add', element: <Page><ProfileForm /></Page> },
 
       // Digital Store / Profile

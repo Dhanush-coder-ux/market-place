@@ -21,6 +21,7 @@ export const ENDPOINTS = {
   UTILITIES: "/utilities",
   UPLOAD_ASSETS: "/utilities/upload/assets",
   GENERATE_BARCODE: "/products/generate-barcode",
+  SUBSCRIPTIONS: "/shops/subscriptions",
 
   // ── Utility Service: Shop Categories ─────────────────────────────
   SHOP_CATEGORIES: "/utilities/shop-categories",

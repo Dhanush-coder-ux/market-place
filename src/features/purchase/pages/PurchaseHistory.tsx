@@ -815,7 +815,8 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
           if (!poToDelete) return;
           try {
             const activeShopId = localStorage.getItem("shop_id") || SHOP_ID;
-            await purchase.deletePurchase(activeShopId, poToDelete.id);
+            const targetId = poToDelete.id || (poToDelete as any).purchase_id || poToDelete.systemId;
+            await purchase.deletePurchase(activeShopId, targetId);
             showToast("Draft purchase deleted successfully.", "success");
             setPoToDelete(null);
             if (onRefresh) onRefresh();

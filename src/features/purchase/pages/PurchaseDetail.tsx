@@ -93,6 +93,7 @@ const PurchaseReturnDialog = ({
 
   const [returnItems, setReturnItems] = useState<ReturnItem[]>([]);
   const [globalReason, setGlobalReason] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("CASH");
 
   // Always fetch fresh purchase data from API when dialog opens
   // so we always have correct backend item IDs (not stale location.state data)
@@ -100,6 +101,7 @@ const PurchaseReturnDialog = ({
     if (!isOpen) return;
     setStep(1);
     setGlobalReason("");
+    setPaymentMethod("CASH");
     setReturnItems([]);
     setLoadingItems(true);
 
@@ -110,23 +112,26 @@ const PurchaseReturnDialog = ({
         const gstType = String(raw?.calculations?.gst_type || raw?.gst_infos?.type || "EXCLUSIVE").toUpperCase();
         setReturnItems(
           rawItems
-            .filter((p: any) => {
-              const qty = Number(p.stocks_infos?.stocks ?? p.stocks ?? p.quantity ?? p.stocks_added ?? 0);
-              return qty > 0;
+            .filter((item: any) => {
+              const currentStock = parseFloat(item.stocks_infos?.stocks ?? item.stock_infos?.stocks ?? item.stocks ?? item.quantity ?? 0);
+              const returnedQty = parseFloat(item.returned_quantity ?? 0);
+              return (currentStock - returnedQty) > 0;
             })
-            .map((p: any) => {
-              const gstRate = parseFloat(String(p.gst || "0").replace('%', '')) || 0;
-              const vName = getVariantName(p) || p.variant_name;
-              const bName = getBatchName(p) || p.batch_name;
+            .map((item: any) => {
+              const currentStock = parseFloat(item.stocks_infos?.stocks ?? item.stock_infos?.stocks ?? item.stocks ?? item.quantity ?? 0);
+              const returnedQty = parseFloat(item.returned_quantity ?? 0);
+              const maxQty = Math.max(0, currentStock - returnedQty);
+              const vName = getVariantName(item.variant_infos || item.variant || item.product_variant_infos);
+              const bName = getBatchName(item.batch_infos || item.batch);
               return {
-                purchase_item_id: p.id || p.purchase_item_id || "",
-                name: String(p.name || p.product_name || p.product_id || "Unknown"),
-                quantity: Number(p.stocks_infos?.stocks ?? p.stocks ?? p.quantity ?? p.stocks_added ?? 0),
-                maxQuantity: Number(p.stocks_infos?.stocks ?? p.stocks ?? p.quantity ?? p.stocks_added ?? 0),
-                buy_price: Number(p.buy_price ?? p.pricing_infos?.[0]?.buy_price ?? 0),
+                purchase_item_id: item.id || item.purchase_item_id,
+                name: item.name || item.product_name || "Item",
+                quantity: maxQty,
+                maxQuantity: maxQty,
                 returnQty: 0,
                 reason: "",
-                gst_rate: gstRate,
+                buy_price: item.buy_price ?? item.rate ?? 0,
+                gst_rate: item.gst_rate ?? item.gst_infos?.rate ?? 0,
                 gst_type: gstType,
                 variant: vName,
                 batch: bName,
@@ -186,6 +191,10 @@ const PurchaseReturnDialog = ({
         purchase_id: purchaseId,
         shop_id: SHOP_ID,
         payment_infos: {
+          mode: paymentMethod,
+          method: paymentMethod,
+          payment_method: paymentMethod,
+          type: paymentMethod,
           reason: globalReason,
           return_value: returnValue,
           adjusted_against_outstanding: adjustedAgainstOutstanding,
@@ -442,17 +451,46 @@ const PurchaseReturnDialog = ({
                   </div>
                 )}
                 {cashRefund > 0 && (
-                  <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-50 border border-emerald-100">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-emerald-200 flex items-center justify-center">
-                        <Banknote size={11} className="text-emerald-700" />
+                  <div className="space-y-3 p-3.5 rounded-xl bg-emerald-50 border border-emerald-100">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-emerald-200 flex items-center justify-center">
+                          <Banknote size={11} className="text-emerald-700" />
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-bold text-emerald-800">Refund to receive</p>
+                          <p className="text-[9px] text-emerald-600">Money returned from supplier</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-[11px] font-bold text-emerald-800">Cash refund to receive</p>
-                        <p className="text-[9px] text-emerald-600">Real money returned</p>
+                      <span className="text-sm font-black text-emerald-700">{fmt(cashRefund)}</span>
+                    </div>
+
+                    <div className="pt-2 border-t border-emerald-200/60">
+                      <label className="text-[10px] font-black text-emerald-800 uppercase tracking-wider block mb-1.5">
+                        Payment Method
+                      </label>
+                      <div className="grid grid-cols-4 gap-1.5">
+                        {[
+                          { id: "CASH", label: "Cash" },
+                          { id: "UPI", label: "UPI" },
+                          { id: "BANK", label: "Bank" },
+                          { id: "CHEQUE", label: "Cheque" },
+                        ].map((pm) => (
+                          <button
+                            key={pm.id}
+                            type="button"
+                            onClick={() => setPaymentMethod(pm.id)}
+                            className={`px-2 py-1.5 rounded-lg text-xs font-bold border transition-all text-center ${
+                              paymentMethod === pm.id
+                                ? "border-emerald-600 bg-white text-emerald-800 shadow-sm ring-2 ring-emerald-500 font-black"
+                                : "border-emerald-200/80 bg-emerald-100/40 text-emerald-700 hover:bg-white"
+                            }`}
+                          >
+                            {pm.label}
+                          </button>
+                        ))}
                       </div>
                     </div>
-                    <span className="text-sm font-black text-emerald-700">{fmt(cashRefund)}</span>
                   </div>
                 )}
                 {adjustedAgainstOutstanding === 0 && cashRefund === 0 && (

@@ -703,7 +703,24 @@ export default function SupplierDetail() {
                           </td></tr>
                         ) : (
                           filteredHistory.map((h, i) => {
-                          const isRefund = h.type === 'PURCHASE_RETURN' || h.type === 'REFUND' || h.notes?.toLowerCase().includes('refund');
+                          const isRefund = h.type === 'PURCHASE_RETURN' || h.type === 'REFUND' || h.entity_name?.toLowerCase().includes('return') || h.notes?.toLowerCase().includes('refund') || h.notes?.toLowerCase().includes('return');
+                          
+                          let displayAmount = Number(h.cleared_amount ?? h.amount ?? 0);
+                          if (displayAmount === 0 && isRefund && h.notes) {
+                            const match = h.notes.match(/Refund amount:\s*([0-9.]+)/i);
+                            if (match && match[1]) {
+                              displayAmount = parseFloat(match[1]) || 0;
+                            }
+                          }
+
+                          let displayNotes = h.notes || (isRefund ? 'Supplier refund' : '—');
+                          if (displayNotes) {
+                            displayNotes = displayNotes.replace(/([0-9]+\.[0-9]+)/g, (match: string) => {
+                              const parsed = parseFloat(match);
+                              return isNaN(parsed) ? match : parsed.toFixed(2);
+                            });
+                          }
+
                           return (
                             <tr key={h.id || i} className="hover:bg-slate-50/50 transition-colors">
                               <td className="px-4 py-3 text-xs font-bold text-slate-600 whitespace-nowrap">
@@ -714,7 +731,7 @@ export default function SupplierDetail() {
                               </td>
                               <td className="px-4 py-3 text-sm font-black whitespace-nowrap">
                                 <span className={isRefund ? 'text-emerald-600' : 'text-rose-600'}>
-                                  ₹{Number(h.cleared_amount ?? h.amount ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  ₹{displayAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </span>
                               </td>
                               <td className="px-4 py-3 text-sm text-slate-700 font-bold whitespace-nowrap">
@@ -725,8 +742,8 @@ export default function SupplierDetail() {
                                   {String(h.payment_method || h.method || "CASH").replace(/_REFUND$/i, "").replace(/REFUND/i, "").replace(/_/g, " ").trim() || "CASH"}
                                 </span>
                               </td>
-                              <td className="px-4 py-3 text-xs font-medium text-slate-500 whitespace-normal break-words" title={h.notes}>
-                                {isRefund && !h.notes ? "Supplier refund" : (h.notes || (isRefund ? "Supplier refund" : "—"))}
+                              <td className="px-4 py-3 text-xs font-medium text-slate-500 whitespace-normal break-words" title={displayNotes}>
+                                {displayNotes}
                               </td>
                             </tr>
                           );

@@ -18,16 +18,30 @@ import { VerifyDeliveryModal } from "../components/VerifyDeliveryModal";
 
 const toCardShape = (o: OrderRecord, customerMap?: Record<string, { name: string, phone: string }>) => {
   const c = o.customer_id && customerMap ? customerMap[o.customer_id] : null;
+  const anyOrder = o as any;
+  const custObj = anyOrder.customer || {};
+  const onlineObj = anyOrder.online_details || {};
+  const addObj = anyOrder.additional_infos || {};
+  const calcObj = anyOrder.calculation_infos || {};
+  const dataObj = anyOrder.datas || {};
+  const itemObj = anyOrder.item_infos || {};
+
+  const name = onlineObj.name || onlineObj.customer_name || o.customer_name || custObj.customer_name || custObj.name || addObj.customer_name || dataObj.customer_name || c?.name || "Customer";
+  const phone = onlineObj.phone || onlineObj.customer_phone || o.customer_number || custObj.mobile_number || custObj.phone || addObj.customer_phone || dataObj.phone || c?.phone || "—";
+  
+  const rawTotal = calcObj.total ?? calcObj.grand_total ?? calcObj.sub_total ?? o.total_amount ?? o.total ?? anyOrder.total_order_value ?? dataObj.total_amount ?? itemObj.total_order_amount ?? o.pending_amount ?? 0;
+  const totalAmount = Number(Number(rawTotal).toFixed(2));
+
   return {
     id: o.id,
     billNo: o.ui_id || o.id,
-    customerName: o.online_details?.name || o.customer_name || o.additional_infos?.customer_name || o.datas?.customer_name || c?.name || "Unknown",
-    phone: o.online_details?.phone || o.customer_number || o.additional_infos?.customer_phone || o.datas?.phone || c?.phone || "—",
-    totalAmount: Number(Number(o.calculation_infos?.total ?? o.calculation_infos?.grand_total ?? o.total_amount ?? o.datas?.total_amount ?? o.item_infos?.total_order_amount ?? o.pending_amount ?? 0).toFixed(2)),
-    status: o.status ?? "PENDING",
-    origin: o.origin || "OFFLINE",
-    deliveryCode: (o as any).delivery_code || null,
-    online_details: o.online_details,
+    customerName: name,
+    phone: phone,
+    totalAmount: isNaN(totalAmount) ? 0 : totalAmount,
+    status: (o.status ?? "PENDING").toUpperCase(),
+    origin: (o.origin || "ONLINE").toUpperCase(),
+    deliveryCode: anyOrder.delivery_code || onlineObj.delivery_code || null,
+    online_details: onlineObj,
   };
 };
 
@@ -36,9 +50,10 @@ const Order = () => {
   const [customerMap, setCustomerMap] = useState<Record<string, { name: string, phone: string }>>({});
 
   const [orders, setOrders] = useState<OrderRecord[]>([]);
-  const [status, setStatus] = useState("PENDING");
+  const [status, setStatus] = useState("ALL");
   const [isOpen, setIsOpen] = useState(false);
   const [open, setOpen] = useState(false);
+  const [dateRange, setDateRange] = useState<{ startDate: Date | null; endDate: Date | null } | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -67,11 +82,31 @@ const Order = () => {
   useEffect(() => {
     const params: any = { limit: "50", offset: "1" };
     if (status && status !== "ALL") params.status = status;
+    if (dateRange?.startDate) {
+      params.from_date = dateRange.startDate.toISOString().split("T")[0];
+    }
+    if (dateRange?.endDate) {
+      params.to_date = dateRange.endDate.toISOString().split("T")[0];
+    }
     
     orderApi.getOrdersByShop(SHOP_ID, params).then((res: any) => {
-      if (res) setOrders(Array.isArray(res.data) ? res.data : [res.data]);
+      if (res?.data) {
+        let orderList: OrderRecord[] = [];
+        if (Array.isArray(res.data)) {
+          orderList = res.data;
+        } else if (Array.isArray(res.data.datas)) {
+          orderList = res.data.datas;
+        } else if (Array.isArray(res.data.orders)) {
+          orderList = res.data.orders;
+        } else if (typeof res.data === "object") {
+          orderList = [res.data];
+        }
+        setOrders(orderList);
+      } else {
+        setOrders([]);
+      }
     }).catch(console.error);
-  }, [refreshKey, status]);
+  }, [refreshKey, status, dateRange]);
 
   const handleStatusChange = async (newStatus: string, originalOrder: OrderRecord) => {
     try {
@@ -98,13 +133,13 @@ const Order = () => {
     }
   };
 
-
-
   const handleOpenDetails = async (order: OrderRecord) => {
     try {
       const res = await orderApi.getOrderById(SHOP_ID, order.id);
       if (res?.data) {
-        const fullOrder = Array.isArray(res.data) ? res.data[0] : res.data;
+        const fullOrder = Array.isArray(res.data) 
+          ? res.data[0] 
+          : (Array.isArray(res.data.datas) ? res.data.datas[0] : res.data);
         const mappedItems = (fullOrder.items || []).map((i: any) => {
           let itemName = i.product_name || i.name || i.datas?.product_name || `Item ${i.product_id?.slice(-4)}`;
           if (i.variant_infos?.variant_name) {
@@ -147,12 +182,15 @@ const Order = () => {
     setIsOpen(true);
   };
 
-  const onlineOrders = orders.filter((o) => o.origin === "ONLINE");
+  const onlineOrders = orders.filter((o) => {
+    const origin = (o.origin || "").toUpperCase();
+    return origin === "ONLINE" || origin === "" || Boolean(o.online_details);
+  });
   const filteredOrders = onlineOrders;
   const totalOrders = onlineOrders.length;
-  const pending = onlineOrders.filter((o) => o.status === "PENDING").length;
-  const accepted = onlineOrders.filter((o) => o.status === "ACCEPTED").length;
-  const delivered = onlineOrders.filter((o) => o.status === "DELIVERED").length;
+  const pending = onlineOrders.filter((o) => (o.status || "").toUpperCase() === "PENDING").length;
+  const accepted = onlineOrders.filter((o) => (o.status || "").toUpperCase() === "ACCEPTED").length;
+  const delivered = onlineOrders.filter((o) => (o.status || "").toUpperCase() === "DELIVERED").length;
 
   return (
     <div className="h-full overflow-y-auto bg-slate-50/60 font-sans pb-10">
@@ -186,6 +224,17 @@ const Order = () => {
         <div className="flex items-center justify-between pt-2">
           <p className="text-sm text-slate-500 font-medium">
             Showing <span className="font-bold text-slate-800">{filteredOrders.length}</span> orders
+            {dateRange?.startDate && dateRange?.endDate && (
+              <span className="ml-2 text-xs text-blue-600 font-normal">
+                (Filtered by Date)
+                <button
+                  onClick={() => setDateRange(null)}
+                  className="ml-1 text-slate-400 hover:text-red-500 font-bold underline"
+                >
+                  Clear
+                </button>
+              </span>
+            )}
           </p>
 
           <div className="flex items-center bg-white border border-slate-200 rounded-lg p-1 shadow-sm">
@@ -238,7 +287,14 @@ const Order = () => {
         {selectedOrder && <OrderDetailView order={selectedOrder} />}
       </Drawer>
 
-      <DateFilter isOpen={open} onClose={() => setOpen(false)} onApply={(range) => { console.log(range); setOpen(false); }} />
+      <DateFilter
+        isOpen={open}
+        onClose={() => setOpen(false)}
+        onApply={(range) => {
+          setDateRange(range);
+          setOpen(false);
+        }}
+      />
 
       {/* Verify Delivery Modal */}
       <VerifyDeliveryModal

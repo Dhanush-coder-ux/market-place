@@ -629,6 +629,7 @@ export default function SupplierDetail() {
                   uiId: p.ui_id || d.ui_id || (p.purchase_id ? p.purchase_id.split('-')[0].toUpperCase() : p.id?.slice(-6)),
                   storageLocation: d.storage_location || p.storage_location || '—',
                   version: p.version || d?.version || p.datas?.version || "v1",
+                  returns: p.returns || d?.returns || p.purchase_returns || d?.purchase_returns || [],
                   productsList: productsList
                 });
               }

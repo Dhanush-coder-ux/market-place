@@ -466,6 +466,21 @@ const ReturnPageContent: React.FC<{ sale: SaleRecord; productMap: Record<string,
                               <div className="flex-1 min-w-0">
                                 <p className="text-[12px] font-bold text-slate-800">{ex.name}</p>
                                 <p className="text-[10px] text-slate-500">Qty: {ex.quantity || ex.qty || 1} {ex.serialNumbers?.length > 0 ? `· Serials: ${ex.serialNumbers.join(", ")}` : ''}</p>
+                                {(() => {
+                                  const finalPrice = ex.price || ex.sell_price || 0;
+                                  const gstRate = parseFloat(String(ex.gst || "0").replace('%', '')) || 0;
+                                  const taxable = finalPrice / (1 + (gstRate / 100));
+                                  const gstAmount = finalPrice - taxable;
+                                  return (
+                                    <div className="flex flex-wrap items-center gap-2 mt-2 text-[9px] font-mono text-slate-500 bg-slate-50 px-2 py-1 rounded w-fit border border-slate-100">
+                                      <span>Taxable: {fmt(taxable)}</span>
+                                      <span className="text-slate-300">|</span>
+                                      <span>GST: {fmt(gstAmount)}</span>
+                                      <span className="text-slate-300">|</span>
+                                      <span className="font-bold text-slate-700">Total: @ {fmt(finalPrice)}</span>
+                                    </div>
+                                  );
+                                })()}
                               </div>
                               <div className="flex items-center gap-3">
                                 <span className="font-mono text-[11px] font-black">{fmt(ex.tprice || (ex.price || ex.sell_price || 0) * (ex.quantity || ex.qty || 1))}</span>

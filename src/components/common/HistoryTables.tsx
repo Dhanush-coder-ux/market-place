@@ -299,7 +299,7 @@ export function StockMovementsTable({ rows, loading, onViewDetails }: StockMovem
                         <td className="px-5 py-4 whitespace-nowrap">
                           <TypeBadge 
                             type={r.displayType}
-                            labelOverride={r.displayType} 
+                            labelOverride={r.displayType === 'Offline Sales' ? 'Sales' : r.displayType} 
                             icon={r.isInc ? ArrowUp : ArrowDown} 
                           />
                         </td>
@@ -647,6 +647,16 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                             {(r.version || (r.datas && r.datas.version)) && (
                               <AntBadge variant="meta-version" type="tag">
                                 {r.version || r.datas?.version}
+                              </AntBadge>
+                            )}
+                            {(r.type === 'RETURN' || r.type === 'PURCHASE_RETURN') && (
+                              <AntBadge variant="tx-sales-return" type="tag">
+                                Return
+                              </AntBadge>
+                            )}
+                            {((r.returns?.length || 0) > 0) && (
+                              <AntBadge variant="tx-sales-return" type="tag">
+                                Returned
                               </AntBadge>
                             )}
                           </div>

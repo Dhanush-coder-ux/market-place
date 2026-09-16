@@ -271,7 +271,7 @@ const SalesListPage: React.FC = () => {
       }
 
       // Derive total from calculation_infos if present (new Order Service format)
-      const total = s.total_sellprice ?? s.calculation_infos?.total ?? s.total ?? 0;
+      const total = Number(s.total_sellprice ?? s.calculation_infos?.total ?? s.calculation_infos?.grand_total ?? s.item_infos?.total_order_amount ?? s.total_amount ?? (Array.isArray(s.items) ? s.items.reduce((acc: number, item: any) => acc + (Number(item.total_amount) || ((Number(item.sell_price) || 0) * (Number(item.quantity) || 1))), 0) : 0) ?? s.total ?? 0);
 
       // Derive total quantity
       let totalQty = s.total_quantity || s.item_infos?.total_order_qty || s.item_infos?.total_order_quantity || 0;
@@ -348,7 +348,7 @@ const SalesListPage: React.FC = () => {
       let offlineAmt = 0;
       let offlineCnt = 0;
       dataList.forEach((s: any) => {
-        const total = s.total_sellprice ?? s.calculation_infos?.total ?? s.total ?? 0;
+        const total = Number(s.total_sellprice ?? s.calculation_infos?.total ?? s.calculation_infos?.grand_total ?? s.item_infos?.total_order_amount ?? s.total_amount ?? (Array.isArray(s.items) ? s.items.reduce((acc: number, item: any) => acc + (Number(item.total_amount) || ((Number(item.sell_price) || 0) * (Number(item.quantity) || 1))), 0) : 0) ?? s.total ?? 0);
         const isOnline = s.origin === "ONLINE" || s.origin === "Online Sales";
         if (isOnline) {
           onlineAmt += total;

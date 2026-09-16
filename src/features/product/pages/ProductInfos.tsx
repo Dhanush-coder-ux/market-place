@@ -978,7 +978,10 @@ const ProductInfos = () => {
     };
     if (debouncedSearch) params.q = debouncedSearch;
     
-    if (activeKpi === "Inactive Products") params.exclude_active = "true";
+    if (activeKpi === "Inactive Products") {
+      params.exclude_active = "true";
+      params.exclude_non_tracking = "true";
+    }
     if (activeKpi === "Stock Not Tracking") params.exclude_tracking = "true";
 
 

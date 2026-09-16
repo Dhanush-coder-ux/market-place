@@ -230,6 +230,7 @@ const DigitalMain = () => {
   const [fallbackImg, setFallbackImg] = useState<string | null>(null);
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState<string | null>(null);
+  const [needsSetup, setNeedsSetup] = useState(false);
   const [showQR, setShowQR]       = useState(false);
   const [showTurnOffConfirm, setShowTurnOffConfirm] = useState(false);
   const [updatingVisibility, setUpdatingVisibility] = useState(false);
@@ -268,7 +269,11 @@ const DigitalMain = () => {
   };
 
   useEffect(() => {
-    if (!SHOP_ID || SHOP_ID === "string") { navigate("/setup-digital-store"); return; }
+    if (!SHOP_ID || SHOP_ID === "string") {
+      setNeedsSetup(true);
+      setLoading(false);
+      return;
+    }
     const load = async () => {
       setLoading(true);
       try {
@@ -289,7 +294,8 @@ const DigitalMain = () => {
             (Array.isArray(data.delivery_options) && data.delivery_options.length > 0);
 
           if (!data.visible_online && !isConfigured) {
-            navigate("/setup-digital-store", { replace: true });
+            setNeedsSetup(true);
+            setLoading(false);
             return;
           }
           setShop(data);
@@ -305,7 +311,7 @@ const DigitalMain = () => {
             setFollowersCount(Array.isArray(rawFollowers) ? rawFollowers.length : 0);
           }
         } else {
-          setError("Shop not found");
+          setNeedsSetup(true);
         }
       } catch (e) {
         console.error(e);
@@ -318,6 +324,29 @@ const DigitalMain = () => {
   }, [navigate]);
 
   if (loading) return <div className="min-h-screen bg-slate-50"><HeaderSkeleton /><div className="px-6 pt-6 space-y-4"><Skeleton className="h-64 rounded-xl" /></div></div>;
+  
+  if (needsSetup) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6" style={{ fontFamily: "Inter, sans-serif" }}>
+        <div className="bg-white rounded-2xl border border-slate-200 p-8 max-w-md w-full text-center shadow-sm">
+          <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-5">
+            <Settings2 size={28} className="text-blue-500" />
+          </div>
+          <h2 className="text-[20px] font-black text-slate-800 mb-2">Create your Digital Store</h2>
+          <p className="text-sm text-slate-500 mb-8 leading-relaxed">
+            You haven't set up your digital store profile yet. Create one to start selling online and managing your catalog.
+          </p>
+          <button
+            onClick={() => navigate("/setup-digital-store")}
+            className="w-full py-3 bg-blue-600 text-white text-[14px] font-bold rounded-xl hover:bg-blue-700 shadow-md shadow-blue-500/20 transition-all cursor-pointer"
+          >
+            Create digital store profile
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (error || !shop) return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
       <div className="bg-white rounded-xl border border-slate-200 p-8 max-w-sm w-full text-center">

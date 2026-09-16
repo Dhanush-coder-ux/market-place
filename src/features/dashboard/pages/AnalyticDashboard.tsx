@@ -456,7 +456,7 @@ const AnalyticsDashboard = () => {
         <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
           <div className="p-5 md:px-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h1 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight">Dashboard</h1>
+              <h1 className="text-xl md:text-2xl font-semibold text-slate-700 tracking-tight">Dashboard</h1>
               <p className="text-xs font-semibold text-slate-400 mt-0.5">
                 {dateRange.start.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} —{" "}
                 {dateRange.end.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
@@ -470,9 +470,9 @@ const AnalyticsDashboard = () => {
                   <button
                     key={r}
                     onClick={() => setActiveRange(r)}
-                    className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
                       activeRange === r
-                        ? "bg-white text-blue-600 shadow-xs"
+                        ? "bg-white text-slate-600 shadow-xs"
                         : "text-slate-500 hover:text-slate-700"
                     }`}
                   >
@@ -487,14 +487,14 @@ const AnalyticsDashboard = () => {
                 className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-all cursor-pointer"
                 title="Refresh"
               >
-                <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-blue-600" : ""}`} />
+                <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-slate-600" : ""}`} />
               </button>
               
               {/* Sync */}
               <button
                 onClick={handleSync}
                 disabled={isSyncing}
-                className="h-9 px-4 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-xs hover:bg-blue-700 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="h-9 px-4 rounded-xl bg-slate-500 flex items-center justify-center text-white font-medium text-xs hover:bg-blue-700 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Sync Data"
               >
                 <Zap className={`w-4 h-4 mr-1.5 ${isSyncing ? "animate-pulse" : ""}`} />
@@ -528,7 +528,7 @@ const AnalyticsDashboard = () => {
           {/* Filters Bar */}
           <div className="px-6 py-3 border-t border-slate-100 flex items-center gap-4 bg-slate-50/50 flex-wrap">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-500">Supplier:</span>
+              <span className="text-xs font-medium text-slate-500">Supplier:</span>
               <div className="w-48">
                 <ReusableSelect
                   value={selectedSupplier}
@@ -561,15 +561,15 @@ const AnalyticsDashboard = () => {
             <div>
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Net Revenue</h3>
+                  <h3 className="text-[11px] font-medium uppercase tracking-wider text-slate-400">Net Revenue</h3>
                   <p className="text-[11px] text-slate-400 font-medium mt-0.5">Total excl. GST</p>
                 </div>
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-blue-50 text-blue-600 shrink-0">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-blue-50 text-slate-600 shrink-0">
                   <IndianRupee className="w-5 h-5" strokeWidth={2.5} />
                 </div>
               </div>
               <div className="flex items-end gap-2 mb-1">
-                <span className="text-[26px] font-black text-slate-800 tracking-tight leading-none">
+                <span className="text-[26px] font-semibold text-slate-700 tracking-tight leading-none">
                   {loading ? "—" : fmt(netRevenue)}
                 </span>
               </div>
@@ -578,17 +578,17 @@ const AnalyticsDashboard = () => {
             <div className="mt-4 pt-3.5 border-t border-slate-100 space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
                   <span className="text-xs font-medium text-slate-600">Received</span>
                 </div>
-                <span className="text-xs font-bold text-emerald-600">{fmt(receivedAmount)}</span>
+                <span className="text-xs font-medium text-emerald-500">{fmt(receivedAmount)}</span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                  <span className="w-2 h-2 rounded-full bg-amber-400"></span>
                   <span className="text-xs font-medium text-slate-600">Outstanding</span>
                 </div>
-                <span className="text-xs font-bold text-amber-600">{fmt(customerOutstanding)}</span>
+                <span className="text-xs font-medium text-amber-500">{fmt(customerOutstanding)}</span>
               </div>
             </div>
           </div>
@@ -598,15 +598,15 @@ const AnalyticsDashboard = () => {
             <div>
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Profit</h3>
+                  <h3 className="text-[11px] font-medium uppercase tracking-wider text-slate-400">Total Profit</h3>
                   <p className="text-[11px] text-slate-400 font-medium mt-0.5">Net earnings</p>
                 </div>
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${totalProfit >= 0 ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"}`}>
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${totalProfit >= 0 ? "bg-emerald-50 text-emerald-500" : "bg-rose-50 text-rose-500"}`}>
                   <TrendingUp className="w-5 h-5" strokeWidth={2.5} />
                 </div>
               </div>
               <div className="flex items-end gap-2 mb-1">
-                <span className={`text-[26px] font-black tracking-tight leading-none ${totalProfit >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                <span className={`text-[26px] font-semibold tracking-tight leading-none ${totalProfit >= 0 ? "text-emerald-500" : "text-rose-500"}`}>
                   {loading ? "—" : fmt(totalProfit)}
                 </span>
                 {totalProfit >= 0 ? (
@@ -618,7 +618,7 @@ const AnalyticsDashboard = () => {
             </div>
 
             <div className="mt-4 pt-3.5 border-t border-slate-100">
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+              <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
                 Total Cost: <span className="text-slate-700">{fmt(totalCost)}</span>
               </p>
             </div>
@@ -629,7 +629,7 @@ const AnalyticsDashboard = () => {
             <div>
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Purchase</h3>
+                  <h3 className="text-[11px] font-medium uppercase tracking-wider text-slate-400">Total Purchase</h3>
                   <p className="text-[11px] text-slate-400 font-medium mt-0.5">Procurement spend</p>
                 </div>
                 <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-indigo-50 text-indigo-600 shrink-0">
@@ -637,7 +637,7 @@ const AnalyticsDashboard = () => {
                 </div>
               </div>
               <div className="flex items-end gap-2 mb-1">
-                <span className="text-[26px] font-black text-slate-800 tracking-tight leading-none">
+                <span className="text-[26px] font-semibold text-slate-700 tracking-tight leading-none">
                   {loading ? "—" : fmt(totalPurchaseAmount)}
                 </span>
               </div>
@@ -645,12 +645,12 @@ const AnalyticsDashboard = () => {
 
             <div className="mt-4 pt-3.5 border-t border-slate-100 space-y-1.5">
               <div className="flex items-center justify-between text-[11px]">
-                <span className="font-bold text-slate-400 uppercase tracking-wider">Purchases:</span>
-                <span className="font-bold text-slate-700">{loading ? "—" : `${totalPurchaseCount} (${totalPurchaseStocks} stocks)`}</span>
+                <span className="font-medium text-slate-400 uppercase tracking-wider">Purchases:</span>
+                <span className="font-medium text-slate-700">{loading ? "—" : `${totalPurchaseCount} (${totalPurchaseStocks} stocks)`}</span>
               </div>
               <div className="flex items-center justify-between text-[11px]">
-                <span className="font-bold text-slate-400 uppercase tracking-wider">Outstanding:</span>
-                <span className="font-bold text-amber-600">{loading ? "—" : fmt(totalPurchaseOutstanding)}</span>
+                <span className="font-medium text-slate-400 uppercase tracking-wider">Outstanding:</span>
+                <span className="font-medium text-amber-500">{loading ? "—" : fmt(totalPurchaseOutstanding)}</span>
               </div>
             </div>
           </div>
@@ -660,22 +660,22 @@ const AnalyticsDashboard = () => {
             <div>
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Orders</h3>
+                  <h3 className="text-[11px] font-medium uppercase tracking-wider text-slate-400">Total Orders</h3>
                   <p className="text-[11px] text-slate-400 font-medium mt-0.5">{RANGE_LABELS[activeRange]}</p>
                 </div>
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-amber-50 text-amber-600 shrink-0">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-amber-50 text-amber-500 shrink-0">
                   <ShoppingCart className="w-5 h-5" strokeWidth={2.2} />
                 </div>
               </div>
               <div className="flex items-end gap-2 mb-1">
-                <span className="text-[26px] font-black text-slate-800 tracking-tight leading-none">
+                <span className="text-[26px] font-semibold text-slate-700 tracking-tight leading-none">
                   {loading ? "—" : totalOrders.toLocaleString()}
                 </span>
               </div>
             </div>
 
             <div className="mt-4 pt-3.5 border-t border-slate-100 flex gap-2 flex-wrap">
-              <span className="text-[10.5px] font-bold px-2 py-0.5 rounded-md text-slate-500 bg-slate-100">
+              <span className="text-[10.5px] font-medium px-2 py-0.5 rounded-md text-slate-500 bg-slate-100">
                 Clean orders
               </span>
             </div>
@@ -686,22 +686,22 @@ const AnalyticsDashboard = () => {
             <div>
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Avg. Order Value</h3>
+                  <h3 className="text-[11px] font-medium uppercase tracking-wider text-slate-400">Avg. Order Value</h3>
                   <p className="text-[11px] text-slate-400 font-medium mt-0.5">Revenue / Orders</p>
                 </div>
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-purple-50 text-purple-600 shrink-0">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-purple-50 text-purple-500 shrink-0">
                   <Zap className="w-5 h-5" strokeWidth={2.2} />
                 </div>
               </div>
               <div className="flex items-end gap-2 mb-1">
-                <span className="text-[26px] font-black text-slate-800 tracking-tight leading-none">
+                <span className="text-[26px] font-semibold text-slate-700 tracking-tight leading-none">
                   {loading ? "—" : fmt(aov)}
                 </span>
               </div>
             </div>
 
             <div className="mt-4 pt-3.5 border-t border-slate-100">
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+              <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
                 Gross Margin: <span className="text-slate-700">{loading ? "—" : `${grossMargin.toFixed(1)}%`}</span>
               </p>
             </div>
@@ -710,7 +710,7 @@ const AnalyticsDashboard = () => {
 
         {/* ── ROW 2: Sales Performance ── */}
         <div className="space-y-4">
-          <h2 className="text-base font-bold text-slate-800">Sales Performance</h2>
+          <h2 className="text-base font-medium text-slate-700">Sales Performance</h2>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
             {/* Chart Area */}
             <div className="lg:col-span-2">
@@ -781,11 +781,11 @@ const AnalyticsDashboard = () => {
                   {/* Legend */}
                   <div className="flex items-center gap-5 mt-3 pt-3 border-t border-slate-100 text-xs">
                     <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-slate-400" />
                       <span className="font-semibold text-slate-600">Revenue</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
                       <span className="font-semibold text-slate-600">Profit</span>
                     </div>
                   </div>
@@ -798,25 +798,25 @@ const AnalyticsDashboard = () => {
               {/* Profitability */}
               <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-bold text-slate-800">Profitability</h3>
-                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <h3 className="text-sm font-medium text-slate-700">Profitability</h3>
+                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-500 flex items-center justify-center">
                     <TrendingUp className="w-4 h-4" />
                   </div>
                 </div>
                 <p className="text-xs text-slate-400 font-medium">Gross Margin</p>
                 <div className="flex items-baseline gap-2 mt-1 mb-3">
-                  <span className="text-2xl font-black text-slate-800">{grossMargin.toFixed(2)}%</span>
-                  <span className="text-xs font-bold text-emerald-600">Profitable</span>
+                  <span className="text-2xl font-semibold text-slate-700">{grossMargin.toFixed(2)}%</span>
+                  <span className="text-xs font-medium text-emerald-500">Profitable</span>
                 </div>
 
                 {/* Progress bar */}
                 <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden mb-2">
                   <div
-                    className="bg-emerald-500 h-full rounded-full transition-all duration-500"
+                    className="bg-emerald-400 h-full rounded-full transition-all duration-500"
                     style={{ width: `${Math.min(100, Math.max(0, grossMargin))}%` }}
                   />
                 </div>
-                <div className="flex justify-between text-[10px] font-bold text-slate-400">
+                <div className="flex justify-between text-[10px] font-medium text-slate-400">
                   <span>0%</span>
                   <span>Margin: {grossMargin.toFixed(2)}%</span>
                   <span>100%</span>
@@ -825,22 +825,22 @@ const AnalyticsDashboard = () => {
 
               {/* Quick Stats */}
               <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Quick Stats</h3>
+                <h3 className="text-xs font-medium uppercase tracking-wider text-slate-400 mb-3">Quick Stats</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-blue-50/50 border border-blue-100/60 rounded-xl p-3 text-center">
-                    <p className="text-lg font-black text-slate-800">{totalOrders}</p>
+                    <p className="text-lg font-semibold text-slate-700">{totalOrders}</p>
                     <p className="text-[11px] font-semibold text-slate-500">Orders</p>
                   </div>
                   <div className="bg-emerald-50/50 border border-emerald-100/60 rounded-xl p-3 text-center">
-                    <p className="text-lg font-black text-emerald-600">{fmt(totalProfit)}</p>
+                    <p className="text-lg font-semibold text-emerald-500">{fmt(totalProfit)}</p>
                     <p className="text-[11px] font-semibold text-slate-500">Profit</p>
                   </div>
                   <div className="bg-amber-50/50 border border-amber-100/60 rounded-xl p-3 text-center">
-                    <p className="text-lg font-black text-amber-700">{fmtShort(aov)}</p>
+                    <p className="text-lg font-semibold text-amber-600">{fmtShort(aov)}</p>
                     <p className="text-[11px] font-semibold text-slate-500">AOV</p>
                   </div>
                   <div className="bg-purple-50/50 border border-purple-100/60 rounded-xl p-3 text-center">
-                    <p className="text-lg font-black text-purple-700">{totalReturnsCount}</p>
+                    <p className="text-lg font-semibold text-purple-500">{totalReturnsCount}</p>
                     <p className="text-[11px] font-semibold text-slate-500">Returns</p>
                   </div>
                 </div>
@@ -883,7 +883,7 @@ const AnalyticsDashboard = () => {
                         <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
                         <span className="text-slate-600">{item.name}</span>
                       </div>
-                      <span className="text-slate-800 font-bold">
+                      <span className="text-slate-700 font-medium">
                         {fmt(item.value)} <span className="text-slate-400 font-normal">({item.count})</span>
                       </span>
                     </div>
@@ -899,32 +899,32 @@ const AnalyticsDashboard = () => {
               <div className="p-5 flex flex-col justify-between min-h-[340px]">
                 {topProducts.length > 0 ? (
                   <div className="space-y-3">
-                    {topProducts.map((p: any, i: number) => {
+                    {topProducts.slice(0, 5).map((p: any, i: number) => {
                       const maxQty = topProducts[0]?.total_qty || 1;
                       return (
                         <div key={p.product_id || i} className="flex items-center gap-3.5 p-2 rounded-xl hover:bg-slate-50/80 transition-colors group">
                           {/* Rank */}
-                          <span className="w-7 h-7 flex items-center justify-center bg-slate-100 rounded-lg text-xs font-bold text-slate-500 shrink-0">
+                          <span className="w-7 h-7 flex items-center justify-center bg-slate-100 rounded-lg text-xs font-medium text-slate-500 shrink-0">
                             #{i + 1}
                           </span>
                           {/* Product info */}
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs font-bold text-slate-800 truncate">{p.name}</p>
+                            <p className="text-xs font-medium text-slate-700 truncate">{p.name}</p>
                             <div className="w-full bg-slate-100 rounded-full h-1.5 mt-1.5 overflow-hidden">
                               <div
-                                className="h-full rounded-full bg-blue-500 group-hover:bg-blue-600 transition-all"
+                                className="h-full rounded-full bg-slate-400 group-hover:bg-slate-500 transition-all"
                                 style={{ width: `${Math.max(5, (p.total_qty / maxQty) * 100)}%` }}
                               />
                             </div>
                           </div>
                           {/* Stats */}
                           <div className="text-right shrink-0">
-                            <p className="text-xs font-bold text-slate-800">{fmt(p.total_revenue)}</p>
+                            <p className="text-xs font-medium text-slate-700">{fmt(p.total_revenue)}</p>
                             <div className="flex items-center gap-1 justify-end text-[11px]">
                               <Package className="w-3 h-3 text-slate-400" />
                               <span className="text-slate-500">{p.total_qty} sold</span>
                               <span className="text-slate-300">·</span>
-                              <span className="font-semibold text-emerald-600">
+                              <span className="font-semibold text-emerald-500">
                                 +{fmt(p.total_profit)}
                               </span>
                             </div>
@@ -945,21 +945,21 @@ const AnalyticsDashboard = () => {
                     <div className="mb-1 flex justify-center">
                       <BarChart2 className="w-4 h-4 text-slate-500" />
                     </div>
-                    <p className="text-xs font-bold text-slate-800">{grossMargin.toFixed(1)}%</p>
+                    <p className="text-xs font-medium text-slate-700">{grossMargin.toFixed(1)}%</p>
                     <p className="text-[10px] font-semibold text-slate-400">Gross Margin</p>
                   </div>
                   <div className="text-center p-3 bg-slate-50 rounded-xl">
                     <div className="mb-1 flex justify-center">
                       <ShoppingCart className="w-4 h-4 text-slate-500" />
                     </div>
-                    <p className="text-xs font-bold text-slate-800">{totalOrders}</p>
+                    <p className="text-xs font-medium text-slate-700">{totalOrders}</p>
                     <p className="text-[10px] font-semibold text-slate-400">Total Orders</p>
                   </div>
                   <div className="text-center p-3 bg-slate-50 rounded-xl">
                     <div className="mb-1 flex justify-center">
                       <TrendingUp className="w-4 h-4 text-emerald-500" />
                     </div>
-                    <p className="text-xs font-bold text-slate-800">{fmtShort(aov)}</p>
+                    <p className="text-xs font-medium text-slate-700">{fmtShort(aov)}</p>
                     <p className="text-[10px] font-semibold text-slate-400">AOV</p>
                   </div>
                 </div>
@@ -975,17 +975,17 @@ const AnalyticsDashboard = () => {
             <div className="p-5">
               {salesByCategory.length > 0 ? (
                 <div className="space-y-4">
-                  {salesByCategory.map((c: any) => {
+                  {salesByCategory.slice(0, 5).map((c: any) => {
                     const maxRev = salesByCategory[0]?.revenue || 1;
                     return (
                       <div key={c.category} className="group">
                         <div className="flex justify-between items-end mb-1">
-                          <p className="text-xs font-bold text-slate-700">{c.category}</p>
-                          <p className="text-xs font-bold text-slate-800">{fmt(c.revenue)}</p>
+                          <p className="text-xs font-medium text-slate-700">{c.category}</p>
+                          <p className="text-xs font-medium text-slate-700">{fmt(c.revenue)}</p>
                         </div>
                         <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
                           <div
-                            className="h-full rounded-full bg-purple-500 group-hover:bg-purple-600 transition-all"
+                            className="h-full rounded-full bg-purple-400 group-hover:bg-purple-500 transition-all"
                             style={{ width: `${Math.max(2, (c.revenue / maxRev) * 100)}%` }}
                           />
                         </div>
@@ -1011,27 +1011,27 @@ const AnalyticsDashboard = () => {
                     return (
                       <div key={s.supplier_id || i} className="flex items-center gap-3.5 p-2 rounded-xl hover:bg-slate-50/80 transition-colors group">
                         {/* Rank */}
-                        <span className="w-7 h-7 flex items-center justify-center bg-slate-100 rounded-lg text-xs font-bold text-slate-500 shrink-0">
+                        <span className="w-7 h-7 flex items-center justify-center bg-slate-100 rounded-lg text-xs font-medium text-slate-500 shrink-0">
                           #{i + 1}
                         </span>
                         {/* Supplier info */}
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-bold text-slate-800 truncate">{s.name}</p>
+                          <p className="text-xs font-medium text-slate-700 truncate">{s.name}</p>
                           <div className="w-full bg-slate-100 rounded-full h-1.5 mt-1.5 overflow-hidden">
                             <div
-                              className="h-full rounded-full bg-blue-500 group-hover:bg-blue-600 transition-all"
+                              className="h-full rounded-full bg-slate-400 group-hover:bg-slate-500 transition-all"
                               style={{ width: `${Math.max(5, (s.total_revenue / maxRev) * 100)}%` }}
                             />
                           </div>
                         </div>
                         {/* Stats */}
                         <div className="text-right shrink-0">
-                          <p className="text-xs font-bold text-slate-800">{fmt(s.total_revenue)}</p>
+                          <p className="text-xs font-medium text-slate-700">{fmt(s.total_revenue)}</p>
                           <div className="flex items-center gap-1 justify-end text-[11px]">
                             <Package className="w-3 h-3 text-slate-400" />
                             <span className="text-slate-500">{s.total_qty} items</span>
                             <span className="text-slate-300">·</span>
-                            <span className="font-semibold text-amber-600">
+                            <span className="font-semibold text-amber-500">
                               +{fmt(s.total_profit)}
                             </span>
                           </div>

@@ -55,13 +55,13 @@ const ITEM_COLORS = ["#dbeafe", "#dcfce7", "#fef3c7", "#fce7f3", "#ede9fe", "#ff
 ═══════════════════════════════════════════════════════════════ */
 const generateItems = (sale: SaleRecord, productMap: Record<string, string> = {}): SaleItem[] => {
   const calcInfos = (sale as any)?.calculation_infos || (sale as any)?.calculations || {};
-  const isExclusive = calcInfos?.include_gst === true || String(calcInfos?.gst_type || (sale as any)?.gst_infos?.type || "EXCLUSIVE").toUpperCase() === "EXCLUSIVE";
-  const gstType = isExclusive ? "EXCLUSIVE" : "INCLUSIVE";
+  // const isExclusive = calcInfos?.include_gst === true || String(calcInfos?.gst_type || (sale as any)?.gst_infos?.type || "EXCLUSIVE").toUpperCase() === "EXCLUSIVE";
+  // const gstType = isExclusive ? "EXCLUSIVE" : "INCLUSIVE";
   
   return (sale.items || []).map((item, i) => {
     const rawName = (item as any).inventory_name || (item as any).name || (item as any).product_name || (item as any).product?.name || (item as any).inventory_infos?.name || (item as any).datas?.product_name || (item as any).datas?.name || productMap[item.inventory_id || (item as any).product_id] || item.barcode || `Item ${i + 1}`;
     const productName = rawName;
-    const gstRate = parseFloat(String(item.gst || "0").replace('%', '')) || 0;
+    // const gstRate = parseFloat(String(item.gst || "0").replace('%', '')) || 0;
 
     let basePrice = Number(item.sell_price || 0);
     if (!basePrice) {
@@ -78,9 +78,7 @@ const generateItems = (sale: SaleRecord, productMap: Record<string, string> = {}
     }
 
     let finalUnitPrice = basePrice;
-    if (gstType === "EXCLUSIVE") {
-      finalUnitPrice = finalUnitPrice + (finalUnitPrice * gstRate / 100);
-    }
+    // Base price (sell_price) already includes GST from the backend, so we do not add it again.
 
     return {
       id: item.id,
@@ -660,8 +658,9 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
     [saleItems, state.returnItems, state.exchangeMap, state.serialReturnMap]);
 
   const totals = useMemo(() => {
-    const isExclusive = sale?.calculations?.include_gst === true || String(sale?.calculations?.gst_type || sale?.gst_infos?.type || "EXCLUSIVE").toUpperCase() === "EXCLUSIVE";
-    const gstType = isExclusive ? "EXCLUSIVE" : "INCLUSIVE";
+  // const isExclusive = sale?.calculations?.include_gst === true || String(sale?.calculations?.gst_type || sale?.gst_infos?.type || "EXCLUSIVE").toUpperCase() === "EXCLUSIVE";
+  // const gstType = isExclusive ? "EXCLUSIVE" : "INCLUSIVE";
+
 
     const returnValue = selectedItems.reduce((s, i) => {
       const selectedUnit = state.itemUnits[i.id] || i.entered_unit || i.unit;
@@ -675,10 +674,7 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
       const price = ep?.price ?? ep?.sell_price ?? 0;
       const exBase = price * qty;
       let exTotal = exBase;
-      const gstRate = parseFloat(String(ep?.gst || "0").replace('%', '')) || 0;
-      if (gstType === "EXCLUSIVE") {
-        exTotal += exBase * (gstRate / 100);
-      }
+      // Price already includes GST from backend, do not add it again
       return s + exTotal;
     }, 0) : 0;
 
@@ -1379,8 +1375,22 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                                               SN: {ex.serialNumbers.join(", ")}
                                             </span>
                                           )}
-                                          <span className="text-[10px] text-slate-400">@ {fmt(ex.price || ex.sell_price || 0)}</span>
                                         </div>
+                                        {(() => {
+                                          const finalPrice = ex.price || ex.sell_price || 0;
+                                          const gstRate = parseFloat(String(ex.gst || "0").replace('%', '')) || 0;
+                                          const taxable = finalPrice / (1 + (gstRate / 100));
+                                          const gstAmount = finalPrice - taxable;
+                                          return (
+                                            <div className="flex flex-wrap items-center gap-2 mt-2 text-[9px] font-mono text-slate-500 bg-slate-50 px-2.5 py-1.5 rounded w-fit border border-slate-100">
+                                              <span>Taxable: {fmt(taxable)}</span>
+                                              <span className="text-slate-300">|</span>
+                                              <span>GST: {fmt(gstAmount)}</span>
+                                              <span className="text-slate-300">|</span>
+                                              <span className="font-bold text-slate-700">Total: @ {fmt(finalPrice)}</span>
+                                            </div>
+                                          );
+                                        })()}
                                       </div>
                                       <div className="flex items-center gap-3 shrink-0">
                                         <span className="font-mono text-[12px] font-black text-slate-900">{fmt((ex.price || ex.sell_price || 0) * (ex.quantity || 1))}</span>

@@ -341,7 +341,7 @@ const SalesListPage: React.FC = () => {
       })
       .catch(() => { });
 
-    api.getData(`${ENDPOINTS.ORDERS}/${SHOP_ID}`, { limit: "500", offset: "1" }).then((res) => {
+    api.getData(`${ENDPOINTS.ORDERS}/${SHOP_ID}`, { limit: "100", offset: "1" }).then((res) => {
       const dataList = Array.isArray(res?.data) ? res.data : (res?.data?.datas ?? []);
       let onlineAmt = 0;
       let onlineCnt = 0;

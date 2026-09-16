@@ -551,7 +551,7 @@ export default function StockMovementPage() {
       })
       .catch(() => { });
 
-    stockMovAdjApi.getStockMovementsByShop(SHOP_ID, { limit: "500", offset: "1" }).then((res: any) => {
+    stockMovAdjApi.getStockMovementsByShop(SHOP_ID, { limit: "100", offset: "1" }).then((res: any) => {
       if (res && res.data) {
         const rawList = Array.isArray(res.data) ? res.data : (res.data.datas || res.data.movements || []);
         let inSum = 0;

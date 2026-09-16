@@ -901,7 +901,7 @@ const ProductInfos = () => {
   }, [searchTerm]);
 
   useEffect(() => {
-    getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}`, { shop_id: SHOP_ID, limit: "500", offset: "1" }).then((res) => {
+    getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}`, { shop_id: SHOP_ID, limit: "100", offset: "1" }).then((res) => {
       if (res) {
         const data: InventoryRecord[] = Array.isArray(res?.data)
           ? res.data

@@ -736,13 +736,13 @@ const PurchaseDetail = () => {
           badges={[
             {
               text: (po.status || "Completed").toUpperCase(),
-              variant: ((po.status || "").toLowerCase() === 'canceled' || (po.status || "").toLowerCase() === 'cancelled') ? "ps-cancelled" : (po.status || "Completed").toLowerCase() === 'draft' ? "draft" : "vendor",
-              dotColor: ((po.status || "").toLowerCase() === 'canceled' || (po.status || "").toLowerCase() === 'cancelled') ? "bg-[var(--ps-cancelled-dot)]" : "bg-[var(--mv-purchase-dot)]"
+              variant: ((po.status || "").toLowerCase() === 'canceled' || (po.status || "").toLowerCase() === 'cancelled') ? "ps-cancelled" : (po.status || "Completed").toLowerCase() === 'draft' ? "ps-draft" : "vendor",
+              dotColor: ((po.status || "").toLowerCase() === 'canceled' || (po.status || "").toLowerCase() === 'cancelled') ? "bg-[var(--ps-cancelled-dot)]" : (po.status || "").toLowerCase() === 'draft' ? "bg-[var(--ps-draft-dot)]" : "bg-[var(--mv-purchase-dot)]"
             },
             (po.status || "").toLowerCase() === 'cancelled' || (po.status || "").toLowerCase() === 'canceled' || (po.payment_status || "").toLowerCase() === 'cancelled' || (po.payment_status || "").toLowerCase() === 'canceled'
               ? { text: "Cancelled", variant: "ps-cancelled", dotColor: "bg-[var(--ps-cancelled-dot)]" }
               : (po.status || "").toLowerCase() === 'draft' || (po.payment_status || "").toLowerCase() === 'draft'
-                ? { text: "Draft", variant: "draft", dotColor: "bg-[var(--ps-draft-dot)]" }
+                ? { text: "DRAFT", variant: "ps-draft", dotColor: "bg-[var(--ps-draft-dot)]" }
                 : po.outstanding && po.outstanding > 0
                   ? (po.paid_amount === 0
                     ? { text: "Unpaid", variant: "pay-pending", dotColor: "bg-[var(--pay-pending-dot)]" }

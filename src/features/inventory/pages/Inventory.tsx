@@ -864,7 +864,7 @@ const InventoryPage = () => {
   useEffect(() => {
     getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}`, {
       active: "true",
-      limit: "500",
+      limit: "100",
       offset: "1",
       exclude_non_tracking: "true"
     }).then((res) => {

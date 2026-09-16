@@ -903,7 +903,7 @@ const PurchaseHistory = () => {
   useEffect(() => {
     purchase.getPurchasesByShop(localStorage.getItem('shop_id') || SHOP_ID, {
       view: "PURCHASE_VIEW",
-      limit: "500",
+      limit: "100",
       offset: "1"
     }).then((res) => {
       if (res) {

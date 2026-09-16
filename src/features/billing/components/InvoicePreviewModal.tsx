@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { X, Loader2, CheckCircle2, Banknote, Smartphone, Wallet, Printer } from "lucide-react";
+import { Download, X, Loader2, CheckCircle2, Banknote, Smartphone, Wallet, Printer, Plus } from "lucide-react";
 import { BillingItem } from "../types";
 import { shopApi } from "../../../services/api/shop";
 
@@ -19,6 +19,8 @@ interface InvoicePreviewModalProps {
   finalAmount: number;
   isSubmitting: boolean;
   onConfirm: (status: BillStatus) => void;
+  orderId?: string;
+  onNewBill?: () => void;
 }
 
 const formatINR = (v: number, d = 2) =>
@@ -33,7 +35,7 @@ const payMeta: Record<string, { label: string; icon: React.ReactNode }> = {
 const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
   isOpen, onClose, items, customerName, phone,
   payments, includeGst, totalAmount, gstAmount, finalAmount,
-  isSubmitting, onConfirm,
+  isSubmitting, onConfirm, orderId, onNewBill
 }) => {
   const invoiceRef = useRef<HTMLDivElement>(null);
   const filledItems = items.filter(i => !!i.name);
@@ -55,6 +57,25 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
       }).catch(console.error);
     }
   }, [isOpen]);
+
+  const handleDownload = async () => {
+    if (!invoiceRef.current) return;
+    const element = invoiceRef.current;
+    
+    try {
+      const html2pdf = (await import('html2pdf.js')).default;
+      const opt = {
+        margin:       0.3,
+        filename:     `Invoice_${orderId || 'preview'}.pdf`,
+        image:        { type: 'jpeg' as const, quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'in' as const, format: 'a4' as const, orientation: 'portrait' as const }
+      };
+      html2pdf().set(opt).from(element).save();
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+    }
+  };
 
   // Body Scroll Lock
   useEffect(() => {
@@ -141,6 +162,7 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
                 {/* Invoice Meta */}
                 <div className="text-right">
                   <p className="text-[9px] font-medium text-blue-500 mb-0.5 print:text-blue-600">Order Receipt</p>
+                  {orderId && <p className="text-[12px] font-bold text-slate-700 mb-1">#{orderId}</p>}
                   <div className="mt-2 space-y-0.5">
                     <p className="text-[10px] text-slate-400">{dateStr} · {timeStr}</p>
                     <div className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-500 bg-slate-50 border border-slate-100 rounded px-1.5 py-0.5 mt-1 print:bg-white print:border-slate-200">
@@ -255,21 +277,36 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
 
         {/* Sticky Action Footer */}
         <div className="flex items-center justify-between px-5 py-3 bg-white border-t border-slate-200/60 shrink-0 gap-2 no-print">
-          <button onClick={() => window.print()} className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-blue-200 text-[12px] font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors">
-            <Printer size={13} /> Print
-          </button>
           <div className="flex gap-2">
-            <button onClick={onClose} className="px-4 py-2 rounded-lg border border-slate-200/60 text-[12px] font-medium text-slate-500 hover:bg-slate-50 transition-colors">
-              Cancel
+            <button onClick={() => window.print()} className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-blue-200 text-[12px] font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors">
+              <Printer size={13} /> Print
             </button>
-            <button
-              onClick={() => onConfirm("COMPLETED")}
-              disabled={isSubmitting}
-              className={`flex items-center gap-1.5 px-5 py-2 rounded-lg text-[12px] font-medium text-white transition-all duration-200 ${isSubmitting ? "bg-slate-300 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600 shadow-[0_1px_3px_rgba(59,130,246,0.3)]"
-                }`}
-            >
-              {isSubmitting ? <><Loader2 size={13} className="animate-spin" /> Saving...</> : <><CheckCircle2 size={13} /> Confirm Order</>}
+            <button onClick={handleDownload} className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-slate-200 text-[12px] font-medium text-slate-600 bg-white hover:bg-slate-50 transition-colors">
+              <Download size={13} /> Download
             </button>
+          </div>
+          <div className="flex gap-2">
+            {!orderId ? (
+              <>
+                <button onClick={onClose} className="px-4 py-2 rounded-lg border border-slate-200/60 text-[12px] font-medium text-slate-500 hover:bg-slate-50 transition-colors">
+                  Cancel
+                </button>
+                <button
+                  onClick={() => onConfirm("COMPLETED")}
+                  disabled={isSubmitting}
+                  className={`flex items-center gap-1.5 px-5 py-2 rounded-lg text-[12px] font-medium text-white transition-all duration-200 ${isSubmitting ? "bg-slate-300 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600 shadow-[0_1px_3px_rgba(59,130,246,0.3)]"}`}
+                >
+                  {isSubmitting ? <><Loader2 size={13} className="animate-spin" /> Saving...</> : <><CheckCircle2 size={13} /> Confirm Order</>}
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => { if(onNewBill) onNewBill(); else onClose(); }}
+                className="flex items-center gap-1.5 px-5 py-2 rounded-lg border border-emerald-200 text-[12px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors shadow-sm"
+              >
+                <Plus size={14} strokeWidth={2.5} /> New Bill
+              </button>
+            )}
           </div>
         </div>
       </div>

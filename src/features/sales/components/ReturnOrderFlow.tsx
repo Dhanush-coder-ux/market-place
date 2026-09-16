@@ -55,13 +55,12 @@ const ITEM_COLORS = ["#dbeafe", "#dcfce7", "#fef3c7", "#fce7f3", "#ede9fe", "#ff
 ═══════════════════════════════════════════════════════════════ */
 const generateItems = (sale: SaleRecord, productMap: Record<string, string> = {}): SaleItem[] => {
   const calcInfos = (sale as any)?.calculation_infos || (sale as any)?.calculations || {};
-  // const isExclusive = calcInfos?.include_gst === true || String(calcInfos?.gst_type || (sale as any)?.gst_infos?.type || "EXCLUSIVE").toUpperCase() === "EXCLUSIVE";
-  // const gstType = isExclusive ? "EXCLUSIVE" : "INCLUSIVE";
+  const isExclusive = calcInfos?.include_gst === true || String(calcInfos?.gst_type || (sale as any)?.gst_infos?.type || "EXCLUSIVE").toUpperCase() === "EXCLUSIVE";
   
   return (sale.items || []).map((item, i) => {
     const rawName = (item as any).inventory_name || (item as any).name || (item as any).product_name || (item as any).product?.name || (item as any).inventory_infos?.name || (item as any).datas?.product_name || (item as any).datas?.name || productMap[item.inventory_id || (item as any).product_id] || item.barcode || `Item ${i + 1}`;
     const productName = rawName;
-    // const gstRate = parseFloat(String(item.gst || "0").replace('%', '')) || 0;
+    const gstRate = parseFloat(String(item.gst || "0").replace('%', '')) || 0;
 
     let basePrice = Number(item.sell_price || 0);
     if (!basePrice) {
@@ -78,7 +77,9 @@ const generateItems = (sale: SaleRecord, productMap: Record<string, string> = {}
     }
 
     let finalUnitPrice = basePrice;
-    // Base price (sell_price) already includes GST from the backend, so we do not add it again.
+    if (isExclusive && gstRate > 0) {
+      finalUnitPrice = basePrice + (basePrice * gstRate) / 100;
+    }
 
     return {
       id: item.id,

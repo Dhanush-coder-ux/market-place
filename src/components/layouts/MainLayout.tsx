@@ -47,7 +47,7 @@ const getPageHeaderInfo = (pathname: string) => {
       title: "Update Purchase Order",
     },
     "/purchase-history": {
-      title: "Purchase History",
+      title: "Purchase List",
     },
     "/production-entry/add": {
       title: "Production Entry",

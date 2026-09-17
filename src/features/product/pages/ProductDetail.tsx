@@ -561,7 +561,8 @@ const ProductDetail = () => {
                   <div className="divide-y divide-slate-50 space-y-0">
                     {[
                       { label: "PRODUCT ID", value: uiId || product.id || "—" },
-                      { label: "TYPE", value: datas.customer_type || "Product" },
+                      { label: "TYPE", value: (product as any).have_tracking !== false ? "Stock Tracked" : "Not Tracked" },
+                      { label: "CREATED", value: product.created_at ? new Date(product.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : "—" },
                       { label: "GST", value: gstValue },
                       (!isActive && (product as any).have_tracking === false) ? null : { label: "STATUS", value: isActive ? "Active" : "Inactive", isStatus: true },
                       { label: "ONLINE", value: (product as any).visible_online ? "Visible" : "Hidden", isOnline: true },

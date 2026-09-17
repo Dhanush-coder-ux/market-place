@@ -61,15 +61,15 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
   const handleDownload = async () => {
     if (!invoiceRef.current) return;
     const element = invoiceRef.current;
-    
+
     try {
       const html2pdf = (await import('html2pdf.js')).default;
       const opt = {
-        margin:       0.3,
-        filename:     `Invoice_${orderId || 'preview'}.pdf`,
-        image:        { type: 'jpeg' as const, quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true },
-        jsPDF:        { unit: 'in' as const, format: 'a4' as const, orientation: 'portrait' as const }
+        margin: 0.3,
+        filename: `Invoice_${orderId || 'preview'}.pdf`,
+        image: { type: 'jpeg' as const, quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'in' as const, format: 'a4' as const, orientation: 'portrait' as const }
       };
       html2pdf().set(opt).from(element).save();
     } catch (error) {
@@ -151,10 +151,10 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
                     </div>
                   </div>
                   <p className="text-[10px] text-slate-400 mt-2 leading-relaxed">
-                    {(shopData?.business_infos?.gst_infos?.number || shopData?.gst_infos?.number || shopData?.gst_number || shopData?.gst) && 
-                    (shopData?.business_infos?.gst_infos?.number || shopData?.gst_infos?.number || shopData?.gst_number || shopData?.gst) !== "N/A" && (
-                      <>GSTIN: {shopData?.business_infos?.gst_infos?.number || shopData?.gst_infos?.number || shopData?.gst_number || shopData?.gst}<br /></>
-                    )}
+                    {(shopData?.business_infos?.gst_infos?.number || shopData?.gst_infos?.number || shopData?.gst_number || shopData?.gst) &&
+                      (shopData?.business_infos?.gst_infos?.number || shopData?.gst_infos?.number || shopData?.gst_number || shopData?.gst) !== "N/A" && (
+                        <>GSTIN: {shopData?.business_infos?.gst_infos?.number || shopData?.gst_infos?.number || shopData?.gst_number || shopData?.gst}<br /></>
+                      )}
                     {shopData?.address?.full_address || shopData?.address_infos?.address_line_1 || (typeof shopData?.address === 'string' ? shopData.address : null) || "Address N/A"}
                   </p>
                 </div>
@@ -301,7 +301,7 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
               </>
             ) : (
               <button
-                onClick={() => { if(onNewBill) onNewBill(); else onClose(); }}
+                onClick={() => { if (onNewBill) onNewBill(); else onClose(); }}
                 className="flex items-center gap-1.5 px-5 py-2 rounded-lg border border-emerald-200 text-[12px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors shadow-sm"
               >
                 <Plus size={14} strokeWidth={2.5} /> New Bill

@@ -482,7 +482,7 @@ const ProductDetail = () => {
                           <span className="text-[11px] font-bold text-indigo-600">Available in Inventory tab</span>
                         </div>
                       ) : buyingPrice !== null ? (
-                        <p className="text-[13px] font-semibold text-slate-800 tabular-nums">{`₹${buyingPrice}`}</p>
+                        <p className="text-[13px] font-semibold text-slate-800 tabular-nums">{`₹${Number(buyingPrice).toFixed(2)}`}</p>
                       ) : (
                         <p className="text-[13px] font-semibold text-slate-400">—</p>
                       )}
@@ -501,7 +501,7 @@ const ProductDetail = () => {
                           <span className="text-[11px] font-bold text-indigo-600">Available in Inventory tab</span>
                         </div>
                       ) : sellingPrice !== null ? (
-                        <p className="text-[13px] font-semibold text-slate-800 tabular-nums">{`₹${sellingPrice}`}</p>
+                        <p className="text-[13px] font-semibold text-slate-800 tabular-nums">{`₹${Number(sellingPrice).toFixed(2)}`}</p>
                       ) : (
                         <p className="text-[13px] font-semibold text-slate-400">—</p>
                       )}

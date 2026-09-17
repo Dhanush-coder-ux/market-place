@@ -3,17 +3,13 @@ import {
   Banknote, Clock, CreditCard, User, X, Search
 } from "lucide-react";
 import { BillingItem, CustomerData } from "../types";
-import InvoicePreviewModal from "./InvoicePreviewModal";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 
 type PaymentMode = "cash" | "upi" | "credit";
-type BillStatus = "COMPLETED" | "PENDING" | "CANCELLED";
 
 interface BillingHeaderProps {
   items: BillingItem[];
   customerData: CustomerData | null;
-  customerName: string;
-  phone: string;
   onConfirmOrder: (payments: { mode: string, amount: number }[], includeGst: boolean, status: string) => void;
   isSubmitting: boolean;
   // Lifted state from parent
@@ -25,6 +21,7 @@ interface BillingHeaderProps {
   onPaymentsChange: (payments: { mode: PaymentMode; amount: number }[]) => void;
   onAddCustomerClick: () => void;
   onDetachCustomer: () => void;
+  onGenerateInvoice: () => void;
 }
 
 const formatINR = (amount: number, decimals = 2) =>
@@ -46,14 +43,14 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 
 /* ── Main Component ────────────────────────────────────────────────────────── */
 const BillingHeader: React.FC<BillingHeaderProps> = ({
-  items, customerData, customerName, phone,
+  items, customerData,
   onConfirmOrder, isSubmitting,
   includeGst, totalAmount, gstAmount, finalAmount,
   payments, onPaymentsChange,
   onAddCustomerClick,
-  onDetachCustomer
+  onDetachCustomer,
+  onGenerateInvoice
 }) => {
-  const [showInvoice, setShowInvoice] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const totalQty = useMemo(() => items.reduce((s, i) => s + (i.qty || 0), 0), [items]);
@@ -99,9 +96,8 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
   const balanceAmount = useMemo(() => round2(finalAmount - paidAmount), [finalAmount, paidAmount]);
 
   const handleGenerateInvoice = () => {
-    if (!customerData) return;
     if (totalQty === 0) return alert("Cart is empty");
-    setShowInvoice(true);
+    onGenerateInvoice();
   };
 
   const handleQuickCheckout = () => {
@@ -113,12 +109,6 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
   const handleConfirmCheckout = () => {
     onConfirmOrder(payments, includeGst, "COMPLETED");
     setShowConfirmDialog(false);
-  };
-
-  const handleConfirm = (status: BillStatus) => {
-    onConfirmOrder(payments, includeGst, status);
-    setShowInvoice(false);
-    onPaymentsChange([{ mode: "cash", amount: 0 }]);
   };
 
   // Credit-related derived values
@@ -369,9 +359,8 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
 
           <button
             onClick={handleGenerateInvoice}
-            disabled={totalQty === 0 || isSubmitting || !customerData}
-            title={!customerData ? "Select a customer to generate an invoice" : undefined}
-            className={`flex-1 h-11 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-200 ${totalQty === 0 || isSubmitting || !customerData
+            disabled={totalQty === 0 || isSubmitting}
+            className={`flex-1 h-11 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-200 ${totalQty === 0 || isSubmitting
                 ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed shadow-none"
                 : "text-blue-500 border-blue-400 border-2 hover:bg-blue-500 hover:text-white shadow-lg shadow-blue-500/20 active:scale-97"
               }`}
@@ -381,22 +370,6 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
         </div>
 
       </div>
-
-      {/* Invoice Preview Modal */}
-      <InvoicePreviewModal
-        isOpen={showInvoice}
-        onClose={() => setShowInvoice(false)}
-        items={items}
-        customerName={customerName}
-        phone={phone}
-        payments={payments}
-        includeGst={includeGst}
-        totalAmount={totalAmount}
-        gstAmount={gstAmount}
-        finalAmount={finalAmount}
-        isSubmitting={isSubmitting}
-        onConfirm={handleConfirm}
-      />
 
       {/* Generate Bill Confirmation Dialog */}
       <ConfirmDialog

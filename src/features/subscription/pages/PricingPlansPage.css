@@ -1,0 +1,211 @@
+
+.plans-billing-page {
+  --app:#F7F8FB; --card:#FFFFFF; --panel:#F5F7FA; --panel2:#EEF1F6;
+  --line:#E6EAF1; --line2:#D5DBE5;
+  --ink:#12161F; --body:#3A414F; --muted:#7A8497; --faint:#A7B0C0;
+  --brand:#343A8F; --brand-600:#2C317A; --brand-700:#232764;
+  --brand-tint:#EDEEFB; --brand-tint2:#DEE0F6; --ring:rgba(52,58,143,.22);
+  --gold:#F2A93B; --gold-lt:#FFC97A;
+  --pos:#12995A; --pos-bg:#E3F7EC; --pos-bd:#8CDCB4; --pos-tx:#0E6B41;
+  --warn:#B5761C; --warn-bg:#FEF4D8; --warn-bd:#F3CE79; --warn-tx:#8B5A15;
+  --coral:#CE5028; --coral-bg:#FCE9E1; --coral-bd:#F3BCA4; --coral-tx:#7E3318;
+  --font-d:'Space Grotesk',sans-serif; --font-b:'Inter',sans-serif; --font-m:'IBM Plex Mono',monospace;
+  --r:13px; --r-s:9px; --r-p:999px;
+  --sh:0 1px 3px rgba(19,24,34,.05),0 1px 2px rgba(19,24,34,.03);
+  --sh-m:0 4px 18px -6px rgba(19,24,34,.13),0 1px 3px rgba(19,24,34,.05);
+  --sh-l:0 20px 50px -18px rgba(19,24,34,.3);
+}
+.plans-billing-page *{box-sizing:border-box}html,.plans-billing-page{margin:0}
+.plans-billing-page{background:var(--app);color:var(--body);font-family:var(--font-b);font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.shell{max-width:1240px;margin:0 auto;padding:26px 24px 140px}
+
+.crumb{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin-bottom:14px}
+.crumb a{color:var(--muted);text-decoration:none}.crumb .cur{color:var(--brand);font-weight:600}
+.phead{margin-bottom:20px}
+.phead h1{font-family:var(--font-d);font-weight:600;font-size:25px;color:var(--ink);letter-spacing:-.03em;margin:0}
+.phead p{font-size:13.5px;color:var(--muted);margin:5px 0 0}
+
+/.plans-billing-page * ============ CURRENT PLAN ============ .plans-billing-page */
+.cur-wrap{display:grid;grid-template-columns:1.25fr 1fr;gap:15px;margin-bottom:22px}
+@media(max-width:980px){.cur-wrap{grid-template-columns:1fr}}
+
+.curplan{background:linear-gradient(135deg,#2E3480 0%,#232764 100%);border-radius:var(--r);
+  padding:22px 24px;color:#fff;position:relative;overflow:hidden;box-shadow:var(--sh-m)}
+.curplan::after{content:"";position:absolute;right:-60px;top:-60px;width:220px;height:220px;opacity:.07;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath fill='%23fff' fill-rule='evenodd' d='M50 2 Q54 22 60 35 L97 29 Q78 42 66 52 L79 96 Q62 82 50 74 Q38 82 21 96 L34 52 Q22 42 3 29 L40 35 Q46 22 50 2 Z M50 24 L59 67 L41 67 Z'/%3E%3C/svg%3E") no-repeat center/contain}
+.curplan>.plans-billing-page *{position:relative;z-index:1}
+.curplan .lbl{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.55)}
+.curplan .nm{font-family:var(--font-d);font-weight:600;font-size:27px;letter-spacing:-.025em;margin-top:6px;
+  display:flex;align-items:center;gap:11px;flex-wrap:wrap}
+.curplan .act{font-size:10px;font-weight:700;letter-spacing:.06em;background:rgba(126,226,168,.2);
+  border:1px solid rgba(126,226,168,.4);color:#9FEBC2;padding:3px 10px;border-radius:var(--r-p)}
+.curplan .amt{font-family:var(--font-m);font-size:15px;color:rgba(255,255,255,.85);margin-top:10px}
+.curplan .amt b{font-size:22px;font-weight:600;color:#fff}
+.curplan .rn{display:flex;align-items:center;gap:8px;font-size:12.5px;color:rgba(255,255,255,.7);margin-top:14px;
+  padding-top:14px;border-top:1px solid rgba(255,255,255,.15)}
+.curplan .rn svg{width:14px;height:14px;flex:none}
+.curplan .btns{display:flex;gap:9px;margin-top:16px;flex-wrap:wrap}
+.wbtn{height:36px;padding:0 15px;border-radius:var(--r-s);font-family:var(--font-b);font-weight:600;font-size:12.5px;
+  cursor:pointer;border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.1);color:#fff;transition:.14s}
+.wbtn:hover{background:rgba(255,255,255,.18)}
+.wbtn.solid{background:#fff;color:var(--brand-700);border-color:#fff}
+.wbtn.solid:hover{background:#F0F1FA}
+
+/.plans-billing-page * usage .plans-billing-page */
+.usage{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;box-shadow:var(--sh)}
+.usage .uh{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.usage .ut{font-family:var(--font-d);font-weight:600;font-size:14px;color:var(--ink)}
+.usage .us{font-size:11.5px;color:var(--faint)}
+.um+.um{margin-top:13px;padding-top:13px;border-top:1px solid var(--line)}
+.um .r1{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.um .k{font-size:12.5px;font-weight:600;color:var(--body);display:flex;align-items:center;gap:7px}
+.um .k svg{width:13px;height:13px;color:var(--faint)}
+.um .v{font-family:var(--font-m);font-size:12.5px;font-weight:600;color:var(--ink)}
+.um .v small{color:var(--faint);font-weight:400}
+.bar{height:6px;background:var(--panel2);border-radius:var(--r-p);overflow:hidden}
+.bar b{display:block;height:100%;border-radius:var(--r-p);background:var(--pos);transition:width .5s ease}
+.bar b.warn{background:var(--warn)} .bar b.full{background:var(--coral)}
+.um .note{font-size:11px;margin-top:6px;display:flex;align-items:center;gap:6px}
+.um .note.warn{color:var(--warn-tx)} .um .note.full{color:var(--coral-tx)}
+.um .note svg{width:12px;height:12px;flex:none}
+.um .note a{color:inherit;font-weight:700;text-decoration:underline;cursor:pointer}
+
+/.plans-billing-page * ============ BILLING CYCLE TOGGLE ============ .plans-billing-page */
+.cyc-row{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px;flex-wrap:wrap}
+.sec-t{font-family:var(--font-d);font-weight:600;font-size:18px;color:var(--ink);letter-spacing:-.02em}
+.sec-s{font-size:13px;color:var(--muted);margin-top:3px}
+.cyc{display:inline-flex;gap:3px;background:var(--panel);border:1px solid var(--line);padding:4px;border-radius:var(--r-s)}
+.cyc button{font-family:var(--font-b);font-weight:600;font-size:12.5px;color:var(--muted);background:none;border:none;
+  border-radius:6px;height:32px;padding:0 15px;cursor:pointer;display:flex;align-items:center;gap:8px}
+.cyc button.on{background:var(--card);color:var(--ink);box-shadow:var(--sh)}
+.cyc .save{font-size:9.5px;font-weight:800;letter-spacing:.04em;background:var(--pos-bg);color:var(--pos-tx);
+  border:1px solid var(--pos-bd);padding:2px 7px;border-radius:var(--r-p)}
+
+/.plans-billing-page * ============ PLAN CARDS ============ .plans-billing-page */
+.plans{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin-bottom:26px}
+@media(max-width:980px){.plans{grid-template-columns:1fr}}
+.pc{background:var(--card);border:1.5px solid var(--line);border-radius:var(--r);padding:22px 21px;
+  display:flex;flex-direction:column;position:relative;transition:.16s}
+.pc:hover{border-color:var(--line2);box-shadow:var(--sh-m)}
+.pc.current{border-color:var(--brand);background:#FCFCFE;box-shadow:0 0 0 3px var(--ring)}
+.pc .ribbon{position:absolute;top:-1.5px;left:-1.5px;right:-1.5px;height:30px;background:var(--brand);
+  border-radius:12px 12px 0 0;display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:800;letter-spacing:.09em;color:#fff}
+.pc.current{padding-top:44px}
+.pc .nm{font-family:var(--font-d);font-weight:600;font-size:19px;color:var(--ink);letter-spacing:-.02em}
+.pc .ds{font-size:12px;color:var(--muted);margin-top:5px;line-height:1.5;min-height:52px}
+.pc .pr{display:flex;align-items:baseline;gap:6px;margin-top:14px}
+.pc .pr .big{font-family:var(--font-d);font-weight:600;font-size:31px;color:var(--ink);letter-spacing:-.03em}
+.pc .pr .per{font-size:12px;color:var(--muted)}
+.pc .sub{font-size:11.5px;color:var(--faint);margin-top:4px;min-height:17px}
+.pc .cta{margin-top:16px}
+.btn{width:100%;height:42px;border-radius:var(--r-s);font-family:var(--font-b);font-weight:700;font-size:13.5px;
+  cursor:pointer;border:1.5px solid var(--line2);background:var(--card);color:var(--body);transition:.15s;
+  display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn:hover{border-color:#BCC4D2;box-shadow:var(--sh)}
+.btn svg{width:15px;height:15px}
+.btn.pri{background:var(--brand);border-color:var(--brand);color:#fff}
+.btn.pri:hover{background:var(--brand-600)}
+.btn.ghost{background:var(--panel);border-color:transparent;color:var(--muted);cursor:default}
+.btn.ghost:hover{box-shadow:none;border-color:transparent}
+.btn:focus-visible{outline:2.5px solid var(--ring);outline-offset:2px}
+.pc .dv{height:1px;background:var(--line);margin:18px 0 14px}
+.pc .il{font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);margin-bottom:10px}
+.pc ul{list-style:none;padding:0;margin:0}
+.pc li{font-size:12.5px;color:var(--body);margin:7px 0;line-height:1.4;display:flex;gap:9px;align-items:flex-start}
+.pc li svg{width:13px;height:13px;color:var(--pos);flex:none;margin-top:2px}
+.pc li b{font-weight:700;color:var(--ink)}
+
+/.plans-billing-page * ============ ADD-ONS ============ .plans-billing-page */
+.addons{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-bottom:26px}
+@media(max-width:1080px){.addons{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:620px){.addons{grid-template-columns:1fr}}
+.ac{background:var(--card);border:1.5px solid var(--line);border-radius:var(--r);padding:17px 18px;
+  display:flex;flex-direction:column;transition:.16s}
+.ac.on{border-color:var(--brand);background:#FCFCFE}
+.ac .ai{width:32px;height:32px;border-radius:9px;background:var(--brand-tint);color:var(--brand);
+  display:grid;place-items:center;margin-bottom:11px}
+.ac.on .ai{background:var(--brand);color:#fff}
+.ac .ai svg{width:16px;height:16px;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ac .an{font-weight:700;font-size:13.5px;color:var(--ink)}
+.ac .ap{font-family:var(--font-m);font-weight:600;font-size:15px;color:var(--brand);margin-top:5px}
+.ac .ad{font-size:11.5px;color:var(--muted);margin-top:7px;line-height:1.5;flex:1}
+.ac .owned{font-size:10.5px;font-weight:700;color:var(--pos-tx);background:var(--pos-bg);border:1px solid var(--pos-bd);
+  border-radius:var(--r-p);padding:3px 9px;display:inline-flex;align-items:center;gap:6px;margin-top:9px;align-self:flex-start}
+.ac .owned svg{width:11px;height:11px;stroke-width:3}
+.qty{display:flex;align-items:center;gap:0;margin-top:13px;border:1.5px solid var(--line2);border-radius:var(--r-s);overflow:hidden;height:38px}
+.qty button{width:38px;height:100%;border:none;background:var(--panel);color:var(--body);font-size:17px;cursor:pointer;
+  display:grid;place-items:center;transition:.14s;font-family:var(--font-b)}
+.qty button:hover:not(:disabled){background:var(--panel2);color:var(--brand)}
+.qty button:disabled{opacity:.35;cursor:not-allowed}
+.qty .n{flex:1;text-align:center;font-family:var(--font-m);font-weight:700;font-size:14px;color:var(--ink)}
+.tgl{margin-top:13px;height:38px;border-radius:var(--r-s);border:1.5px solid var(--line2);background:var(--card);
+  font-family:var(--font-b);font-weight:600;font-size:12.5px;color:var(--body);cursor:pointer;width:100%;transition:.15s}
+.tgl:hover{border-color:#BCC4D2}
+.tgl.on{background:var(--brand);border-color:var(--brand);color:#fff}
+
+/.plans-billing-page * ============ HISTORY ============ .plans-billing-page */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;margin-bottom:22px}
+.ch{padding:15px 19px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.ch .t{font-family:var(--font-d);font-weight:600;font-size:14.5px;color:var(--ink)}
+.ch .s{font-size:12px;color:var(--muted);margin-top:2px}
+.lnk{font-size:12.5px;font-weight:600;color:var(--brand);text-decoration:none;cursor:pointer}
+.lnk:hover{text-decoration:underline}
+.plans-billing-page table{width:100%;border-collapse:collapse}
+.plans-billing-page thead th{padding:10px 19px;background:var(--panel);border-bottom:1px solid var(--line);font-family:var(--font-d);
+  font-weight:600;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:left;white-space:nowrap}
+.plans-billing-page thead th.r{text-align:right}
+t.plans-billing-page td{padding:13px 19px;border-bottom:1px solid var(--line);font-size:13px}
+t.plans-billing-page tr:last-child td{border-bottom:none}
+t.plans-billing-page tr:hover{background:#FCFDFE}
+.plans-billing-page td.r{text-align:right}
+.mono{font-family:var(--font-m)}
+.chip{display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:10.5px;padding:3px 9px;
+  border-radius:var(--r-p);border:1px solid;white-space:nowrap}
+.chip .d{width:5.5px;height:5.5px;border-radius:50%}
+.chip.paid{background:var(--pos-bg);border-color:var(--pos-bd);color:var(--pos-tx)}.chip.paid .d{background:var(--pos)}
+
+/.plans-billing-page * payment method .plans-billing-page */
+.pm{display:flex;align-items:center;gap:14px;padding:16px 19px;flex-wrap:wrap}
+.pm .icon{width:44px;height:32px;border-radius:7px;background:var(--panel2);display:grid;place-items:center;flex:none}
+.pm .icon svg{width:20px;height:20px;color:var(--muted)}
+.pm .t2{font-weight:600;font-size:13.5px;color:var(--ink)}
+.pm .s2{font-size:12px;color:var(--muted);margin-top:2px}
+.pm .act2{margin-left:auto}
+.sbtn{height:36px;padding:0 14px;border-radius:var(--r-s);border:1px solid var(--line2);background:var(--card);
+  font-family:var(--font-b);font-weight:600;font-size:12.5px;color:var(--body);cursor:pointer}
+.sbtn:hover{border-color:#BCC4D2}
+
+/.plans-billing-page * ============ STICKY SUMMARY ============ .plans-billing-page */
+.bar-b{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line2);
+  box-shadow:0 -6px 24px -10px rgba(19,24,34,.18);padding:14px 24px;z-index:40;
+  transform:translateY(105%);transition:transform .28s cubic-bezier(.3,.8,.3,1)}
+.bar-b.on{transform:translateY(0)}
+.bar-in{max-width:1240px;margin:0 auto;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.bar-l{flex:1;min-width:230px}
+.bar-l .ttl{font-family:var(--font-d);font-weight:600;font-size:14.5px;color:var(--ink);display:flex;align-items:center;gap:9px}
+.bar-l .ttl .cnt{font-size:10px;font-weight:800;background:var(--brand);color:#fff;border-radius:var(--r-p);padding:2px 8px}
+.bar-l .items{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5}
+.bar-r{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.tot{text-align:right}
+.tot .lb{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.tot .vl{font-family:var(--font-d);font-weight:600;font-size:25px;color:var(--ink);letter-spacing:-.025em;line-height:1.1;margin-top:3px}
+.tot .nx{font-size:11px;color:var(--faint);margin-top:4px}
+.bar-r .go{height:46px;padding:0 26px;border-radius:var(--r-s);background:var(--brand);color:#fff;border:none;
+  font-family:var(--font-b);font-weight:700;font-size:14.5px;cursor:pointer;display:inline-flex;align-items:center;gap:9px}
+.bar-r .go:hover{background:var(--brand-600)}
+.bar-r .go svg{width:16px;height:16px}
+.bar-r .cx{height:46px;padding:0 16px;border-radius:var(--r-s);border:1px solid var(--line2);background:var(--card);
+  font-family:var(--font-b);font-weight:600;font-size:13px;color:var(--muted);cursor:pointer}
+.bar-r .cx:hover{border-color:#BCC4D2;color:var(--body)}
+
+.prorate{background:var(--brand-tint);border:1px solid var(--brand-tint2);border-radius:var(--r-s);
+  padding:9px 13px;font-size:11.5px;color:var(--brand-700);margin-top:9px;display:flex;gap:8px;align-items:flex-start;line-height:1.5}
+.prorate svg{width:13px;height:13px;flex:none;margin-top:2px}
+
+.toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%) translateY(14px);opacity:0;
+  background:var(--ink);color:#fff;font-size:13px;font-weight:500;padding:11px 18px;border-radius:var(--r-s);
+  pointer-events:none;transition:.24s;z-index:60;display:flex;align-items:center;gap:9px}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast svg{width:16px;height:16px;stroke:#7EE2A8;fill:none;stroke-width:2.6}
+@media(prefers-reduced-motion:reduce){.plans-billing-page *{transition:none!important}}

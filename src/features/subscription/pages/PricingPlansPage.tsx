@@ -12,7 +12,7 @@ export const PricingPlansPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [trialLoading, setTrialLoading] = useState(false);
   const [selectedAddons, setSelectedAddons] = useState<Record<string, number>>({});
-  
+
   // Checkout Modal
   const [checkoutPlan, setCheckoutPlan] = useState<PlanItem | null>(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -85,7 +85,7 @@ export const PricingPlansPage: React.FC = () => {
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50/50 pb-20 animate-in fade-in duration-300" style={{ fontFamily: "Inter, sans-serif" }}>
-      
+
       {/* ── Top Header Section (Matching Slide 1) ── */}
       <div className="text-center pt-10 pb-8 px-4 max-w-4xl mx-auto space-y-3">
         <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
@@ -134,11 +134,10 @@ export const PricingPlansPage: React.FC = () => {
             return (
               <div
                 key={plan.id}
-                className={`relative rounded-3xl bg-white border flex flex-col transition-all duration-200 ${
-                  isPopular
+                className={`relative rounded-3xl bg-white border flex flex-col transition-all duration-200 ${isPopular
                     ? "border-blue-500 shadow-xl shadow-blue-500/10 ring-2 ring-blue-500/20 md:-translate-y-2 z-10"
                     : "border-slate-200/80 shadow-sm hover:shadow-md hover:border-slate-300"
-                }`}
+                  }`}
               >
                 {/* Most Popular Ribbon */}
                 {isPopular && (
@@ -181,11 +180,10 @@ export const PricingPlansPage: React.FC = () => {
                       }
                     }}
                     disabled={isCurrentPlan || trialLoading}
-                    className={`w-full py-3 px-4 rounded-xl font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 mb-6 ${
-                      isPopular
+                    className={`w-full py-3 px-4 rounded-xl font-bold text-sm transition-all cursor-pointer flex items-center justify-center gap-2 mb-6 ${isPopular
                         ? "bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-600/25 active:scale-[0.99]"
                         : "bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 active:scale-[0.99]"
-                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                      } disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
                     {isCurrentPlan ? (
                       "Current Active Plan"
@@ -203,8 +201,8 @@ export const PricingPlansPage: React.FC = () => {
                       {plan.id === "digital_store"
                         ? "WHAT'S INCLUDED"
                         : plan.id === "basic"
-                        ? "EVERYTHING IN DIGITAL STORE, PLUS"
-                        : "EVERYTHING IN BASIC, PLUS"}
+                          ? "EVERYTHING IN DIGITAL STORE, PLUS"
+                          : "EVERYTHING IN BASIC, PLUS"}
                     </p>
                     <ul className="space-y-2.5 flex-1">
                       {plan.included_features.map((feature, i) => (
@@ -245,9 +243,8 @@ export const PricingPlansPage: React.FC = () => {
             return (
               <div
                 key={addon.id}
-                className={`p-5 rounded-2xl bg-white border transition-all flex flex-col justify-between ${
-                  count > 0 ? "border-blue-500 ring-2 ring-blue-500/10 shadow-md" : "border-slate-200/80 shadow-xs hover:border-slate-300"
-                }`}
+                className={`p-5 rounded-2xl bg-white border transition-all flex flex-col justify-between ${count > 0 ? "border-blue-500 ring-2 ring-blue-500/10 shadow-md" : "border-slate-200/80 shadow-xs hover:border-slate-300"
+                  }`}
               >
                 <div>
                   <div className="flex items-center justify-between mb-3">
@@ -274,9 +271,8 @@ export const PricingPlansPage: React.FC = () => {
                   {addon.id === "verified_badge" || addon.id === "sku_expansion" ? (
                     <button
                       onClick={() => handleAddonChange(addon.id, count > 0 ? -1 : 1)}
-                      className={`w-full py-1.5 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                        count > 0 ? "bg-blue-50 text-blue-700 border border-blue-200" : "bg-slate-100 hover:bg-slate-200 text-slate-700"
-                      }`}
+                      className={`w-full py-1.5 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${count > 0 ? "bg-blue-50 text-blue-700 border border-blue-200" : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                        }`}
                     >
                       {count > 0 ? "Selected (1)" : "+ Add Add-on"}
                     </button>

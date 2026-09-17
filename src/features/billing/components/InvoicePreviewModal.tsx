@@ -147,10 +147,10 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
                     </div>
                     <div>
                       <p className="text-[14px] font-semibold text-slate-800 leading-tight">{shopData?.name || shopData?.shop_name || "MarketPlace"}</p>
-                      <p className="text-[10px] text-slate-400 font-normal">{shopData?.category_infos?.name || "Retail & Distribution"}</p>
+                      <p className="text-[10px] text-slate-600 font-normal">{shopData?.category_infos?.name || "Retail & Distribution"}</p>
                     </div>
                   </div>
-                  <p className="text-[10px] text-slate-400 mt-2 leading-relaxed">
+                  <p className="text-[10px] text-slate-600 mt-2 leading-relaxed">
                     {(shopData?.business_infos?.gst_infos?.number || shopData?.gst_infos?.number || shopData?.gst_number || shopData?.gst) &&
                       (shopData?.business_infos?.gst_infos?.number || shopData?.gst_infos?.number || shopData?.gst_number || shopData?.gst) !== "N/A" && (
                         <>GSTIN: {shopData?.business_infos?.gst_infos?.number || shopData?.gst_infos?.number || shopData?.gst_number || shopData?.gst}<br /></>
@@ -164,8 +164,8 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
                   <p className="text-[9px] font-medium text-blue-500 mb-0.5 print:text-blue-600">Order Receipt</p>
                   {orderId && <p className="text-[12px] font-bold text-slate-700 mb-1">#{orderId}</p>}
                   <div className="mt-2 space-y-0.5">
-                    <p className="text-[10px] text-slate-400">{dateStr} · {timeStr}</p>
-                    <div className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-500 bg-slate-50 border border-slate-100 rounded px-1.5 py-0.5 mt-1 print:bg-white print:border-slate-200">
+                    <p className="text-[10px] text-slate-600">{dateStr} · {timeStr}</p>
+                    <div className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-600 bg-slate-50 border border-slate-100 rounded px-1.5 py-0.5 mt-1 print:bg-white print:border-slate-200">
                       {modeInfo.icon} {payments.length > 1 ? "Split Payment" : modeInfo.label}
                     </div>
                   </div>
@@ -176,9 +176,9 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
             {/* ── Customer & Status ──────────────────────── */}
             <div className="px-6 py-3 border-b border-slate-100 flex items-center justify-between">
               <div>
-                <p className="text-[9px] font-medium text-slate-400 mb-0.5">Bill To</p>
-                <p className="text-[13px] font-medium text-slate-700">{customerName || "Walk-in Customer"}</p>
-                <p className="text-[10px] text-slate-400 font-mono">{phone || "—"}</p>
+                <p className="text-[9px] font-medium text-slate-600 mb-0.5">Bill To</p>
+                <p className="text-[13px] font-medium text-slate-800">{customerName || "Walk-in Customer"}</p>
+                <p className="text-[10px] text-slate-600 font-mono">{phone || "—"}</p>
               </div>
               {/* Status Selector removed */}
             </div>
@@ -188,12 +188,12 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
               <table className="w-full">
                 <thead>
                   <tr className="bg-slate-50/60 border-b border-slate-100 print:bg-slate-50">
-                    <th className="text-left text-[9px] font-medium text-slate-400 pl-6 pr-2 py-2 w-8">#</th>
-                    <th className="text-left text-[9px] font-medium text-slate-400 px-2 py-2">Product</th>
-                    <th className="text-center text-[9px] font-medium text-slate-400 px-2 py-2 w-12">Qty</th>
-                    <th className="text-right text-[9px] font-medium text-slate-400 px-2 py-2 w-20">Price</th>
-                    {includeGst && <th className="text-right text-[9px] font-medium text-slate-400 px-2 py-2 w-14">GST</th>}
-                    <th className="text-right text-[9px] font-medium text-slate-400 pl-2 pr-6 py-2 w-24">Total</th>
+                    <th className="text-left text-[9px] font-medium text-slate-600 pl-6 pr-2 py-2 w-8">#</th>
+                    <th className="text-left text-[9px] font-medium text-slate-600 px-2 py-2">Product</th>
+                    <th className="text-center text-[9px] font-medium text-slate-600 px-2 py-2 w-12">Qty</th>
+                    <th className="text-right text-[9px] font-medium text-slate-600 px-2 py-2 w-20">Price</th>
+                    {includeGst && <th className="text-right text-[9px] font-medium text-slate-600 px-2 py-2 w-14">GST</th>}
+                    <th className="text-right text-[9px] font-medium text-slate-600 pl-2 pr-6 py-2 w-24">Total</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -201,15 +201,15 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
                     const [baseName, variantName] = item.name.split(' - ');
                     return (
                       <tr key={i} className={`border-b border-slate-50 ${i % 2 === 1 ? "bg-slate-50/30" : ""} hover:bg-blue-50/20 transition-colors print:hover:bg-transparent`}>
-                        <td className="pl-6 pr-2 py-2.5 text-[10px] text-slate-400 tabular-nums">{i + 1}</td>
+                        <td className="pl-6 pr-2 py-2.5 text-[10px] text-slate-600 tabular-nums">{i + 1}</td>
                         <td className="px-2 py-2.5">
-                          <p className="text-[12px] font-medium text-slate-700 leading-tight">{baseName}</p>
-                          {variantName && <p className="text-[10px] text-slate-400 mt-0.5">{variantName}</p>}
-                          {item.code && <p className="text-[9px] text-slate-400 font-mono mt-0.5">{item.code}</p>}
+                          <p className="text-[12px] font-medium text-slate-800 leading-tight">{baseName}</p>
+                          {variantName && <p className="text-[10px] text-slate-600 mt-0.5">{variantName}</p>}
+                          {item.code && <p className="text-[9px] text-slate-600 font-mono mt-0.5">{item.code}</p>}
                         </td>
-                        <td className="px-2 py-2.5 text-center text-[11px] text-slate-600 tabular-nums">{item.qty}</td>
-                        <td className="px-2 py-2.5 text-right text-[11px] text-slate-500 tabular-nums">₹{formatINR(item.price)}</td>
-                        {includeGst && <td className="px-2 py-2.5 text-right text-[10px] text-slate-400 tabular-nums">{item.gst ?? 18}%</td>}
+                        <td className="px-2 py-2.5 text-center text-[11px] text-slate-700 tabular-nums">{item.qty}</td>
+                        <td className="px-2 py-2.5 text-right text-[11px] text-slate-600 tabular-nums">₹{formatINR(item.price)}</td>
+                        {includeGst && <td className="px-2 py-2.5 text-right text-[10px] text-slate-600 tabular-nums">{item.gst ?? 18}%</td>}
                         <td className="pl-2 pr-6 py-2.5 text-right text-[12px] font-medium text-slate-800 tabular-nums">₹{formatINR(item.tprice)}</td>
                       </tr>
                     );
@@ -222,17 +222,17 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
             <div className="px-6 py-4 border-t border-slate-100">
               <div className="flex justify-end">
                 <div className="w-[220px] space-y-1.5">
-                  <div className="flex justify-between text-[11px] text-slate-500">
+                  <div className="flex justify-between text-[11px] text-slate-600">
                     <span>Subtotal</span>
                     <span className="tabular-nums">₹{formatINR(totalAmount)}</span>
                   </div>
                   {includeGst && (
-                    <div className="flex justify-between text-[11px] text-slate-500">
+                    <div className="flex justify-between text-[11px] text-slate-600">
                       <span>Total GST</span>
                       <span className="tabular-nums">₹{formatINR(gstAmount)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-[11px] text-slate-500">
+                  <div className="flex justify-between text-[11px] text-slate-600">
                     <span>Discount</span>
                     <span className="tabular-nums">₹0.00</span>
                   </div>
@@ -243,7 +243,7 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
                     </div>
                   </div>
                   {payments.map((p, idx) => (
-                    <div key={idx} className="flex justify-between text-[11px] text-slate-500">
+                    <div key={idx} className="flex justify-between text-[11px] text-slate-600">
                       <span>Paid ({payMeta[p.mode]?.label || p.mode})</span>
                       <span className="tabular-nums">₹{formatINR(p.amount)}</span>
                     </div>
@@ -260,31 +260,33 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
             <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/30 rounded-b-xl print:bg-white">
               <div className="flex justify-between items-end">
                 <div>
-                  <p className="text-[11px] font-medium text-slate-600 mb-0.5">Thank you for your purchase!</p>
-                  <p className="text-[9px] text-slate-400 leading-relaxed max-w-[260px]">
+                  <p className="text-[11px] font-medium text-slate-800 mb-0.5">Thank you for your purchase!</p>
+                  <p className="text-[9px] text-slate-600 leading-relaxed max-w-[260px]">
                     Goods once sold will not be taken back. All disputes subject to local jurisdiction.
                   </p>
                 </div>
                 <div className="text-right">
                   <div className="w-24 border-b border-slate-300 mb-1" />
-                  <p className="text-[9px] text-slate-400">Authorized Signatory</p>
+                  <p className="text-[9px] text-slate-600">Authorized Signatory</p>
                 </div>
               </div>
-              <p className="text-center text-[8px] text-slate-400 mt-3">This is a computer-generated receipt and does not require a physical signature.</p>
+              <p className="text-center text-[8px] text-slate-500 mt-3">This is a computer-generated receipt and does not require a physical signature.</p>
             </div>
           </div>
         </div>
 
         {/* Sticky Action Footer */}
-        <div className="flex items-center justify-between px-5 py-3 bg-white border-t border-slate-200/60 shrink-0 gap-2 no-print">
-          <div className="flex gap-2">
-            <button onClick={() => window.print()} className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-blue-200 text-[12px] font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors">
-              <Printer size={13} /> Print
-            </button>
-            <button onClick={handleDownload} className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-slate-200 text-[12px] font-medium text-slate-600 bg-white hover:bg-slate-50 transition-colors">
-              <Download size={13} /> Download
-            </button>
-          </div>
+        <div className={`flex items-center ${orderId ? 'justify-between' : 'justify-end'} px-5 py-3 bg-white border-t border-slate-200/60 shrink-0 gap-2 no-print`}>
+          {orderId && (
+            <div className="flex gap-2">
+              <button onClick={() => window.print()} className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-blue-200 text-[12px] font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors">
+                <Printer size={13} /> Print
+              </button>
+              <button onClick={handleDownload} className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-slate-200 text-[12px] font-medium text-slate-600 bg-white hover:bg-slate-50 transition-colors">
+                <Download size={13} /> Download
+              </button>
+            </div>
+          )}
           <div className="flex gap-2">
             {!orderId ? (
               <>

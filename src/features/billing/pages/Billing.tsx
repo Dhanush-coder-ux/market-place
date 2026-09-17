@@ -12,7 +12,7 @@ import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { apiClient } from "@/services/api/apiClient";
 import AttachCustomerModal from "../components/AttachCustomerModal";
 import { usePurchaseSettings } from "@/context/PurchaseContext";
-import { BillingSuccessModal } from "../components/BillingSuccessModal";
+import InvoicePreviewModal from "../components/InvoicePreviewModal";
 import { NavigationBlocker } from "@/components/common/NavigationBlocker";
 
 // ─── Billing Page ─────────────────────────────────────────────────────────────
@@ -39,6 +39,7 @@ const Billing = () => {
 
   // ── Attach/Create Customer Modal State
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [showInvoicePreview, setShowInvoicePreview] = useState(false);
 
   // ── Checkout Success Details State
   const [successDetails, setSuccessDetails] = useState<{
@@ -384,8 +385,6 @@ const Billing = () => {
             <BillingHeader
               items={items}
               customerData={customerData}
-              customerName={customerName}
-              phone={phone}
               onConfirmOrder={handleConfirmOrder}
               isSubmitting={isSubmitting || isCheckoutLoading || !cartInitialized}
               includeGst={includeGst}
@@ -396,6 +395,7 @@ const Billing = () => {
               onPaymentsChange={setPayments}
               onAddCustomerClick={() => setIsCustomerModalOpen(true)}
               onDetachCustomer={resetCustomer}
+              onGenerateInvoice={() => setShowInvoicePreview(true)}
             />
           </div>
         </div>
@@ -422,8 +422,6 @@ const Billing = () => {
           <BillingHeader
             items={items}
             customerData={customerData}
-            customerName={customerName}
-            phone={phone}
             onConfirmOrder={handleConfirmOrder}
             isSubmitting={isSubmitting || isCheckoutLoading || !cartInitialized}
             includeGst={includeGst}
@@ -434,6 +432,7 @@ const Billing = () => {
             onPaymentsChange={setPayments}
             onAddCustomerClick={() => setIsCustomerModalOpen(true)}
             onDetachCustomer={resetCustomer}
+            onGenerateInvoice={() => setShowInvoicePreview(true)}
           />
         </aside>
 
@@ -448,12 +447,31 @@ const Billing = () => {
           }}
         />
 
-        {/* Checkout Success Modal */}
-        <BillingSuccessModal
-          isOpen={!!successDetails}
-          details={successDetails}
-          onClose={() => setSuccessDetails(null)}
-          onNextBill={handleNextBill}
+        {/* Invoice Preview & Success Modal */}
+        <InvoicePreviewModal
+          isOpen={showInvoicePreview || !!successDetails}
+          onClose={() => {
+            setShowInvoicePreview(false);
+            setSuccessDetails(null);
+          }}
+          items={successDetails ? successDetails.items : items}
+          customerName={successDetails ? successDetails.customerName : customerName}
+          phone={successDetails ? successDetails.phone : phone}
+          payments={successDetails ? successDetails.payments : payments}
+          includeGst={includeGst}
+          totalAmount={successDetails ? successDetails.totalAmount : totalAmount}
+          gstAmount={successDetails ? successDetails.gstAmount : gstAmount}
+          finalAmount={successDetails ? successDetails.finalAmount : finalAmount}
+          isSubmitting={isSubmitting || isCheckoutLoading}
+          onConfirm={(status) => {
+            handleConfirmOrder(payments, includeGst, status);
+          }}
+          orderId={successDetails?.orderId}
+          onNewBill={() => {
+            handleNextBill();
+            setShowInvoicePreview(false);
+            setSuccessDetails(null);
+          }}
         />
       </div>
 

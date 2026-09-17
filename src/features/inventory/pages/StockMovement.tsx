@@ -858,7 +858,7 @@ export default function StockMovementPage() {
             iconBg="bg-rose-50"
             iconColor="text-rose-600"
             valueColor="text-rose-600 font-bold"
-            subValue="Sales, Purchase Return, Damage or Negative Adjustment"
+            subValue="Sales, Purchase Return, or Negative Adjustment"
             onClick={() => setDirectionFilter(prev => prev === "OUT" ? "ALL" : "OUT")}
             className={directionFilter === "OUT" ? "ring-2 ring-rose-500 border-rose-400 bg-rose-50/20" : "hover:border-rose-200"}
           />

@@ -422,14 +422,14 @@ export default function Employee() {
                         <div className="flex items-center justify-end gap-2 relative">
                           <button
                             onClick={() => navigate(`/employee/${empId}`)}
-                            className="text-slate-400 hover:text-blue-600 transition-colors p-1"
+                            className="text-emerald-500 hover:text-emerald-600 transition-colors p-1"
                             title="View Employee"
                           >
                             <Eye size={15} />
                           </button>
                           <button
                             onClick={() => navigate(`/employee/${empId}/edit`)}
-                            className="text-slate-400 hover:text-blue-600 transition-colors p-1"
+                            className="text-amber-400 hover:text-amber-500 transition-colors p-1"
                             title="Edit Employee"
                           >
                             <Pencil size={15} />
@@ -437,7 +437,7 @@ export default function Employee() {
                           <div className="relative">
                             <button
                               onClick={() => setActiveMenuId(activeMenuId === empId ? null : empId)}
-                              className="text-slate-400 hover:text-blue-600 transition-colors p-1"
+                              className="text-slate-800 hover:text-slate-900 transition-colors p-1"
                               title="More actions"
                             >
                               <MoreVertical size={15} />

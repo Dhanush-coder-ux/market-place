@@ -219,13 +219,23 @@ const SaleDetailPage: React.FC = () => {
   const totalPaid = paymentsDetail.reduce((sum, p) => sum + p.amount, 0);
   const outstanding = Math.max(0, (sale.total_sellprice || 0) - totalPaid);
 
+  const returnsCount = Array.isArray((sale as any)?.returns) ? (sale as any).returns.length : 0;
+  const exchangesCount = Array.isArray((sale as any)?.exchanges) ? (sale as any).exchanges.length : 0;
+  const reCount = returnsCount + exchangesCount;
+  const hasReturns = returnsCount > 0 || exchangesCount > 0 || (sale.items || []).some((i: any) => (i.returned_quantity && i.returned_quantity > 0) || i.status === "REFUNDED" || i.status === "EXCHANGED") || sale.status === "Returned" || sale.status === "RETURNED";
+
   return (
     <div className="flex-1 flex flex-col min-h-0 h-full bg-slate-50/50 font-sans text-slate-900 overflow-hidden relative">
 
       {/* Profile Header Card */}
       <div className="flex-none p-1 pb-0">
         <ProfileHeaderCard
-          name={`Order #${sale.ui_id}`}
+          name={
+            <div className="flex items-center gap-2">
+              <span>Order #{sale.ui_id}</span>
+              {hasReturns && <AntBadge variant="tx-sales-return" type="tag">Returned</AntBadge>}
+            </div>
+          }
           initials="ORD"
           subText={`Order ID: ${sale.ui_id || sale.id?.slice(0, 8).toUpperCase()}`}
           badges={[
@@ -263,7 +273,7 @@ const SaleDetailPage: React.FC = () => {
       {/* Tabs Navigation */}
       <div className="flex-none px-1 py-2">
         <div className="flex gap-2 p-1 bg-slate-100/50 w-fit rounded-lg border border-slate-200/50">
-          {["Overview", "Items", "Returns & Exchanges"].map((tab, i) => (
+          {["Overview", "Items"].map((tab, i) => (
             <button
               key={tab}
               onClick={() => setActiveTab(i)}
@@ -275,6 +285,21 @@ const SaleDetailPage: React.FC = () => {
               {tab}
             </button>
           ))}
+          <button
+            key="Returns & Exchanges"
+            onClick={() => setActiveTab(2)}
+            className={`px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all flex items-center gap-1.5 ${activeTab === 2
+                ? "bg-blue-600 text-white shadow-md shadow-blue-100"
+                : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+                }`}
+          >
+            Returns & Exchanges
+            {reCount > 0 && (
+              <span className={`flex items-center justify-center min-w-[16px] h-[16px] rounded-full text-[9px] font-black ${activeTab === 2 ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'}`}>
+                {reCount}
+              </span>
+            )}
+          </button>
         </div>
       </div>
 

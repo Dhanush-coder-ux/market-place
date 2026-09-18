@@ -132,6 +132,7 @@ const StockMovementDetail = () => {
   const getMovementLabel = (t: string) => {
     const mt = t?.toUpperCase() || "";
     if (mt.includes("PURCHASE") || mt === "DIRECT") return "Purchase";
+    if (mt.includes("EXCHANGE")) return "Sales Exchange";
     if (mt === "SALES") return "Sales";
     if (mt.includes("RETURN")) return "Return";
     if (mt === "TRANSFER") return "Transfer";

@@ -20,6 +20,7 @@ interface BillingSuccessModalProps {
   onClose: () => void;
   onNextBill: () => void;
   onPrint?: () => void;
+  autoPrint?: boolean;
 }
 
 type AnimPhase = "feeding" | "revealing" | "cutting" | "done" | "tearaway";
@@ -51,6 +52,7 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
   onClose,
   onNextBill,
   onPrint,
+  autoPrint = true,
 }) => {
   const [view, setView] = useState<ModalView>("summary");
   const [phase, setPhase] = useState<AnimPhase | null>(null);
@@ -69,39 +71,6 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
     timerRefs.current.push(id);
     return id;
   }, []);
-
-  /* Reset state when modal opens/closes */
-  useEffect(() => {
-    if (isOpen) {
-      setView("summary");
-      setPhase(null);
-      setClosing(false);
-    } else {
-      clearTimers();
-      setView("summary");
-      setPhase(null);
-      setClosing(false);
-    }
-    return clearTimers;
-  }, [isOpen, clearTimers]);
-
-  /* Body scroll lock */
-  useEffect(() => {
-    if (isOpen) document.body.classList.add("no-scroll");
-    else document.body.classList.remove("no-scroll");
-    return () => document.body.classList.remove("no-scroll");
-  }, [isOpen]);
-
-  /* Fetch shop data for receipt header */
-  useEffect(() => {
-    const shopId = localStorage.getItem("shop_id");
-    if (isOpen && shopId) {
-      shopApi.getShopById(shopId).then(res => {
-        const data = res?.data ?? res;
-        setShopData(data);
-      }).catch(console.error);
-    }
-  }, [isOpen]);
 
   /* ── Animation helpers ─────────────────────────────────────────────── */
   const isAnimating = phase === "feeding" || phase === "revealing" || phase === "cutting" || phase === "tearaway";
@@ -161,6 +130,43 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
       }
     }, 4100);
   }, [view, isAnimating, phase, onPrint, addTimer]);
+
+  /* Reset state when modal opens/closes */
+  useEffect(() => {
+    if (isOpen) {
+      setClosing(false);
+      if (autoPrint) {
+        startPrint();
+      } else {
+        setView("summary");
+        setPhase(null);
+      }
+    } else {
+      clearTimers();
+      setView("summary");
+      setPhase(null);
+      setClosing(false);
+    }
+    return clearTimers;
+  }, [isOpen, autoPrint, startPrint, clearTimers]);
+
+  /* Body scroll lock */
+  useEffect(() => {
+    if (isOpen) document.body.classList.add("no-scroll");
+    else document.body.classList.remove("no-scroll");
+    return () => document.body.classList.remove("no-scroll");
+  }, [isOpen]);
+
+  /* Fetch shop data for receipt header */
+  useEffect(() => {
+    const shopId = localStorage.getItem("shop_id");
+    if (isOpen && shopId) {
+      shopApi.getShopById(shopId).then(res => {
+        const data = res?.data ?? res;
+        setShopData(data);
+      }).catch(console.error);
+    }
+  }, [isOpen]);
 
   const handleClose = useCallback(() => {
     if (isAnimating) return;

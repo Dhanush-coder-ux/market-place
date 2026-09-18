@@ -13,6 +13,7 @@ import { apiClient } from "@/services/api/apiClient";
 import AttachCustomerModal from "../components/AttachCustomerModal";
 import { usePurchaseSettings } from "@/context/PurchaseContext";
 import InvoicePreviewModal from "../components/InvoicePreviewModal";
+import { BillingSuccessModal } from "../components/BillingSuccessModal";
 import { NavigationBlocker } from "@/components/common/NavigationBlocker";
 
 // ─── Billing Page ─────────────────────────────────────────────────────────────
@@ -163,6 +164,29 @@ const Billing = () => {
   // We add items to the cart when confirmed at checkout, not on every UI change.
   // (Items are already tracked locally in `items` state)
 
+  const handleNextBill = useCallback(async () => {
+    setItems([]);
+    setPhone("");
+    setCustomerName("");
+    setCustomerData(null);
+    setPayments([{ mode: "cash", amount: 0 }]);
+    setSuccessDetails(null);
+    setShowInvoicePreview(false);
+    sessionDoneRef.current = false;
+
+    // Start a fresh cart session for the next bill
+    try {
+      const res = await apiClient.post(`${ENDPOINTS.ORDER_CART}/init`, {});
+      const sid = res?.data?.session_id;
+      if (sid) {
+        setSessionId(sid);
+        setCartInitialized(true);
+      }
+    } catch (e) {
+      console.error("Failed to re-init cart session", e);
+    }
+  }, []);
+
   // ── Confirm Order → Order Service Cart flow
   const handleConfirmOrder = useCallback(async (paymentsArg: { mode: string, amount: number }[], _includeGst: boolean, _status: string) => {
     if (isSubmittingRef.current || isCheckoutLoading) return;
@@ -296,6 +320,8 @@ const Billing = () => {
           (typeof res?.data === "string" ? res.data : undefined) ||
           undefined;
 
+        showToast("Order confirmed successfully", "success");
+
         setSuccessDetails({
           items: [...items],
           payments: [...paymentsArg],
@@ -306,7 +332,6 @@ const Billing = () => {
           phone: phone || "",
           orderId: resolvedOrderId,
         });
-        showToast("Order confirmed successfully", "success");
       }
     } catch (err: any) {
       console.error("Order confirmation failed:", err);
@@ -315,29 +340,7 @@ const Billing = () => {
       isSubmittingRef.current = false;
       setIsCheckoutLoading(false);
     }
-  }, [items, customerData, sessionId, showToast, totalAmount, gstAmount, finalAmount, customerName, phone, includeGst, isCheckoutLoading]);
-
-  const handleNextBill = useCallback(async () => {
-    setItems([]);
-    setPhone("");
-    setCustomerName("");
-    setCustomerData(null);
-    setPayments([{ mode: "cash", amount: 0 }]);
-    setSuccessDetails(null);
-    sessionDoneRef.current = false;
-
-    // Start a fresh cart session for the next bill
-    try {
-      const res = await apiClient.post(`${ENDPOINTS.ORDER_CART}/init`, {});
-      const sid = res?.data?.session_id;
-      if (sid) {
-        setSessionId(sid);
-        setCartInitialized(true);
-      }
-    } catch (e) {
-      console.error("Failed to re-init cart session", e);
-    }
-  }, []);
+  }, [items, customerData, sessionId, showToast, totalAmount, gstAmount, finalAmount, customerName, phone, includeGst, isCheckoutLoading, showInvoicePreview, handleNextBill]);
 
   // ── Resizable Sidebar Logic
   const [sidebarWidth, setSidebarWidth] = useState(400);
@@ -447,9 +450,21 @@ const Billing = () => {
           }}
         />
 
-        {/* Invoice Preview & Success Modal */}
+        {/* Thermal Receipt & Printer Animation Modal (for Complete Bill) */}
+        <BillingSuccessModal
+          isOpen={!showInvoicePreview && !!successDetails}
+          details={successDetails}
+          autoPrint={true}
+          onClose={() => setSuccessDetails(null)}
+          onNextBill={() => {
+            setSuccessDetails(null);
+            handleNextBill();
+          }}
+        />
+
+        {/* Full A4 Invoice Preview Modal (for Complete Invoice) */}
         <InvoicePreviewModal
-          isOpen={showInvoicePreview || !!successDetails}
+          isOpen={showInvoicePreview}
           onClose={() => {
             setShowInvoicePreview(false);
             setSuccessDetails(null);

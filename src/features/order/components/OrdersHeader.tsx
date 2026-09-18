@@ -5,6 +5,7 @@ import {
   ListFilter,
   Inbox,
   CheckCircle,
+  Truck,
   PackageCheck,
   XCircle
 } from "lucide-react";
@@ -14,6 +15,7 @@ const pipelineTabs = [
   { label: "All Orders", value: "ALL", icon: ListFilter },
   { label: "Pending", value: "PENDING", icon: Inbox },
   { label: "Accepted", value: "ACCEPTED", icon: CheckCircle },
+  { label: "Out For Delivery", value: "OUT_FOR_DELIVERY", icon: Truck },
   { label: "Delivered", value: "DELIVERED", icon: PackageCheck },
   { label: "Canceled", value: "CANCELED", icon: XCircle },
 ];
@@ -67,4 +69,3 @@ const OrdersHeader: React.FC<OrdersHeaderProps> = ({
 };
 
 export default OrdersHeader;
-

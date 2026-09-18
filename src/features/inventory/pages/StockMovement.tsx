@@ -77,12 +77,7 @@ const formatStockValue = (val: number | null | undefined) => {
   return Number(n.toFixed(2)).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 };
 
-const formatStatQty = (val: any) => {
-  if (val === null || val === undefined || isNaN(Number(val))) return '0';
-  const n = Number(val);
-  if (Math.abs(n % 1) < 0.0001) return Math.round(n).toString();
-  return Number(n.toFixed(2)).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-};
+
 
 // Fixed styling helper to accommodate all MovementTypes
 
@@ -535,10 +530,12 @@ export default function StockMovementPage() {
 
   const [directionFilter, setDirectionFilter] = useState<"ALL" | "IN" | "OUT">("ALL");
   const [analyticsStats, setAnalyticsStats] = useState<any>(null);
-  const [summaryStats, setSummaryStats] = useState<{ total: number; totalIn: number; totalOut: number }>({
+  const [summaryStats, setSummaryStats] = useState<{ total: number; totalIn: number; totalOut: number; totalInCount: number; totalOutCount: number }>({
     total: 0,
     totalIn: 0,
     totalOut: 0,
+    totalInCount: 0,
+    totalOutCount: 0,
   });
 
   useEffect(() => {
@@ -556,24 +553,32 @@ export default function StockMovementPage() {
         const rawList = Array.isArray(res.data) ? res.data : (res.data.datas || res.data.movements || []);
         let inSum = 0;
         let outSum = 0;
+        let inCount = 0;
+        let outCount = 0;
         rawList.forEach((m: any) => {
           const items = m.items || m.productsList || [];
+          let hasIn = false;
+          let hasOut = false;
           if (items.length > 0) {
             items.forEach((p: any) => {
               const q = Number(p.qty) || 0;
-              if (q > 0) inSum += q;
-              else if (q < 0) outSum += Math.abs(q);
+              if (q > 0) { inSum += q; hasIn = true; }
+              else if (q < 0) { outSum += Math.abs(q); hasOut = true; }
             });
           } else {
             const q = Number(m.qty) || 0;
-            if (q > 0) inSum += q;
-            else if (q < 0) outSum += Math.abs(q);
+            if (q > 0) { inSum += q; hasIn = true; }
+            else if (q < 0) { outSum += Math.abs(q); hasOut = true; }
           }
+          if (hasIn) inCount++;
+          if (hasOut) outCount++;
         });
         setSummaryStats({
           total: rawList.length,
           totalIn: Number(inSum.toFixed(2)),
-          totalOut: Number(outSum.toFixed(2))
+          totalOut: Number(outSum.toFixed(2)),
+          totalInCount: inCount,
+          totalOutCount: outCount,
         });
       }
     }).catch(() => {});
@@ -842,7 +847,7 @@ export default function StockMovementPage() {
           />
           <StatCard
             label="Stock In"
-            value={`+${formatStatQty(analyticsStats?.overview?.stock_adjustment?.total_stockmovadj_increments ?? summaryStats.totalIn)}`}
+            value={(analyticsStats?.overview?.stock_adjustment?.total_stockmovadj_increments_count ?? summaryStats.totalInCount ?? 0).toString()}
             icon={TrendingUp}
             iconBg="bg-emerald-50"
             iconColor="text-emerald-600"
@@ -853,7 +858,7 @@ export default function StockMovementPage() {
           />
           <StatCard
             label="Stock Out"
-            value={`-${formatStatQty(analyticsStats?.overview?.stock_adjustment?.total_stockmovadj_decrements ?? summaryStats.totalOut)}`}
+            value={(analyticsStats?.overview?.stock_adjustment?.total_stockmovadj_decrements_count ?? summaryStats.totalOutCount ?? 0).toString()}
             icon={TrendingDown}
             iconBg="bg-rose-50"
             iconColor="text-rose-600"

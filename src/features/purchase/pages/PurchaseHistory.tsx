@@ -1063,7 +1063,6 @@ const PurchaseHistory = () => {
     
     if (filters.activeKpi === "Outstanding Payments") {
       params.exclude_non_outstanding = true;
-      params.exclude_return = true;
     }
     if (filters.activeKpi === "Purchase Returns") {
       params.exclude_non_return = true;

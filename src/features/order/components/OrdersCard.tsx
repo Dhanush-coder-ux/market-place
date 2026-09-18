@@ -14,6 +14,7 @@ const statusConfig: Record<string, string> = {
   REFUNDED: "ps-cancelled",
   EXCHANGED: "tx-adjustment",
   DELIVERED: "ps-completed",
+  OUT_FOR_DELIVERY: "tx-adjustment",
 };
 
 interface OrdersCardProps {
@@ -89,8 +90,9 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
               options={[
                 { label: "Pending", value: "PENDING" },
                 { label: "Accepted", value: "ACCEPTED" },
-                { label: "Canceled", value: "CANCELED" },
+                { label: "Out For Delivery", value: "OUT_FOR_DELIVERY" },
                 { label: "Delivered", value: "DELIVERED" },
+                { label: "Canceled", value: "CANCELED" },
               ]}
               value={order.status}
               onValueChange={(val) => onStatusChange?.(val)}
@@ -168,8 +170,9 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
             options={[
               { label: "Pending", value: "PENDING" },
               { label: "Accepted", value: "ACCEPTED" },
-              { label: "Canceled", value: "CANCELED" },
+              { label: "Out For Delivery", value: "OUT_FOR_DELIVERY" },
               { label: "Delivered", value: "DELIVERED" },
+              { label: "Canceled", value: "CANCELED" },
             ]}
             value={order.status}
             onValueChange={(val) => onStatusChange?.(val)}

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import {
-  Package, LayoutGrid, List, Inbox, PackageCheck, X, CheckCircle
+  Package, LayoutGrid, List, Inbox, PackageCheck, X, CheckCircle, Truck
 } from "lucide-react";
 import OrdersHeader from "../components/OrdersHeader";
 import OrdersCard from "../components/OrdersCard";
@@ -190,6 +190,7 @@ const Order = () => {
   const totalOrders = onlineOrders.length;
   const pending = onlineOrders.filter((o) => (o.status || "").toUpperCase() === "PENDING").length;
   const accepted = onlineOrders.filter((o) => (o.status || "").toUpperCase() === "ACCEPTED").length;
+  const outForDelivery = onlineOrders.filter((o) => (o.status || "").toUpperCase() === "OUT_FOR_DELIVERY").length;
   const delivered = onlineOrders.filter((o) => (o.status || "").toUpperCase() === "DELIVERED").length;
 
   return (
@@ -201,6 +202,7 @@ const Order = () => {
             <StatCard label="Total Orders" value={totalOrders} icon={Package} iconBg="bg-slate-100" iconColor="text-slate-600" />
             <StatCard label="Pending" value={pending} icon={Inbox} iconBg="bg-amber-50" iconColor="text-amber-600" />
             <StatCard label="Accepted" value={accepted} icon={CheckCircle} iconBg="bg-blue-50" iconColor="text-blue-600" />
+            <StatCard label="Out For Delivery" value={outForDelivery} icon={Truck} iconBg="bg-purple-50" iconColor="text-purple-600" />
             <StatCard label="Delivered" value={delivered} icon={PackageCheck} iconBg="bg-emerald-50" iconColor="text-emerald-600" />
           </div>
         </div>

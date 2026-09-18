@@ -41,8 +41,8 @@ export function TypeBadge({ type, labelOverride, icon: Icon }: { type: string, l
   else if (t.includes("PURCHASE_CANCEL") || t.includes("PURCHASE CANCEL")) { variant = "tx-purchase-return"; label = "Purchase Cancel"; }
   else if (t.includes("ONLINE_SALES_RETURN") || t.includes("ONLINE SALES RETURN") || t.includes("ONLINE_SALE_RETURN") || t.includes("ONLINE SALE RETURN")) { variant = "tx-sales-return"; label = "Online Return"; }
   else if (t.includes("SALES_RETURN") || t.includes("SALE_RETURN") || t.includes("SALES RETURN") || t.includes("SALE RETURN")) { variant = "tx-sales-return"; label = "Sales Return"; }
-  else if (t.includes("ONLINE_SALES_EXCHANGE") || t.includes("ONLINE SALES EXCHANGE") || t.includes("ONLINE_EXCHANGE") || t.includes("ONLINE EXCHANGE")) { variant = "tx-sales"; label = "Online Exchange"; }
-  else if (t.includes("EXCHANGE")) { variant = "tx-sales"; label = "Exchange"; }
+  else if (t.includes("ONLINE_SALES_EXCHANGE") || t.includes("ONLINE SALES EXCHANGE") || t.includes("ONLINE_EXCHANGE") || t.includes("ONLINE EXCHANGE")) { variant = "tx-sales"; label = "Online Sales Exchange"; }
+  else if (t.includes("EXCHANGE")) { variant = "tx-sales"; label = "Sales Exchange"; }
   else if (t.includes("ONLINE_SALES") || t.includes("ONLINE SALES") || t.includes("ONLINE_SALE") || t.includes("ONLINE SALE") || t === "ONLINE") { variant = "tx-sales"; label = "Online Sales"; }
   else if (t.includes("PURCHASE_UPDATE") || t.includes("PURCHASE UPDATE")) { variant = "tx-purchase"; label = "Purchase Update"; }
   else if (t.includes("PO_PURCHASE") || t.includes("STOCK_UPDATE") || t.includes("PO PURCHASE") || t.includes("STOCK UPDATE")) { variant = "tx-purchase"; label = "PO Purchase"; }

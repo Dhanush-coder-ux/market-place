@@ -721,10 +721,14 @@ export default function CustomerDetail() {
                               </td></tr>
                             ) : (
                               filteredClearingHistory.map((h, i) => {
-                                const addInfos = h.additional_infos || {};
-                                const clearedAmount = addInfos.cleared_amount ?? addInfos.paid_amount ?? 0;
+                                let addInfos = h.additional_infos || {};
+                                if (typeof addInfos === 'string') {
+                                  try { addInfos = JSON.parse(addInfos); } catch (e) { addInfos = {}; }
+                                }
                                 const outBefore = addInfos.outstanding_before ?? h.cleared_infos?.outstanding_before ?? 0;
                                 const outAfter = addInfos.outstanding_after ?? h.cleared_infos?.outstanding_after ?? 0;
+                                const defaultClearedAmount = outBefore > outAfter ? (outBefore - outAfter) : 0;
+                                const clearedAmount = addInfos.cleared_amount ?? addInfos.paid_amount ?? defaultClearedAmount;
                                 const paymentInfos = h.payment_infos || [];
                                 const invoiceStr = addInfos.invoice_no || h.invoice_no || "";
 

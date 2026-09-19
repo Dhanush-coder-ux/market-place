@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import {
   ArrowLeft, Package, User,
-  RotateCcw, Calendar, Clock,
+  RotateCcw, Calendar,
   AlertCircle, Smartphone,
   Database,
   Search,
@@ -20,6 +20,47 @@ import SkeletonLoader from "@/components/common/SkeletonLoader";
 
 /* ── helpers ── */
 const fmt = (n?: number) => `₹${(n || 0).toLocaleString("en-IN")}`;
+
+function parseSaleDateTime(dateVal?: any): Date {
+  if (!dateVal) return new Date();
+  if (dateVal instanceof Date) return dateVal;
+  let str = String(dateVal).trim().replace(" ", "T");
+  if (str.includes("T") && !str.endsWith("Z") && !str.includes("+") && !/[0-9]-[0-9]{2}:[0-9]{2}$/.test(str)) {
+    const utcDate = new Date(str + "Z");
+    if (!isNaN(utcDate.getTime())) return utcDate;
+  }
+  const parsed = new Date(str.includes("T") ? str : str + "T00:00:00");
+  return isNaN(parsed.getTime()) ? new Date() : parsed;
+}
+
+function fmtShortDate(dateVal?: any) {
+  if (!dateVal) return "—";
+  const d = parseSaleDateTime(dateVal);
+  return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function fmtDate(dateVal?: any) {
+  if (!dateVal) return "N/A";
+  const d = parseSaleDateTime(dateVal);
+  return d.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
+}
+
+function fmtTime(dateVal?: any) {
+  if (!dateVal) return "";
+  const d = parseSaleDateTime(dateVal);
+  return d.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true });
+}
+
+const formatBatchDate = (dateStr?: string) => {
+  if (!dateStr) return "";
+  const d = parseSaleDateTime(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  return d.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
 
 const formatStockValue = (val: number | null | undefined) => {
   if (val === null || val === undefined || isNaN(Number(val))) return '—';
@@ -202,8 +243,9 @@ const SaleDetailPage: React.FC = () => {
   const canReturn = sale.status === "Completed" && sale.origin !== "Sales Return";
   const customerName = (sale as any).additional_infos?.customer_name || (sale as any).datas?.customer_name || sale.customer?.customer_name || customerMap[sale.customer_id] || "Walk-in Customer";
   const customerMobile = (sale as any).additional_infos?.customer_phone || sale.customer?.customer_mobile_number || "";
-  const dateStr = sale.created_at?.split("T")[0] || "N/A";
-  const timeStr = sale.created_at?.includes("T") ? sale.created_at.split("T")[1]?.slice(0, 5) || "" : "";
+  const saleDateVal = sale.created_at || (sale as any).date || (sale as any).order_date;
+  const dateStr = saleDateVal ? fmtDate(saleDateVal) : "N/A";
+  const timeStr = saleDateVal ? fmtTime(saleDateVal) : "";
   const refunded = items.filter(i => i.status === "REFUNDED").length;
   const exchanged = items.filter(i => i.status === "EXCHANGED").length;
 
@@ -243,7 +285,7 @@ const SaleDetailPage: React.FC = () => {
             { text: sale.origin, variant: "primary" }
           ]}
           infoItems={[
-            { icon: Calendar, text: `${dateStr} ${timeStr && `at ${timeStr}`}` },
+            { icon: Calendar, text: timeStr ? `${dateStr} at ${timeStr}` : dateStr },
             { icon: User, text: customerName }
           ]}
           actions={
@@ -318,8 +360,7 @@ const SaleDetailPage: React.FC = () => {
                       <DetailItem icon={User} label="Customer Name" value={customerName} />
                       <DetailItem icon={Database} label="Order ID" value={String(sale.ui_id || "")} />
                       {customerMobile && <DetailItem icon={Smartphone} label="Customer Mobile" value={customerMobile} />}
-                      <DetailItem icon={Calendar} label="Order Date" value={dateStr} />
-                      <DetailItem icon={Clock} label="Order Time" value={timeStr || "—"} />
+                      <DetailItem icon={Calendar} label="Date & Time" value={timeStr ? `${dateStr} at ${timeStr}` : dateStr} />
                       <DetailItem icon={Search} label="Origin" value={sale.origin} />
                     </div>
                   </SectionCard>
@@ -476,8 +517,8 @@ const SaleDetailPage: React.FC = () => {
                                       </div>
                                       {(item.mfgDate || item.expDate) && (
                                         <div className="flex gap-3 text-[9px] text-slate-400 mt-1 font-medium">
-                                          {item.mfgDate && <span>MFG: {item.mfgDate}</span>}
-                                          {item.expDate && <span>EXP: {item.expDate}</span>}
+                                          {item.mfgDate && <span>MFG: {formatBatchDate(item.mfgDate)}</span>}
+                                          {item.expDate && <span>EXP: {formatBatchDate(item.expDate)}</span>}
                                         </div>
                                       )}
                                     </div>
@@ -647,8 +688,8 @@ const SaleDetailPage: React.FC = () => {
                                           </div>
                                           {(item.mfgDate || item.expDate) && (
                                             <div className="flex gap-3 text-[9px] text-slate-400 mt-1 font-medium">
-                                              {item.mfgDate && <span>MFG: {item.mfgDate}</span>}
-                                              {item.expDate && <span>EXP: {item.expDate}</span>}
+                                              {item.mfgDate && <span>MFG: {formatBatchDate(item.mfgDate)}</span>}
+                                              {item.expDate && <span>EXP: {formatBatchDate(item.expDate)}</span>}
                                             </div>
                                           )}
                                         </div>
@@ -727,7 +768,7 @@ const SaleDetailPage: React.FC = () => {
                     const replacementItems = exch.replaced_items || [];
 
                     return (
-                      <SectionCard key={exch.id || eIdx} title={`Exchange Request #${exch.ui_id || exch.id?.slice(0, 8).toUpperCase()}`} className="p-0 overflow-hidden border-blue-200 shadow-sm">
+                      <SectionCard key={exch.id || eIdx} title="Exchange Details" className="p-0 overflow-hidden border-blue-200 shadow-sm">
                         {/* Header Banner */}
                         <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50/50 border-b border-blue-100 flex flex-wrap justify-between items-center text-xs gap-3">
                           <div className="flex items-center gap-2">
@@ -754,6 +795,7 @@ const SaleDetailPage: React.FC = () => {
                                 <tr className="bg-rose-50/40 border-b border-rose-100 text-rose-900">
                                   <th className="px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.12em]">Product</th>
                                   <th className="px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.12em] text-center">Returned Qty</th>
+                                  <th className="px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.12em] text-center">Date & Time</th>
                                   <th className="px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.12em] text-right">Value</th>
                                   <th className="px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.12em] text-right">Reason</th>
                                 </tr>
@@ -773,6 +815,19 @@ const SaleDetailPage: React.FC = () => {
                                       <td className="px-4 py-3 text-center">
                                         <span className="text-xs font-black text-rose-600">{rItem.entered_qty ?? rItem.quantity}</span>
                                         <span className="text-[9px] font-black text-rose-400 uppercase block">{rItem.entered_unit || rItem.unit_infos?.name || ""}</span>
+                                      </td>
+                                      <td className="px-4 py-3 text-center whitespace-nowrap">
+                                        {(() => {
+                                          const exchItemDateVal = rItem.created_at || exch.created_at || exch.date || (exch as any).createdAt || sale.updated_at || sale.created_at;
+                                          const exchItemDate = fmtShortDate(exchItemDateVal);
+                                          const exchItemTime = fmtTime(exchItemDateVal);
+                                          return (
+                                            <div>
+                                              <span className="text-xs font-bold text-slate-700 block">{exchItemDate}</span>
+                                              {exchItemTime && <span className="text-[10px] font-semibold text-slate-400 block">{exchItemTime}</span>}
+                                            </div>
+                                          );
+                                        })()}
                                       </td>
                                       <td className="px-4 py-3 text-right">
                                         <span className="text-sm font-black text-slate-850 tabular-nums">{fmt(rItem.exchange_amount || 0)}</span>
@@ -799,6 +854,7 @@ const SaleDetailPage: React.FC = () => {
                                 <tr className="bg-emerald-50/50 border-b border-emerald-100 text-emerald-900">
                                   <th className="px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.12em]">Replacement Item</th>
                                   <th className="px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.12em] text-center">Qty Given</th>
+                                  <th className="px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.12em] text-center">Date & Time</th>
                                   <th className="px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.12em] text-right">Unit Price</th>
                                   <th className="px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.12em] text-right">Total</th>
                                 </tr>
@@ -827,7 +883,26 @@ const SaleDetailPage: React.FC = () => {
                                       </td>
                                       <td className="px-4 py-3 text-center">
                                         <span className="text-xs font-black text-emerald-700">{repItem.entered_qty ?? repItem.quantity}</span>
-                                        <span className="text-[9px] font-black text-emerald-500 uppercase block">{repItem.entered_unit || repItem.unit_infos?.name || repItem.unit || ""}</span>
+                                        {(() => {
+                                          const repUnit = repItem.entered_unit || repItem.unit_infos?.name || repItem.unit || repItem.unit_name || (() => {
+                                            const matched = (sale.items || []).find((si: any) => si.product_id === repItem.product_id);
+                                            return (matched as any)?.unit_infos?.name || (matched as any)?.entered_unit || matched?.unit || "";
+                                          })();
+                                          return repUnit ? <span className="text-[9px] font-black text-emerald-500 uppercase block">{repUnit}</span> : null;
+                                        })()}
+                                      </td>
+                                      <td className="px-4 py-3 text-center whitespace-nowrap">
+                                        {(() => {
+                                          const repItemDateVal = repItem.created_at || exch.created_at || exch.date || (exch as any).createdAt || sale.updated_at || sale.created_at;
+                                          const repItemDate = fmtShortDate(repItemDateVal);
+                                          const repItemTime = fmtTime(repItemDateVal);
+                                          return (
+                                            <div>
+                                              <span className="text-xs font-bold text-slate-700 block">{repItemDate}</span>
+                                              {repItemTime && <span className="text-[10px] font-semibold text-slate-400 block">{repItemTime}</span>}
+                                            </div>
+                                          );
+                                        })()}
                                       </td>
                                       <td className="px-4 py-3 text-right">
                                         <span className="text-xs font-bold text-slate-500 tabular-nums">{fmt(repItem.sell_price || 0)}</span>
@@ -852,7 +927,7 @@ const SaleDetailPage: React.FC = () => {
               {Array.isArray(sale.returns) && sale.returns.length > 0 && (
                 <div className="space-y-4">
                   {sale.returns.map((ret: any, rIdx: number) => (
-                    <SectionCard key={ret.id || rIdx} title={`Return Request #${ret.id?.slice(0, 8).toUpperCase()}`} className="p-0 overflow-hidden border-rose-100">
+                    <SectionCard key={ret.id || rIdx} title="Return Details" className="p-0 overflow-hidden border-rose-100">
                       <div className="p-4 bg-rose-50/50 border-b border-rose-100 flex justify-between items-center text-xs">
                         <span className="font-bold text-rose-700">Refund Status: {ret.status}</span>
                         <div className="flex gap-4">
@@ -866,6 +941,7 @@ const SaleDetailPage: React.FC = () => {
                             <tr className="bg-slate-50/50 border-b border-slate-100">
                               <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Returned Product</th>
                               <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center">Returned Qty</th>
+                              <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center">Date & Time</th>
                               <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Refund Amount</th>
                               <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Reason</th>
                             </tr>
@@ -926,6 +1002,19 @@ const SaleDetailPage: React.FC = () => {
                                       <span className="text-xs font-black text-rose-600">{displayQty}</span>
                                       {displayUnit && <span className="text-[9px] font-black text-rose-400 uppercase mt-0.5">{displayUnit}</span>}
                                     </div>
+                                  </td>
+                                  <td className="px-6 py-4 text-center whitespace-nowrap">
+                                    {(() => {
+                                      const retItemDateVal = retItem.created_at || ret.created_at || ret.date || (ret as any).createdAt || sale.updated_at || sale.created_at;
+                                      const retItemDate = fmtShortDate(retItemDateVal);
+                                      const retItemTime = fmtTime(retItemDateVal);
+                                      return (
+                                        <div>
+                                          <span className="text-xs font-bold text-slate-700 block">{retItemDate}</span>
+                                          {retItemTime && <span className="text-[10px] font-semibold text-slate-400 block">{retItemTime}</span>}
+                                        </div>
+                                      );
+                                    })()}
                                   </td>
                                   <td className="px-6 py-4 text-right">
                                     <span className="text-sm font-black text-slate-850 tabular-nums">{fmt(retItem.refund_amount)}</span>

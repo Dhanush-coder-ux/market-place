@@ -1,4 +1,9 @@
-const BASE_URL = import.meta.env.VITE_GATEWAY_URL || "http://localhost:8000";
+import {
+  getGatewayBaseUrl,
+  ensureFreshToken,
+  refreshTokens,
+  clearAuthAndRedirect,
+} from "./tokenManager";
 
 interface RequestOptions {
   method: string;
@@ -92,140 +97,88 @@ const parseError = async (res: Response): Promise<string> => {
   }
 };
 
-const handleLogout = () => {
-  if (window.location.pathname !== '/login') {
-    localStorage.removeItem("auth_token");
-    localStorage.removeItem("refresh_token");
-    localStorage.removeItem("shop_id");
-    localStorage.removeItem("user_id");
-    localStorage.removeItem("session_id");
-    localStorage.removeItem("user_email");
-    localStorage.removeItem("user_name");
-    window.location.href = "/login";
-  }
-};
-
-let isRefreshing = false;
-let failedQueue: Array<(success: boolean) => void> = [];
-
-async function handleTokenRefresh(): Promise<boolean> {
-  if (isRefreshing) {
-    return new Promise((resolve) => {
-      failedQueue.push((success: boolean) => resolve(success));
-    });
+const buildUrl = (endpoint: string, params?: Record<string, string>): string => {
+  const gatewayUrl = getGatewayBaseUrl();
+  let cleanEndpoint = endpoint;
+  if (cleanEndpoint.startsWith("/api/")) {
+    cleanEndpoint = cleanEndpoint.slice(4);
+  } else if (!cleanEndpoint.startsWith("/")) {
+    cleanEndpoint = "/" + cleanEndpoint;
   }
 
-  isRefreshing = true;
-  const refreshToken = localStorage.getItem("refresh_token");
-  if (!refreshToken) {
-    isRefreshing = false;
-    failedQueue.forEach(cb => cb(false));
-    failedQueue = [];
-    return false;
-  }
-
-  try {
-    let tokenVersion = "1";
-    try {
-      const p = JSON.parse(atob(refreshToken.split(".")[1]));
-      if (p.version) tokenVersion = p.version;
-    } catch { /* ignore */ }
-
-    const refreshRes = await fetch(`${BASE_URL}/auth/refresh`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refresh_token: refreshToken, version: tokenVersion })
-    });
-
-    if (refreshRes.ok) {
-      const refreshData = await refreshRes.json();
-      if (refreshData.access_token) {
-        localStorage.setItem("auth_token", refreshData.access_token);
-      }
-      if (refreshData.refresh_token) {
-        localStorage.setItem("refresh_token", refreshData.refresh_token);
-      }
-      
-      isRefreshing = false;
-      failedQueue.forEach(cb => cb(true));
-      failedQueue = [];
-      return true;
-    } else {
-      isRefreshing = false;
-      failedQueue.forEach(cb => cb(false));
-      failedQueue = [];
-      return false;
-    }
-  } catch (err) {
-    console.error("Token refresh failed:", err);
-    isRefreshing = false;
-    failedQueue.forEach(cb => cb(false));
-    failedQueue = [];
-    return false;
-  }
-}
-
-async function request(options: RequestOptions): Promise<any> {
-  const { method, endpoint, body, params } = options;
-
-  let url = endpoint.startsWith("http") ? endpoint : `${BASE_URL}${endpoint}`;
+  let url = endpoint.startsWith("http") ? endpoint : `${gatewayUrl}${cleanEndpoint}`;
   if (params && Object.keys(params).length > 0) {
     url += (url.includes("?") ? "&" : "?") + new URLSearchParams(params).toString();
   }
+  return url;
+};
 
-  const getHeaders = () => {
-    const token = localStorage.getItem("auth_token");
-    let shopId = localStorage.getItem("shop_id");
-    let userId = localStorage.getItem("user_id");
-    const sessionId = localStorage.getItem("session_id");
+const getHeaders = (customToken?: string | null): Record<string, string> => {
+  const token = customToken !== undefined ? customToken : localStorage.getItem("auth_token");
+  let shopId = localStorage.getItem("shop_id");
+  let userId = localStorage.getItem("user_id");
+  const sessionId = localStorage.getItem("session_id");
 
-    if (token && (!shopId || !userId)) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        if (payload.user_id && !userId) {
-          userId = payload.user_id;
-          if (userId) localStorage.setItem("user_id", userId);
-        }
-        if (payload.shop_id && !shopId) {
-          shopId = payload.shop_id;
-          if (shopId) localStorage.setItem("shop_id", shopId);
-        }
-      } catch (e) {
-        // ignore
+  if (token && (!shopId || !userId)) {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      if (payload.user_id && !userId) {
+        userId = payload.user_id;
+        if (userId) localStorage.setItem("user_id", userId);
       }
-    }
-
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json"
-    };
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        const userInfos = {
-          user_id: payload.user_id || payload.sub || userId,
-          id: payload.user_id || payload.sub || userId,
-          name: payload.name || payload.entity_name || localStorage.getItem("user_name") || "",
-          email: payload.email || localStorage.getItem("user_email") || "",
-          role: payload.role || payload.entity_type || "User"
-        };
-        headers["x-user-infos"] = JSON.stringify(userInfos);
-      } catch (e) {
-        // ignore
+      if (payload.shop_id && !shopId) {
+        shopId = payload.shop_id;
+        if (shopId) localStorage.setItem("shop_id", shopId);
       }
+    } catch {
+      // ignore
     }
-    if (shopId) {
-      headers["x-shop-id"] = shopId;
-    }
-    if (userId) {
-      headers["x-user-id"] = userId;
-    }
-    if (sessionId) {
-      headers["x-session-id"] = sessionId;
-    }
+  }
 
-    return headers;
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json"
   };
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const userInfos = {
+        user_id: payload.user_id || payload.sub || userId,
+        id: payload.user_id || payload.sub || userId,
+        name: payload.name || payload.entity_name || localStorage.getItem("user_name") || "",
+        email: payload.email || localStorage.getItem("user_email") || "",
+        role: payload.role || payload.entity_type || "User"
+      };
+      headers["x-user-infos"] = JSON.stringify(userInfos);
+    } catch {
+      // ignore
+    }
+  }
+
+  if (shopId) {
+    headers["x-shop-id"] = shopId;
+  }
+  if (userId) {
+    headers["x-user-id"] = userId;
+  }
+  if (sessionId) {
+    headers["x-session-id"] = sessionId;
+  }
+
+  return headers;
+};
+
+async function request(options: RequestOptions): Promise<any> {
+  const { method, endpoint, body, params } = options;
+  const isAuthRoute = endpoint.includes("/auth/");
+
+  // Proactive token refresh if expired
+  if (!isAuthRoute) {
+    await ensureFreshToken();
+  }
+
+  const url = buildUrl(endpoint, params);
 
   let res = await fetch(url, {
     method,
@@ -233,21 +186,17 @@ async function request(options: RequestOptions): Promise<any> {
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
   });
 
-  if (res.status === 401) {
-    if (!endpoint.includes("/auth/refresh")) {
-      const refreshSuccess = await handleTokenRefresh();
-      if (refreshSuccess) {
-        // Retry the original request
-        res = await fetch(url, {
-          method,
-          headers: getHeaders(),
-          ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
-        });
-      } else {
-        handleLogout();
-      }
+  // Reactive token refresh on 401
+  if (res.status === 401 && !isAuthRoute) {
+    const refreshedToken = await refreshTokens();
+    if (refreshedToken) {
+      res = await fetch(url, {
+        method,
+        headers: getHeaders(refreshedToken),
+        ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+      });
     } else {
-      handleLogout();
+      clearAuthAndRedirect();
     }
   }
 
@@ -264,81 +213,36 @@ async function request(options: RequestOptions): Promise<any> {
  * Does NOT set Content-Type — the browser auto-sets it with the boundary.
  */
 async function requestFormData(endpoint: string, formData: FormData): Promise<any> {
-  const url = endpoint.startsWith("http") ? endpoint : `${BASE_URL}${endpoint}`;
+  const isAuthRoute = endpoint.includes("/auth/");
 
-  const getHeaders = () => {
-    const token = localStorage.getItem("auth_token");
-    let shopId = localStorage.getItem("shop_id");
-    let userId = localStorage.getItem("user_id");
-    const sessionId = localStorage.getItem("session_id");
+  if (!isAuthRoute) {
+    await ensureFreshToken();
+  }
 
-    if (token && (!shopId || !userId)) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        if (payload.user_id && !userId) {
-          userId = payload.user_id;
-          if (userId) localStorage.setItem("user_id", userId);
-        }
-        if (payload.shop_id && !shopId) {
-          shopId = payload.shop_id;
-          if (shopId) localStorage.setItem("shop_id", shopId);
-        }
-      } catch (e) {
-        // ignore
-      }
-    }
+  const url = buildUrl(endpoint);
 
-    const headers: Record<string, string> = {};
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        const userInfos = {
-          user_id: payload.user_id || payload.sub || userId,
-          id: payload.user_id || payload.sub || userId,
-          name: payload.name || payload.entity_name || localStorage.getItem("user_name") || "",
-          email: payload.email || localStorage.getItem("user_email") || "",
-          role: payload.role || payload.entity_type || "User"
-        };
-        headers["x-user-infos"] = JSON.stringify(userInfos);
-      } catch (e) {
-        // ignore
-      }
-    }
-    if (shopId) {
-      headers["x-shop-id"] = shopId;
-    }
-    if (userId) {
-      headers["x-user-id"] = userId;
-    }
-    if (sessionId) {
-      headers["x-session-id"] = sessionId;
-    }
-
-    return headers;
+  const getFormDataHeaders = (customToken?: string | null) => {
+    const base = getHeaders(customToken);
+    delete base["Content-Type"];
+    return base;
   };
 
   let res = await fetch(url, {
     method: "POST",
-    headers: getHeaders(),
+    headers: getFormDataHeaders(),
     body: formData,
   });
 
-  if (res.status === 401) {
-    if (!endpoint.includes("/auth/refresh")) {
-      const refreshSuccess = await handleTokenRefresh();
-      if (refreshSuccess) {
-        // Retry the original request
-        res = await fetch(url, {
-          method: "POST",
-          headers: getHeaders(),
-          body: formData,
-        });
-      } else {
-        handleLogout();
-      }
+  if (res.status === 401 && !isAuthRoute) {
+    const refreshedToken = await refreshTokens();
+    if (refreshedToken) {
+      res = await fetch(url, {
+        method: "POST",
+        headers: getFormDataHeaders(refreshedToken),
+        body: formData,
+      });
     } else {
-      handleLogout();
+      clearAuthAndRedirect();
     }
   }
 
@@ -361,4 +265,3 @@ export const apiClient = {
   /** POST multipart form-data for file uploads */
   postFormData: (endpoint: string, formData: FormData) => requestFormData(endpoint, formData),
 };
-

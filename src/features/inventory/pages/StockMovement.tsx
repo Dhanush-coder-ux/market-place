@@ -61,13 +61,31 @@ const WAREHOUSES = ["All Locations", "Warehouse A", "Warehouse B", "Store Front"
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+function parseMovementDate(dateVal?: any): Date {
+  if (!dateVal) return new Date();
+  if (dateVal instanceof Date) return dateVal;
+  let str = String(dateVal).trim().replace(" ", "T");
+  if (str.includes("T") && !str.endsWith("Z") && !str.includes("+") && !/[0-9]-[0-9]{2}:[0-9]{2}$/.test(str)) {
+    const utcDate = new Date(str + "Z");
+    if (!isNaN(utcDate.getTime())) return utcDate;
+  }
+  const parsed = new Date(str.includes("T") ? str : str + "T00:00:00");
+  return isNaN(parsed.getTime()) ? new Date() : parsed;
+}
+
 function fmt(dateStr: string) {
-  const d = new Date(dateStr);
-  return d.toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  const d = parseMovementDate(dateStr);
+  return d.toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true });
 }
 
 function fmtDate(dateStr: string) {
-  return dateStr.slice(0, 10);
+  const d = parseMovementDate(dateStr);
+  return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function fmtTime(dateStr: string) {
+  const d = parseMovementDate(dateStr);
+  return d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
 }
 
 const formatStockValue = (val: number | null | undefined) => {
@@ -638,7 +656,7 @@ export default function StockMovementPage() {
 
     const adjMovements: Movement[] = aData.map((a: any) => {
       const finalType = mapType(a.movement_type || a.type || "");
-      const dateStr = String(a.created_at || new Date().toISOString());
+      const dateStr = String(a.created_at || a.adjusted_date || a.date || a.updated_at || new Date().toISOString());
 
       // Determine source/destination based on type
       let source = "System";
@@ -700,7 +718,7 @@ export default function StockMovementPage() {
         source,
         destination,
         ref: a.ui_id ? `REF-${a.ui_id}` : (smId?.slice(0, 8).toUpperCase() || "—"),
-        date: dateStr.includes("T") ? dateStr : dateStr + "T00:00:00",
+        date: dateStr,
         status: "Completed" as StatusType,
         user: String(a.added_by || a.user_name || a.user_info?.name || a.user || a.executed_by || a.performed_by || "System"),
         notes: a.description || "",
@@ -1130,10 +1148,10 @@ export default function StockMovementPage() {
                       <td className="px-4 py-3 align-middle border-r border-slate-100 last:border-r-0">
                         <div className="flex flex-col gap-0.5">
                           <span className="text-[13px] font-semibold text-slate-700">
-                            {new Date(m.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                            {fmtDate(m.date)}
                           </span>
                           <span className="text-[11px] text-slate-400 font-bold">
-                            {new Date(m.date).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+                            {fmtTime(m.date)}
                           </span>
                         </div>
                       </td>

@@ -91,16 +91,16 @@ const StockMovementTab = ({ inventoryId, product }: StockMovementTabProps) => {
 
         rawData.forEach((a: any) => {
           const mType = a.movement_type || "";
-          let displayType = "Adjustment";
+          let displayType = mType || "Adjustment";
           if (mType) {
             displayType = mType.split('_').map((word: string) => {
               if (word.toUpperCase() === 'PO') return 'PO';
               return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
             }).join(' ');
             
-            // Remove "Offline" prefix for Offline Purchase/Sales Returns
-            if (displayType.toLowerCase().includes('offline') && displayType.toLowerCase().includes('return')) {
-              displayType = displayType.replace(/Offline /i, '').trim();
+            // Remove "Offline" prefix across all movement types
+            if (displayType.toLowerCase().startsWith('offline')) {
+              displayType = displayType.replace(/^Offline\s+/i, '').trim();
             }
           }
 

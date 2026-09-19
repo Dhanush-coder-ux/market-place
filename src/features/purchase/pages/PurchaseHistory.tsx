@@ -133,14 +133,44 @@ export function parseGst(val: any): number {
 export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
   const d2 = (p.datas ? (typeof p.datas === "string" ? JSON.parse(p.datas) : p.datas) : p) as any;
   const products = ((p as any).items ?? (p as any).products ?? d2?.products ?? d2?.purchase_products ?? d2?.grn_products ?? d2?.finished_products) as any[] | undefined;
-  const dateRaw = String(d2?.purchaseDetails?.date ?? d2?.purchase_date ?? d2?.production_date ?? d2?.receipt_date ?? d2?.adjusted_date ?? (p as any).date ?? (p as any).purchase_date ?? new Date().toISOString());
+  const dateRaw = String(d2?.purchaseDetails?.date ?? d2?.purchase_date ?? d2?.production_date ?? d2?.receipt_date ?? d2?.adjusted_date ?? (p as any).date ?? (p as any).purchase_date ?? "");
+  const createdRaw = String((p as any).created_at ?? d2?.created_at ?? (p as any).createdAt ?? d2?.createdAt ?? (p as any).history?.[0]?.date ?? (p as any).history?.[(p as any).history?.length - 1]?.date ?? (p as any).updated_at ?? d2?.updated_at ?? "");
 
-  let d = new Date();
+  let dateObj = new Date();
+  let timeObj: Date | null = null;
+
   if (dateRaw && dateRaw !== "undefined" && dateRaw !== "null" && dateRaw !== "—") {
-    const parsedDate = new Date(dateRaw.includes("T") ? dateRaw : dateRaw + "T00:00:00");
+    const rawNoSpace = dateRaw.trim().replace(" ", "T");
+    const parsedDate = new Date(rawNoSpace.includes("T") ? rawNoSpace : rawNoSpace + "T00:00:00");
     if (!isNaN(parsedDate.getTime())) {
-      d = parsedDate;
+      dateObj = parsedDate;
+      if (parsedDate.getHours() !== 0 || parsedDate.getMinutes() !== 0 || parsedDate.getSeconds() !== 0) {
+        timeObj = parsedDate;
+      }
     }
+  }
+
+  if (!timeObj && createdRaw && createdRaw !== "undefined" && createdRaw !== "null" && createdRaw !== "—") {
+    let cleanCreated = createdRaw.trim().replace(" ", "T");
+    if (!cleanCreated.endsWith("Z") && !cleanCreated.includes("+") && !/[0-9]-[0-9]{2}:[0-9]{2}$/.test(cleanCreated)) {
+      cleanCreated = cleanCreated + "Z";
+    }
+    const parsedCreated = new Date(cleanCreated);
+    if (!isNaN(parsedCreated.getTime())) {
+      timeObj = parsedCreated;
+      if (!dateRaw || dateRaw === "undefined" || dateRaw === "null" || dateRaw === "—") {
+        dateObj = parsedCreated;
+      }
+    } else {
+      const fallbackCreated = new Date(createdRaw);
+      if (!isNaN(fallbackCreated.getTime())) {
+        timeObj = fallbackCreated;
+      }
+    }
+  }
+
+  if (!timeObj) {
+    timeObj = dateObj;
   }
 
   const typeMap: Record<string, PurchaseType> = {
@@ -211,8 +241,8 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
     id: p.id || (p as any).purchase_id || "",
     poNumber: d2?.purchaseDetails?.invoiceNo || (p as any).invoice_no || ((p as any).ui_id ? String((p as any).ui_id) : p.id?.slice(0, 8).toUpperCase() ?? "PO"),
     systemId: (p as any).ui_id ? String((p as any).ui_id) : "",
-    date: d.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }),
-    time: d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }),
+    date: dateObj.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }),
+    time: timeObj.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true }),
     vendor: String(vendorName),
     totoalItems: totoalItems,
     version: (p as any).version || d2?.version || "v1",

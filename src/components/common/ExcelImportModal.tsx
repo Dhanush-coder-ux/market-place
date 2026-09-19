@@ -53,6 +53,7 @@ import {
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { utilityApi } from "@/services/api/utility";
+import { shopApi } from "@/services/api/shop";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -61,6 +62,7 @@ interface ExcelImportModalProps {
   onClose: () => void;
   onSuccess: () => void;
   entityType: EntityType;
+  onCompleteStockImport?: () => void;
 }
 
 type Step = "intro" | "upload" | "mapping" | "submitting" | "result";
@@ -95,10 +97,17 @@ const ENTITY_META = {
     hasCategoryUnit: false,
   },
   inventory: {
-    label: "Products",
+    label: "Initial Stocks",
     bulkEndpoint: ENDPOINTS.INVENTORIES + "/bulk",
     gradientFrom: "#059669",
     gradientTo: "#10b981",
+    hasCategoryUnit: true,
+  },
+  product: {
+    label: "Products",
+    bulkEndpoint: ENDPOINTS.INVENTORIES + "/bulk",
+    gradientFrom: "#0284c7",
+    gradientTo: "#38bdf8",
     hasCategoryUnit: true,
   },
 } as const;
@@ -614,6 +623,7 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
   onClose,
   onSuccess,
   entityType,
+  onCompleteStockImport,
 }) => {
   const { postData } = useApi();
   const meta = ENTITY_META[entityType];
@@ -626,6 +636,7 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
   // File / rows
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [showStockConfirmModal, setShowStockConfirmModal] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
   const [rows, setRows] = useState<ParsedRow[]>([]);
   const [rowErrors, setRowErrors] = useState<RowValidationError[]>([]);
@@ -880,6 +891,27 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
           {/* ═══ INTRO STEP ═══ */}
           {step === "intro" && (
             <div className="flex-1 p-6 overflow-y-auto space-y-5">
+              {entityType === "inventory" && (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3.5 flex items-center justify-between gap-3 shadow-sm">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
+                      <CheckCheck size={16} />
+                    </div>
+                    <div>
+                      <p className="text-[12px] font-bold text-emerald-900">Finished initial stock import?</p>
+                      <p className="text-[11px] text-emerald-700/80">Click when all your initial stocks have been imported</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowStockConfirmModal(true)}
+                    className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition-all shadow-sm shrink-0 flex items-center gap-1.5"
+                  >
+                    <CheckCheck size={13} />
+                    All stocks imported successfully
+                  </button>
+                </div>
+              )}
               <div className="rounded-xl border border-slate-100 bg-slate-50 p-4 space-y-3">
                 <div className="flex items-center gap-2">
                   <Table2 size={15} className="text-slate-500" />
@@ -1233,6 +1265,54 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
           </div>
         </div>
       </div>
+
+        {/* Confirmation Modal for All Stocks Imported */}
+        {showStockConfirmModal && (
+          <div
+            className="fixed inset-0 z-[10000] flex items-center justify-center p-4"
+            style={{ background: "rgba(15,23,42,0.6)", backdropFilter: "blur(4px)" }}
+          >
+            <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full animate-in zoom-in-95 duration-200">
+              <div className="flex flex-col items-center text-center">
+                <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mb-4">
+                  <CheckCheck size={28} />
+                </div>
+                <h3 className="text-[16px] font-bold text-slate-800 mb-2">
+                  Are you confirm you have been imported all the stocks?
+                </h3>
+                <p className="text-[12px] text-slate-500 leading-relaxed mb-6">
+                  Once confirmed, the initial stock import option on the stock list will be permanently removed for this shop.
+                </p>
+                <div className="flex items-center gap-3 w-full">
+                  <button
+                    type="button"
+                    onClick={() => setShowStockConfirmModal(false)}
+                    className="flex-1 h-9 rounded-lg border border-slate-200 text-slate-600 text-[12px] font-semibold hover:bg-slate-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await shopApi.completeInitialStockImport(SHOP_ID);
+                      } catch (err) {
+                        console.error("Failed to persist initial stock import completion to DB:", err);
+                      }
+                      localStorage.setItem(`stock_import_completed_${SHOP_ID}`, "true");
+                      setShowStockConfirmModal(false);
+                      onClose();
+                      if (onCompleteStockImport) onCompleteStockImport();
+                    }}
+                    className="flex-1 h-9 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[12px] font-bold transition-colors shadow-sm"
+                  >
+                    Yes, Confirm
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
       <style>{`
         @keyframes modalIn {

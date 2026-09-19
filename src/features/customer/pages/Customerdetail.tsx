@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import {
   Mail, Pencil, User, Phone, Trash2,
   CreditCard, Database, MapPin, Tag, FileText, Banknote,
-  Layers, Check, X as XIcon, Search
+  Layers, Check, X as XIcon, Search, Calendar
 } from "lucide-react";
 import {
   fmt, SectionCard, FormInput, FormTextarea
@@ -86,6 +86,29 @@ const DetailItem = ({ icon: Icon, label, value, onClick }: { icon: any, label: s
     </div>
   </div>
 );
+
+
+function parseCustomerDateTime(dateVal?: any): Date {
+  if (!dateVal) return new Date();
+  if (dateVal instanceof Date) return dateVal;
+  let str = String(dateVal).trim().replace(" ", "T");
+  if (str.includes("T") && !str.endsWith("Z") && !str.includes("+") && !/[0-9]-[0-9]{2}:[0-9]{2}$/.test(str)) {
+    const utcDate = new Date(str + "Z");
+    if (!isNaN(utcDate.getTime())) return utcDate;
+  }
+  const parsed = new Date(str.includes("T") ? str : str + "T00:00:00");
+  return isNaN(parsed.getTime()) ? new Date() : parsed;
+}
+
+
+
+function fmtDateTime(dateVal?: any) {
+  if (!dateVal) return "—";
+  const d = parseCustomerDateTime(dateVal);
+  const date = d.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
+  const time = d.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true });
+  return `${date} at ${time}`;
+}
 
 // ── Main page ───────────────────────────────────────────────────────────────
 export default function CustomerDetail() {
@@ -317,6 +340,8 @@ export default function CustomerDetail() {
   const name = customer.name || "Unknown Customer";
   const initials = name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
   // Support both new nested and legacy flat shapes
+  const customerUiId = customer.ui_id || (customer as any).customer_ui_id || (customer.id ? customer.id.slice(0, 8).toUpperCase() : "");
+  const customerCreatedDate = customer.created_at || (customer as any).createdAt || datas.created_at;
   const customerEmail = (customer as any).contact_infos?.email || customer.email || "";
   const customerPhone = (customer as any).contact_infos?.mobile_number || customer.mobile_number || "";
   const customerCreditLimit = (customer as any).credit_infos?.limit ?? customer.credit_limit ?? 0;
@@ -341,8 +366,9 @@ export default function CustomerDetail() {
           <ProfileHeaderCard
             name={name}
             initials={initials}
-            subText={`ID: ${customer.id}`}
+            subText={`Customer ID: ${customerUiId}`}
             infoItems={[
+              ...(customerCreatedDate ? [{ icon: Calendar, text: fmtDateTime(customerCreatedDate) }] : []),
               { icon: Mail, text: customerEmail || "No email" },
               { icon: Phone, text: customerPhone || "No phone" }
             ]}
@@ -418,6 +444,10 @@ export default function CustomerDetail() {
                           onClick={() => setViewValue({ label: "Full Name", value: name })}
                         />
                         <DetailItem
+                          icon={Database} label="Customer ID" value={customerUiId}
+                          onClick={() => setViewValue({ label: "Customer ID", value: customerUiId })}
+                        />
+                        <DetailItem
                           icon={Mail} label="Email Address" value={customerEmail || "—"}
                           onClick={() => setViewValue({ label: "Email Address", value: customerEmail || "—" })}
                         />
@@ -429,6 +459,12 @@ export default function CustomerDetail() {
                           icon={CreditCard} label="Credit Limit" value={fmt(customerCreditLimit)}
                           onClick={() => setViewValue({ label: "Credit Limit", value: fmt(customerCreditLimit) })}
                         />
+                        {customerCreatedDate && (
+                          <DetailItem
+                            icon={Calendar} label="Date & Time" value={fmtDateTime(customerCreatedDate)}
+                            onClick={() => setViewValue({ label: "Date & Time", value: fmtDateTime(customerCreatedDate) })}
+                          />
+                        )}
 
                         {/* Dynamically render all other fields */}
                         {Object.entries(datas).map(([key, val]) => {
@@ -698,7 +734,7 @@ export default function CustomerDetail() {
                                       {invoiceStr ? `#${invoiceStr}` : `#${h.entity_id || "—"}`}
                                     </td>
                                     <td className="px-4 py-3 text-xs font-bold text-slate-600 whitespace-nowrap">
-                                      {h.created_at || h.date ? new Date(h.created_at || h.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                                      {h.created_at || h.date ? fmtDateTime(h.created_at || h.date) : '—'}
                                     </td>
                                     <td className="px-4 py-3 text-sm font-black whitespace-nowrap text-slate-800">
                                       ₹{Number(clearedAmount).toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}

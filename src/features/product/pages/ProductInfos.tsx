@@ -4,9 +4,11 @@ import {
   Package, Search, Filter, Trash2,
   ChevronDown, ChevronRight, Layers,
   AlertCircle, Calendar, Hash, ExternalLink,
-  Copy, Check, Pencil, Eye, MoreVertical, RefreshCw, History, Plus
+  Copy, Check, Pencil, Eye, MoreVertical, RefreshCw, History, Plus,
+  FileUp
 } from "lucide-react";
 import ActionMenu, { ActionMenuItem, ActionMenuDivider } from "@/components/common/ActionMenu";
+import ExcelImportModal from "@/components/common/ExcelImportModal";
 import { VariantRows, BatchCards, SerialBadgeList } from "../../inventory/components/StockTree";
 import { Modal } from "@/components/common/SuperUI";
 import { useHeader } from "@/context/HeaderContext";
@@ -117,7 +119,13 @@ const calculateProductStock = (p: any) => {
   return computedStock;
 };
 
-const getStockStatus = (stock: number, reorderPoint?: number) => {
+const getStockStatus = (stock: number, reorderPoint?: number, haveTracking: boolean = true) => {
+  if (haveTracking === false) {
+    return {
+      label: "Stock Not Tracked",
+      variant: "ps-completed",
+    };
+  }
   const s = Number(stock) || 0;
   const rp = Number(reorderPoint) || 10;
   if (s <= 0)
@@ -517,7 +525,8 @@ const ProductRow = React.memo(
               const reorderPoint = Number(
                 p.reorder_point_infos?.reorder_point ?? (p as any).reorder_point ?? datas.reorder_point ?? 0
               );
-              const status = getStockStatus(computedStock, reorderPoint);
+              const haveTracking = (p as any).have_tracking !== false && (datas as any)?.have_tracking !== false;
+              const status = getStockStatus(computedStock, reorderPoint, haveTracking);
               return (
                 <td key={key} className="px-3 py-2.5 whitespace-nowrap">
                   <AntBadge variant={status.variant} type="pill" dot>
@@ -894,6 +903,7 @@ const ProductInfos = () => {
   const [toDate, setToDate] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isImportOpen, setIsImportOpen] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
@@ -960,6 +970,14 @@ const ProductInfos = () => {
           </button>
         )}
 
+        <button
+          onClick={() => setIsImportOpen(true)}
+          className="h-8 px-3 rounded-md border border-slate-200 text-slate-600 font-medium text-[12px] bg-white hover:bg-slate-50 transition-colors flex items-center gap-1.5"
+        >
+          <FileUp size={13} />
+          Import
+        </button>
+
         <GradientButton
           path="/product/add"
           className="h-8 flex items-center px-4 text-[12px] rounded-md"
@@ -969,7 +987,7 @@ const ProductInfos = () => {
       </div>
     );
     return () => setActions(null);
-  }, [setActions, navigate, isCleanMode]);
+  }, [setActions, navigate, isCleanMode, setRefreshKey]);
 
   useEffect(() => {
     const params: Record<string, string> = {
@@ -1441,6 +1459,17 @@ const ProductInfos = () => {
         description="This action cannot be undone. This will permanently remove the product and all associated data."
         confirmText="Remove product"
         type="danger"
+      />
+
+      {/* ── Excel Import Modal ── */}
+      <ExcelImportModal
+        open={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        onSuccess={() => {
+          setIsImportOpen(false);
+          setRefreshKey((prev: number) => prev + 1);
+        }}
+        entityType="product"
       />
     </div>
   );

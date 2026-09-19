@@ -43,7 +43,8 @@ interface Product {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function stockStyle(stock: number): { textColor: string; label: string; indicator: string } {
+function stockStyle(stock: number, haveTracking: boolean = true): { textColor: string; label: string; indicator: string } {
+  if (haveTracking === false) return { textColor: "text-slate-600", label: "Not Tracked", indicator: "bg-emerald-400" };
   if (stock === 0) return { textColor: "text-red-600", label: "Out of stock", indicator: "bg-red-400" };
   if (stock <= 10) return { textColor: "text-amber-600", label: `${stock} left`, indicator: "bg-amber-400" };
   return { textColor: "text-emerald-600", label: `${stock}`, indicator: "bg-emerald-400" };
@@ -89,7 +90,7 @@ function ProductCard({
   onEdit: () => void;
   actionLoading?: boolean;
 }) {
-  const stock = stockStyle(product.stock);
+  const stock = stockStyle(product.stock, product.haveTracking);
 
   return (
     <div
@@ -232,7 +233,7 @@ function ProductRow({
   onEdit: () => void;
   actionLoading?: boolean;
 }) {
-  const stock = stockStyle(product.stock);
+  const stock = stockStyle(product.stock, product.haveTracking);
 
   return (
     <tr
@@ -547,7 +548,7 @@ const ProductDashboard = () => {
           onlineSellPrice,
           stock: Math.floor(totalStock),
           category: p.category_infos?.name || p.category_id || "Uncategorized",
-          status: !p.is_active ? "Draft" : totalStock === 0 ? "Out of Stock" : "Active",
+          status: !p.is_active ? "Draft" : (p.have_tracking !== false && totalStock === 0) ? "Out of Stock" : "Active",
           image,
           rating: p.rating || 4.5,
           sold: p.sold || 0,

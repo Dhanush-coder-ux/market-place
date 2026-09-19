@@ -30,6 +30,30 @@ type SaleRecord = OrderResponse;
 
 const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 
+function parseSaleDateTime(dateVal?: any): Date {
+  if (!dateVal) return new Date();
+  if (dateVal instanceof Date) return dateVal;
+  let str = String(dateVal).trim().replace(" ", "T");
+  if (str.includes("T") && !str.endsWith("Z") && !str.includes("+") && !/[0-9]-[0-9]{2}:[0-9]{2}$/.test(str)) {
+    const utcDate = new Date(str + "Z");
+    if (!isNaN(utcDate.getTime())) return utcDate;
+  }
+  const parsed = new Date(str.includes("T") ? str : str + "T00:00:00");
+  return isNaN(parsed.getTime()) ? new Date() : parsed;
+}
+
+function fmtDate(dateVal?: any) {
+  if (!dateVal) return "—";
+  const d = parseSaleDateTime(dateVal);
+  return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function fmtTime(dateVal?: any) {
+  if (!dateVal) return "";
+  const d = parseSaleDateTime(dateVal);
+  return d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
+}
+
 /* ═══════════════════════════════════════════════════════════════
    BADGE CONFIGS
 ═══════════════════════════════════════════════════════════════ */
@@ -556,7 +580,8 @@ const SalesListPage: React.FC = () => {
               ) : filtered.map((sale, index) => {
                 const oCfg = ORIGIN_CFG[sale.origin as OriginType] || ORIGIN_CFG["Offline"];
 
-                const dateStr = sale.created_at.split("T")[0];
+                const dateStr = fmtDate(sale.created_at || (sale as any).date);
+                const timeStr = fmtTime(sale.created_at || (sale as any).date);
                 const refundedCount = (sale.items || []).filter((i: any) => i.status === "REFUNDED").length;
                 const exchangedCount = (sale.items || []).filter((i: any) => i.status === "EXCHANGED").length;
                 const hasReturns = (sale.returns && sale.returns.length > 0) || (sale.items || []).some((i: any) => (i.returned_quantity && i.returned_quantity > 0) || i.status === "REFUNDED" || i.status === "EXCHANGED") || sale.status === "Returned" || sale.status === "RETURNED";
@@ -604,7 +629,12 @@ const SalesListPage: React.FC = () => {
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-4 border-b border-slate-50"><span className="font-mono text-[11px] text-slate-500">{dateStr}</span></td>
+                    <td className="px-4 py-4 border-b border-slate-50">
+                      <div>
+                        <span className="font-mono text-[11px] text-slate-700 block font-medium">{dateStr}</span>
+                        {timeStr && <span className="text-[10px] text-slate-400 block">{timeStr}</span>}
+                      </div>
+                    </td>
                     <td className="px-4 py-4 border-b border-slate-50 text-center"><span className="text-[11px] font-semibold text-slate-600">{Number((sale.total_quantity || 0).toFixed(2))}</span></td>
                     <td className="px-4 py-4 border-b border-slate-50 text-right"><span className="font-mono text-xs font-bold text-slate-900">{fmt(sale.total_sellprice)}</span></td>
                     <td className="px-4 py-4 border-b border-slate-50">{(() => { const cfg = STATUS_CFG[sale.status as SaleStatus] || STATUS_CFG["Pending"]; return <Badge cls={cfg.cls} dot={cfg.dot} label={sale.status} />; })()}</td>
@@ -739,7 +769,7 @@ const ReturnSearchPortal: React.FC<ReturnSearchPortalProps> = ({ isOpen, onClose
                       <p className="text-[14px] font-black text-slate-900 group-hover:text-blue-600 transition-colors tracking-tight">Order {sale.ui_id}</p>
                       <span className="font-mono text-[13px] font-black text-slate-900 group-hover:text-blue-700">{fmt(sale.total_sellprice)}</span>
                     </div>
-                    <p className="text-[11px] text-slate-500 truncate font-bold uppercase tracking-tight opacity-70 group-hover:opacity-100">{sale.customer?.customer_name || customerMap[sale.customer_id] || sale.customer_id} {sale.customer?.customer_mobile_number ? `· ${sale.customer.customer_mobile_number}` : ''} · {sale.created_at.split('T')[0]}</p>
+                    <p className="text-[11px] text-slate-500 truncate font-bold uppercase tracking-tight opacity-70 group-hover:opacity-100">{sale.customer?.customer_name || customerMap[sale.customer_id] || sale.customer_id} {sale.customer?.customer_mobile_number ? `· ${sale.customer.customer_mobile_number}` : ''} · {fmtDate(sale.created_at || (sale as any).date)}</p>
                   </div>
                   <div className="w-6 h-6 rounded-lg bg-slate-50 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all">
                     <ChevronRight size={14} className="text-slate-300 group-hover:text-white" />

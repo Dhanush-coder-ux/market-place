@@ -31,6 +31,7 @@ import { useApi } from "@/context/ApiContext";
 import { useHeader } from "@/context/HeaderContext";
 import { useToast } from "@/context/ToastContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import { shopApi } from "@/services/api/shop";
 import SkeletonLoader from "@/components/common/SkeletonLoader";
 import { StatCard } from "@/components/common/StatsCard";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -213,7 +214,14 @@ const calculateProductStock = (item: any) => {
   return stockNumber;
 };
 
-const getStockStatus = (stock: number, reorderPoint?: number) => {
+const getStockStatus = (stock: number, reorderPoint?: number, haveTracking: boolean = true) => {
+  if (haveTracking === false) {
+    return {
+      label: "Stock Not Tracked",
+      variant: "stk-in-stock",
+      icon: Package,
+    };
+  }
   const s = Number(stock) || 0;
   const rp = Number(reorderPoint) || 10;
   if (s <= 0)
@@ -344,7 +352,8 @@ const ProductRow = React.memo(
     const reorderPoint = Number(
       (item as any).reorder_point_infos?.reorder_point ?? (item as any).reorder_point ?? datas.reorder_point ?? 0
     );
-    const status = getStockStatus(stockNumber, reorderPoint);
+    const haveTracking = (item as any).have_tracking !== false && (datas as any).have_tracking !== false;
+    const status = getStockStatus(stockNumber, reorderPoint, haveTracking);
 
 
     const { totalSerials, totalBatches } = useMemo(() => {
@@ -817,8 +826,29 @@ const InventoryPage = () => {
     window.open(`${window.location.pathname}?mode=clean`, "_blank", "noopener,noreferrer");
   };
 
-  const [isImportOpen, setIsImportOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isStockImportCompleted, setIsStockImportCompleted] = useState<boolean>(() => {
+    return localStorage.getItem(`stock_import_completed_${SHOP_ID}`) === "true";
+  });
+
+  useEffect(() => {
+    // Check DB-level initial stock import completion
+    shopApi.getShopById(SHOP_ID).then((res: any) => {
+      const shopData = res?.data || res;
+      const isImported = Boolean(
+        shopData?.initial_stock_imported ||
+        shopData?.additional_infos?.initial_stock_imported ||
+        shopData?.datas?.initial_stock_imported
+      );
+      if (isImported) {
+        setIsStockImportCompleted(true);
+        localStorage.setItem(`stock_import_completed_${SHOP_ID}`, "true");
+      }
+    }).catch(err => {
+      console.error("Failed to fetch shop import status:", err);
+    });
+  }, [refreshKey]);
 
   useEffect(() => {
     setActions(
@@ -842,17 +872,19 @@ const InventoryPage = () => {
             <ExternalLink size={13} />
           </button>
         )}
-        <button
-          onClick={() => setIsImportOpen(true)}
-          className="h-8 px-3 rounded-md border border-slate-200 text-slate-600 font-medium text-[12px] bg-white hover:bg-slate-50 transition-colors flex items-center gap-1.5"
-        >
-          <FileUp size={13} />
-          Import
-        </button>
+        {!isStockImportCompleted && (
+          <button
+            onClick={() => setIsImportOpen(true)}
+            className="h-8 px-3 rounded-md border border-slate-200 text-slate-600 font-medium text-[12px] bg-white hover:bg-slate-50 transition-colors flex items-center gap-1.5"
+          >
+            <FileUp size={13} />
+            Import
+          </button>
+        )}
       </div>
     );
     return () => setActions(null);
-  }, [setActions, isCleanMode, setRefreshKey]);
+  }, [setActions, isCleanMode, setRefreshKey, isStockImportCompleted]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -878,7 +910,10 @@ const InventoryPage = () => {
           );
           return stock <= rp && stock > 0;
         }).length;
-        const outOfStock = itemsRaw.filter((p: InventoryItem) => calculateProductStock(p) === 0).length;
+        const outOfStock = itemsRaw.filter((p: InventoryItem) => {
+          const ht = (p as any).have_tracking !== false && (p as any).datas?.have_tracking !== false;
+          return ht && calculateProductStock(p) <= 0;
+        }).length;
         setSummaryStats({ available, low, outOfStock });
       }
     }).catch(() => {});
@@ -1356,10 +1391,15 @@ const InventoryPage = () => {
 
       {/* ── Excel Import Modal ── */}
       <ExcelImportModal
-        open={isImportOpen}
+        open={isImportOpen && !isStockImportCompleted}
         onClose={() => setIsImportOpen(false)}
         onSuccess={() => { setIsImportOpen(false); setRefreshKey((prev: number) => prev + 1); }}
         entityType="inventory"
+        onCompleteStockImport={() => {
+          setIsStockImportCompleted(true);
+          setIsImportOpen(false);
+          showToast("All stocks marked as imported successfully. Stock import option has been removed.", "success");
+        }}
       />
     </div>
   );

@@ -55,12 +55,12 @@ const ITEM_COLORS = ["#dbeafe", "#dcfce7", "#fef3c7", "#fce7f3", "#ede9fe", "#ff
 ═══════════════════════════════════════════════════════════════ */
 const generateItems = (sale: SaleRecord, productMap: Record<string, string> = {}): SaleItem[] => {
   const calcInfos = (sale as any)?.calculation_infos || (sale as any)?.calculations || {};
-  const isExclusive = calcInfos?.include_gst === true || String(calcInfos?.gst_type || (sale as any)?.gst_infos?.type || "EXCLUSIVE").toUpperCase() === "EXCLUSIVE";
+  const isExclusive = calcInfos?.include_gst === true;
   
   return (sale.items || []).map((item, i) => {
     const rawName = (item as any).inventory_name || (item as any).name || (item as any).product_name || (item as any).product?.name || (item as any).inventory_infos?.name || (item as any).datas?.product_name || (item as any).datas?.name || productMap[item.inventory_id || (item as any).product_id] || item.barcode || `Item ${i + 1}`;
     const productName = rawName;
-    const gstRate = parseFloat(String(item.gst || "0").replace('%', '')) || 0;
+    const gstRate = isExclusive ? (parseFloat(String(item.gst || "0").replace('%', '')) || 0) : 0;
 
     let basePrice = Number(item.sell_price || 0);
     if (!basePrice) {
@@ -616,8 +616,9 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
     if (existingIndex >= 0) {
       const existing = current[existingIndex];
       const addedQty = product.quantity || product.qty || 1;
-      const maxStk = existing.maxStock !== undefined ? existing.maxStock : 9999;
-      const updatedQty = Math.min(existing.quantity + addedQty, maxStk);
+      const isTracked = product.isStockTracked !== false && product.have_tracking !== false;
+      const maxStk = isTracked && existing.maxStock !== undefined ? existing.maxStock : 9999;
+      const updatedQty = isTracked && existing.maxStock !== undefined ? Math.min(existing.quantity + addedQty, maxStk) : (existing.quantity + addedQty);
       const unitP = existing.price ?? existing.sell_price ?? 0;
       const updatedList = [...current];
       updatedList[existingIndex] = {
@@ -906,7 +907,8 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
           if (qty <= 0) return false;
           if (ex.requireSerial && (!ex.serialNumbers && !ex.serial_numbers || (ex.serialNumbers || ex.serial_numbers).length !== qty)) return false;
           if (ex.batchTracking && !ex.batch_id && !ex.batchId) return false;
-          if (ex.maxStock !== undefined && qty > ex.maxStock) return false;
+          const isTracked = ex.isStockTracked !== false && ex.have_tracking !== false;
+          if (isTracked && ex.maxStock !== undefined && qty > ex.maxStock) return false;
         }
         
         return true;
@@ -985,8 +987,9 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
   const [allExchProducts, setAllExchProducts] = useState<any[]>([]);  // full catalog
   const [exchProducts, setExchProducts] = useState<any[]>([]);         // filtered view
   const [loadingExch, setLoadingExch] = useState(false);
-  const isExclusive = sale?.calculations?.include_gst === true || String(sale?.calculations?.gst_type || sale?.gst_infos?.type || "EXCLUSIVE").toUpperCase() === "EXCLUSIVE";
-  const gstType = isExclusive ? "EXCLUSIVE" : "INCLUSIVE";
+  const calcInfos = (sale as any)?.calculation_infos || (sale as any)?.calculations || {};
+  const isExclusive = calcInfos?.include_gst === true;
+  // const gstType = isExclusive ? "EXCLUSIVE" : "NONE";
 
   // Body scroll lock (only for modal)
   useEffect(() => {
@@ -1073,11 +1076,15 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
       }));
     }
 
+    const isStockTracked = fullProduct.have_tracking !== false && fullProduct.is_stock_tracked !== false && fullProduct.track_stock !== false && fullProduct.type !== "service" && (fullProduct.datas?.have_tracking !== false);
+
     let computedStock = Number(fullProduct.stock_infos?.available_stocks ?? fullProduct.stock_infos?.physical_stocks ?? fullProduct.stocks ?? 0);
     let computedPrice = fullProduct.pricing_infos?.sell_price ?? fullProduct.sell_price ?? 0;
 
     return {
       ...fullProduct,
+      isStockTracked,
+      have_tracking: fullProduct.have_tracking ?? fullProduct.datas?.have_tracking ?? true,
       product_name: fullProduct.name || "Unknown Product",
       product_barcode: fullProduct.barcode || "N/A",
       category: fullProduct.category || "Other",
@@ -1112,10 +1119,11 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
         setIsProductModalOpen(true);
       } else {
         const baseRootPrice = mapped.price || 0;
-        const exGstRate = parseFloat(String(mapped.gst || "0").replace('%', '')) || 0;
+        const exGstRate = isExclusive ? (parseFloat(String(mapped.gst || "0").replace('%', '')) || 0) : 0;
         let displayPrice = baseRootPrice;
-        if (gstType === "EXCLUSIVE") { displayPrice += baseRootPrice * (exGstRate / 100); }
+        if (isExclusive && exGstRate > 0) { displayPrice += baseRootPrice * (exGstRate / 100); }
 
+        const isTracked = (mapped as any).isStockTracked !== false && (mapped as any).have_tracking !== false;
         m.addExchangeProduct("__global__", {
           id: mapped.id,
           inventoryId: mapped.id,
@@ -1133,7 +1141,9 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
           serialno_id: null,
           requireSerial: false,
           batchTracking: false,
-          maxStock: (mapped as any).isStockTracked !== false ? mapped.stocks : undefined,
+          isStockTracked: isTracked,
+          have_tracking: (mapped as any).have_tracking,
+          maxStock: isTracked ? mapped.stocks : undefined,
           gst: mapped.gst,
           unitInfos: mapped.unitInfos,
           unit: mapped.unitInfos?.name || (mapped as any).unit || "",
@@ -1143,6 +1153,7 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
     } catch (e) {
       console.error(e);
       const baseRootPrice = ep.price || 0;
+      const isTracked = ep.have_tracking !== false && (ep as any).track_stock !== false && (ep as any).tracking !== false && (ep.datas?.have_tracking !== false);
       m.addExchangeProduct("__global__", {
         id: ep.id ?? ep._id,
         inventoryId: ep.id ?? ep._id,
@@ -1160,7 +1171,9 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
         serialno_id: null,
         requireSerial: false,
         batchTracking: false,
-        maxStock: ep.stocks,
+        isStockTracked: isTracked,
+        have_tracking: ep.have_tracking,
+        maxStock: isTracked ? ep.stocks : undefined,
         gst: ep.gst || "0",
         unit: ep.unit || "",
         _product: ep
@@ -1171,6 +1184,7 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
   };
   const handleProductSelectSuccess = (variant: ProductVariant, quantity: number, serials?: string[]) => {
     if (!pendingProduct) return;
+    const isTracked = (pendingProduct as any).isStockTracked !== false && (pendingProduct as any).have_tracking !== false;
     m.addExchangeProduct("__global__", {
       id: pendingProduct.id,
       inventoryId: pendingProduct.id,
@@ -1190,7 +1204,9 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
       batchTracking: pendingProduct.batchTracking,
       manufacturingDate: variant.manufacturingDate || pendingProduct.manufacturingDate,
       expiryDate: variant.expiryDate || pendingProduct.expiryDate,
-      maxStock: (pendingProduct as any).isStockTracked !== false ? variant.stock : undefined,
+      isStockTracked: isTracked,
+      have_tracking: (pendingProduct as any).have_tracking,
+      maxStock: isTracked ? variant.stock : undefined,
       gst: pendingProduct.gst,
       unitInfos: pendingProduct.unitInfos,
       unit: pendingProduct.unitInfos?.name || (pendingProduct as any).unit || "",
@@ -1204,8 +1220,8 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
     if (state.step === 2 && state.mode === "exchange") {
       setExchSearch("");
       setLoadingExch(true);
-      // Fetch all active inventory items with a high limit
-      inventoryApi.searchInventories("", true).then(res => {
+      // Fetch all inventory items with a high limit
+      inventoryApi.searchInventories("").then(res => {
         const mapped = res.map((p: any) => {
           let computedStock = Number(p.stock_infos?.available_stocks ?? p.stock_infos?.physical_stocks ?? p.stocks ?? 0);
           let computedPrice = p.pricing_infos?.sell_price ?? p.sell_price ?? 0;
@@ -1234,7 +1250,7 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
             if (computedStock === 0) computedStock = batches.reduce((acc: number, b: any) => acc + Number(b.stock_infos?.available_stocks ?? b.stock_infos?.physical_stocks ?? b.stocks ?? 0), 0);
             if ((computedPrice === 0 || computedPrice === undefined) && batches.length > 0) computedPrice = batches[0].pricing_infos?.sell_price ?? batches[0].sell_price ?? 0;
           }
-          return { ...p, name: p.name || "Unknown Product", price: computedPrice, stocks: computedStock, hasVariants, hasBatches, hasSerials, variantCount: rawVariants.length };
+          return { ...p, name: p.name || "Unknown Product", price: computedPrice, stocks: computedStock, have_tracking: p.have_tracking ?? (p.datas?.have_tracking ?? true), hasVariants, hasBatches, hasSerials, variantCount: rawVariants.length };
         });
         console.log('[Exchange Catalog] loaded:', mapped.length, 'active products');
         setAllExchProducts(mapped);
@@ -1379,7 +1395,10 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                                         </div>
                                         {(() => {
                                           const finalPrice = ex.price || ex.sell_price || 0;
-                                          const gstRate = parseFloat(String(ex.gst || "0").replace('%', '')) || 0;
+                                          const gstRate = isExclusive ? (parseFloat(String(ex.gst || "0").replace('%', '')) || 0) : 0;
+                                          if (!isExclusive || gstRate <= 0) {
+                                            return null;
+                                          }
                                           const taxable = finalPrice / (1 + (gstRate / 100));
                                           const gstAmount = finalPrice - taxable;
                                           return (
@@ -1429,14 +1448,17 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                                 {exchProducts.map(ep => {
                                   const sel = (state.exchangeMap["__global__"] || []).some((ex: any) => ex.id === ep.id);
                                   const resolvedStock = ep.stocks || 0;
-                                  const inStock = ep.hasVariants || ep.hasBatches || resolvedStock > 0;
+                                  const isStockTracked = ep.have_tracking !== false && (ep as any).track_stock !== false && (ep as any).tracking !== false;
+                                  const inStock = !isStockTracked || ep.hasVariants || ep.hasBatches || resolvedStock > 0;
                                   const parts = [];
                                   if (ep.hasVariants) parts.push(ep.variantCount > 0 ? `${ep.variantCount} VARIANT${ep.variantCount > 1 ? 'S' : ''}` : 'VARIANTS');
                                   if (ep.hasBatches) parts.push('BATCHES');
                                   if (ep.hasSerials) parts.push('SERIALS');
                                   
                                   let stockLabel = 'OUT OF STOCK';
-                                  if (inStock) {
+                                  if (!isStockTracked) {
+                                    stockLabel = 'IN STOCK';
+                                  } else if (inStock) {
                                     if (parts.length > 0) {
                                       stockLabel = `${parts.join(' & ')}${resolvedStock > 0 ? ` · ${resolvedStock} IN STOCK` : ''}`;
                                     } else {
@@ -1445,9 +1467,9 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                                   }
                                   
                                   const baseRootPrice = ep.price || 0;
-                                  const exGstRate = parseFloat(String(ep.gst || ep.datas?.gst || "0").replace('%', '')) || 0;
+                                  const exGstRate = isExclusive ? (parseFloat(String(ep.gst || ep.datas?.gst || "0").replace('%', '')) || 0) : 0;
                                   let displayPrice = baseRootPrice;
-                                  if (gstType === "EXCLUSIVE") { displayPrice += baseRootPrice * (exGstRate / 100); }
+                                  if (isExclusive && exGstRate > 0) { displayPrice += baseRootPrice * (exGstRate / 100); }
                                   return (
                                     <div key={ep.id ?? ep._id ?? ep.name} onClick={() => inStock && handleExchangeClick(ep)} className={`flex items-center gap-3 p-3 px-4 border rounded-lg transition-all duration-200 cursor-pointer ${sel ? "bg-blue-50 border-blue-500 shadow-md scale-[0.99]" : !inStock ? "opacity-50 grayscale cursor-not-allowed border-slate-100" : "bg-white border-slate-100 hover:border-blue-400 hover:shadow-lg"}`}>
                                       <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center flex-shrink-0 transition-colors"><Package size={16} className="text-slate-400" /></div>

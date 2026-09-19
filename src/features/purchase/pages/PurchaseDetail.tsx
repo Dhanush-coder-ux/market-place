@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   Printer, Building2, Calendar, Package,
-  ReceiptText, ArrowLeft, FileText, CheckCircle2, Clock, Banknote, AlertCircle,
+  ReceiptText, ArrowLeft, FileText, CheckCircle2, Banknote, AlertCircle,
   RotateCcw, X, ChevronRight, Info, Minus, Plus, CornerDownLeft, Pencil
 } from "lucide-react";
 import { toDisplayData } from "./PurchaseHistory";
@@ -843,8 +843,7 @@ const PurchaseDetail = () => {
                       {po.systemId && po.systemId !== po.poNumber && (
                         <DetailItem icon={FileText} label="System ID" value={po.systemId} />
                       )}
-                      <DetailItem icon={Calendar} label="Date" value={po.date} />
-                      <DetailItem icon={Clock} label="Time" value={po.time} />
+                      <DetailItem icon={Calendar} label="Date & Time" value={`${po.date} at ${po.time}`} />
                       <DetailItem icon={CheckCircle2} label="Status" value={(po.status || "Completed").toUpperCase()} />
                       {po.storage_location && (
                         <DetailItem icon={Building2} label="Storage Location" value={po.storage_location} />
@@ -909,10 +908,6 @@ const PurchaseDetail = () => {
                       <div className="flex justify-between items-center">
                         <span className="text-[11px] font-medium text-slate-400 uppercase tracking-tight">Total Items</span>
                         <span className="text-xs font-bold text-slate-700">{po.totoalItems}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-[11px] font-medium text-slate-400 uppercase tracking-tight">Origin</span>
-                        <span className="text-xs font-bold text-slate-700">{po.purchaseType}</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-[11px] font-medium text-slate-400 uppercase tracking-tight">Payment</span>

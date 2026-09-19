@@ -299,7 +299,6 @@ export function StockMovementsTable({ rows, loading, onViewDetails }: StockMovem
                         <td className="px-5 py-4 whitespace-nowrap">
                           <TypeBadge 
                             type={r.displayType}
-                            labelOverride={r.displayType === 'Offline Sales' ? 'Sales' : r.displayType} 
                             icon={r.isInc ? ArrowUp : ArrowDown} 
                           />
                         </td>

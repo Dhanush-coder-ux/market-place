@@ -114,6 +114,7 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
         if (shop) {
           setCurrentShopId(shop.id);
           setSelectedShop({ name: shop.name, initial: shop.name.charAt(0).toUpperCase(), logo_url: shop.logo_url });
+          localStorage.setItem("shop_name", shop.name);
         }
       })
       .catch(() => setSelectedShop({ name: "My Shop", initial: "M" }))
@@ -135,6 +136,7 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
     setCurrentShopId(shop.id);
     setShopId(shop.id);
     localStorage.setItem("shop_id", shop.id);
+    localStorage.setItem("shop_name", shop.name);
     setIsShopMenuOpen(false);
     window.location.reload();
   }, []);

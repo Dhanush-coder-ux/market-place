@@ -1,8 +1,10 @@
 import { createContext, useContext, useState, useRef, useCallback, ReactNode, useEffect } from "react";
-import { ENDPOINTS } from "@/services/endpoints";
-
-const BASE_URL = import.meta.env.VITE_GATEWAY_URL || "http://localhost:8000";
-let refreshPromise: Promise<string | null> | null = null;
+import {
+  getGatewayBaseUrl,
+  ensureFreshToken,
+  refreshTokens,
+  clearAuthAndRedirect
+} from "@/services/api/tokenManager";
 
 // ─── Simple in-memory GET cache ───────────────────────────────────────────────
 // TTL = 60 seconds. Prevents duplicate fetches on fast navigation.
@@ -21,82 +23,6 @@ const getCached = (url: string): unknown | null => {
 
 const setCache = (url: string, data: unknown) => {
   cache.set(url, { data, ts: Date.now() });
-};
-
-const clearAuthTokens = () => {
-  if (window.location.pathname !== "/login") {
-    localStorage.removeItem("auth_token");
-    localStorage.removeItem("refresh_token");
-    localStorage.removeItem("shop_id");
-    localStorage.removeItem("user_id");
-    localStorage.removeItem("session_id");
-    localStorage.removeItem("user_email");
-    localStorage.removeItem("user_name");
-    window.location.href = "/login";
-  }
-};
-
-const isJwtExpired = (token: string | null): boolean => {
-  if (!token) return false;
-  try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    if (!payload?.exp) return false;
-    return payload.exp * 1000 <= Date.now() + 30_000;
-  } catch {
-    return false;
-  }
-};
-
-const refreshAccessToken = async (): Promise<string | null> => {
-  const refreshToken = localStorage.getItem("refresh_token");
-  if (!refreshToken) {
-    clearAuthTokens();
-    return null;
-  }
-
-  if (!refreshPromise) {
-    let tokenVersion = "1";
-    try {
-      const p = JSON.parse(atob(refreshToken.split(".")[1]));
-      if (p.version) tokenVersion = p.version;
-    } catch { /* ignore */ }
-
-    let cleanBaseUrl = BASE_URL.replace(/\/+$/, "");
-    if (cleanBaseUrl.endsWith("/api")) {
-      cleanBaseUrl = cleanBaseUrl.slice(0, -4);
-    }
-
-    refreshPromise = fetch(`${cleanBaseUrl}/api${ENDPOINTS.AUTH_TOKEN_REFRESH}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refresh_token: refreshToken, version: tokenVersion }),
-    })
-      .then(async (res) => {
-        if (!res.ok) {
-          clearAuthTokens();
-          return null;
-        }
-        const data = await res.json();
-        if (!data?.access_token) {
-          clearAuthTokens();
-          return null;
-        }
-        localStorage.setItem("auth_token", data.access_token);
-        if (data.refresh_token) {
-          localStorage.setItem("refresh_token", data.refresh_token);
-        }
-        return data.access_token as string;
-      })
-      .catch(() => {
-        clearAuthTokens();
-        return null;
-      })
-      .finally(() => {
-        refreshPromise = null;
-      });
-  }
-
-  return refreshPromise;
 };
 
 /** Manually invalidate cache for a given URL prefix (call after POST/PUT/DELETE) */
@@ -246,7 +172,6 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
   }, [notify]);
 
   const isLoading = useCallback((key: string) => {
-    // This will be called by the useApiLoading hook which subscribes to updates
     return !!loadingMapRef.current[key];
   }, []);
 
@@ -258,14 +183,25 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     params?: Record<string, string>,
     options?: { signal?: AbortSignal; cacheKey?: string }
   ): Promise<any> => {
-    let cleanBaseUrl = BASE_URL.replace(/\/+$/, "");
-    if (cleanBaseUrl.endsWith("/api")) {
-      cleanBaseUrl = cleanBaseUrl.slice(0, -4);
+    const isAuthRoute = endpoint.includes("/auth/");
+
+    // Proactive token refresh if expired
+    if (!isAuthRoute) {
+      await ensureFreshToken();
     }
-    let url = `${cleanBaseUrl}${endpoint.startsWith("/api") ? endpoint : `/api${endpoint}`}`;
+
+    const gatewayUrl = getGatewayBaseUrl();
+    let cleanEndpoint = endpoint;
+    if (cleanEndpoint.startsWith("/api/")) {
+      cleanEndpoint = cleanEndpoint.slice(4);
+    } else if (!cleanEndpoint.startsWith("/")) {
+      cleanEndpoint = "/" + cleanEndpoint;
+    }
+
+    let url = endpoint.startsWith("http") ? endpoint : `${gatewayUrl}${cleanEndpoint}`;
 
     if (params && Object.keys(params).length > 0) {
-      url += `?${new URLSearchParams(params).toString()}`
+      url += `?${new URLSearchParams(params).toString()}`;
     }
 
     const key = options?.cacheKey ?? `${method}:${url}`;
@@ -286,8 +222,8 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
       setError(null);
 
       try {
-        const getHeaders = () => {
-          const token = localStorage.getItem("auth_token");
+        const getHeaders = (customToken?: string | null) => {
+          const token = customToken !== undefined ? customToken : localStorage.getItem("auth_token");
           let shopId = localStorage.getItem("shop_id");
           let userId = localStorage.getItem("user_id");
           const sessionId = localStorage.getItem("session_id");
@@ -303,7 +239,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
                 shopId = payload.shop_id;
                 if (shopId) localStorage.setItem("shop_id", shopId);
               }
-            } catch (e) {
+            } catch {
               // ignore
             }
           }
@@ -325,10 +261,6 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
           return headers;
         };
 
-        if (!endpoint.includes(ENDPOINTS.AUTH_TOKEN_REFRESH) && isJwtExpired(localStorage.getItem("auth_token"))) {
-          await refreshAccessToken();
-        }
-
         let res = await fetch(url, {
           method,
           headers: getHeaders(),
@@ -336,15 +268,18 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
           signal: options?.signal,
         });
 
-        if (res.status === 401 && !endpoint.includes(ENDPOINTS.AUTH_TOKEN_REFRESH)) {
-          const refreshedToken = await refreshAccessToken();
+        // Reactive token refresh on 401
+        if (res.status === 401 && !isAuthRoute) {
+          const refreshedToken = await refreshTokens();
           if (refreshedToken) {
             res = await fetch(url, {
               method,
-              headers: getHeaders(),
+              headers: getHeaders(refreshedToken),
               ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
               signal: options?.signal,
             });
+          } else {
+            clearAuthAndRedirect();
           }
         }
 
@@ -404,7 +339,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
         deleteData,
         patchData,
         clearError,
-        _subscribe: subscribe // Internal use for the hook
+        _subscribe: subscribe
       }}
     >
       {children}

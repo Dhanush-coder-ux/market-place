@@ -200,6 +200,89 @@ export const SUPPLIER_IMPORT_COLUMNS: ImportColumnDef[] = [
 // ────────────────────────────────────────────────────────────────────────────────
 // Inventory  (CreateProdInvSchema)
 // ────────────────────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────────
+// Product Master (Without Stock Information)
+// ────────────────────────────────────────────────────────────────────────────────
+export const PRODUCT_IMPORT_COLUMNS: ImportColumnDef[] = [
+  {
+    key: "name",
+    label: "Product Name",
+    required: true,
+    type: "string",
+    example: "Premium Wireless Headphones",
+  },
+  {
+    key: "description",
+    label: "Description",
+    required: false,
+    type: "string",
+    example: "High quality wireless headphones with noise cancellation",
+  },
+  {
+    key: "brand",
+    label: "Brand",
+    required: false,
+    type: "string",
+    example: "Sony",
+  },
+  {
+    key: "barcode",
+    label: "Barcode",
+    required: false,
+    type: "string",
+    example: "8901234567890",
+  },
+  {
+    key: "sku",
+    label: "SKU",
+    required: false,
+    type: "string",
+    example: "WH-1000XM5-BLK",
+  },
+  {
+    key: "buy_price",
+    label: "Buy Price",
+    required: false,
+    type: "number",
+    example: "8000",
+  },
+  {
+    key: "sell_price",
+    label: "Sell Price",
+    required: false,
+    type: "number",
+    example: "12000",
+  },
+  {
+    key: "gst",
+    label: "GST (%)",
+    required: false,
+    type: "string",
+    example: "18%",
+  },
+  {
+    key: "reorder_point",
+    label: "Reorder Point",
+    required: false,
+    type: "number",
+    example: "5",
+  },
+  {
+    key: "storage_location",
+    label: "Storage Location",
+    required: false,
+    type: "string",
+    example: "Rack A - Shelf 2",
+  },
+  {
+    key: "have_tracking",
+    label: "Have Tracking (true/false)",
+    required: false,
+    type: "boolean",
+    example: "true",
+  },
+];
+
 export const INVENTORY_IMPORT_COLUMNS: ImportColumnDef[] = [
   {
     key: "name",
@@ -293,7 +376,7 @@ export const INVENTORY_IMPORT_COLUMNS: ImportColumnDef[] = [
 // Helpers
 // ────────────────────────────────────────────────────────────────────────────────
 
-export type EntityType = "inventory" | "customer" | "supplier";
+export type EntityType = "inventory" | "product" | "customer" | "supplier";
 
 export function getColumnsForEntity(entity: EntityType): ImportColumnDef[] {
   switch (entity) {
@@ -303,6 +386,8 @@ export function getColumnsForEntity(entity: EntityType): ImportColumnDef[] {
       return SUPPLIER_IMPORT_COLUMNS;
     case "inventory":
       return INVENTORY_IMPORT_COLUMNS;
+    case "product":
+      return PRODUCT_IMPORT_COLUMNS;
   }
 }
 
@@ -389,7 +474,7 @@ export function transformRowToPayload(
     }
   }
 
-  if (entity === "inventory") {
+  if (entity === "product" || entity === "inventory") {
     if (payload.brand && payload.name && !payload.name.toLowerCase().includes(payload.brand.toLowerCase())) {
       payload.name = `${payload.brand} ${payload.name}`;
     }
@@ -397,7 +482,12 @@ export function transformRowToPayload(
     if (!payload.description) payload.description = payload.name || "";
     if (!payload.category_id) payload.category_id = "";
     if (!payload.unit_id) payload.unit_id = "";
-    if (payload.have_tracking === undefined) payload.have_tracking = false;
+    if (entity === "product") {
+      if (payload.have_tracking === undefined) payload.have_tracking = true;
+      payload.stocks = 0;
+    } else {
+      if (payload.have_tracking === undefined) payload.have_tracking = false;
+    }
     if (!payload.type_infos)
       payload.type_infos = {
         has_variant: false,

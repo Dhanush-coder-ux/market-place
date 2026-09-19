@@ -27,6 +27,7 @@ export default function EmployeeDetail() {
   const { setBottomActions } = useHeader();
 
   const [employee, setEmployee] = useState<EmployeeRecord | null>(null);
+  const [shopName, setShopName] = useState<string>(() => localStorage.getItem("shop_name") || "");
   const [recordLoading, setRecordLoading] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [viewValue, setViewValue] = useState<{ label: string, value: string } | null>(null);
@@ -50,10 +51,21 @@ export default function EmployeeDetail() {
   useEffect(() => {
     if (!id) return;
     setRecordLoading(true);
-    getData(`${ENDPOINTS.EMPLOYEES}/by/${SHOP_ID}/${id}`)
+    const activeShopId = localStorage.getItem("shop_id") || SHOP_ID;
+    getData(`${ENDPOINTS.EMPLOYEES}/by/${activeShopId}/${id}`)
       .then((res) => {
         if (res?.data) {
-          setEmployee(Array.isArray(res.data) ? res.data[0] : res.data);
+          const empData: any = Array.isArray(res.data) ? res.data[0] : res.data;
+          setEmployee(empData);
+          if (empData?.shop_name) {
+            setShopName(empData.shop_name);
+          } else if (empData?.shop_id) {
+            getData(`${ENDPOINTS.SHOPS}/by/${empData.shop_id}`).then(shopRes => {
+              if (shopRes?.data?.name) {
+                setShopName(shopRes.data.name);
+              }
+            }).catch(() => {});
+          }
         }
       })
       .finally(() => setRecordLoading(false));
@@ -62,7 +74,9 @@ export default function EmployeeDetail() {
   const handleDelete = async () => {
     if (!employee) return;
     try {
-      await deleteData(`${ENDPOINTS.EMPLOYEES}/${SHOP_ID}/${employee.id}`);
+      const activeShopId = employee.shop_id || localStorage.getItem("shop_id") || SHOP_ID;
+      const empId = employee.id || employee.employee_id;
+      await deleteData(`${ENDPOINTS.EMPLOYEES}/${activeShopId}/${empId}`);
       showToast("Employee removed successfully", "success");
       navigate("/employee/all");
     } catch (err: any) {
@@ -71,12 +85,13 @@ export default function EmployeeDetail() {
   };
 
   const handleResendVerification = async () => {
-    if (!employee?.id) return;
+    const empId = employee?.id || employee?.employee_id;
+    if (!empId) return;
     setResendingVerification(true);
     try {
       await employeeApi.resendVerificationEmail({
-        id: employee.id,
-        shop_id: employee.shop_id || SHOP_ID
+        id: empId,
+        shop_id: employee.shop_id || localStorage.getItem("shop_id") || SHOP_ID
       });
       showToast("Verification email sent again", "success");
     } catch (err: any) {
@@ -104,6 +119,10 @@ export default function EmployeeDetail() {
 
   const name = employee.name || "Unknown Member";
   const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  const employeeUiId = String(employee.ui_id || employee.employee_ui_id || (employee.id ? employee.id.slice(0, 8).toUpperCase() : (employee.employee_id ? String(employee.employee_id).slice(0, 8).toUpperCase() : "—")));
+  const salaryRange = employee.datas?.salary_range ?? (employee as any).additional_infos?.salary_range;
+  const fullAddress = employee.datas?.address?.full_address ?? (employee as any).additional_infos?.address?.full_address;
+  const zipCode = employee.datas?.address?.zip_code ?? (employee as any).additional_infos?.address?.zip_code;
 
   return (
     <div className="flex-1 flex flex-col min-h-0 h-full bg-slate-50/50 font-sans overflow-hidden relative">
@@ -113,7 +132,7 @@ export default function EmployeeDetail() {
         <ProfileHeaderCard
           name={name}
           initials={initials}
-          subText={`Employee ID: ${employee.ui_id || employee.id?.slice(0, 8).toUpperCase()}`}
+          subText={`Employee ID: ${employeeUiId}`}
           badges={[
             { text: String(employee.role || "Staff"), variant: "primary" },
             {
@@ -187,21 +206,28 @@ export default function EmployeeDetail() {
                   onClick={() => setViewValue({ label: "Joining Date", value: String(employee.joined_date || "—") })}
                 />
                 <DetailItem
-                  icon={Database} label="Salary Range" value={employee.datas?.salary_range ? `₹${employee.datas.salary_range}` : "—"}
-                  onClick={() => setViewValue({ label: "Salary Range", value: String(employee.datas?.salary_range || "—") })}
+                  icon={Database} label="Salary Range" value={salaryRange ? `₹${salaryRange}` : "—"}
+                  onClick={() => setViewValue({ label: "Salary Range", value: String(salaryRange || "—") })}
                 />
                 <DetailItem
-                  icon={MapPin} label="Full Address" value={employee.datas?.address?.full_address || "—"}
-                  onClick={() => setViewValue({ label: "Full Address", value: employee.datas?.address?.full_address || "—" })}
+                  icon={MapPin} label="Full Address" value={fullAddress || "—"}
+                  onClick={() => setViewValue({ label: "Full Address", value: fullAddress || "—" })}
                 />
                 <DetailItem
-                  icon={MapPin} label="Zip Code" value={employee.datas?.address?.zip_code || "—"}
-                  onClick={() => setViewValue({ label: "Zip Code", value: employee.datas?.address?.zip_code || "—" })}
+                  icon={MapPin} label="Zip Code" value={zipCode || "—"}
+                  onClick={() => setViewValue({ label: "Zip Code", value: zipCode || "—" })}
                 />
 
                 {/* Dynamic fields */}
                 {Object.entries(employee).map(([key, val]) => {
-                  if (["name", "email", "mobile_number", "role", "department", "joined_date", "employee_id", "shop_id", "account_id", "is_accepted", "added_by", "id", "datas", "ui_id", "created_at", "updated_at"].includes(key)) return null;
+                  if ([
+                    "name", "email", "mobile_number", "role", "department", "joined_date",
+                    "employee_id", "shop_id", "account_id", "is_accepted", "added_by", "id",
+                    "datas", "ui_id", "created_at", "updated_at", "user_id", "accepted",
+                    "additional_infos", "shop_name", "sequence_id"
+                  ].includes(key)) return null;
+
+                  if (typeof val === "object" && val !== null) return null;
                   const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                   return (
                     <DetailItem
@@ -221,8 +247,8 @@ export default function EmployeeDetail() {
           <div className="lg:col-span-4 space-y-6">
             <SectionCard title="System Context">
               <div className="space-y-4">
-                <InfoRow label="Employee ID" value={String(employee.id || "—")} />
-                <InfoRow label="Shop ID" value={String(employee.shop_id || SHOP_ID)} />
+                <InfoRow label="Employee ID" value={employeeUiId} />
+                <InfoRow label="Shop Name" value={shopName || "—"} />
               </div>
             </SectionCard>
           </div>
@@ -259,5 +285,3 @@ export default function EmployeeDetail() {
     </div>
   );
 }
-
-

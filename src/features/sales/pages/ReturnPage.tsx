@@ -499,14 +499,17 @@ const ReturnPageContent: React.FC<{ sale: SaleRecord; productMap: Record<string,
                         const sel = (state.exchangeMap["__global__"] || []).some((ex: any) => ex.id === ep.id);
                         
                         const resolvedStock = ep.stocks || 0;
-                        const inStock = ep.hasVariants || ep.hasBatches || resolvedStock > 0;
+                        const isStockTracked = ep.have_tracking !== false && ep.track_stock !== false && ep.tracking !== false;
+                        const inStock = !isStockTracked || ep.hasVariants || ep.hasBatches || resolvedStock > 0;
                         const parts = [];
                         if (ep.hasVariants) parts.push(ep.variantCount > 0 ? `${ep.variantCount} VARIANT${ep.variantCount > 1 ? 'S' : ''}` : 'VARIANTS');
                         if (ep.hasBatches) parts.push('BATCHES');
                         if (ep.hasSerials) parts.push('SERIALS');
                         
                         let stockLabel = 'OUT OF STOCK';
-                        if (inStock) {
+                        if (!isStockTracked) {
+                          stockLabel = 'IN STOCK';
+                        } else if (inStock) {
                           if (parts.length > 0) {
                             stockLabel = `${parts.join(' & ')}${resolvedStock > 0 ? ` - ${resolvedStock} IN STOCK` : ''}`;
                           } else {

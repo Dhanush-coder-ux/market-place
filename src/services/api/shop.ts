@@ -64,6 +64,10 @@ export const shopApi = {
     return await apiClient.get(`${ENDPOINTS.SHOPS}/by/user/${user_id}`);
   },
   
+  completeInitialStockImport: async (shop_id: string) => {
+    return await apiClient.post(`${ENDPOINTS.SHOPS}/${shop_id}/complete-initial-stock-import`, {});
+  },
+
   deleteShop: async (data: Record<string, any>) => {
     validateMandatory(data, SCHEMAS.shop_delete);
     return await apiClient.delete(`${ENDPOINTS.SHOPS}/${data.id}`);

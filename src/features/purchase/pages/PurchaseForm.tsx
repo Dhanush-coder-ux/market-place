@@ -821,7 +821,7 @@ const PurchaseForm = () => {
                 {id && purchaseVersion && (
                   <div className="flex items-center gap-1.5">
                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Current Version</span>
-                    <span className="px-2.5 py-1 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-[10px] font-black tracking-widest shadow-sm border border-blue-400/30">
+                    <span className="px-2.5 py-1 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 text-white text-[10px] font-black tracking-widest shadow-sm border border-blue-400/30">
                       {purchaseVersion.toUpperCase()}
                     </span>
                   </div>

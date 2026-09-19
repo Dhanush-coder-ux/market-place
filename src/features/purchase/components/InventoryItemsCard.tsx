@@ -324,7 +324,7 @@ export const InventoryItemsCard = ({
     setBatchModal({ isOpen: false, rowIndex: -1, batches: [], productName: "", variantName: "", existingSerials: [], allowNewBatch: true });
   };
 
-  const themeColor = type === "PURCHASE" ? "indigo" : "emerald";
+  const themeColor = type === "PURCHASE" ? "blue" : "emerald";
   const typeText = type === "PURCHASE" ? "Purchase" : "Production";
 
 
@@ -595,7 +595,7 @@ export const InventoryItemsCard = ({
       {/* Variant Modal — rendered outside the card to avoid overflow clipping */}
       {variantModal.isOpen && createPortal(
         <div className="fixed inset-0 z-[100] flex flex-col items-center p-4 md:p-12 overflow-y-auto bg-slate-900/40 backdrop-blur-sm custom-scrollbar animate-in fade-in duration-300">
-          <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col border border-slate-200 my-auto shadow-indigo-200/20">
+          <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col border border-slate-200 my-auto shadow-blue-200/20">
             <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-lg bg-${themeColor}-50 flex items-center justify-center text-${themeColor}-600 border border-${themeColor}-100`}>
@@ -622,9 +622,9 @@ export const InventoryItemsCard = ({
                     <div
                       key={variant.id}
                       onClick={() => setSelectedVariants(variant.id)}
-                      className={`relative p-5 rounded-lg border-2 transition-all cursor-pointer group ${isSelected ? 'border-indigo-600 bg-indigo-50/50 shadow-md shadow-indigo-100' : 'border-slate-100 bg-white hover:border-indigo-200 hover:bg-slate-50/30'}`}
+                      className={`relative p-5 rounded-lg border-2 transition-all cursor-pointer group ${isSelected ? 'border-blue-600 bg-blue-50/50 shadow-md shadow-blue-100' : 'border-slate-100 bg-white hover:border-blue-200 hover:bg-slate-50/30'}`}
                     >
-                      <div className={`absolute top-5 right-5 h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-200 group-hover:border-indigo-300'}`}>
+                      <div className={`absolute top-5 right-5 h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-200 group-hover:border-blue-300'}`}>
                         {isSelected && <Check size={12} strokeWidth={4} />}
                       </div>
                       <h4 className="font-black text-slate-800 text-sm pr-8 tracking-tight">{variant.name}</h4>
@@ -1267,7 +1267,7 @@ export const InventoryItemsCard = ({
                                         <>
                                           <div className="flex justify-between text-[11px]">
                                             <span className="text-slate-500">GST Cost ({product.taxGst}%)</span>
-                                            <span className="font-bold text-indigo-650">+₹{(baseCost * Number(product.taxGst) / 100).toFixed(2)}</span>
+                                            <span className="font-bold text-blue-650">+₹{(baseCost * Number(product.taxGst) / 100).toFixed(2)}</span>
                                           </div>
                                           <div className="flex justify-between text-[11px] font-semibold text-slate-750">
                                             <span className="text-slate-600">Unit Cost (incl. GST)</span>
@@ -1299,7 +1299,7 @@ export const InventoryItemsCard = ({
                                         <>
                                           <div className="flex justify-between text-[11px]">
                                             <span className="text-slate-500">Row GST ({product.taxGst}%)</span>
-                                            <span className="font-bold text-indigo-650">+₹{(rowTotal * Number(product.taxGst) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                            <span className="font-bold text-blue-650">+₹{(rowTotal * Number(product.taxGst) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                           </div>
                                           <div className="flex justify-between text-[11px] font-semibold text-slate-750">
                                             <span className="text-slate-600">Row Subtotal (incl. GST)</span>
@@ -1321,7 +1321,7 @@ export const InventoryItemsCard = ({
                                     <div className="mt-4 p-2.5 bg-slate-50 border border-slate-150 rounded-xl flex items-center justify-between text-[11px] text-slate-600">
                                       <span className="font-black text-slate-400 uppercase tracking-wider text-[9px]">Tax Formula:</span>
                                       <span className="font-medium tabular-nums">
-                                        Base Cost <span className="font-semibold text-slate-700">₹{baseCost.toFixed(2)}</span> + GST Cost ({product.taxGst}%) <span className="font-semibold text-indigo-600">₹{(baseCost * Number(product.taxGst) / 100).toFixed(2)}</span> = Total <span className="font-bold text-slate-800">₹{(baseCost * (1 + Number(product.taxGst) / 100)).toFixed(2)}</span>
+                                        Base Cost <span className="font-semibold text-slate-700">₹{baseCost.toFixed(2)}</span> + GST Cost ({product.taxGst}%) <span className="font-semibold text-blue-600">₹{(baseCost * Number(product.taxGst) / 100).toFixed(2)}</span> = Total <span className="font-bold text-slate-800">₹{(baseCost * (1 + Number(product.taxGst) / 100)).toFixed(2)}</span>
                                       </span>
                                     </div>
                                   )}

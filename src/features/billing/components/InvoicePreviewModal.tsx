@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Download, X, Loader2, CheckCircle2, Banknote, Smartphone, Wallet, Printer, Plus } from "lucide-react";
+import { Download, X, Loader2, CheckCircle2, Banknote, Smartphone, Wallet, Plus } from "lucide-react";
 import { BillingItem } from "../types";
 import { shopApi } from "../../../services/api/shop";
 
@@ -279,9 +279,6 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
         <div className={`flex items-center ${orderId ? 'justify-between' : 'justify-end'} px-5 py-3 bg-white border-t border-slate-200/60 shrink-0 gap-2 no-print`}>
           {orderId && (
             <div className="flex gap-2">
-              <button onClick={() => window.print()} className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-blue-200 text-[12px] font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 transition-colors">
-                <Printer size={13} /> Print
-              </button>
               <button onClick={handleDownload} className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-slate-200 text-[12px] font-medium text-slate-600 bg-white hover:bg-slate-50 transition-colors">
                 <Download size={13} /> Download
               </button>

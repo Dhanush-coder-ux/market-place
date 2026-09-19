@@ -454,7 +454,7 @@ const Billing = () => {
         <BillingSuccessModal
           isOpen={!showInvoicePreview && !!successDetails}
           details={successDetails}
-          autoPrint={true}
+          autoPrint={false}
           onClose={() => setSuccessDetails(null)}
           onNextBill={() => {
             setSuccessDetails(null);

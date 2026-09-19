@@ -89,45 +89,6 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
     addTimer(() => setPhase("cutting"), 3400);
     addTimer(() => {
       setPhase("done");
-      const content = document.getElementById("printable-receipt")?.innerHTML;
-      if (content) {
-        const iframe = document.createElement("iframe");
-        iframe.style.position = "fixed";
-        iframe.style.right = "0";
-        iframe.style.bottom = "0";
-        iframe.style.width = "0";
-        iframe.style.height = "0";
-        iframe.style.border = "0";
-        document.body.appendChild(iframe);
-        const doc = iframe.contentWindow?.document;
-        if (doc) {
-          const links = Array.from(document.querySelectorAll("link[rel='stylesheet'], style"))
-            .map(el => el.outerHTML)
-            .join("\n");
-          doc.open();
-          doc.write(`
-            <html>
-              <head>
-                <title>Receipt</title>
-                ${links}
-                <style>
-                  body { margin: 0; padding: 20px; font-family: sans-serif; background: white; color: black; }
-                  hr { border-color: #000; }
-                </style>
-              </head>
-              <body>
-                ${content}
-              </body>
-            </html>
-          `);
-          doc.close();
-          setTimeout(() => {
-            iframe.contentWindow?.focus();
-            iframe.contentWindow?.print();
-            setTimeout(() => document.body.removeChild(iframe), 1000);
-          }, 250);
-        }
-      }
     }, 4100);
   }, [view, isAnimating, phase, onPrint, addTimer]);
 
@@ -148,7 +109,8 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
       setClosing(false);
     }
     return clearTimers;
-  }, [isOpen, autoPrint, startPrint, clearTimers]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   /* Body scroll lock */
   useEffect(() => {
@@ -477,9 +439,6 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
               style={{
                 animation: "receiptPaperFeed 1.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards",
                 boxShadow: "2px 4px 16px rgba(0,0,0,0.18), -1px 0 4px rgba(0,0,0,0.06)",
-                ...(isAnimating && phase === "feeding"
-                  ? { animationName: "receiptPaperFeed, paperJitter", animationDuration: "1.8s, 0.08s", animationTimingFunction: "cubic-bezier(0.25,0.46,0.45,0.94), linear", animationIterationCount: "1, infinite", animationFillMode: "forwards, none" }
-                  : {}),
               }}
             >
               {/* Receipt content — reveals with clip-path */}
@@ -490,8 +449,8 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
                   animation: receiptRevealed
                     ? "receiptContentReveal 1.5s ease-out forwards"
                     : "none",
-                  clipPath: receiptRevealed ? undefined : "inset(0 0 100% 0)",
-                  opacity: receiptRevealed ? undefined : 0.4,
+                  clipPath: receiptRevealed ? "none" : "inset(0 0 100% 0)",
+                  opacity: receiptRevealed ? 1 : 0.4,
                   minHeight: 120,
                 }}
               >

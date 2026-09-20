@@ -96,6 +96,11 @@ export default defineConfig({
       'react-is',
       'antd',
       'primereact',
+      // Pre-bundle html2pdf.js + its CJS deps so Vite resolves the
+      // CommonJS default export correctly (fixes "default is not a function")
+      'html2pdf.js',
+      'html2canvas',
+      'jspdf',
     ],
   },
 })

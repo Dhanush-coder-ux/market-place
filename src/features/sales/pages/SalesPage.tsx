@@ -583,7 +583,23 @@ const SalesListPage: React.FC = () => {
                 const dateStr = fmtDate(sale.created_at || (sale as any).date);
                 const timeStr = fmtTime(sale.created_at || (sale as any).date);
                 const refundedCount = (sale.items || []).filter((i: any) => i.status === "REFUNDED").length;
-                const exchangedCount = (sale.items || []).filter((i: any) => i.status === "EXCHANGED").length;
+
+                // ── Exchange detection ─────────────────────────────────────────────
+                // Count items individually marked EXCHANGED
+                const itemExchangedCount = (sale.items || []).filter((i: any) => i.status === "EXCHANGED").length;
+                // Count entries in the top-level exchanges array (set by the Order Service)
+                const topLevelExchangeCount = Array.isArray((sale as any).exchanges) ? (sale as any).exchanges.length : 0;
+                const exchangedCount = itemExchangedCount + topLevelExchangeCount;
+
+                // True when this sale IS an exchange-replacement order itself
+                // (origin contains "exchange" in any casing, or the is_exchange / exchange_type flag is set)
+                const isExchangeOrder =
+                  (typeof (sale as any).origin === 'string' && (sale as any).origin.toLowerCase().includes('exchange')) ||
+                  !!(sale as any).is_exchange ||
+                  !!(sale as any).exchange_type ||
+                  (sale as any).order_type === 'EXCHANGE' ||
+                  (sale as any).type === 'exchange';
+
                 const hasReturns = (sale.returns && sale.returns.length > 0) || (sale.items || []).some((i: any) => (i.returned_quantity && i.returned_quantity > 0) || i.status === "REFUNDED" || i.status === "EXCHANGED") || sale.status === "Returned" || sale.status === "RETURNED";
 
                 const isSelected = selectedSale?.id === sale.id;
@@ -600,8 +616,11 @@ const SalesListPage: React.FC = () => {
                         <span className="font-mono text-[11px] font-semibold text-slate-800 block">{sale.ui_id}</span>
                         <div className="flex gap-1 mt-1 flex-wrap">
                           {sale.origin === "Offline Return" && <AntBadge variant="tx-sales-return" type="tag">Return</AntBadge>}
-                          {hasReturns && <AntBadge variant="tx-sales-return" type="tag">Returned</AntBadge>}
+                          {/* Exchange-replacement sale — this order itself is an exchange */}
+                          {isExchangeOrder && <AntBadge variant="tx-sales" type="tag">Exchanged</AntBadge>}
+                          {hasReturns && !isExchangeOrder && <AntBadge variant="tx-sales-return" type="tag">Returned</AntBadge>}
                           {refundedCount > 0 && <AntBadge variant="pay-partial" type="tag">{refundedCount} Refunded</AntBadge>}
+                          {/* Items on this order that were later exchanged */}
                           {exchangedCount > 0 && <AntBadge variant="tx-sales" type="tag">{exchangedCount} Exchanged</AntBadge>}
                         </div>
                       </div>

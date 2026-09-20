@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Download, X, Loader2, CheckCircle2, Banknote, Smartphone, Wallet, Plus } from "lucide-react";
-import { BillingItem } from "../types";
+import { Download, X, Loader2, CheckCircle2, Banknote, Smartphone, Wallet, Plus, Printer } from "lucide-react";
+import type { BillingItem } from "../types";
 import { shopApi } from "../../../services/api/shop";
 
 type BillStatus = "COMPLETED" | "PENDING" | "CANCELLED";
@@ -27,9 +27,9 @@ const formatINR = (v: number, d = 2) =>
   v.toLocaleString("en-IN", { minimumFractionDigits: d, maximumFractionDigits: d });
 
 const payMeta: Record<string, { label: string; icon: React.ReactNode }> = {
-  cash: { label: "Cash", icon: <Banknote size={12} strokeWidth={1.5} /> },
-  upi: { label: "UPI / Card", icon: <Smartphone size={12} strokeWidth={1.5} /> },
-  credit: { label: "Credit", icon: <Wallet size={12} strokeWidth={1.5} /> },
+  cash:   { label: "Cash",       icon: <Banknote   size={12} strokeWidth={1.5} /> },
+  upi:    { label: "UPI / Card", icon: <Smartphone size={12} strokeWidth={1.5} /> },
+  credit: { label: "Credit",     icon: <Wallet      size={12} strokeWidth={1.5} /> },
 };
 
 const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
@@ -38,13 +38,14 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
   isSubmitting, onConfirm, orderId, onNewBill
 }) => {
   const invoiceRef = useRef<HTMLDivElement>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const filledItems = items.filter(i => !!i.name);
-  const today = new Date();
+  const today   = new Date();
   const dateStr = today.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
   const timeStr = today.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
 
   const primaryPayment = payments[0] || { mode: "cash" };
-  const modeInfo = payMeta[primaryPayment.mode] || payMeta.cash;
+  const modeInfo       = payMeta[primaryPayment.mode] || payMeta.cash;
 
   const [shopData, setShopData] = useState<any>(null);
 
@@ -58,22 +59,115 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
     }
   }, [isOpen]);
 
+  // ── PDF Download ─────────────────────────────────────────────────────────────
   const handleDownload = async () => {
-    if (!invoiceRef.current) return;
-    const element = invoiceRef.current;
+    if (!invoiceRef.current || isGeneratingPdf) return;
+    setIsGeneratingPdf(true);
 
     try {
-      const html2pdf = (await import('html2pdf.js')).default;
-      const opt = {
-        margin: 0.3,
-        filename: `Invoice_${orderId || 'preview'}.pdf`,
-        image: { type: 'jpeg' as const, quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: 'in' as const, format: 'a4' as const, orientation: 'portrait' as const }
-      };
-      html2pdf().set(opt).from(element).save();
-    } catch (error) {
-      console.error("Error generating PDF:", error);
+      // ── Import dom-to-image-more + jsPDF ─────────────────────────────────────
+      // dom-to-image-more renders via the browser's native SVG foreignObject
+      // pipeline — it never parses CSS itself, so Tailwind v4's oklch() / oklab()
+      // colors work perfectly (html2canvas crashed on them).
+      const [dtimMod, jspdfMod] = await Promise.all([
+        import('dom-to-image-more'),
+        import('jspdf'),
+      ]);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const domtoimage = (dtimMod.default ?? dtimMod) as any;
+
+      // jsPDF ships as { jsPDF } | { default: { jsPDF } } | { default: fn }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const jspdfAny  = jspdfMod as any;
+      const JsPDFCtor =
+        jspdfAny.jsPDF ??
+        jspdfAny.default?.jsPDF ??
+        jspdfAny.default;
+
+      if (typeof JsPDFCtor !== 'function') {
+        throw new Error(`jsPDF constructor not found. Module keys: ${Object.keys(jspdfAny).join(', ')}`);
+      }
+
+      const el = invoiceRef.current;
+
+      // ── Capture invoice as a high-res JPEG ───────────────────────────────────
+      // scale:2 for retina sharpness; filter removes .no-print elements.
+      const dataUrl: string = await domtoimage.toJpeg(el, {
+        quality: 0.95,
+        bgcolor: '#ffffff',
+        width:   el.scrollWidth,
+        height:  el.scrollHeight,
+        scale:   2,
+        style: {
+          overflow:        'visible',
+          transform:       'scale(1)',
+          transformOrigin: 'top left',
+        },
+        filter: (node: Node) =>
+          !(node instanceof Element && node.classList.contains('no-print')),
+      });
+
+      if (!dataUrl || dataUrl === 'data:,') {
+        throw new Error('dom-to-image-more returned an empty image.');
+      }
+
+      // ── Load the data URL into a canvas for slicing ───────────────────────────
+      const img = new Image();
+      img.src = dataUrl;
+      await new Promise<void>((res, rej) => {
+        img.onload  = () => res();
+        img.onerror = () => rej(new Error('Failed to load captured invoice image.'));
+      });
+
+      const src = document.createElement('canvas');
+      src.width  = img.naturalWidth;
+      src.height = img.naturalHeight;
+      src.getContext('2d')!.drawImage(img, 0, 0);
+
+      // ── Tile across A4 pages in jsPDF ────────────────────────────────────────
+      const pdf    = new JsPDFCtor({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
+      const pageW  = pdf.internal.pageSize.getWidth();   // 210 mm
+      const pageH  = pdf.internal.pageSize.getHeight();  // 297 mm
+      const margin = 10;
+      const printW = pageW - margin * 2;   // 190 mm
+      const printH = pageH - margin * 2;   // 277 mm
+
+      // At 2× scale: logical pixel width = naturalWidth / 2
+      const pxPerMm    = (src.width / 2) / printW;
+      const pagePixels = printH * pxPerMm * 2;  // canvas-px per A4 page height
+
+      let top       = 0;
+      let firstPage = true;
+
+      while (top < src.height) {
+        const slicePx = Math.min(pagePixels, src.height - top);
+        const sliceMm = slicePx / (pxPerMm * 2);
+
+        // Draw only this vertical strip into a temp canvas
+        const strip  = document.createElement('canvas');
+        strip.width  = src.width;
+        strip.height = Math.ceil(slicePx);
+        strip.getContext('2d')!.drawImage(
+          src,
+          0, top, src.width, Math.ceil(slicePx),
+          0, 0,   src.width, Math.ceil(slicePx),
+        );
+
+        if (!firstPage) pdf.addPage();
+        pdf.addImage(strip.toDataURL('image/jpeg', 0.95), 'JPEG', margin, margin, printW, sliceMm);
+
+        top      += Math.ceil(slicePx);
+        firstPage = false;
+      }
+
+      pdf.save(`Invoice_${orderId || 'preview'}.pdf`);
+
+    } catch (err) {
+      console.error('[InvoicePreviewModal] PDF generation failed:', err);
+      alert(`PDF download failed:\n${(err as Error)?.message ?? String(err)}`);
+    } finally {
+      setIsGeneratingPdf(false);
     }
   };
 
@@ -92,29 +186,15 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
       <style dangerouslySetInnerHTML={{
         __html: `
         @media print {
-          body * {
-            visibility: hidden;
-          }
-          .print-area, .print-area * {
-            visibility: visible;
-          }
+          body * { visibility: hidden; }
+          .print-area, .print-area * { visibility: visible; }
           .print-area {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            margin: 0;
-            padding: 0;
-            box-shadow: none !important;
-            border: none !important;
+            position: absolute; left: 0; top: 0;
+            width: 100%; margin: 0; padding: 0;
+            box-shadow: none !important; border: none !important;
           }
-          .no-print {
-            display: none !important;
-          }
-          @page {
-            size: A4;
-            margin: 15mm;
-          }
+          .no-print { display: none !important; }
+          @page { size: A4; margin: 15mm; }
         }
       `}} />
 
@@ -180,7 +260,6 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
                 <p className="text-[13px] font-medium text-slate-800">{customerName || "Walk-in Customer"}</p>
                 <p className="text-[10px] text-slate-600 font-mono">{phone || "—"}</p>
               </div>
-              {/* Status Selector removed */}
             </div>
 
             {/* ── Items Table ────────────────────────────── */}
@@ -279,8 +358,26 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
         <div className={`flex items-center ${orderId ? 'justify-between' : 'justify-end'} px-5 py-3 bg-white border-t border-slate-200/60 shrink-0 gap-2 no-print`}>
           {orderId && (
             <div className="flex gap-2">
-              <button onClick={handleDownload} className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-slate-200 text-[12px] font-medium text-slate-600 bg-white hover:bg-slate-50 transition-colors">
-                <Download size={13} /> Download
+              <button
+                onClick={() => window.print()}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-slate-200 text-[12px] font-medium text-slate-600 bg-white hover:bg-slate-50 transition-colors"
+              >
+                <Printer size={13} /> Print
+              </button>
+              <button
+                onClick={handleDownload}
+                disabled={isGeneratingPdf}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg border text-[12px] font-medium transition-colors ${
+                  isGeneratingPdf
+                    ? 'border-slate-200 text-slate-400 bg-slate-50 cursor-not-allowed'
+                    : 'border-slate-200 text-slate-600 bg-white hover:bg-slate-50'
+                }`}
+              >
+                {isGeneratingPdf ? (
+                  <><Loader2 size={13} className="animate-spin" /> Generating…</>
+                ) : (
+                  <><Download size={13} /> Download</>
+                )}
               </button>
             </div>
           )}
@@ -315,4 +412,3 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
 };
 
 export default InvoicePreviewModal;
-

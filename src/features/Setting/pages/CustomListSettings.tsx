@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Plus, X, Tag, Ruler, Pencil, Check, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { SHOP_ID } from "@/services/endpoints";
 import { utilityApi } from "@/services/api/utility";
+import { useToast } from "@/context/ToastContext";
 
 interface CustomListSettingsProps {
   type: "categories" | "units";
@@ -31,6 +32,7 @@ const normalizeItems = (res: any): ListItem[] => {
 };
 
 export const CustomListSettings: React.FC<CustomListSettingsProps> = ({ type }) => {
+  const { showToast } = useToast();
   const [items, setItems] = useState<ListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -138,7 +140,7 @@ export const CustomListSettings: React.FC<CustomListSettingsProps> = ({ type }) 
 
   const handleDelete = async (itemToRemove: ListItem) => {
     if (saving) return;
-    setItems((prev) => prev.filter((item) => item.id !== itemToRemove.id));
+
     setSaving(true);
     try {
       if (type === "categories") {
@@ -147,6 +149,46 @@ export const CustomListSettings: React.FC<CustomListSettingsProps> = ({ type }) 
         await utilityApi.deleteShopUnit({ id: itemToRemove.id, shop_id: SHOP_ID });
       }
       await fetchData();
+    } catch (err: any) {
+      // Parse the error message from common API response shapes
+      let apiMsg = "";
+      const detail = err?.response?.data?.detail;
+      if (detail && typeof detail === "object" && detail.description) {
+        apiMsg = detail.description;
+      } else if (detail && typeof detail === "object" && detail.msg) {
+        apiMsg = detail.msg;
+      } else if (typeof detail === "string") {
+        apiMsg = detail;
+      } else {
+        apiMsg =
+          err?.response?.data?.message ||
+          err?.response?.data?.error ||
+          err?.data?.message ||
+          err?.message ||
+          "";
+      }
+
+      // Provide a friendly, context-aware message
+      const lower = apiMsg.toLowerCase();
+      let friendly: string;
+      if (
+        lower.includes("product") ||
+        lower.includes("item") ||
+        lower.includes("tagged") ||
+        lower.includes("in use") ||
+        lower.includes("referenced") ||
+        lower.includes("associated") ||
+        lower.includes("foreign key") ||
+        lower.includes("constraint")
+      ) {
+        friendly = `"${itemToRemove.name}" cannot be deleted because one or more products are tagged with this category. Remove the category from all products in the Dropdown Settings tab first, then try again.`;
+      } else if (apiMsg) {
+        friendly = `Could not delete "${itemToRemove.name}": ${apiMsg}`;
+      } else {
+        friendly = `Could not delete "${itemToRemove.name}". It may be in use by a product or dropdown setting. Please check the Dropdown Settings tab and remove any references first.`;
+      }
+
+      showToast(friendly, "error");
     } finally {
       setSaving(false);
     }

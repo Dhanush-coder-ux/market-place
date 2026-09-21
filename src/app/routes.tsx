@@ -88,6 +88,9 @@ function RouteErrorBoundary() {
 // ─── Layout & Auth ───────────────────────────────────────────────────────────
 const MainLayout = lazyRetry(() => import("../components/layouts/MainLayout"));
 const Login = lazyRetry(() => import("../features/auth/pages/Login"));
+const TermsOfService = lazyRetry(() => import("../features/legal/pages/TermsOfService"));
+const PrivacyPolicy = lazyRetry(() => import("../features/legal/pages/PrivacyPolicy"));
+const Security = lazyRetry(() => import("../features/legal/pages/Security"));
 const AuthCallback = lazyRetry(() => import("../features/auth/pages/AuthCallback"));
 const ShopSelect = lazyRetry(() => import("../features/auth/pages/ShopSelect"));
 
@@ -263,6 +266,30 @@ export const router = createBrowserRouter([
       { path: "/customers/:id/edit", element: <Page><CustomerFormPage /></Page> },
       { path: "/customers/:id", element: <Page><CustomerDetail /></Page> },
     ]
+  },
+  {
+    path: '/terms',
+    element: (
+      <Suspense fallback={<Loader />}>
+        <TermsOfService />
+      </Suspense>
+    )
+  },
+  {
+    path: '/privacy',
+    element: (
+      <Suspense fallback={<Loader />}>
+        <PrivacyPolicy />
+      </Suspense>
+    )
+  },
+  {
+    path: '/security',
+    element: (
+      <Suspense fallback={<Loader />}>
+        <Security />
+      </Suspense>
+    )
   },
   {
     path: '/login',

@@ -4,8 +4,7 @@ import { CheckCircle2, XCircle } from "lucide-react";
 export default function EmployeeVerifyPage() {
   const [params] = useSearchParams();
   const status = params.get("status");
-  const employeeId = params.get("employee_id");
-  const shopId = params.get("shop_id");
+  const shopName = params.get("shop_name");
   const verified = status === "success";
 
   return (
@@ -27,9 +26,9 @@ export default function EmployeeVerifyPage() {
         </div>
 
         {verified && (
-          <div className="rounded-lg bg-slate-50 border border-slate-100 p-4 text-left space-y-2">
-            {employeeId && <p className="text-xs font-bold text-slate-500 break-all">Employee ID: {employeeId}</p>}
-            {shopId && <p className="text-xs font-bold text-slate-500 break-all">Shop ID: {shopId}</p>}
+          <div className="rounded-lg bg-emerald-50/50 border border-emerald-100 p-4 text-center space-y-2">
+            {shopName && <p className="text-sm font-bold text-slate-700">Shop: {shopName}</p>}
+            <p className="text-sm font-medium text-slate-600">Your login credentials will be sent to your email shortly.</p>
           </div>
         )}
 

@@ -1,4 +1,4 @@
-import { Search, Filter, Users, X, AlertCircle, ExternalLink, Eye, Pencil, MoreVertical, Trash2, Mail, RefreshCw } from 'lucide-react';
+import { Search, Filter, Users, ExternalLink, Eye, Pencil, MoreVertical, Trash2, Mail, RefreshCw } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { StatCard } from '@/components/common/StatsCard';
 import SkeletonLoader from "@/components/common/SkeletonLoader";
@@ -12,11 +12,19 @@ import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { ColumnPicker } from '@/components/common/ColumnPicker';
 import { RightSidebarFilter } from '@/components/common/RightSidebarFilter';
 import { employeeApi } from '@/services/api/employee';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
+import ActionMenu, { ActionMenuItem } from '@/components/common/ActionMenu';
 
 export default function Employee() {
   const { getData, deleteData, loading, error, clearError } = useApi();
   const { showToast } = useToast();
+
+  useEffect(() => {
+    if (error) {
+      showToast(error, "error");
+      clearError();
+    }
+  }, [error, clearError, showToast]);
   const navigate = useNavigate();
   const location = useLocation();
   const isCleanMode = new URLSearchParams(location.search).get("mode") === "clean";
@@ -38,6 +46,7 @@ export default function Employee() {
   const [employeeToDelete, setEmployeeToDelete] = useState<EmployeeRecord | null>(null);
   const [selectedEmployees, setSelectedEmployees] = useState<Set<string>>(new Set());
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const menuBtnRef = useRef<HTMLButtonElement>(null);
 
   // Dynamic Column State
   const [availableKeys, setAvailableKeys] = useState<string[]>([]);
@@ -120,14 +129,16 @@ export default function Employee() {
     if (!employeeToDelete) return;
     try {
       const targetId = String(employeeToDelete.employee_id || employeeToDelete.id);
-      await deleteData(`${ENDPOINTS.EMPLOYEES}/${SHOP_ID}/${targetId}`);
-      showToast("Employee deleted successfully", "success");
-      setSelectedEmployees(prev => {
-        const next = new Set(prev);
-        next.delete(String(employeeToDelete.employee_id || employeeToDelete.id));
-        return next;
-      });
-      setRefreshKey(prev => prev + 1);
+      const res = await deleteData(`${ENDPOINTS.EMPLOYEES}/${SHOP_ID}/${targetId}`);
+      if (res) {
+        showToast("Employee deleted successfully", "success");
+        setSelectedEmployees(prev => {
+          const next = new Set(prev);
+          next.delete(String(employeeToDelete.employee_id || employeeToDelete.id));
+          return next;
+        });
+        setRefreshKey(prev => prev + 1);
+      }
     } catch (err: any) {
       showToast(err?.message || "Failed to delete employee", "error");
     } finally {
@@ -152,15 +163,22 @@ export default function Employee() {
   };
 
   const handleResendVerification = async (emp: EmployeeRecord) => {
-    if (!(emp?.id || emp?.employee_id)) return;
+    const empId = emp?.employee_id || emp?.id || (emp as any)?._id;
+    const currentShopId = emp?.shop_id || localStorage.getItem("shop_id") || SHOP_ID;
+
+    if (!empId || !currentShopId) {
+      showToast("Missing employee ID or shop ID", "error");
+      return;
+    }
     try {
       await employeeApi.resendVerificationEmail({
-        id: String(emp.employee_id || emp.id),
-        shop_id: emp.shop_id || SHOP_ID
+        id: String(empId),
+        shop_id: String(currentShopId)
       });
-      showToast("Verification email sent again", "success");
+      showToast("Verification invite email sent successfully!", "success");
     } catch (err: any) {
-      showToast(err?.message || "Failed to send verification email", "error");
+      const msg = err?.detail?.description || err?.detail?.msg || err?.message || "Failed to send verification email";
+      showToast(msg, "error");
     }
   };
 
@@ -320,18 +338,7 @@ export default function Employee() {
         </div>
       </RightSidebarFilter>
 
-      {/* Error State */}
-      {error && (
-        <div className="p-4 bg-rose-50 border border-rose-100 rounded-lg flex items-center justify-between animate-in fade-in slide-in-from-top-2">
-          <div className="flex items-center gap-3 text-rose-600">
-            <AlertCircle size={20} />
-            <p className="text-sm font-semibold">{error}</p>
-          </div>
-          <button onClick={clearError} className="p-1 hover:bg-rose-100 rounded-lg transition-colors text-rose-400">
-            <X size={18} />
-          </button>
-        </div>
-      )}
+
 
       {/* Table Section */}
       <div className="bg-white rounded-lg shadow-sm border border-slate-100 min-w-0 overflow-hidden flex flex-col flex-1 min-h-0 mt-2">
@@ -436,42 +443,45 @@ export default function Employee() {
                           </button>
                           <div className="relative">
                             <button
-                              onClick={() => setActiveMenuId(activeMenuId === empId ? null : empId)}
-                              className="text-slate-800 hover:text-slate-900 transition-colors p-1"
+                              ref={activeMenuId === empId ? menuBtnRef : undefined}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveMenuId(activeMenuId === empId ? null : empId);
+                              }}
+                              className="text-slate-800 hover:text-slate-900 transition-colors p-1 cursor-pointer"
                               title="More actions"
                             >
                               <MoreVertical size={15} />
                             </button>
-                            {activeMenuId === empId && (
-                              <>
-                                <div className="fixed inset-0 z-40" onClick={() => setActiveMenuId(null)} />
-                                <div className="absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-lg shadow-lg py-1 z-50 text-left font-sans animate-in fade-in slide-in-from-top-1 duration-150">
-                                  {!emp.accepted && (
-                                    <button
-                                      onClick={() => {
-                                        setActiveMenuId(null);
-                                        handleResendVerification(emp);
-                                      }}
-                                      className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                                    >
-                                      <Mail size={13} />
-                                      Resend Invite
-                                    </button>
-                                  )}
-                                  <button
-                                    onClick={() => {
-                                      setActiveMenuId(null);
-                                      setEmployeeToDelete(emp);
-                                      setIsDeleteDialogOpen(true);
-                                    }}
-                                    className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-red-650 hover:bg-red-50"
-                                  >
-                                    <Trash2 size={13} />
-                                    Delete
-                                  </button>
-                                </div>
-                              </>
-                            )}
+                            <ActionMenu
+                              triggerRef={menuBtnRef}
+                              open={activeMenuId === empId}
+                              onClose={() => setActiveMenuId(null)}
+                              width={160}
+                            >
+                              {!emp.accepted && (
+                                <ActionMenuItem
+                                  icon={<Mail size={13} />}
+                                  onClick={() => {
+                                    setActiveMenuId(null);
+                                    handleResendVerification(emp);
+                                  }}
+                                >
+                                  Resend Invite
+                                </ActionMenuItem>
+                              )}
+                              <ActionMenuItem
+                                icon={<Trash2 size={13} />}
+                                danger
+                                onClick={() => {
+                                  setActiveMenuId(null);
+                                  setEmployeeToDelete(emp);
+                                  setIsDeleteDialogOpen(true);
+                                }}
+                              >
+                                Delete
+                              </ActionMenuItem>
+                            </ActionMenu>
                           </div>
                         </div>
                       </td>

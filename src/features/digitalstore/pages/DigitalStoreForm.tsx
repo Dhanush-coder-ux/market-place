@@ -9,12 +9,13 @@ import { inventoryApi } from "@/services/api/inventory";
 import { SHOP_ID } from "@/services/endpoints";
 import { useHeader } from "@/context/HeaderContext";
 
-// Import steps (we will create these)
+// Import steps
 import Step1BasicDetails from "../components/wizard/Step1BasicDetails";
 import Step2OperatingHours from "../components/wizard/Step2OperatingHours";
 import Step3DeliveryOptions from "../components/wizard/Step3DeliveryOptions";
 import Step4Products from "../components/wizard/Step3Products";
 import Step5Confirmation from "../components/wizard/Step4Confirmation";
+import StoreLaunchAnimationModal from "../components/wizard/StoreLaunchAnimationModal";
 
 const INITIAL_STATE: StoreFormData = {
   name: "",
@@ -67,6 +68,10 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
   const [form, setForm] = useState<StoreFormData>(INITIAL_STATE);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLaunchingModalOpen, setIsLaunchingModalOpen] = useState<boolean>(false);
+  const [isLaunchComplete, setIsLaunchComplete] = useState<boolean>(false);
+  const [launchError, setLaunchError] = useState<string | null>(null);
+
   const navigate = useNavigate();
   const { shop } = useBusinessApi();
   const { setBottomActions } = useHeader();
@@ -150,7 +155,6 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
   };
 
   const saveDraft = async () => {
-    setIsLoading(true);
     try {
       const payload = {
         name: form.name,
@@ -198,7 +202,7 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
       let newShopId = currentShopId;
       let isNewShop = false;
 
-      // 1. Create or Update Shop (backend updateShop automatically handles upsert and deduplication)
+      // 1. Create or Update Shop
       if (currentShopId && currentShopId !== "string") {
         await shop.updateShop({ id: currentShopId, ...fullPayload, visible_online: true });
       } else {
@@ -207,7 +211,7 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
         isNewShop = true;
       }
 
-      // If it was newly created, set it so subsequent steps update it
+      // If newly created, set local storage and create owner record
       if (isNewShop && newShopId) {
         localStorage.setItem("shop_id", newShopId);
         import('@/services/endpoints').then(module => { module.setShopId(newShopId); });
@@ -229,11 +233,7 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
       return newShopId;
     } catch (err: any) {
       console.error("Failed to save draft", err);
-      const msg = err?.detail?.description || err?.detail?.msg || err?.message || "Failed to save shop details";
-      showToast(msg, "error");
-      return null;
-    } finally {
-      setIsLoading(false);
+      throw err;
     }
   };
 
@@ -250,17 +250,29 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
   };
 
   const handleSave = async () => {
+    setIsLaunchingModalOpen(true);
+    setIsLaunchComplete(false);
+    setLaunchError(null);
     setIsLoading(true);
+
     try {
       const newShopId = await saveDraft();
       
       if (newShopId) {
-        // 1.5 Upload Images if any (usually handled in Step 1 now, but kept as fallback)
+        // Upload Images if any
         if (form.logo instanceof File) {
-          await shop.uploadShopImage(form.logo, "logo", newShopId);
+          try {
+            await shop.uploadShopImage(form.logo, "logo", newShopId);
+          } catch (e) {
+            console.error("Logo upload error", e);
+          }
         }
         if (form.banner instanceof File) {
-          await shop.uploadShopImage(form.banner, "banner", newShopId);
+          try {
+            await shop.uploadShopImage(form.banner, "banner", newShopId);
+          } catch (e) {
+            console.error("Banner upload error", e);
+          }
         }
 
         // Handle Products save using newShopId
@@ -282,15 +294,23 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
           }
         }
 
-        navigate("/profile");
+        // Mark launch animation as complete
+        setIsLaunchComplete(true);
       }
     } catch (err: any) {
       console.error("Failed to create shop", err);
       const msg = err?.detail?.description || err?.detail?.msg || err?.message || "Failed to launch shop";
+      setLaunchError(msg);
       showToast(msg, "error");
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleLaunchModalFinished = () => {
+    setIsLaunchingModalOpen(false);
+    showToast("Your store is now live online!", "success");
+    navigate("/profile");
   };
 
   useEffect(() => {
@@ -299,8 +319,8 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
         <button
           type="button"
           onClick={handlePrev}
-          disabled={currentStep === 1 || isLoading}
-          className={`flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all ${currentStep === 1 ? 'opacity-0 pointer-events-none' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 shadow-sm'}`}
+          disabled={currentStep === 1 || isLoading || isLaunchingModalOpen}
+          className={`flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all ${currentStep === 1 ? 'opacity-0 pointer-events-none' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 shadow-sm cursor-pointer'}`}
         >
           <ChevronLeft size={16} strokeWidth={2.5} />
           Back
@@ -315,7 +335,7 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
           <button
             type="button"
             onClick={handleNext}
-            className="flex items-center justify-center gap-1.5 px-7 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-sm bg-blue-600 hover:bg-blue-700 active:scale-95 text-white"
+            className="flex items-center justify-center gap-1.5 px-7 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-sm bg-blue-600 hover:bg-blue-700 active:scale-95 text-white cursor-pointer"
           >
             Continue
             <ChevronRight size={16} strokeWidth={2.5} />
@@ -324,30 +344,22 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
           <button
             type="button"
             onClick={handleSave}
-            disabled={isLoading}
-            className={`flex items-center justify-center gap-2 px-7 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-sm ${isLoading ? "bg-slate-400 cursor-not-allowed text-white" : "bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white"}`}
+            disabled={isLoading || isLaunchingModalOpen}
+            className={`flex items-center justify-center gap-2 px-7 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-md active:scale-95 cursor-pointer ${
+              isLoading || isLaunchingModalOpen
+                ? "bg-slate-400 cursor-not-allowed text-white" 
+                : "bg-emerald-600 hover:bg-emerald-700 text-white"
+            }`}
           >
-            {isLoading ? (
-              <>
-                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                </svg>
-                Creating Store...
-              </>
-            ) : (
-              <>
-                <Rocket size={15} strokeWidth={2} />
-                Launch Store
-              </>
-            )}
+            <Rocket size={15} strokeWidth={2} className="animate-bounce" />
+            <span>Launch Store</span>
           </button>
         )}
       </div>
     );
 
     return () => setBottomActions(null);
-  }, [currentStep, isLoading, form]);
+  }, [currentStep, isLoading, isLaunchingModalOpen, form]);
 
   const currentStepData = STEPS.find(s => s.id === currentStep)!;
   const progressPercent = ((currentStep - 1) / (STEPS.length - 1)) * 100;
@@ -441,6 +453,17 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
         </div>
 
       </div>
+
+      {/* ─── IMMERSIVE "OFFLINE SHOP GOING ONLINE" LAUNCH MODAL ─── */}
+      <StoreLaunchAnimationModal
+        isOpen={isLaunchingModalOpen}
+        storeName={form.name}
+        category={form.category}
+        isComplete={isLaunchComplete}
+        error={launchError}
+        onFinished={handleLaunchModalFinished}
+        onRetry={handleSave}
+      />
     </div>
   );
 }

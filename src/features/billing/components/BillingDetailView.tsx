@@ -26,7 +26,8 @@ const formatINR = (v: number, d = 2) =>
 
 const PaymentModeLabel: Record<string, { label: string; icon: React.ReactNode }> = {
   cash:   { label: "Cash",     icon: <Banknote   size={14} /> },
-  upi:    { label: "UPI/Card", icon: <Smartphone size={14} /> },
+  upi:    { label: "UPI",      icon: <Smartphone size={14} /> },
+  card:   { label: "Card",     icon: <CreditCard size={14} /> },
   credit: { label: "Credit",   icon: <Wallet     size={14} /> },
 };
 

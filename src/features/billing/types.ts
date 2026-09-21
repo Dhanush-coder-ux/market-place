@@ -1,6 +1,6 @@
 // types.ts
 
-export type PaymentMode = "cash" | "upi" | "credit";
+export type PaymentMode = "cash" | "upi" | "credit" | "card";
 
 export interface CustomerData {
   id: string;

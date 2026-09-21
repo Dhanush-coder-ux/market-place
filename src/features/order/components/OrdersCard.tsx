@@ -2,7 +2,6 @@ import {
   Phone, User, IndianRupee, Wifi, ArrowRight, 
   Truck
 } from "lucide-react";
-import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { AntBadge } from "@/components/ui/AntBadge";
 
 const statusConfig: Record<string, string> = {
@@ -40,6 +39,35 @@ const DeliveryBadge = ({ onClick }: { onClick?: () => void }) => (
 const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "grid", onStatusChange, onVerifyDelivery }) => {
   const variant = statusConfig[order.status] ?? "ps-draft";
   const showDeliveryVerify = order.origin === "ONLINE" && !["COMPLETED", "CANCELED", "REFUNDED", "DELIVERED"].includes(order.status);
+
+  const renderActions = (isGrid: boolean) => {
+    const btnBase = `flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all duration-200 shadow-sm active:scale-95 ${isGrid ? 'flex-1' : ''}`;
+    
+    if (order.status === "PENDING") {
+      return (
+        <div className={`flex gap-2 ${isGrid ? 'w-full' : ''}`}>
+          <button onClick={() => onStatusChange?.("ACCEPTED")} className={`${btnBase} bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-500 hover:text-white`}>Accept</button>
+          <button onClick={() => onStatusChange?.("CANCELED")} className={`${btnBase} bg-red-50 text-red-600 border border-red-200 hover:bg-red-500 hover:text-white`}>Cancel</button>
+        </div>
+      );
+    }
+    if (order.status === "ACCEPTED") {
+      return (
+        <div className={`flex gap-2 ${isGrid ? 'w-full' : ''}`}>
+          <button onClick={() => onStatusChange?.("OUT_FOR_DELIVERY")} className={`${btnBase} bg-purple-50 text-purple-600 border border-purple-200 hover:bg-purple-500 hover:text-white`}>Out for Delivery</button>
+          <button onClick={() => onStatusChange?.("CANCELED")} className={`${btnBase} bg-red-50 text-red-600 border border-red-200 hover:bg-red-500 hover:text-white`}>Cancel</button>
+        </div>
+      );
+    }
+    if (order.status === "OUT_FOR_DELIVERY") {
+      return (
+        <div className={`flex gap-2 ${isGrid ? 'w-full' : ''}`}>
+          <button onClick={() => onStatusChange?.("DELIVERED")} className={`${btnBase} bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-500 hover:text-white`}>Delivered</button>
+        </div>
+      );
+    }
+    return null;
+  };
 
   // ─── HORIZONTAL LIST VIEW ──────────────────────────────────────────────────
   if (viewMode === "list") {
@@ -85,19 +113,8 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
 
         {/* Right Section: Actions */}
         <div className="flex items-center gap-3 shrink-0 md:border-l md:border-slate-100 md:pl-6 w-full md:w-auto mt-2 md:mt-0">
-          <div className="w-40 hidden sm:block">
-            <ReusableSelect
-              options={[
-                { label: "Pending", value: "PENDING" },
-                { label: "Accepted", value: "ACCEPTED" },
-                { label: "Out For Delivery", value: "OUT_FOR_DELIVERY" },
-                { label: "Delivered", value: "DELIVERED" },
-                { label: "Canceled", value: "CANCELED" },
-              ]}
-              value={order.status}
-              onValueChange={(val) => onStatusChange?.(val)}
-              placeholder="Update Status"
-            />
+          <div className="hidden sm:block">
+            {renderActions(false)}
           </div>
           
           <div className="sm:hidden mr-auto">
@@ -166,18 +183,7 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
         </div>
 
         <div className="flex flex-col gap-3">
-          <ReusableSelect
-            options={[
-              { label: "Pending", value: "PENDING" },
-              { label: "Accepted", value: "ACCEPTED" },
-              { label: "Out For Delivery", value: "OUT_FOR_DELIVERY" },
-              { label: "Delivered", value: "DELIVERED" },
-              { label: "Canceled", value: "CANCELED" },
-            ]}
-            value={order.status}
-            onValueChange={(val) => onStatusChange?.(val)}
-            placeholder="Update Status"
-          />
+          {renderActions(true)}
 
           <div className="flex items-center gap-2">
             <button

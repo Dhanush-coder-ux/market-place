@@ -5,7 +5,7 @@ import { GripVertical } from "lucide-react";
 import BillingTable from "../components/BillingTable";
 import BillingHeader from "../components/BillingHeader";
 
-import { BillingItem, CustomerData } from "../types";
+import { BillingItem, CustomerData, PaymentMode } from "../types";
 import { useToast } from "@/context/ToastContext";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
@@ -58,7 +58,7 @@ const Billing = () => {
   const { settings } = usePurchaseSettings();
   const includeGst = settings.gstType === "registered";
   const round2 = (n: number) => Math.round(n * 100) / 100;
-  const [payments, setPayments] = useState<{ mode: "cash" | "upi" | "credit"; amount: number }[]>([
+  const [payments, setPayments] = useState<{ mode: PaymentMode; amount: number }[]>([
     { mode: "cash", amount: 0 },
   ]);
 

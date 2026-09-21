@@ -5,7 +5,7 @@ import {
 import { BillingItem, CustomerData } from "../types";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 
-type PaymentMode = "cash" | "upi" | "credit";
+type PaymentMode = "cash" | "upi" | "credit" | "card";
 
 interface BillingHeaderProps {
   items: BillingItem[];
@@ -226,7 +226,8 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
                     {p.mode === 'cash' && <Banknote size={14} className="opacity-60" />}
                     {p.mode === 'upi' && <CreditCard size={14} className="opacity-60" />}
                     {p.mode === 'credit' && <Clock size={14} className="opacity-60" />}
-                    <span className="capitalize">{p.mode === 'upi' ? 'UPI' : p.mode === 'credit' ? 'On Credit' : p.mode}</span>
+                    {p.mode === 'card' && <CreditCard size={14} className="opacity-60" />}
+                    <span className="capitalize">{p.mode === 'upi' ? 'UPI' : p.mode === 'credit' ? 'On Credit' : p.mode === 'card' ? 'Card' : p.mode}</span>
                   </div>
                   <div className="h-full w-px bg-blue-100/80" />
                   <div className="flex items-center justify-center px-3 bg-blue-50/80 text-blue-600 text-[12px] font-bold shrink-0">
@@ -260,7 +261,7 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
 
           {/* Quick Actions */}
           <div className="shrink-0 space-y-2 pt-2 border-t border-slate-100">
-            <div className="grid grid-cols-3 gap-2 p-2 border border-dashed border-slate-200 rounded-lg">
+            <div className="grid grid-cols-2 gap-2 p-2 border border-dashed border-slate-200 rounded-lg">
               <button
                 onClick={() => addPayment('cash')}
                 disabled={payments.some(p => p.mode === 'cash')}
@@ -274,6 +275,13 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
                 className="flex items-center justify-center gap-1.5 py-1.5 rounded bg-white border border-slate-200 text-slate-600 text-[11px] font-bold hover:bg-slate-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <CreditCard size={12} className="opacity-60" /> UPI
+              </button>
+              <button
+                onClick={() => addPayment('card')}
+                disabled={payments.some(p => p.mode === 'card')}
+                className="flex items-center justify-center gap-1.5 py-1.5 rounded bg-white border border-slate-200 text-slate-600 text-[11px] font-bold hover:bg-slate-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <CreditCard size={12} className="opacity-60" /> Card
               </button>
               <button
                 onClick={() => addPayment('credit')}
@@ -295,6 +303,12 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
                 className="px-2.5 py-1.5 bg-blue-50/80 text-blue-700 rounded-md text-[11px] font-bold border border-blue-100/80 hover:bg-blue-100/80 transition-colors"
               >
                 Full ₹{formatINR(finalAmount)} in UPI
+              </button>
+              <button
+                onClick={() => onPaymentsChange([{ mode: 'card', amount: finalAmount }])}
+                className="px-2.5 py-1.5 bg-blue-50/80 text-blue-700 rounded-md text-[11px] font-bold border border-blue-100/80 hover:bg-blue-100/80 transition-colors"
+              >
+                Full ₹{formatINR(finalAmount)} in Card
               </button>
               {customerData && (
                 <button

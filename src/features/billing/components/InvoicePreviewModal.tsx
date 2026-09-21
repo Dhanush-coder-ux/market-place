@@ -189,7 +189,7 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
           body * { visibility: hidden; }
           .print-area, .print-area * { visibility: visible; }
           .print-area {
-            position: absolute; left: 0; top: 0;
+            position: fixed; left: 0; top: 0;
             width: 100%; margin: 0; padding: 0;
             box-shadow: none !important; border: none !important;
           }
@@ -202,7 +202,7 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
       <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm no-print" onClick={onClose} />
 
       {/* Modal Container */}
-      <div className="relative bg-slate-100 rounded-lg shadow-[0_24px_80px_rgba(0,0,0,0.3)] w-full max-w-[640px] max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-3rem)] flex flex-col overflow-hidden animate-in zoom-in-95 duration-300 print:max-h-none print:bg-white print:rounded-none print:shadow-none print:w-full print:max-w-none">
+      <div className="relative bg-slate-100 rounded-lg shadow-[0_24px_80px_rgba(0,0,0,0.3)] w-full max-w-[640px] max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-3rem)] flex flex-col overflow-hidden animate-in zoom-in-95 duration-300 print:max-h-none print:bg-white print:rounded-none print:shadow-none print:w-full print:max-w-none print:animate-none print:transform-none">
 
         {/* Modal Header */}
         <div className="flex items-center justify-between px-5 py-3 bg-white border-b border-slate-200/60 shrink-0 no-print">

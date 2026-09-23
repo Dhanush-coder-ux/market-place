@@ -70,6 +70,7 @@ const PAYMENT_CFG: Record<string, BadgeConfig> = {
   "G-Pay": { cls: "bg-[var(--mv-sales-bg)] text-[var(--mv-sales-tx)] border border-[var(--mv-sales-bd)]", dot: "bg-[var(--mv-sales-dot)]" },
   PhonePe: { cls: "bg-[var(--mv-sreturn-bg)] text-[var(--mv-sreturn-tx)] border border-[var(--mv-sreturn-bd)]", dot: "bg-[var(--mv-sreturn-dot)]" },
   Credit: { cls: "bg-[var(--ps-draft-bg)] text-[var(--ps-draft-tx)] border border-[var(--ps-draft-bd)]", dot: "bg-[var(--ps-draft-dot)]" },
+  "On Credit": { cls: "bg-[var(--ps-draft-bg)] text-[var(--ps-draft-tx)] border border-[var(--ps-draft-bd)]", dot: "bg-[var(--ps-draft-dot)]" },
   Other: { cls: "bg-[var(--pay-pending-bg)] text-[var(--pay-pending-tx)] border border-[var(--pay-pending-bd)]", dot: "bg-[var(--pay-pending-dot)]" },
 };
 const STATUS_CFG: Record<SaleStatus, BadgeConfig> = {
@@ -273,7 +274,7 @@ const SalesListPage: React.FC = () => {
           if (u === "CARD") return "Card";
           if (u === "UPI" || u === "GPAY" || u === "G-PAY") return "UPI";
           if (u === "PHONEPE") return "PhonePe";
-          if (u === "CREDIT" || u === "ON_CREDIT") return "Credit";
+          if (u === "CREDIT" || u === "ON_CREDIT" || u === "ON CREDIT") return "On Credit";
           return k.charAt(0).toUpperCase() + k.slice(1).toLowerCase();
         }).join(", ");
       } else if (Array.isArray(s.payment_infos) && s.payment_infos.length > 0) {
@@ -284,14 +285,14 @@ const SalesListPage: React.FC = () => {
           if (u === "CARD") return "Card";
           if (u === "UPI" || u === "GPAY" || u === "G-PAY") return "UPI";
           if (u === "PHONEPE") return "PhonePe";
-          if (u === "CREDIT" || u === "ON_CREDIT") return "Credit";
+          if (u === "CREDIT" || u === "ON_CREDIT" || u === "ON CREDIT") return "On Credit";
           return methodStr || "Other";
         }).join(", ");
       } else if (s.payments && Object.keys(s.payments).length > 0) {
-        pm = Object.keys(s.payments).map(k => { const u = k.toUpperCase(); if (u === "CASH") return "Cash"; if (u === "CARD") return "Card"; if (u === "UPI" || u === "G-PAY" || u === "GPAY") return "UPI"; if (u === "PHONEPE") return "PhonePe"; if (u === "CREDIT" || u === "ON_CREDIT") return "Credit"; return k.charAt(0).toUpperCase() + k.slice(1).toLowerCase(); }).join(", ");
+        pm = Object.keys(s.payments).map(k => { const u = k.toUpperCase(); if (u === "CASH") return "Cash"; if (u === "CARD") return "Card"; if (u === "UPI" || u === "G-PAY" || u === "GPAY") return "UPI"; if (u === "PHONEPE") return "PhonePe"; if (u === "CREDIT" || u === "ON_CREDIT" || u === "ON CREDIT") return "On Credit"; return k.charAt(0).toUpperCase() + k.slice(1).toLowerCase(); }).join(", ");
       } else if (s.payment_method) {
         const r = (s.payment_method || "Other").toUpperCase();
-        pm = r === "CASH" ? "Cash" : r === "CARD" ? "Card" : r === "UPI" || r === "G-PAY" || r === "GPAY" ? "UPI" : r === "PHONEPE" ? "PhonePe" : r === "CREDIT" || r === "ON_CREDIT" ? "Credit" : s.payment_method;
+        pm = r === "CASH" ? "Cash" : r === "CARD" ? "Card" : r === "UPI" || r === "G-PAY" || r === "GPAY" ? "UPI" : r === "PHONEPE" ? "PhonePe" : r === "CREDIT" || r === "ON_CREDIT" || r === "ON CREDIT" ? "On Credit" : s.payment_method;
       }
 
       // Derive total from calculation_infos if present (new Order Service format)
@@ -639,7 +640,7 @@ const SalesListPage: React.FC = () => {
                         {sale.payments && Object.keys(sale.payments).length > 0 ? (
                           Object.keys(sale.payments).map(k => {
                             const u = k.toUpperCase();
-                            const label = u === "CASH" ? "Cash" : u === "CARD" ? "Card" : u === "UPI" || u === "G-PAY" || u === "GPAY" ? "UPI" : u === "PHONEPE" ? "PhonePe" : u === "CREDIT" || u === "ON_CREDIT" ? "Credit" : k;
+                            const label = u === "CASH" ? "Cash" : u === "CARD" ? "Card" : u === "UPI" || u === "G-PAY" || u === "GPAY" ? "UPI" : u === "PHONEPE" ? "PhonePe" : u === "CREDIT" || u === "ON_CREDIT" || u === "ON CREDIT" ? "On Credit" : k;
                             const cfg = PAYMENT_CFG[label] || PAYMENT_CFG["Other"];
                             return <Badge key={k} cls={cfg.cls} dot={cfg.dot} label={label} />;
                           })

@@ -35,7 +35,7 @@ export function formatPaymentMethodName(method: string): string {
   if (u === "UPI" || u === "G-PAY" || u === "GPAY") return "UPI";
   if (u === "PHONEPE") return "PhonePe";
   if (u === "PAYTM") return "Paytm";
-  if (u === "CREDIT" || u === "ON_CREDIT") return "Credit";
+  if (u === "CREDIT" || u === "ON_CREDIT" || u === "ON CREDIT") return "On Credit";
   if (u === "NETBANKING" || u === "NET_BANKING") return "Net Banking";
   if (u === "CHEQUE") return "Cheque";
   return method.charAt(0).toUpperCase() + method.slice(1);
@@ -252,6 +252,7 @@ const SaleDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(!sale);
   const [activeTab, setActiveTab] = useState(0);
   const [isReturnOpen, setIsReturnOpen] = useState(false);
+  const [clearingHistories, setClearingHistories] = useState<any[]>([]);
 
   const fetchSaleDetail = async () => {
     setLoading(true);
@@ -267,6 +268,21 @@ const SaleDetailPage: React.FC = () => {
             status: found.status ? found.status.charAt(0).toUpperCase() + found.status.slice(1).toLowerCase() : "Completed",
             origin: found.origin === "OFFLINE" ? "Sales" : found.origin || "Sales",
           });
+
+          if (found.customer_id) {
+            try {
+              const clrRes = await api.getData(`${ENDPOINTS.CUSTOMERS}/cleared-histories/by/id/${SHOP_ID}/${found.customer_id}`);
+              if (clrRes?.data) {
+                let actualClr = clrRes.data;
+                if (typeof actualClr === 'object' && !Array.isArray(actualClr) && 'datas' in actualClr) {
+                  actualClr = actualClr.datas;
+                }
+                setClearingHistories(Array.isArray(actualClr) ? actualClr : [actualClr]);
+              }
+            } catch (err) {
+              console.warn("Could not load clearing history:", err);
+            }
+          }
         }
       }
     } catch (err) {
@@ -341,14 +357,61 @@ const SaleDetailPage: React.FC = () => {
   const refunded = items.filter(i => i.status === "REFUNDED").length;
   const exchanged = items.filter(i => i.status === "EXCHANGED").length;
 
+  const isCreditPayment = (method?: string) => {
+    if (!method) return false;
+    const m = String(method).trim().toLowerCase();
+    return m.includes('credit');
+  };
+
   const rawPayments = (sale as any).payment_infos || (sale as any).payment_info || sale.payments || {};
   const extractedList = extractPaymentList(rawPayments, sale.payment_method);
   const paymentsDetail = extractedList.length > 0
     ? extractedList.map(p => ({ label: p.method, amount: p.amount ?? (sale.total_sellprice || 0) }))
     : [{ label: sale.payment_method || "Other", amount: sale.total_sellprice }];
 
-  const totalPaid = paymentsDetail.reduce((sum, p) => sum + p.amount, 0);
-  const outstanding = Math.max(0, (sale.total_sellprice || 0) - totalPaid);
+  // Initial payment amounts at the time of sale (excluding on-credit debt)
+  const initialNonCreditPaid = paymentsDetail
+    .filter(p => !isCreditPayment(p.label))
+    .reduce((sum, p) => sum + (p.amount || 0), 0);
+
+  const initialCreditAmount = paymentsDetail
+    .filter(p => isCreditPayment(p.label))
+    .reduce((sum, p) => sum + (p.amount || 0), 0);
+
+  const isBilledCredit = initialCreditAmount > 0 || isCreditPayment(sale.payment_method) || paymentsDetail.some(p => isCreditPayment(p.label));
+  const orderTotal = Number(sale.total_sellprice || 0);
+
+  const initialDue = isBilledCredit
+    ? (initialCreditAmount > 0 ? initialCreditAmount : Math.max(0, orderTotal - initialNonCreditPaid))
+    : Math.max(0, orderTotal - initialNonCreditPaid);
+
+  const orderUiId = String(sale.ui_id || '').trim().toUpperCase();
+  const orderId = String(sale.id || '').trim().toUpperCase();
+  const clearedForThisOrder = clearingHistories.reduce((sum: number, h: any) => {
+    const isInitialBilled = String(h.additional_infos?.notes || h.notes || '').toLowerCase().includes('billed (on credit)');
+    if (isInitialBilled) return sum;
+
+    const inv = String(h.invoice_no || h.additional_infos?.invoice_no || '').trim().toUpperCase();
+    const entityId = String(h.entity_id || h.additional_infos?.entity_id || '').trim().toUpperCase();
+
+    const matches = (orderUiId && (inv === orderUiId || entityId === orderUiId)) ||
+                    (orderId && (inv === orderId || entityId === orderId));
+    if (!matches) return sum;
+
+    let amt = Number(h.additional_infos?.cleared_amount ?? 0);
+    if (!amt && h.payment_infos && Array.isArray(h.payment_infos)) {
+      amt = h.payment_infos.reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
+    }
+    if (!amt && h.cleared_infos) {
+      const before = Number(h.cleared_infos.outstanding_before || 0);
+      const after = Number(h.cleared_infos.outstanding_after || 0);
+      if (before > after) amt = before - after;
+    }
+    return sum + (amt || 0);
+  }, 0);
+
+  const totalPaid = initialNonCreditPaid + clearedForThisOrder;
+  const outstanding = Math.max(0, initialDue - clearedForThisOrder);
 
   const returnsCount = Array.isArray((sale as any)?.returns) ? (sale as any).returns.length : 0;
   const exchangesCount = Array.isArray((sale as any)?.exchanges) ? (sale as any).exchanges.length : 0;

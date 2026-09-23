@@ -6,7 +6,8 @@ import {
   AlertCircle, Smartphone,
   Database,
   Search,
-  Layers
+  Layers,
+  CreditCard
 } from "lucide-react";
 
 import { useApi } from "@/context/ApiContext";
@@ -20,6 +21,97 @@ import SkeletonLoader from "@/components/common/SkeletonLoader";
 
 /* ── helpers ── */
 const fmt = (n?: number) => `₹${(n || 0).toLocaleString("en-IN")}`;
+
+export interface ParsedPaymentItem {
+  method: string;
+  amount?: number;
+}
+
+export function formatPaymentMethodName(method: string): string {
+  if (!method) return "Other";
+  const u = String(method).trim().toUpperCase();
+  if (u === "CASH") return "Cash";
+  if (u === "CARD") return "Card";
+  if (u === "UPI" || u === "G-PAY" || u === "GPAY") return "UPI";
+  if (u === "PHONEPE") return "PhonePe";
+  if (u === "PAYTM") return "Paytm";
+  if (u === "CREDIT" || u === "ON_CREDIT") return "Credit";
+  if (u === "NETBANKING" || u === "NET_BANKING") return "Net Banking";
+  if (u === "CHEQUE") return "Cheque";
+  return method.charAt(0).toUpperCase() + method.slice(1);
+}
+
+export function extractPaymentList(paymentInfos: any, fallback?: any): ParsedPaymentItem[] {
+  const result: ParsedPaymentItem[] = [];
+
+  const add = (method: string, amount?: any) => {
+    if (!method) return;
+    const cleanMethod = formatPaymentMethodName(method);
+    const parsedAmount = typeof amount === "number" ? amount : (amount !== undefined && amount !== null && amount !== "" ? Number(amount) : undefined);
+    result.push({ method: cleanMethod, amount: isNaN(parsedAmount as number) ? undefined : parsedAmount });
+  };
+
+  const inspect = (source: any): boolean => {
+    if (!source) return false;
+
+    // Array of objects or strings
+    if (Array.isArray(source) && source.length > 0) {
+      source.forEach((p: any) => {
+        if (typeof p === "string") add(p);
+        else if (p && typeof p === "object") {
+          add(p.method || p.mode || p.type || p.payment_method || p.payment_mode || "Other", p.amount ?? p.value);
+        }
+      });
+      return result.length > 0;
+    }
+
+    // Object with .payments array: e.g. { payments: [ { method: 'Cash', amount: 77 } ] }
+    if (source.payments && Array.isArray(source.payments) && source.payments.length > 0) {
+      source.payments.forEach((p: any) => {
+        if (typeof p === "string") add(p);
+        else if (p && typeof p === "object") {
+          add(p.method || p.mode || p.type || p.payment_method || p.payment_mode || "Other", p.amount ?? p.value);
+        }
+      });
+      return result.length > 0;
+    }
+
+    // Key-value map: e.g. { "CASH": 177 } or { "Cash": { amount: 177 } }
+    if (typeof source === "object" && Object.keys(source).length > 0) {
+      Object.entries(source).forEach(([k, v]) => {
+        if (k === "payments" && Array.isArray(v)) {
+          v.forEach((p: any) => {
+            if (typeof p === "string") add(p);
+            else if (p && typeof p === "object") {
+              add(p.method || p.mode || p.type || "Other", p.amount ?? p.value);
+            }
+          });
+        } else if (v && typeof v === "object" && ("amount" in (v as any) || "value" in (v as any))) {
+          add(k, (v as any).amount ?? (v as any).value);
+        } else if (typeof v === "number" || (typeof v === "string" && !isNaN(Number(v)))) {
+          add(k, Number(v));
+        } else if (typeof v === "string") {
+          add(v);
+        }
+      });
+      return result.length > 0;
+    }
+
+    if (typeof source === "string" && source.trim()) {
+      add(source.trim());
+      return true;
+    }
+
+    return false;
+  };
+
+  const found = inspect(paymentInfos);
+  if (!found && fallback) {
+    inspect(fallback);
+  }
+
+  return result;
+}
 
 function parseSaleDateTime(dateVal?: any): Date {
   if (!dateVal) return new Date();
@@ -250,12 +342,9 @@ const SaleDetailPage: React.FC = () => {
   const exchanged = items.filter(i => i.status === "EXCHANGED").length;
 
   const rawPayments = (sale as any).payment_infos || (sale as any).payment_info || sale.payments || {};
-  const paymentsDetail = rawPayments && Object.keys(rawPayments).length > 0
-    ? Object.entries(rawPayments).map(([k, v]) => {
-      const u = k.toUpperCase();
-      const label = u === "CASH" ? "Cash" : u === "CARD" ? "Card" : (u === "UPI" || u === "G-PAY" || u === "GPAY") ? "UPI" : u === "PHONEPE" ? "PhonePe" : (u === "CREDIT" || u === "ON_CREDIT") ? "Credit" : k;
-      return { label, amount: v as number };
-    })
+  const extractedList = extractPaymentList(rawPayments, sale.payment_method);
+  const paymentsDetail = extractedList.length > 0
+    ? extractedList.map(p => ({ label: p.method, amount: p.amount ?? (sale.total_sellprice || 0) }))
     : [{ label: sale.payment_method || "Other", amount: sale.total_sellprice }];
 
   const totalPaid = paymentsDetail.reduce((sum, p) => sum + p.amount, 0);
@@ -403,8 +492,30 @@ const SaleDetailPage: React.FC = () => {
                         <span className="text-[11px] font-medium text-slate-400 uppercase tracking-tight">Payment</span>
                         <span className="text-xs font-bold text-slate-700">{paymentsDetail.map(p => p.label).join(', ') || "—"}</span>
                       </div>
-                      {(refunded > 0 || exchanged > 0) && (
+                      {(refunded > 0 || exchanged > 0 || exchangesCount > 0 || returnsCount > 0) && (
                         <div className="pt-2.5 border-t border-slate-100/50 space-y-2">
+                          {returnsCount > 0 && (
+                            <div className="flex justify-between items-center">
+                              <span className="text-[11px] font-medium text-slate-400 uppercase tracking-tight">Return Refund Mode</span>
+                              <span className="text-xs font-bold text-rose-600">
+                                {(() => {
+                                  const allModes = (sale.returns || []).flatMap((r: any) => extractPaymentList(r.payment_infos, r.payment_method).map(p => p.method));
+                                  return Array.from(new Set(allModes)).join(", ") || "Cash";
+                                })()}
+                              </span>
+                            </div>
+                          )}
+                          {exchangesCount > 0 && (
+                            <div className="flex justify-between items-center">
+                              <span className="text-[11px] font-medium text-slate-400 uppercase tracking-tight">Exchange Payment Mode</span>
+                              <span className="text-xs font-bold text-indigo-600">
+                                {(() => {
+                                  const allModes = ((sale as any).exchanges || []).flatMap((e: any) => extractPaymentList(e.payment_infos, e.payment_method).map(p => p.method));
+                                  return Array.from(new Set(allModes)).join(", ") || "Cash";
+                                })()}
+                              </span>
+                            </div>
+                          )}
                           {refunded > 0 && (
                             <div className="flex justify-between items-center">
                               <span className="text-[11px] font-medium text-slate-400 uppercase tracking-tight">Refunded Items</span>
@@ -733,11 +844,17 @@ const SaleDetailPage: React.FC = () => {
                         <div className="flex flex-col">
                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Payment Collected / Refunded</span>
                           {(() => {
-                            const paymentSum = Object.values(exch.replacement_order.payments || {}).reduce((sum: number, val: any) => sum + Number(val), 0);
-                            if (paymentSum < 0) {
-                              return <span className="text-sm font-black tabular-nums text-red-600">Refund: {fmt(Math.abs(paymentSum))}</span>;
-                            } else if (paymentSum > 0) {
-                              return <span className="text-sm font-black tabular-nums text-emerald-600">Collected: {fmt(paymentSum)}</span>;
+                            const pList = extractPaymentList((exch as any).payment_infos, (exch as any).payments || exch.replacement_order?.payments);
+                            const pModes = pList.map(p => p.method).join(", ");
+                            const paymentSum = pList.reduce((sum, p) => sum + (p.amount || 0), 0) ||
+                              (exch.replacement_order?.payments ? Object.values(exch.replacement_order.payments).reduce((sum: number, val: any) => sum + Number(val), 0) : 0);
+                            const diffVal = (Number((exch as any).total_replacement_amount) || 0) - (Number((exch as any).total_exchanged_amount) || 0);
+                            const isRefund = diffVal < 0 || paymentSum < 0;
+                            const amountToShow = Math.abs(diffVal) || Math.abs(paymentSum);
+                            if (isRefund && amountToShow > 0) {
+                              return <span className="text-sm font-black tabular-nums text-red-600">Refund: {fmt(amountToShow)} {pModes ? `(${pModes})` : ""}</span>;
+                            } else if (diffVal > 0 || paymentSum > 0) {
+                              return <span className="text-sm font-black tabular-nums text-emerald-600">Collected: {fmt(amountToShow)} {pModes ? `(${pModes})` : ""}</span>;
                             } else {
                               return <span className="text-sm font-black tabular-nums text-slate-500">₹0</span>;
                             }
@@ -746,7 +863,7 @@ const SaleDetailPage: React.FC = () => {
                         <div className="h-8 w-px bg-slate-200"></div>
                         <div className="flex flex-col">
                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Total Value</span>
-                          <span className="text-sm font-black text-blue-600 tabular-nums">{fmt(exch.replacement_order.total_sellprice)}</span>
+                          <span className="text-sm font-black text-blue-600 tabular-nums">{fmt((exch as any).total_replacement_amount || exch.replacement_order?.total_sellprice || 0)}</span>
                         </div>
                       </div>
                     </div>
@@ -766,21 +883,40 @@ const SaleDetailPage: React.FC = () => {
                     const diff = (Number(exch.total_replacement_amount) || 0) - (Number(exch.total_exchanged_amount) || 0);
                     const returnedItems = exch.items || [];
                     const replacementItems = exch.replaced_items || [];
+                    const parsedExchPayments = extractPaymentList(exch.payment_infos, exch.payments || exch.payment_method || exch.replacement_order?.payments);
+                    const exchPaymentModesText = parsedExchPayments.map(p => p.amount !== undefined ? `${p.method} (${fmt(p.amount)})` : p.method).join(", ") || (exch.payment_method ? formatPaymentMethodName(exch.payment_method) : "");
 
                     return (
                       <SectionCard key={exch.id || eIdx} title="Exchange Details" className="p-0 overflow-hidden border-blue-200 shadow-sm">
                         {/* Header Banner */}
                         <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50/50 border-b border-blue-100 flex flex-wrap justify-between items-center text-xs gap-3">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-bold text-blue-800">Status: {exch.status || "COMPLETED"}</span>
                             <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide border ${diff > 0 ? "bg-amber-50 text-amber-800 border-amber-200" : diff < 0 ? "bg-emerald-50 text-emerald-800 border-emerald-200" : "bg-blue-50 text-blue-800 border-blue-200"}`}>
                               {diff > 0 ? `Collected Extra: ${fmt(diff)}` : diff < 0 ? `Refunded: ${fmt(Math.abs(diff))}` : "Even Value Exchange"}
                             </span>
+                            {exchPaymentModesText && (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide bg-white text-indigo-700 border border-indigo-200 shadow-2xs">
+                                <CreditCard size={11} className="text-indigo-500" />
+                                <span>{diff < 0 ? "Refund Mode: " : "Payment Mode: "}<strong>{exchPaymentModesText}</strong></span>
+                              </span>
+                            )}
                           </div>
-                          <div className="flex items-center gap-4 text-slate-600 font-bold">
+                          <div className="flex items-center gap-4 text-slate-600 font-bold flex-wrap">
                             <span>Returned Value: <strong className="text-slate-900">{fmt(exch.total_exchanged_amount || 0)}</strong></span>
                             <span className="text-slate-300">|</span>
                             <span>Replacement Value: <strong className="text-emerald-700">{fmt(exch.total_replacement_amount || 0)}</strong></span>
+                            {parsedExchPayments.length > 0 && (
+                              <>
+                                <span className="text-slate-300">|</span>
+                                <span>
+                                  {diff < 0 ? "Refund Mode: " : "Payment Mode: "}
+                                  <strong className="text-indigo-700">
+                                    {parsedExchPayments.map(p => p.method).join(", ")}
+                                  </strong>
+                                </span>
+                              </>
+                            )}
                           </div>
                         </div>
 
@@ -917,6 +1053,43 @@ const SaleDetailPage: React.FC = () => {
                             </table>
                           </div>
                         </div>
+
+                        {/* Exchange Settlement Footer */}
+                        <div className="p-3.5 bg-gradient-to-r from-slate-50 to-blue-50/30 border-t border-blue-100 flex flex-wrap justify-between items-center text-xs gap-3">
+                          <div className="flex items-center gap-2 text-slate-600">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Settlement:</span>
+                            <span className="font-semibold text-slate-700">
+                              {diff > 0
+                                ? `Extra balance of ${fmt(diff)} paid by customer`
+                                : diff < 0
+                                ? `Refund of ${fmt(Math.abs(diff))} issued to customer`
+                                : "Direct even-value exchange (no balance due)"}
+                            </span>
+                          </div>
+                          {parsedExchPayments.length > 0 ? (
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">{diff < 0 ? "Refund Mode:" : "Payment Mode:"}</span>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                {parsedExchPayments.map((p, idx) => (
+                                  <span key={idx} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-black bg-white text-indigo-700 border border-indigo-200 shadow-2xs">
+                                    <CreditCard size={12} className="text-indigo-500" />
+                                    {p.method}{p.amount !== undefined ? `: ${fmt(p.amount)}` : ""}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          ) : (
+                            exch.payment_method && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">{diff < 0 ? "Refund Mode:" : "Payment Mode:"}</span>
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-black bg-white text-indigo-700 border border-indigo-200 shadow-2xs">
+                                  <CreditCard size={12} className="text-indigo-500" />
+                                  {formatPaymentMethodName(exch.payment_method)}
+                                </span>
+                              </div>
+                            )
+                          )}
+                        </div>
                       </SectionCard>
                     );
                   })}
@@ -926,13 +1099,32 @@ const SaleDetailPage: React.FC = () => {
               {/* 2. Refund Requests */}
               {Array.isArray(sale.returns) && sale.returns.length > 0 && (
                 <div className="space-y-4">
-                  {sale.returns.map((ret: any, rIdx: number) => (
-                    <SectionCard key={ret.id || rIdx} title="Return Details" className="p-0 overflow-hidden border-rose-100">
-                      <div className="p-4 bg-rose-50/50 border-b border-rose-100 flex justify-between items-center text-xs">
-                        <span className="font-bold text-rose-700">Refund Status: {ret.status}</span>
-                        <div className="flex gap-4">
-                          <span className="font-bold text-slate-650">GST Amount: {fmt(ret.total_gst_amount)}</span>
-                          <span className="font-bold text-slate-650">Total Refund: {fmt(ret.total_refund_amount)} (Qty: {ret.total_refund_qty})</span>
+                  {sale.returns.map((ret: any, rIdx: number) => {
+                    const parsedRetPayments = extractPaymentList(ret.payment_infos, ret.payments || ret.payment_method || (sale as any)?.payment_infos);
+                    const retPaymentModesText = parsedRetPayments.map(p => p.amount !== undefined ? `${p.method} (${fmt(p.amount)})` : p.method).join(", ") || (ret.payment_method ? formatPaymentMethodName(ret.payment_method) : "");
+
+                    return (
+                    <SectionCard key={ret.id || rIdx} title="Return Details" className="p-0 overflow-hidden border-rose-100 shadow-sm">
+                      <div className="p-4 bg-gradient-to-r from-rose-50 to-pink-50/30 border-b border-rose-100 flex flex-wrap justify-between items-center text-xs gap-3">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-bold text-rose-700">Refund Status: {ret.status || "COMPLETED"}</span>
+                          {retPaymentModesText && (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide bg-white text-rose-700 border border-rose-200 shadow-2xs">
+                              <CreditCard size={11} className="text-rose-500" />
+                              <span>Refund Mode: <strong>{retPaymentModesText}</strong></span>
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-4 text-slate-650 font-bold flex-wrap">
+                          {parsedRetPayments.length > 0 && (
+                            <>
+                              <span>Refund Mode: <strong className="text-rose-700">{parsedRetPayments.map(p => p.method).join(", ")}</strong></span>
+                              <span className="text-slate-300">|</span>
+                            </>
+                          )}
+                          <span>GST Amount: <strong className="text-slate-800">{fmt(ret.total_gst_amount)}</strong></span>
+                          <span className="text-slate-300">|</span>
+                          <span>Total Refund: <strong className="text-rose-600">{fmt(ret.total_refund_amount)}</strong> (Qty: {ret.total_refund_qty})</span>
                         </div>
                       </div>
                       <div className="overflow-x-auto">
@@ -943,6 +1135,7 @@ const SaleDetailPage: React.FC = () => {
                               <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center">Returned Qty</th>
                               <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center">Date & Time</th>
                               <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Refund Amount</th>
+                              <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center">Payment Mode</th>
                               <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Reason</th>
                             </tr>
                           </thead>
@@ -1019,6 +1212,12 @@ const SaleDetailPage: React.FC = () => {
                                   <td className="px-6 py-4 text-right">
                                     <span className="text-sm font-black text-slate-850 tabular-nums">{fmt(retItem.refund_amount)}</span>
                                   </td>
+                                  <td className="px-6 py-4 text-center">
+                                    <span className="inline-flex items-center gap-1 text-xs font-bold text-slate-700 px-2.5 py-1 rounded-md bg-white border border-slate-200 shadow-2xs">
+                                      <CreditCard size={12} className="text-rose-500" />
+                                      {parsedRetPayments.map(p => p.method).join(", ") || (sale.payment_method || "Cash")}
+                                    </span>
+                                  </td>
                                   <td className="px-6 py-4 text-right">
                                     <span className="text-xs font-semibold text-slate-500">{retItem.reason}</span>
                                   </td>
@@ -1028,8 +1227,42 @@ const SaleDetailPage: React.FC = () => {
                           </tbody>
                         </table>
                       </div>
+
+                      {/* Return Settlement Footer */}
+                      <div className="p-3.5 bg-gradient-to-r from-slate-50 to-rose-50/20 border-t border-rose-100 flex flex-wrap justify-between items-center text-xs gap-3">
+                        <div className="flex items-center gap-2 text-slate-600">
+                          <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Settlement:</span>
+                          <span className="font-semibold text-slate-700">
+                            Total refund of {fmt(ret.total_refund_amount)} issued for {ret.total_refund_qty || ret.items?.length || 1} returned item(s)
+                          </span>
+                        </div>
+                        {parsedRetPayments.length > 0 ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Refund Mode:</span>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {parsedRetPayments.map((p, idx) => (
+                                <span key={idx} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-black bg-white text-rose-700 border border-rose-200 shadow-2xs">
+                                  <CreditCard size={12} className="text-rose-500" />
+                                  {p.method}{p.amount !== undefined ? `: ${fmt(p.amount)}` : ""}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          ret.payment_method && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Refund Mode:</span>
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-black bg-white text-rose-700 border border-rose-200 shadow-2xs">
+                                <CreditCard size={12} className="text-rose-500" />
+                                {formatPaymentMethodName(ret.payment_method)}
+                              </span>
+                            </div>
+                          )
+                        )}
+                      </div>
                     </SectionCard>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
 

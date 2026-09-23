@@ -348,7 +348,7 @@ const GrnForm = () => {
   const [products, setProducts] = useState<ProductItem[]>([defaultProductRow]);
   const [charges, setCharges] = useState({ transport: "" as number | "", other: "" as number | "" });
   const [payment, setPayment] = useState({ method: "Cash" as PaymentMethod, amountPaid: "" as number | "" });
-  const [costMethod, setCostMethod] = useState("None");
+  const [costMethod, setCostMethod] = useState("By Value");
   const [supplierDetails, setSupplierDetails] = useState<any>(null);
 
   const stats = useMemo(() => {
@@ -388,7 +388,12 @@ const GrnForm = () => {
       if (costMethod === "By Unit" && totalQty > 0) alloc = (q / totalQty) * totalCharges;
       else if (costMethod === "By Value" && subtotal > 0) alloc = ((q * c) / subtotal) * totalCharges;
       else if (costMethod === "Equally" && products.length > 0) alloc = totalCharges / products.length;
-      const netCostPerUnit = q > 0 ? (q * c + alloc) / q : c;
+      else if (totalCharges > 0) {
+        if (subtotal > 0) alloc = ((q * c) / subtotal) * totalCharges;
+        else if (totalQty > 0) alloc = (q / totalQty) * totalCharges;
+        else if (products.length > 0) alloc = totalCharges / products.length;
+      }
+      const netCostPerUnit = q > 0 ? (q * c + alloc) / q : (c + alloc);
       return { alloc, netCostPerUnit };
     });
 

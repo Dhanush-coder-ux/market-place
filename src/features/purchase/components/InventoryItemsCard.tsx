@@ -841,7 +841,7 @@ export const InventoryItemsCard = ({
 
                 const allocTotal = stats.allocations[index]?.alloc || 0;
                 const allocPerUnit = q > 0 ? allocTotal / q : 0;
-                const netCostPerUnit = stats.allocations[index]?.netCostPerUnit || rowBaseCost;
+                const netCostPerUnit = stats.allocations[index]?.netCostPerUnit ?? (rowBaseCost + allocPerUnit);
                 const costForSp = gstMode === "inclusive" ? rowBaseCost + rowGstPerUnit : rowBaseCost;
                 const netCostForSp = costForSp + allocPerUnit;
 

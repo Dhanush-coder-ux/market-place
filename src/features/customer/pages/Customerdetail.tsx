@@ -717,11 +717,14 @@ export default function CustomerDetail() {
                               }
 
                               const isRefund = h.type === 'SALES_RETURN' || h.type === 'REFUND' || h.entity_name?.toLowerCase().includes('return') || h.notes?.toLowerCase().includes('refund') || h.notes?.toLowerCase().includes('return');
+                              const isCreditAddition = h.entity_name === 'order' || String(h.notes || addInfos.notes || '').toLowerCase().includes('billed (on credit)') || String(h.notes || addInfos.notes || '').toLowerCase().includes('added to credit');
                               
                               const outBefore = addInfos.outstanding_before ?? h.cleared_infos?.outstanding_before ?? 0;
                               const outAfter = addInfos.outstanding_after ?? h.cleared_infos?.outstanding_after ?? 0;
                               const defaultClearedAmount = outBefore > outAfter ? (outBefore - outAfter) : 0;
-                              let displayAmount = Number(addInfos.cleared_amount ?? addInfos.paid_amount ?? h.cleared_amount ?? h.amount ?? defaultClearedAmount);
+                              let displayAmount = isCreditAddition 
+                                ? 0 
+                                : Number(addInfos.cleared_amount ?? addInfos.paid_amount ?? h.cleared_amount ?? h.amount ?? defaultClearedAmount);
                               
                               if (displayAmount === 0 && isRefund && h.notes) {
                                 const match = h.notes.match(/Refund amount:\s*([0-9.]+)/i);
@@ -732,6 +735,7 @@ export default function CustomerDetail() {
 
                               let displayNotes = h.notes || (isRefund ? 'Customer refund' : '—');
                               if (displayNotes) {
+                                displayNotes = displayNotes.replace(/\s*\((?:Return|Exchange):\s*[^)]+\)/gi, '');
                                 displayNotes = displayNotes.replace(/([0-9]+\.[0-9]+)/g, (match: string) => {
                                   const parsed = parseFloat(match);
                                   return isNaN(parsed) ? match : parsed.toFixed(2);
@@ -739,9 +743,23 @@ export default function CustomerDetail() {
                               }
 
                               const paymentInfos = h.payment_infos || [];
-                              const methodStr = paymentInfos.length > 0 
-                                ? paymentInfos.map((p: any) => p.method).join(", ") 
-                                : String(h.payment_method || h.method || "CASH");
+                              let methodStr = paymentInfos.length > 0
+                                ? paymentInfos.map((p: any) => p.method || p.mode).join(", ")
+                                : String(addInfos.payment_method || h.payment_method || h.method || "");
+
+                              const notesStr = String(displayNotes || h.notes || addInfos.notes || "");
+                              if (!methodStr || methodStr.toUpperCase() === "CASH") {
+                                if (notesStr.toLowerCase().includes("(on credit)") || notesStr.toLowerCase().includes("on credit") || notesStr.toLowerCase().includes("on_credit")) {
+                                  methodStr = "ON_CREDIT";
+                                } else if (!methodStr) {
+                                  methodStr = "CASH";
+                                }
+                              }
+
+                              const isCreditMode = methodStr.toUpperCase().includes("ON_CREDIT") || methodStr.toUpperCase().includes("CREDIT");
+                              const badgeColorClass = (isRefund || isCreditMode)
+                                ? "bg-rose-50 text-rose-700"
+                                : "bg-emerald-50 text-emerald-700";
 
                               return (
                                 <tr key={h.id || i} className="hover:bg-slate-50/50 transition-colors">
@@ -760,7 +778,7 @@ export default function CustomerDetail() {
                                     ₹{Number((outAfter || h.outstanding_amount) ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </td>
                                   <td className="px-4 py-3 whitespace-nowrap">
-                                    <span className={`text-[11px] font-black px-2.5 py-1 rounded-md uppercase tracking-wider flex items-center w-fit ${isRefund ? 'bg-rose-50 text-rose-700' : 'bg-emerald-50 text-emerald-700'}`}>
+                                    <span className={`text-[11px] font-black px-2.5 py-1 rounded-md uppercase tracking-wider flex items-center w-fit ${badgeColorClass}`}>
                                       {methodStr.replace(/_REFUND$/i, "").replace(/REFUND/i, "").replace(/_/g, " ").trim() || "CASH"}
                                     </span>
                                   </td>

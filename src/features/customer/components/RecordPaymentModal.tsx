@@ -115,6 +115,23 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
     return maxOutstanding > 0 ? Math.min(remaining, maxOutstanding) : remaining;
   };
 
+  const outstandingOrders = useMemo(() => {
+    return orders
+      .map(o => ({
+        ...o,
+        _computedOutstanding: getOrderOutstanding(o)
+      }))
+      .filter(o => {
+        if (o._computedOutstanding <= 0) return false;
+        if (!clearSearch) return true;
+        const q = clearSearch.toLowerCase();
+        return (
+          (o.ui_id && o.ui_id.toLowerCase().includes(q)) ||
+          (o.id && o.id.toLowerCase().includes(q))
+        );
+      });
+  }, [orders, clearSearch, clearedMap, maxOutstanding]);
+
   const handleClose = () => {
     onClose();
   };
@@ -203,15 +220,13 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
             <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1 custom-scrollbar">
               {ordersLoading ? (
                 <div className="p-4 text-center text-xs text-slate-500">Loading orders...</div>
-              ) : orders.length === 0 ? (
-                <div className="p-4 text-center text-xs text-slate-500">No recent orders found.</div>
+              ) : outstandingOrders.length === 0 ? (
+                <div className="p-4 text-center text-xs text-slate-500">
+                  {clearSearch ? "No matching outstanding orders found." : "No outstanding orders found for this customer."}
+                </div>
               ) : (
-                orders.filter(o =>
-                  !clearSearch ||
-                  (o.ui_id && o.ui_id.toLowerCase().includes(clearSearch.toLowerCase())) ||
-                  (o.id && o.id.toLowerCase().includes(clearSearch.toLowerCase()))
-                ).map(o => {
-                  const orderOutstanding = getOrderOutstanding(o);
+                outstandingOrders.map(o => {
+                  const orderOutstanding = o._computedOutstanding;
                   const date = o.created_at || o.date ? new Date(o.created_at || o.date).toLocaleDateString() : 'Unknown Date';
 
                   return (
@@ -232,7 +247,7 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
                       </div>
                       <div className="text-right">
                         <p className="text-[10px] font-bold text-slate-400 mb-0.5">Outstanding</p>
-                        <p className={`text-sm font-black ${orderOutstanding > 0 ? "text-rose-500" : "text-emerald-600"}`}>
+                        <p className="text-sm font-black text-rose-500">
                           ₹{orderOutstanding.toLocaleString()}
                         </p>
                       </div>

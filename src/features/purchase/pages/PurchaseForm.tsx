@@ -123,7 +123,7 @@ const PurchaseForm = () => {
     return (type as any) || "DIRECT";
   });
   const [payment, setPayment] = useState({ method: "NONE" as PaymentMethod, amountPaid: "" as number | string, referenceNo: "" as string });
-  const [costMethod, setCostMethod] = useState("None");
+  const [costMethod, setCostMethod] = useState("By Value");
   const [supplierDetails, setSupplierDetails] = useState<any>(null);
   const [isGstExpanded, setIsGstExpanded] = useState(false);
   const [gstMode, setGstMode] = useState<"inclusive" | "exclusive">("exclusive");
@@ -183,8 +183,16 @@ const PurchaseForm = () => {
         alloc = ((q * baseCost) / subtotal) * totalCharges;
       } else if (costMethod === "Equally" && products.length > 0) {
         alloc = totalCharges / products.length;
+      } else if (totalCharges > 0) {
+        if (subtotal > 0) {
+          alloc = ((q * baseCost) / subtotal) * totalCharges;
+        } else if (totalQty > 0) {
+          alloc = (q / totalQty) * totalCharges;
+        } else if (products.length > 0) {
+          alloc = totalCharges / products.length;
+        }
       }
-      const netCostPerUnit = q > 0 ? (q * baseCost + alloc) / q : baseCost;
+      const netCostPerUnit = q > 0 ? (q * baseCost + alloc) / q : (baseCost + alloc);
       return { alloc, netCostPerUnit };
     });
 
@@ -549,6 +557,14 @@ const PurchaseForm = () => {
           allocated = (baseCost / stats.subtotal) * stats.totalCharges;
         } else if (costMethod === "Equally" && products.length > 0) {
           allocated = (stats.totalCharges / products.length) / (q > 0 ? q : 1);
+        } else if (stats.totalCharges > 0) {
+          if (stats.subtotal > 0) {
+            allocated = (baseCost / stats.subtotal) * stats.totalCharges;
+          } else if (stats.totalQty > 0) {
+            allocated = stats.totalCharges / stats.totalQty;
+          } else if (products.length > 0) {
+            allocated = (stats.totalCharges / products.length) / (q > 0 ? q : 1);
+          }
         }
         const netCostForSp = costForSp + allocated;
 
@@ -585,7 +601,7 @@ const PurchaseForm = () => {
           storage_location_infos: p.storageLoc ? { name: p.storageLoc } : null,
           reorder_point_infos: p.reorderPoint ? { reorder_point: Number(p.reorderPoint) } : null,
           pricing_infos: {
-            buy_price: Number(baseCost.toFixed(2)),
+            buy_price: Number((baseCost + allocated).toFixed(2)),
             sell_price: Number(finalSellPrice.toFixed(2))
           },
           gst: String(p.taxGst || 0).includes("%") ? String(p.taxGst || 0) : `${p.taxGst || 0}%`,

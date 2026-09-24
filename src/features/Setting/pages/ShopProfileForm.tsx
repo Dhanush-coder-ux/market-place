@@ -90,13 +90,6 @@ export const ShopProfileForm = () => {
             <Edit className="w-4 h-4" />
             Edit Shop Details
           </button>
-          <button
-            onClick={() => navigate("/setup-digital-store")}
-            className="h-9 px-4 bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-bold rounded-lg transition-all flex items-center gap-2 shadow-sm"
-          >
-            <Store className="w-4 h-4" />
-            Edit Digital Store
-          </button>
         </div>
       </div>
 

@@ -3,7 +3,7 @@ import { ENDPOINTS } from "@/services/endpoints";
 let refreshPromise: Promise<string | null> | null = null;
 
 export const getGatewayBaseUrl = (): string => {
-  let url = (import.meta.env.VITE_GATEWAY_URL || "http://127.0.0.1:8900/api").replace(/\/+$/, "");
+  let url = (import.meta.env.VITE_GATEWAY_URL || "http://127.0.0.1:8000/api").replace(/\/+$/, "");
   if (!url.endsWith("/api")) {
     url += "/api";
   }

@@ -20,7 +20,15 @@ import { OrderResponse } from "@/features/order/types";
 import SkeletonLoader from "@/components/common/SkeletonLoader";
 
 /* ── helpers ── */
-const fmt = (n?: number) => `₹${(n || 0).toLocaleString("en-IN")}`;
+const fmt = (n?: number) => {
+  if (n === undefined || n === null || isNaN(Number(n))) return "₹0";
+  const num = Number(n);
+  const formatted = num.toLocaleString("en-IN", {
+    minimumFractionDigits: num % 1 !== 0 ? 2 : 0,
+    maximumFractionDigits: 2,
+  });
+  return `₹${formatted}`;
+};
 
 export interface ParsedPaymentItem {
   method: string;
@@ -175,6 +183,7 @@ const getItemDisplayQty = (item: any) => {
 type SaleItem = {
   id: string; name: string; sku: string; quantity: number; returnedQty?: number; reason?: string;
   unitPrice: number; buyPrice: number; basePrice: number;
+  gstRate: number; gstAmount: number; totalAmount: number;
   status?: string; serial_numbers?: string[];
   unit: string;
   variantName?: string;
@@ -193,28 +202,69 @@ type SaleItem = {
 const generateItems = (sale: OrderResponse, productMap: Record<string, string> = {}): SaleItem[] => {
   const calcInfos = (sale as any)?.calculation_infos || (sale as any)?.calculations || {};
   const calcItems = calcInfos.items || [];
-  const includeGst = calcInfos.include_gst === true;
+  const includeGst = calcInfos.include_gst === true || calcInfos.gst_type === "INCLUSIVE" || sale.gst_infos?.type === "INCLUSIVE";
 
   return (sale?.items || []).map((i: any) => {
     // Attempt to find matching calc item for subunit pricing/qty details
     const calc = calcItems.find((ci: any) => ci.product_id === i.product_id || ci.product_id === i.inventory_id);
     let basePrice = calc?.price ?? i.sell_price ?? (i.total_amount && i.quantity ? i.total_amount / i.quantity : 0);
+    const qty = calc?.qty ?? i.quantity ?? 1;
+
+    const rawGst = i.gst || i.datas?.gst || calc?.gst || 0;
+    const gstRate = typeof rawGst === "number" ? rawGst : (parseFloat(String(rawGst).replace("%", "")) || 0);
+
+    const isActuallyExclusive = calcInfos.total && calcInfos.subtotal && calcInfos.gst_amount 
+      ? Math.abs(Number(calcInfos.total) - (Number(calcInfos.subtotal) + Number(calcInfos.gst_amount))) < 1
+      : false;
     
+    const treatAsInclusive = includeGst && !isActuallyExclusive;
+
+    let gstAmount = 0;
+    if (calc?.gst_amount !== undefined && calc?.gst_amount !== null && !isNaN(Number(calc.gst_amount))) {
+      gstAmount = Number(calc.gst_amount);
+    } else if (i.gst_amount !== undefined && i.gst_amount !== null && !isNaN(Number(i.gst_amount))) {
+      gstAmount = Number(i.gst_amount);
+    } else if (gstRate > 0) {
+      if (treatAsInclusive) {
+        const baseWithoutGst = basePrice / (1 + gstRate / 100);
+        gstAmount = (basePrice - baseWithoutGst) * qty;
+      } else {
+        gstAmount = (basePrice * (gstRate / 100)) * qty;
+      }
+    }
+
     let unitPrice = basePrice;
-    if (includeGst) {
-      const gstRate = parseFloat(String(i.gst || i.datas?.gst || "0").replace("%", "")) || 0;
-      unitPrice = unitPrice + (unitPrice * (gstRate / 100));
+    if (gstRate > 0 && !treatAsInclusive) {
+      unitPrice = basePrice + (basePrice * (gstRate / 100));
+    }
+
+    let totalAmount = 0;
+    if (i.total_amount !== undefined && i.total_amount !== null && !isNaN(Number(i.total_amount)) && Number(i.total_amount) > 0) {
+      totalAmount = Number(i.total_amount);
+    } else if (calc?.total !== undefined && calc?.total !== null && !isNaN(Number(calc.total)) && Number(calc.total) > 0) {
+      totalAmount = Number(calc.total);
+    } else {
+      totalAmount = (basePrice * qty);
+    }
+
+    // Safely ensure totalAmount includes GST.
+    // If the provided totalAmount is roughly equal to just basePrice * qty, it implies it doesn't have GST added.
+    if (Math.abs(totalAmount - (basePrice * qty)) < 1) {
+      totalAmount += gstAmount;
     }
 
     return {
       id: i.id,
       name: i.name || i.product_name || i.datas?.product_name || i.datas?.name || productMap[i.inventory_id] || "Unknown Item",
       sku: i.barcode?.trim() || i.inventory_id?.slice(-6) || "N/A",
-      quantity: calc?.qty ?? i.quantity ?? 0,
+      quantity: qty,
       returnedQty: i.returned_quantity || 0,
       unitPrice,
       buyPrice: i.buy_price || 0,
       basePrice,
+      gstRate,
+      gstAmount,
+      totalAmount,
       status: i.status || "COMPLETED",
       reason: i.reason,
       serial_numbers: Array.isArray(i.serialno_infos) ? i.serialno_infos.map((sn: any) => sn.name || sn) : (i.serialno_info?.serial_numbers || i.serial_info?.serial_numbers || i.serial_numbers || []),
@@ -458,15 +508,26 @@ const SaleDetailPage: React.FC = () => {
                     <div className="space-y-1">
                       <InfoRow label="Subtotal" value={fmt(subtotal)} />
                       {(() => {
-                        const gstAmount = (sale as any)?.calculation_infos?.gst_amount;
-                        if (gstAmount !== undefined && gstAmount > 0) {
-                          return <InfoRow label="GST" value={<span className="text-indigo-600 font-semibold">+{fmt(gstAmount)}</span>} />;
+                        const calcGst = (sale as any)?.calculation_infos?.gst_amount ?? (sale as any)?.calculation_infos?.total_gst_amount;
+                        const totalItemGst = items.reduce((sum, item) => sum + (item.gstAmount || 0), 0);
+                        const gstAmount = calcGst !== undefined && calcGst !== null && !isNaN(Number(calcGst)) && Number(calcGst) > 0 ? Number(calcGst) : totalItemGst;
+                        if (gstAmount > 0) {
+                          return <InfoRow label="GST Amount" value={<span className="text-indigo-600 font-semibold">+{fmt(gstAmount)}</span>} />;
                         }
                         return null;
                       })()}
                       <div className="mt-4 pt-4 border-t-2 border-slate-800 flex justify-between">
                         <span className="font-black">Grand Total</span>
-                        <span className="text-xl font-black text-slate-900">{fmt(sale.total_sellprice)}</span>
+                        <span className="text-xl font-black text-slate-900">
+                          {fmt(
+                            (() => {
+                              const calcGst = (sale as any)?.calculation_infos?.gst_amount ?? (sale as any)?.calculation_infos?.total_gst_amount;
+                              const totalItemGst = items.reduce((sum, item) => sum + (item.gstAmount || 0), 0);
+                              const gstAmount = calcGst !== undefined && calcGst !== null && !isNaN(Number(calcGst)) && Number(calcGst) > 0 ? Number(calcGst) : totalItemGst;
+                              return Math.max(sale.total_sellprice || 0, subtotal + gstAmount);
+                            })()
+                          )}
+                        </span>
                       </div>
                     </div>
                   </SectionCard>
@@ -576,6 +637,8 @@ const SaleDetailPage: React.FC = () => {
                         <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center">Qty</th>
                         <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center">Unit</th>
                         <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Unit Price</th>
+                        <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">GST Amount</th>
+                        <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">With GST</th>
                         <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Total</th>
                       </tr>
                     </thead>
@@ -657,10 +720,19 @@ const SaleDetailPage: React.FC = () => {
                             <span className="text-[10px] font-black text-slate-500 uppercase px-2 py-0.5 rounded bg-slate-100">{(item as any).entered_unit || item.unit}</span>
                           </td>
                           <td className="px-6 py-4 text-right">
-                            <span className="text-xs font-bold text-slate-500 tabular-nums">{fmt(item.unitPrice)}</span>
+                            <span className="text-xs font-bold text-slate-700 tabular-nums">{fmt(item.basePrice)}</span>
                           </td>
                           <td className="px-6 py-4 text-right">
-                            <span className="text-sm font-black text-slate-800 tabular-nums">{fmt(item.unitPrice * item.quantity)}</span>
+                            <span className="text-xs font-bold text-slate-500 tabular-nums">{fmt(item.gstAmount)}</span>
+                            {item.gstRate > 0 && (
+                              <span className="text-[10px] font-medium text-slate-400 block tabular-nums">@{item.gstRate}%</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <span className="text-xs font-bold text-slate-700 tabular-nums">{fmt(item.basePrice + (item.gstAmount / (item.quantity || 1)))}</span>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <span className="text-sm font-black text-slate-900 tabular-nums">{fmt(item.totalAmount)}</span>
                           </td>
                         </tr>
                       ))}
@@ -682,6 +754,8 @@ const SaleDetailPage: React.FC = () => {
                             <th className="px-6 py-3 text-[10px] font-black text-blue-500 uppercase tracking-[0.15em] text-center">Qty</th>
                             <th className="px-6 py-3 text-[10px] font-black text-blue-500 uppercase tracking-[0.15em] text-center">Unit</th>
                             <th className="px-6 py-3 text-[10px] font-black text-blue-500 uppercase tracking-[0.15em] text-right">Unit Price</th>
+                            <th className="px-6 py-3 text-[10px] font-black text-blue-500 uppercase tracking-[0.15em] text-right">GST Amount</th>
+                            <th className="px-6 py-3 text-[10px] font-black text-blue-500 uppercase tracking-[0.15em] text-right">With GST</th>
                             <th className="px-6 py-3 text-[10px] font-black text-blue-500 uppercase tracking-[0.15em] text-right">Total</th>
                           </tr>
                         </thead>
@@ -690,6 +764,32 @@ const SaleDetailPage: React.FC = () => {
                             const variantN = item.variant_infos?.variant_name || item.variant_name;
                             const batchN = item.batch_infos?.batch_name || item.batch_name;
                             const serialsList = Array.isArray(item.serialno_infos) ? item.serialno_infos.map((sn: any) => sn.name || sn) : [];
+                            const displayQty = item.entered_qty ?? item.quantity ?? 1;
+                            let basePrice = item.sell_price || 0;
+                            if (item.total_amount && item.quantity && basePrice === 0) {
+                                basePrice = item.total_amount / item.quantity;
+                            }
+                            const rawGst = item.gst || item.datas?.gst || 0;
+                            const gstRate = typeof rawGst === "number" ? rawGst : (parseFloat(String(rawGst).replace("%", "")) || 0);
+                            const calcInfos = (sale as any)?.calculation_infos || (sale as any)?.calculations || {};
+                            const includeGst = calcInfos.include_gst === true || calcInfos.gst_type === "INCLUSIVE" || sale.gst_infos?.type === "INCLUSIVE";
+                            
+                            let repGst = item.gst_amount || item.total_gst_amount || 0;
+                            if (!item.gst_amount && !item.total_gst_amount && gstRate > 0) {
+                                if (includeGst) {
+                                    const baseWithoutGst = basePrice / (1 + gstRate / 100);
+                                    repGst = (basePrice - baseWithoutGst) * displayQty;
+                                } else {
+                                    repGst = (basePrice * (gstRate / 100)) * displayQty;
+                                }
+                            }
+                            let unitPriceIncGst = basePrice;
+                            if (gstRate > 0 && !includeGst) {
+                                unitPriceIncGst = basePrice + (basePrice * (gstRate / 100));
+                            }
+                            const repTotal = item.total_amount || (unitPriceIncGst * displayQty);
+                            const unitPriceExclGst = unitPriceIncGst - (repGst / displayQty);
+
                             return (
                               <tr key={item.id || rIdx} className="hover:bg-slate-50/50 transition-colors">
                                 <td className="px-6 py-4">
@@ -721,10 +821,16 @@ const SaleDetailPage: React.FC = () => {
                                   <span className="text-[10px] font-black text-blue-500 uppercase px-2 py-0.5 rounded bg-blue-50 border border-blue-100">{item.entered_unit || item.unit_infos?.name || item.unit || ""}</span>
                                 </td>
                                 <td className="px-6 py-4 text-right">
-                                  <span className="text-xs font-bold text-slate-500 tabular-nums">{fmt(item.sell_price || 0)}</span>
+                                  <span className="text-xs font-bold text-slate-500 tabular-nums">{fmt(unitPriceExclGst)}</span>
                                 </td>
                                 <td className="px-6 py-4 text-right">
-                                  <span className="text-sm font-black text-slate-800 tabular-nums">{fmt(item.total_amount || ((item.sell_price || 0) * (item.quantity || 1)))}</span>
+                                  <span className="text-xs font-bold text-slate-500 tabular-nums">{fmt(repGst)}</span>
+                                </td>
+                                <td className="px-6 py-4 text-right">
+                                  <span className="text-xs font-bold text-slate-700 tabular-nums">{fmt(unitPriceExclGst + (repGst / displayQty))}</span>
+                                </td>
+                                <td className="px-6 py-4 text-right">
+                                  <span className="text-sm font-black text-slate-800 tabular-nums">{fmt(repTotal)}</span>
                                 </td>
                               </tr>
                             );
@@ -747,6 +853,8 @@ const SaleDetailPage: React.FC = () => {
                             <th className="px-6 py-3 text-[10px] font-black text-blue-400 uppercase tracking-[0.15em] text-center">Qty</th>
                             <th className="px-6 py-3 text-[10px] font-black text-blue-400 uppercase tracking-[0.15em] text-center">Unit</th>
                             <th className="px-6 py-3 text-[10px] font-black text-blue-400 uppercase tracking-[0.15em] text-right">Unit Price</th>
+                            <th className="px-6 py-3 text-[10px] font-black text-blue-400 uppercase tracking-[0.15em] text-right">GST Amount</th>
+                            <th className="px-6 py-3 text-[10px] font-black text-blue-400 uppercase tracking-[0.15em] text-right">With GST</th>
                             <th className="px-6 py-3 text-[10px] font-black text-blue-400 uppercase tracking-[0.15em] text-right">Total</th>
                           </tr>
                         </thead>
@@ -828,10 +936,19 @@ const SaleDetailPage: React.FC = () => {
                                 <span className="text-[10px] font-black text-blue-500 uppercase px-2 py-0.5 rounded bg-blue-50 border border-blue-100">{(item as any).entered_unit || item.unit}</span>
                               </td>
                               <td className="px-6 py-4 text-right">
-                                <span className="text-xs font-bold text-slate-500 tabular-nums">{fmt(item.unitPrice)}</span>
+                                <span className="text-xs font-bold text-slate-700 tabular-nums">{fmt(item.basePrice)}</span>
                               </td>
                               <td className="px-6 py-4 text-right">
-                                <span className="text-sm font-black text-slate-800 tabular-nums">{fmt(item.unitPrice * item.quantity)}</span>
+                                <span className="text-xs font-bold text-slate-500 tabular-nums">{fmt(item.gstAmount)}</span>
+                                {item.gstRate > 0 && (
+                                  <span className="text-[10px] font-medium text-slate-400 block tabular-nums">@{item.gstRate}%</span>
+                                )}
+                              </td>
+                              <td className="px-6 py-4 text-right">
+                                <span className="text-xs font-bold text-slate-700 tabular-nums">{fmt(item.basePrice + (item.gstAmount / (item.quantity || 1)))}</span>
+                              </td>
+                              <td className="px-6 py-4 text-right">
+                                <span className="text-sm font-black text-slate-900 tabular-nums">{fmt(item.totalAmount)}</span>
                               </td>
                             </tr>
                           ))}
@@ -932,7 +1049,9 @@ const SaleDetailPage: React.FC = () => {
                                   <th className="px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.12em]">Product</th>
                                   <th className="px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.12em] text-center">Returned Qty</th>
                                   <th className="px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.12em] text-center">Date & Time</th>
-                                  <th className="px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.12em] text-right">Value</th>
+                                  <th className="px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.12em] text-right">Unit Price</th>
+                                  <th className="px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.12em] text-right">GST Amount</th>
+                                  <th className="px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.12em] text-right">Total</th>
                                   <th className="px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.12em] text-right">Reason</th>
                                 </tr>
                               </thead>
@@ -940,6 +1059,10 @@ const SaleDetailPage: React.FC = () => {
                                 {returnedItems.map((rItem: any, idx: number) => {
                                   const variantN = rItem.variant_infos?.variant_name || rItem.variant_name;
                                   const batchN = rItem.batch_infos?.batch_name || rItem.batch_name;
+                                  const matchingItem = items.find((i: any) => i.id === rItem.order_item_id || i.id === rItem.id || i.id === (rItem as any).return_order_item_id);
+                                  const displayQty = rItem.entered_qty ?? rItem.quantity ?? 1;
+                                  const itemGst = matchingItem ? (matchingItem.gstAmount / (matchingItem.quantity || 1)) * displayQty : (rItem.gst_amount || rItem.total_gst_amount || 0);
+                                  const itemTotal = rItem.exchange_amount || (matchingItem ? matchingItem.unitPrice * displayQty : 0);
                                   return (
                                     <tr key={rItem.id || idx} className="hover:bg-rose-50/20 transition-colors">
                                       <td className="px-4 py-3">
@@ -966,7 +1089,13 @@ const SaleDetailPage: React.FC = () => {
                                         })()}
                                       </td>
                                       <td className="px-4 py-3 text-right">
-                                        <span className="text-sm font-black text-slate-850 tabular-nums">{fmt(rItem.exchange_amount || 0)}</span>
+                                        <span className="text-xs font-bold text-slate-500 tabular-nums">{fmt((itemTotal - itemGst) / displayQty)}</span>
+                                      </td>
+                                      <td className="px-4 py-3 text-right">
+                                        <span className="text-xs font-bold text-slate-500 tabular-nums">{fmt(itemGst)}</span>
+                                      </td>
+                                      <td className="px-4 py-3 text-right">
+                                        <span className="text-sm font-black text-slate-850 tabular-nums">{fmt(itemTotal)}</span>
                                       </td>
                                       <td className="px-4 py-3 text-right">
                                         <span className="text-xs font-semibold text-slate-600">{rItem.reason || exch.reason || "Exchange"}</span>
@@ -992,6 +1121,7 @@ const SaleDetailPage: React.FC = () => {
                                   <th className="px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.12em] text-center">Qty Given</th>
                                   <th className="px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.12em] text-center">Date & Time</th>
                                   <th className="px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.12em] text-right">Unit Price</th>
+                                  <th className="px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.12em] text-right">GST Amount</th>
                                   <th className="px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.12em] text-right">Total</th>
                                 </tr>
                               </thead>
@@ -1000,6 +1130,32 @@ const SaleDetailPage: React.FC = () => {
                                   const variantN = repItem.variant_infos?.variant_name || repItem.variant_name;
                                   const batchN = repItem.batch_infos?.batch_name || repItem.batch_name;
                                   const serialsList = Array.isArray(repItem.serialno_infos) ? repItem.serialno_infos.map((sn: any) => sn.name || sn) : [];
+                                  
+                                  const displayQty = repItem.entered_qty ?? repItem.quantity ?? 1;
+                                  let basePrice = repItem.sell_price || 0;
+                                  if (repItem.total_amount && repItem.quantity && basePrice === 0) {
+                                      basePrice = repItem.total_amount / repItem.quantity;
+                                  }
+                                  const rawGst = repItem.gst || repItem.datas?.gst || 0;
+                                  const gstRate = typeof rawGst === "number" ? rawGst : (parseFloat(String(rawGst).replace("%", "")) || 0);
+                                  const calcInfos = (sale as any)?.calculation_infos || (sale as any)?.calculations || {};
+                                  const includeGst = calcInfos.include_gst === true || calcInfos.gst_type === "INCLUSIVE" || sale.gst_infos?.type === "INCLUSIVE";
+                                  
+                                  let repGst = repItem.gst_amount || repItem.total_gst_amount || 0;
+                                  if (!repItem.gst_amount && !repItem.total_gst_amount && gstRate > 0) {
+                                      if (includeGst) {
+                                          const baseWithoutGst = basePrice / (1 + gstRate / 100);
+                                          repGst = (basePrice - baseWithoutGst) * displayQty;
+                                      } else {
+                                          repGst = (basePrice * (gstRate / 100)) * displayQty;
+                                      }
+                                  }
+                                  let unitPriceIncGst = basePrice;
+                                  if (gstRate > 0 && !includeGst) {
+                                      unitPriceIncGst = basePrice + (basePrice * (gstRate / 100));
+                                  }
+                                  const repTotal = repItem.total_amount || (unitPriceIncGst * displayQty);
+                                  const unitPriceExclGst = unitPriceIncGst - (repGst / displayQty);
                                   return (
                                     <tr key={repItem.id || idx} className="hover:bg-emerald-50/30 transition-colors">
                                       <td className="px-4 py-3">
@@ -1041,10 +1197,13 @@ const SaleDetailPage: React.FC = () => {
                                         })()}
                                       </td>
                                       <td className="px-4 py-3 text-right">
-                                        <span className="text-xs font-bold text-slate-500 tabular-nums">{fmt(repItem.sell_price || 0)}</span>
+                                        <span className="text-xs font-bold text-slate-500 tabular-nums">{fmt(unitPriceExclGst)}</span>
                                       </td>
                                       <td className="px-4 py-3 text-right">
-                                        <span className="text-sm font-black text-emerald-800 tabular-nums">{fmt(repItem.total_amount || ((repItem.sell_price || 0) * (repItem.quantity || 1)))}</span>
+                                        <span className="text-xs font-bold text-slate-500 tabular-nums">{fmt(repGst)}</span>
+                                      </td>
+                                      <td className="px-4 py-3 text-right">
+                                        <span className="text-sm font-black text-emerald-800 tabular-nums">{fmt(repTotal)}</span>
                                       </td>
                                     </tr>
                                   );
@@ -1134,7 +1293,9 @@ const SaleDetailPage: React.FC = () => {
                               <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Returned Product</th>
                               <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center">Returned Qty</th>
                               <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center">Date & Time</th>
-                              <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Refund Amount</th>
+                              <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Unit Price</th>
+                              <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">GST Amount</th>
+                              <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Total Refund</th>
                               <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center">Payment Mode</th>
                               <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Reason</th>
                             </tr>
@@ -1154,6 +1315,11 @@ const SaleDetailPage: React.FC = () => {
                                 displayQty = Number((retItem.quantity * factor).toFixed(2));
                                 displayUnit = (origItem as any).entered_unit || displayUnit;
                               }
+                              
+                              const matchingItem = items.find((i: any) => i.id === retItem.order_item_id || i.id === retItem.return_order_item_id || i.id === retItem.id);
+                              const retGst = matchingItem ? (matchingItem.gstAmount / (matchingItem.quantity || 1)) * (retItem.quantity || 1) : (retItem.gst_amount || retItem.total_gst_amount || 0);
+                              const retTotal = retItem.refund_amount || (matchingItem ? matchingItem.unitPrice * (retItem.quantity || 1) : 0);
+                              const retUnitPriceExclGst = (retTotal - retGst) / (displayQty || 1);
 
                               return (
                                 <tr key={retItem.id} className="hover:bg-slate-50/50 transition-colors">
@@ -1210,7 +1376,13 @@ const SaleDetailPage: React.FC = () => {
                                     })()}
                                   </td>
                                   <td className="px-6 py-4 text-right">
-                                    <span className="text-sm font-black text-slate-850 tabular-nums">{fmt(retItem.refund_amount)}</span>
+                                    <span className="text-xs font-bold text-slate-500 tabular-nums">{fmt(retUnitPriceExclGst)}</span>
+                                  </td>
+                                  <td className="px-6 py-4 text-right">
+                                    <span className="text-xs font-bold text-slate-500 tabular-nums">{fmt(retGst)}</span>
+                                  </td>
+                                  <td className="px-6 py-4 text-right">
+                                    <span className="text-sm font-black text-slate-850 tabular-nums">{fmt(retTotal)}</span>
                                   </td>
                                   <td className="px-6 py-4 text-center">
                                     <span className="inline-flex items-center gap-1 text-xs font-bold text-slate-700 px-2.5 py-1 rounded-md bg-white border border-slate-200 shadow-2xs">

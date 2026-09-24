@@ -28,7 +28,15 @@ type OriginType = "Offline" | "Offline Return" | "Online";
 type SaleStatus = "Completed" | "Pending" | "Cancelled";
 type SaleRecord = OrderResponse;
 
-const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
+const fmt = (n?: number) => {
+  if (n === undefined || n === null || isNaN(Number(n))) return "₹0";
+  const num = Number(n);
+  const formatted = num.toLocaleString("en-IN", {
+    minimumFractionDigits: num % 1 !== 0 ? 2 : 0,
+    maximumFractionDigits: 2,
+  });
+  return `₹${formatted}`;
+};
 
 function parseSaleDateTime(dateVal?: any): Date {
   if (!dateVal) return new Date();

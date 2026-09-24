@@ -35,7 +35,7 @@ interface ShopItem {
 const CATEGORY_COLORS: Record<string, { bg: string; text: string; border: string }> = {
   groceries: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200" },
   clothing: { bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-200" },
-  electronics: { bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-200" },
+  electronics: { bg: "bg-blue-50", text: "text-blue-500", border: "border-blue-200" },
   books: { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200" },
   default: { bg: "bg-slate-100", text: "text-slate-700", border: "border-slate-200" }
 };
@@ -120,11 +120,11 @@ const ShopSelect = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-2.5">
-        <div className="w-11 h-11 rounded-xl bg-blue-800 text-white flex items-center justify-center shadow-md shadow-blue-800/20 animate-pulse">
+        <div className="w-11 h-11 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-600/20 animate-pulse">
           <Store className="w-5 h-5" />
         </div>
         <div className="flex items-center gap-2 text-slate-500 font-medium text-xs">
-          <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-700" />
+          <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-500" />
           <span>Opening your retail storefronts…</span>
         </div>
       </div>
@@ -132,14 +132,14 @@ const ShopSelect = () => {
   }
 
   return (
-    <div className="h-screen w-full bg-slate-50 text-slate-900 font-sans flex flex-col overflow-y-auto selection:bg-blue-500/20">
+    <div className="h-screen w-full bg-slate-50 text-slate-900 font-sans flex flex-col overflow-y-auto selection:bg-blue-600/20">
       {/* =========================================================================
           TOP NAVIGATION BAR (COMPACT & STICKY)
           ========================================================================= */}
       <header className="w-full bg-white border-b border-slate-200 px-4 sm:px-8 py-3 flex items-center justify-between sticky top-0 z-30 shadow-2xs shrink-0">
         {/* Brand */}
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-blue-800 text-white flex items-center justify-center font-black text-xs shadow-xs">
+          <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-black text-xs shadow-xs">
             ★
           </div>
           <div>
@@ -180,7 +180,7 @@ const ShopSelect = () => {
         {/* Hero Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-200 pb-4">
           <div className="space-y-1">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-blue-50 border border-blue-200/80 text-blue-800 text-[10px] font-bold tracking-wider uppercase">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-blue-50 border border-blue-200/80 text-blue-600 text-[10px] font-bold tracking-wider uppercase">
               <Building2 size={11} />
               <span>Select Active Storefront</span>
             </div>
@@ -201,13 +201,13 @@ const ShopSelect = () => {
                 placeholder="Search storefronts…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 shadow-2xs transition-all"
+                className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-500 shadow-2xs transition-all"
               />
             </div>
 
             <button
               onClick={handleCreateShop}
-              className="px-3.5 py-1.5 bg-blue-800 hover:bg-blue-900 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 shadow-xs shrink-0 transition-all active:scale-95 cursor-pointer"
+              className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-lg flex items-center gap-1.5 shadow-xs shrink-0 transition-all active:scale-95 cursor-pointer"
             >
               <Plus size={14} />
               <span>Add Store</span>
@@ -232,14 +232,14 @@ const ShopSelect = () => {
                 onClick={() => !selecting && handleSelectShop(shop)}
                 className={`group relative bg-white border rounded-xl shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col justify-between overflow-hidden ${
                   isCurrent
-                    ? "border-blue-600 ring-2 ring-blue-600/20 bg-blue-50/10 scale-[0.99]"
-                    : "border-slate-200 hover:border-blue-500 hover:-translate-y-0.5"
+                    ? "border-blue-500 ring-2 ring-blue-500/20 bg-blue-50/10 scale-[0.99]"
+                    : "border-slate-200 hover:border-blue-600 hover:-translate-y-0.5"
                 }`}
               >
                 {/* ─── CLEAN MUTED BLUE HEADER STRIP ─── */}
-                <div className="bg-blue-900 px-3.5 py-2.5 flex items-center justify-between text-white border-b border-blue-950">
+                <div className="bg-blue-500 px-3.5 py-2.5 flex items-center justify-between text-white border-b border-blue-500">
                   <div className="flex items-center gap-2">
-                    <div className="w-5 h-5 rounded bg-blue-800 flex items-center justify-center text-blue-200">
+                    <div className="w-5 h-5 rounded bg-blue-600 flex items-center justify-center text-blue-200">
                       <Store size={12} />
                     </div>
                     <span className="text-[10px] font-bold uppercase tracking-wider text-blue-100">
@@ -259,7 +259,7 @@ const ShopSelect = () => {
                   <div className="space-y-3">
                     {/* Store Monogram & Title */}
                     <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-blue-800 text-white flex items-center justify-center font-bold text-sm shadow-xs shrink-0 overflow-hidden border border-slate-100 group-hover:scale-105 transition-transform">
+                      <div className="w-10 h-10 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-xs shrink-0 overflow-hidden border border-slate-100 group-hover:scale-105 transition-transform">
                         {shop.logo_url ? (
                           <img
                             src={shop.logo_url}
@@ -272,11 +272,11 @@ const ShopSelect = () => {
                       </div>
 
                       <div className="space-y-0.5 min-w-0 flex-1">
-                        <h3 className="font-bold text-sm text-slate-900 group-hover:text-blue-800 transition-colors truncate">
+                        <h3 className="font-bold text-sm text-slate-900 group-hover:text-blue-600 transition-colors truncate">
                           {shop.name}
                         </h3>
                         <div className="flex items-center gap-1 text-xs text-slate-500 font-medium">
-                          <MapPin size={12} className="text-blue-700 shrink-0" />
+                          <MapPin size={12} className="text-blue-500 shrink-0" />
                           <span className="truncate">
                             {shop.city || shop.state || "Main Store Location"}
                           </span>
@@ -318,7 +318,7 @@ const ShopSelect = () => {
                   <div className="pt-3 border-t border-slate-100 space-y-2.5">
                     <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
                       <div className="flex items-center gap-1.5 text-slate-700 font-semibold">
-                        <ShoppingBag size={13} className="text-blue-700" />
+                        <ShoppingBag size={13} className="text-blue-500" />
                         <span>Counter POS Ready</span>
                       </div>
                       <span className="text-[11px] text-emerald-700 font-bold flex items-center gap-1">
@@ -327,9 +327,9 @@ const ShopSelect = () => {
                     </div>
 
                     {/* "Enter Storefront" Button */}
-                    <div className="w-full py-2 px-3.5 rounded-lg bg-slate-100 group-hover:bg-blue-800 text-slate-700 group-hover:text-white font-semibold text-xs flex items-center justify-between transition-all duration-150">
+                    <div className="w-full py-2 px-3.5 rounded-lg bg-slate-100 group-hover:bg-blue-600 text-slate-700 group-hover:text-white font-semibold text-xs flex items-center justify-between transition-all duration-150">
                       {isCurrent ? (
-                        <span className="inline-flex items-center gap-1.5 mx-auto text-blue-700 group-hover:text-white">
+                        <span className="inline-flex items-center gap-1.5 mx-auto text-blue-500 group-hover:text-white">
                           <Loader2 size={13} className="animate-spin" />
                           <span>Entering Store…</span>
                         </span>
@@ -352,14 +352,14 @@ const ShopSelect = () => {
           {/* ─── "OPEN NEW STORE" CARD ─── */}
           <div
             onClick={handleCreateShop}
-            className="border-2 border-dashed border-slate-300 hover:border-blue-600 bg-white hover:bg-blue-50/20 rounded-xl p-6 flex flex-col items-center justify-center text-center gap-3.5 cursor-pointer transition-all duration-200 group min-h-[230px]"
+            className="border-2 border-dashed border-slate-300 hover:border-blue-500 bg-white hover:bg-blue-50/20 rounded-xl p-6 flex flex-col items-center justify-center text-center gap-3.5 cursor-pointer transition-all duration-200 group min-h-[230px]"
           >
-            <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 flex items-center justify-center group-hover:scale-105 group-hover:bg-blue-800 group-hover:text-white transition-all shadow-2xs">
+            <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-200 text-blue-500 flex items-center justify-center group-hover:scale-105 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-2xs">
               <Plus size={22} />
             </div>
 
             <div className="space-y-1">
-              <h3 className="font-bold text-base text-slate-900 group-hover:text-blue-800 transition-colors">
+              <h3 className="font-bold text-base text-slate-900 group-hover:text-blue-600 transition-colors">
                 Open a New Store
               </h3>
               <p className="text-xs text-slate-500 max-w-[240px] leading-relaxed">
@@ -367,7 +367,7 @@ const ShopSelect = () => {
               </p>
             </div>
 
-            <span className="px-3.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200 group-hover:border-blue-300 text-xs font-bold text-blue-700 group-hover:bg-blue-800 group-hover:text-white transition-all shadow-2xs">
+            <span className="px-3.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200 group-hover:border-blue-400 text-xs font-bold text-blue-500 group-hover:bg-blue-600 group-hover:text-white transition-all shadow-2xs">
               + Launch Storefront
             </span>
           </div>

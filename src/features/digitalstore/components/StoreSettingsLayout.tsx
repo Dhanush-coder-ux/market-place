@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Store,
   Clock,
@@ -55,6 +55,11 @@ export function StoreSettingsLayout({ shop }: { shop: any }) {
   );
   const [resumeDate, setResumeDate] = useState("");
   const [savingVacation, setSavingVacation] = useState(false);
+  const [savedVacation, setSavedVacation] = useState(false);
+
+  useEffect(() => {
+    if (savedVacation) setSavedVacation(false);
+  }, [vacationEnabled, vacationMessage, resumeDate]);
 
   // Danger Zone State
   const [confirmDelete, setConfirmDelete] = useState("");
@@ -70,8 +75,10 @@ export function StoreSettingsLayout({ shop }: { shop: any }) {
 
   const handleSaveVacation = () => {
     setSavingVacation(true);
+    setSavedVacation(false);
     setTimeout(() => {
       setSavingVacation(false);
+      setSavedVacation(true);
       showToast("Vacation mode settings saved", "success");
     }, 800);
   };
@@ -271,11 +278,11 @@ export function StoreSettingsLayout({ shop }: { shop: any }) {
               </div>
               <button
                 onClick={handleSaveVacation}
-                disabled={savingVacation}
-                className="inline-flex items-center gap-2 h-9 px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-all shrink-0 ml-4"
+                disabled={savingVacation || savedVacation}
+                className={`inline-flex items-center gap-2 h-9 px-4 ${savedVacation ? 'bg-emerald-600 hover:bg-emerald-700 opacity-90' : 'bg-blue-600 hover:bg-blue-700'} disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-all shrink-0 ml-4`}
               >
-                <Save className="w-3.5 h-3.5" />
-                {savingVacation ? "Saving…" : "Save Changes"}
+                {savedVacation ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Save className="w-3.5 h-3.5" />}
+                {savingVacation ? "Saving…" : savedVacation ? "Saved" : "Save Changes"}
               </button>
             </div>
 

@@ -9,6 +9,7 @@ import {
   Store,
   AlertTriangle,
   X,
+  LayoutTemplate,
 } from "lucide-react";
 
 import { Switch } from "@/components/ui/switch";
@@ -16,7 +17,9 @@ import { ActivityLogPage } from "@/features/Setting/pages/ActivityLogPage";
 import { CustomListSettings } from "@/features/Setting/pages/CustomListSettings";
 import { ShopProfileForm } from "@/features/Setting/pages/ShopProfileForm";
 import { BusinessCategorySettings } from "@/features/Setting/pages/BusinessCategorySettings";
-import { SubscriptionSettingsTab } from "@/features/subscription/components/SubscriptionSettingsTab";
+import PricingPlansPage from "@/features/subscription/pages/PricingPlansPage";
+import { useSearchParams } from "react-router-dom";
+import { InvoiceTemplateSettings } from "@/features/Setting/pages/InvoiceTemplateSettings";
 import { CreditCard } from "lucide-react";
 import { usePurchaseSettings } from "@/context/PurchaseContext";
 import { shopApi } from "@/services/api/shop";
@@ -62,6 +65,13 @@ const MENU_ITEMS = [
     accent: "blue",
   },
   {
+    id: "templates",
+    label: "Invoice Templates",
+    icon: LayoutTemplate,
+    description: "Choose invoice design",
+    accent: "violet",
+  },
+  {
     id: "activity",
     label: "Activity Log",
     icon: Activity,
@@ -81,7 +91,16 @@ const accentClasses: Record<string, { icon: string; badge: string }> = {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export const ProfileSettingsPage = () => {
-  const [activeTab, setActiveTab] = useState("dropdowns");
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get("tab") || "shopprofile";
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  React.useEffect(() => {
+    const tabParam = searchParams.get("tab");
+    if (tabParam && tabParam !== activeTab) {
+      setActiveTab(tabParam);
+    }
+  }, [searchParams]);
   const { settings, toggleSetting, setGstType } = usePurchaseSettings();
   const { showToast } = useToast();
   const [gstNumber, setGstNumber] = useState<string>("");
@@ -156,7 +175,10 @@ export const ProfileSettingsPage = () => {
 
     switch (activeTab) {
       case "subscription":
-        return wrapper(<SubscriptionSettingsTab />);
+        return wrapper(<PricingPlansPage isEmbedded={true} />);
+
+      case "templates":
+        return wrapper(<InvoiceTemplateSettings />);
 
       case "shopprofile":
         return <ShopProfileForm />;

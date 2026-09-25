@@ -650,6 +650,91 @@ export default function CustomerDetail() {
 
             {/* TAB 2 — Payment Ledger */}
             {activeTab === 2 && (() => {
+              // Build initial credit map from customerOrders
+              const orderInitMap = new Map<string, number>();
+              (customerOrders || []).forEach((o: any) => {
+                const uId = String(o.ui_id || '').trim().toUpperCase();
+                const rawId = String(o.id || '').trim().toUpperCase();
+                const invNo = String(o.invoice_no || '').trim().toUpperCase();
+
+                const payInfos = typeof o.payment_infos === 'object' && o.payment_infos ? o.payment_infos : {};
+                const onCredit = Number(payInfos.ON_CREDIT ?? payInfos.on_credit ?? 0);
+                const nonCreditPaid = Object.entries(payInfos).reduce((s, [k, v]) => (!['ON_CREDIT', 'on_credit'].includes(k) ? s + Number(v || 0) : s), 0);
+                const orderTotal = Number(o.calculation_infos?.total ?? o.total_sellprice ?? o.grand_total ?? o.total_amount ?? 0);
+
+                const initialDue = onCredit > 0 ? onCredit : (orderTotal > 0 ? Math.max(0, orderTotal - nonCreditPaid) : Number(o.pending_amount || 0));
+
+                if (uId) orderInitMap.set(uId, initialDue);
+                if (rawId) orderInitMap.set(rawId, initialDue);
+                if (invNo) orderInitMap.set(invNo, initialDue);
+              });
+
+              // Sort clearingHistory chronologically (oldest first) to accurately track per-invoice running balances
+              const sorted = [...(clearingHistory || [])].sort((a, b) => {
+                const tA = new Date(a.created_at || a.date || a.additional_infos?.timestamp || 0).getTime();
+                const tB = new Date(b.created_at || b.date || b.additional_infos?.timestamp || 0).getTime();
+                return tA - tB;
+              });
+
+              const runningInvBalance = new Map<string, number>();
+              const entryBalanceMap = new Map<any, number>();
+
+              sorted.forEach((h, idx) => {
+                let addInfos = h.additional_infos || {};
+                if (typeof addInfos === 'string') {
+                  try { addInfos = JSON.parse(addInfos); } catch (e) { addInfos = {}; }
+                }
+
+                const invKey = String(addInfos.invoice_no || h.invoice_no || h.reference_no || h.ref_no || addInfos.entity_id || h.entity_id || '').trim().toUpperCase();
+
+                const isRefund = h.type === 'SALES_RETURN' || h.type === 'REFUND' || h.entity_name?.toLowerCase().includes('return') || h.notes?.toLowerCase().includes('refund') || h.notes?.toLowerCase().includes('return');
+                const isCreditAddition = h.entity_name === 'order' || String(h.notes || addInfos.notes || '').toLowerCase().includes('billed (on credit)') || String(h.notes || addInfos.notes || '').toLowerCase().includes('added to credit');
+
+                const outBefore = addInfos.outstanding_before ?? h.cleared_infos?.outstanding_before ?? 0;
+                const outAfter = addInfos.outstanding_after ?? h.cleared_infos?.outstanding_after ?? 0;
+                const defaultClearedAmount = outBefore > outAfter ? (outBefore - outAfter) : 0;
+                let displayAmount = isCreditAddition 
+                  ? 0 
+                  : Number(addInfos.cleared_amount ?? addInfos.paid_amount ?? h.cleared_amount ?? h.amount ?? defaultClearedAmount);
+
+                if (displayAmount === 0 && isRefund && h.notes) {
+                  const match = h.notes.match(/Refund amount:\s*([0-9.]+)/i);
+                  if (match && match[1]) {
+                    displayAmount = parseFloat(match[1]) || 0;
+                  }
+                }
+
+                let rowInvOutstanding = 0;
+
+                if (invKey) {
+                  let initialCreditForOrder = orderInitMap.get(invKey);
+                  if (initialCreditForOrder === undefined) {
+                    if (addInfos.invoice_outstanding !== undefined && addInfos.invoice_outstanding !== null) {
+                      initialCreditForOrder = Number(addInfos.invoice_outstanding);
+                    } else if (addInfos.total_amount && Number(addInfos.total_amount) > 0) {
+                      initialCreditForOrder = Math.max(0, Number(addInfos.total_amount) - Number(addInfos.paid_amount || 0));
+                    } else {
+                      initialCreditForOrder = isCreditAddition ? Number(h.cleared_infos?.outstanding_after ?? h.outstanding_amount ?? 0) : displayAmount;
+                    }
+                  }
+
+                  if (isCreditAddition) {
+                    runningInvBalance.set(invKey, initialCreditForOrder);
+                    rowInvOutstanding = initialCreditForOrder;
+                  } else {
+                    const currentBal = runningInvBalance.has(invKey) ? runningInvBalance.get(invKey)! : initialCreditForOrder;
+                    const newBal = Math.max(0, currentBal - displayAmount);
+                    runningInvBalance.set(invKey, newBal);
+                    rowInvOutstanding = newBal;
+                  }
+                } else {
+                  rowInvOutstanding = Number((outAfter || h.outstanding_amount) ?? 0);
+                }
+
+                if (h.id) entryBalanceMap.set(h.id, rowInvOutstanding);
+                entryBalanceMap.set(idx, rowInvOutstanding);
+              });
+
               const filteredHistory = clearingHistory.filter((h) => {
                 if (!ledgerSearch.trim()) return true;
                 const q = ledgerSearch.toLowerCase();
@@ -775,7 +860,7 @@ export default function CustomerDetail() {
                                     </span>
                                   </td>
                                   <td className="px-4 py-3 text-sm text-slate-700 font-bold whitespace-nowrap">
-                                    ₹{Number((outAfter || h.outstanding_amount) ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    ₹{Number(((h.id && entryBalanceMap.has(h.id)) ? entryBalanceMap.get(h.id) : (entryBalanceMap.has(i) ? entryBalanceMap.get(i) : (outAfter || h.outstanding_amount))) ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </td>
                                   <td className="px-4 py-3 whitespace-nowrap">
                                     <span className={`text-[11px] font-black px-2.5 py-1 rounded-md uppercase tracking-wider flex items-center w-fit ${badgeColorClass}`}>
@@ -853,8 +938,8 @@ export default function CustomerDetail() {
         >
           <div className="space-y-5">
             <FormInput label="Email Address" type="email" defaultValue={String(customer.email ?? "")} />
-            <FormInput label="Subject" type="text" defaultValue="Invoice from Market Place" />
-            <FormTextarea label="Message" defaultValue={`Dear ${name},\n\nPlease find attached your invoice.\n\nThank you!\n\nBest regards,\nMarket Place Team`} style={{ minHeight: 120 }} />
+            <FormInput label="Subject" type="text" defaultValue="Invoice from inventQ" />
+            <FormTextarea label="Message" defaultValue={`Dear ${name},\n\nPlease find attached your invoice.\n\nThank you!\n\nBest regards,\ninventQ Team`} style={{ minHeight: 120 }} />
           </div>
         </Modal>
 

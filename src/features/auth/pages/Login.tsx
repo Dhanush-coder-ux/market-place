@@ -103,25 +103,49 @@ const Login = () => {
     };
   }, [isPaused, currentScene]);
 
-  const handleSignIn = async () => {
+  const handleSignIn = useCallback(async (isSignUp: boolean = false) => {
     setLoading(true);
     try {
       const response = await authApi.getLoginUrl();
-      const url = response?.signin_url || response?.url || response?.data?.signin_url || response?.data?.url;
+      const signinUrl = response?.signin_url || response?.url || response?.data?.signin_url || response?.data?.url;
+      const signupUrl = response?.signup_url || response?.data?.signup_url || signinUrl;
+      const targetUrl = isSignUp ? signupUrl : signinUrl;
 
-      if (typeof url === "string" && url.startsWith("http")) {
-        window.location.href = url;
+      if (typeof targetUrl === "string" && targetUrl.startsWith("http")) {
+        window.location.href = targetUrl;
       } else {
         console.error("Unexpected login URL response:", response);
         showToast("Invalid login URL received from server.", "error");
+        setLoading(false);
       }
     } catch (error) {
       console.error(error);
       showToast("Failed to initialize login. Please try again later.", "error");
-    } finally {
       setLoading(false);
     }
-  };
+  }, [showToast]);
+
+  // Check existing token or trigger auto-login if coming from landing page
+  useEffect(() => {
+    const token = localStorage.getItem("auth_token") || localStorage.getItem("access_token");
+    const sessionId = localStorage.getItem("session_id");
+    const shopId = localStorage.getItem("shop_id");
+    const params = new URLSearchParams(window.location.search);
+    const fromLanding = params.get("from") === "landing" || params.get("autologin") === "true";
+    const isSignUp = params.get("action") === "signup" || params.get("mode") === "signup";
+
+    if (token && (shopId || sessionId)) {
+      window.location.href = "/dashboard";
+      return;
+    } else if (token && !shopId && !sessionId) {
+      window.location.href = "/shop-select";
+      return;
+    }
+
+    if (fromLanding) {
+      handleSignIn(isSignUp);
+    }
+  }, [handleSignIn]);
 
   const handleDial = (rawNumber: string) => {
     window.location.href = `tel:${rawNumber}`;
@@ -207,7 +231,7 @@ const Login = () => {
       `}</style>
 
       {/* =========================================================================
-          LEFT PANEL: RetailerPro Brand & Core Theme Blue Gradient Showcase
+          LEFT PANEL: inventQ Brand & Core Theme Blue Gradient Showcase
           ========================================================================= */}
       <aside
         className="w-full lg:w-[48%] xl:w-[46%] text-white p-8 lg:p-12 flex flex-col justify-between relative overflow-hidden shrink-0 shadow-2xl"
@@ -255,16 +279,9 @@ const Login = () => {
               </svg>
             </span>
             <div>
-              <div className="font-bold text-[22px] tracking-[-0.025em] text-white flex items-baseline">
-                <span>Reta</span>
-                <span className="relative inline-block w-[0.42em] h-[1em]">
-                  <span className="absolute left-1/2 -translate-x-1/2 bottom-0 w-[2.4px] h-[0.62em] bg-white rounded-[1px]" />
-                  <svg viewBox="0 0 16 16" className="absolute left-1/2 -translate-x-1/2 -top-[0.31em] w-[0.46em] h-[0.46em]">
-                    <path fill="#FBBF24" d="M8 0c0 4 4 8 8 8-4 0-8 4-8 8 0-4-4-8-8-8 4 0 8-4 8-8z" />
-                  </svg>
-                </span>
-                <span>ler</span>
-                <span className="text-amber-300">Pro</span>
+              <div className="font-bold text-[24px] tracking-tight text-white flex items-baseline">
+                <span>invent</span>
+                <span className="text-amber-300 font-extrabold">Q</span>
               </div>
               <div className="text-[10.5px] text-blue-100/70 tracking-[0.13em] uppercase font-semibold mt-0.5">
                 from Antaris Software
@@ -590,7 +607,7 @@ const Login = () => {
             </div>
 
             <button
-              onClick={handleSignIn}
+              onClick={() => handleSignIn(false)}
               disabled={loading}
               className="w-full h-12 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 active:from-blue-800 active:to-blue-900 text-white font-semibold text-[14.5px] flex items-center justify-center gap-2 shadow-lg shadow-blue-600/25 active:scale-98 transition-all disabled:opacity-50 disabled:pointer-events-none group"
             >
@@ -646,7 +663,7 @@ const Login = () => {
             </div>
 
             <div className="text-center pt-1">
-              <span className="text-xs text-slate-500">New to RetailerPro? </span>
+              <span className="text-xs text-slate-500">New to inventQ? </span>
               <button
                 onClick={() => setShowSupportModal(true)}
                 className="text-xs text-blue-600 font-semibold hover:underline"
@@ -683,7 +700,7 @@ const Login = () => {
               <rect x="4" y="10" width="16" height="11" rx="2" />
               <path d="M8 10V7a4 4 0 0 1 8 0v3" />
             </svg>
-            Your business data is encrypted in transit and at rest. RetailerPro is a product of Antaris Software Pvt Ltd, India.
+            Your business data is encrypted in transit and at rest. inventQ is a product of Antaris Software Pvt Ltd, India.
           </p>
         </div>
       </main>
@@ -705,7 +722,7 @@ const Login = () => {
               <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center font-bold mb-3">
                 <PhoneCall size={22} />
               </div>
-              <h3 className="text-xl font-bold text-slate-900 tracking-tight">Contact RetailerPro Support</h3>
+              <h3 className="text-xl font-bold text-slate-900 tracking-tight">Contact inventQ Support</h3>
               <p className="text-xs text-slate-500 leading-relaxed">
                 Choose a direct line to connect with our retail specialists. Tapping a number opens your device dialer automatically.
               </p>

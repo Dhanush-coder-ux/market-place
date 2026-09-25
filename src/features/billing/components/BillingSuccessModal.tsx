@@ -457,7 +457,7 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
                 {/* ── Shop Header ─────────────────────────────── */}
                 <div className="text-center mb-2">
                   <div className="text-[13px] font-bold tracking-[0.08em] text-[#1A1714] uppercase">
-                    {shopData?.name || shopData?.shop_name || "MarketPlace"}
+                    {shopData?.name || shopData?.shop_name || "inventQ"}
                   </div>
                   {(shopData?.address?.full_address || shopData?.address_infos?.address_line_1 || (typeof shopData?.address === 'string' ? shopData.address : null)) && (
                     <div className="text-[8.5px] text-[#8A857C] mt-0.5 leading-[1.4] max-w-[90%] mx-auto">

@@ -1,3 +1,4 @@
+import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { StoreFormData, DeliveryConfig } from "@/features/digitalstore/type";
 import { Truck, Clock, Timer, IndianRupee, MapPin } from "lucide-react";
 
@@ -44,14 +45,18 @@ export default function Step2DeliveryHours({ form, setForm }: Step2Props) {
         {enabled && (
           <div className="space-y-4 pt-4 border-t border-slate-100 animate-in slide-in-from-top-2 fade-in">
             <div>
-              <label className="text-[11px] font-bold text-slate-500 mb-1.5 flex items-center gap-1"><Timer size={12}/> Speed</label>
-              <select 
-                value={data.speed} 
-                onChange={(e) => updateDelivery(type, "speed", e.target.value)}
-                className="w-full text-xs p-2 rounded-lg border border-slate-200 outline-none focus:border-blue-500"
-              >
-                {SPEED_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-              </select>
+              <ReusableSelect
+                label="Speed"
+                options={SPEED_OPTIONS.map((opt) => ({
+                  label: opt,
+                  value: opt,
+                  icon: <Timer size={13} className="text-slate-400" />
+                }))}
+                value={data.speed}
+                onValueChange={(val) => updateDelivery(type, "speed", val)}
+                placeholder="Select Speed"
+                className="h-9 py-1 px-3 text-xs bg-white rounded-lg border-slate-200"
+              />
             </div>
             <div>
               <label className="text-[11px] font-bold text-slate-500 mb-1.5 flex items-center gap-1"><IndianRupee size={12}/> Free Shipping Threshold</label>

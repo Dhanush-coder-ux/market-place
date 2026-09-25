@@ -1,3 +1,4 @@
+import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { useState, useEffect, useMemo } from "react";
 import { Modal } from "@/components/common/SuperUI";
 import { Wallet, Loader2 } from "lucide-react";
@@ -74,17 +75,65 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
     }
   }, [show, customer?.id, getData, customerApi]);
 
+  // Safe payment extractor to prevent any NaN from malformed payment objects
+  const extractPayments = (source: any): { method: string; amount: number }[] => {
+    const result: { method: string; amount: number }[] = [];
+    if (!source) return result;
+
+    const add = (method: string, amount?: any) => {
+      if (!method) return;
+      const num = Number(amount);
+      result.push({ method: String(method), amount: isNaN(num) ? 0 : num });
+    };
+
+    if (Array.isArray(source)) {
+      source.forEach((p: any) => {
+        if (p && typeof p === "object") {
+          add(p.method || p.mode || p.type || p.payment_method || "Other", p.amount ?? p.value);
+        }
+      });
+    } else if (typeof source === "object") {
+      if (source.payments && Array.isArray(source.payments)) {
+        source.payments.forEach((p: any) => {
+          if (p && typeof p === "object") {
+            add(p.method || p.mode || p.type || p.payment_method || "Other", p.amount ?? p.value);
+          }
+        });
+      } else if ("amount" in source || "cleared_amount" in source) {
+        add(source.payment_method || source.method || source.mode || "Other", source.amount ?? source.cleared_amount);
+      } else {
+        Object.entries(source).forEach(([k, v]) => {
+          if (typeof v === "number") {
+            add(k, v);
+          } else if (typeof v === "string" && !isNaN(Number(v))) {
+            add(k, Number(v));
+          } else if (v && typeof v === "object" && ("amount" in (v as any) || "value" in (v as any))) {
+            add(k, (v as any).amount ?? (v as any).value);
+          }
+        });
+      }
+    }
+    return result;
+  };
+
   // Build map of already cleared amounts per invoice/order
   const clearedMap = useMemo(() => {
     const map: Record<string, number> = {};
     clearingHistories.forEach((h: any) => {
-      const isInitialBilled = String(h.additional_infos?.notes || h.notes || '').toLowerCase().includes('billed (on credit)');
-      if (isInitialBilled) return;
+      const noteStr = String(h.additional_infos?.notes || h.notes || '').toLowerCase();
+      const isInitialBilled = noteStr.includes('billed (on credit)') || noteStr.includes('billed on credit');
+      const isCreditAdd = noteStr.includes('added to credit') || h.type === 'INCREMENT';
+
+      // Credit additions (e.g. initial order on credit, exchange added to credit) are debt additions, NOT payments
+      if (isInitialBilled || isCreditAdd) return;
 
       const inv = String(h.invoice_no || h.additional_infos?.invoice_no || h.additional_infos?.entity_id || h.entity_id || '').trim().toUpperCase();
-      let amt = Number(h.additional_infos?.cleared_amount ?? 0);
-      if (!amt && h.payment_infos && Array.isArray(h.payment_infos)) {
-        amt = h.payment_infos.reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0);
+      let amt = Number(h.additional_infos?.cleared_amount ?? h.cleared_amount ?? 0);
+      if (!amt && h.payment_infos) {
+        const pList = extractPayments(h.payment_infos);
+        amt = pList
+          .filter(p => !p.method.toUpperCase().includes('CREDIT'))
+          .reduce((sum, p) => sum + (p.amount || 0), 0);
       }
       if (!amt && h.cleared_infos) {
         const before = Number(h.cleared_infos.outstanding_before || 0);
@@ -103,16 +152,86 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
     const orderUiId = String(o.ui_id || '').trim().toUpperCase();
     const orderId = String(o.id || '').trim().toUpperCase();
 
-    const payInfos = typeof o.payment_infos === 'object' && o.payment_infos ? o.payment_infos : {};
-    const onCredit = Number(payInfos.ON_CREDIT ?? payInfos.on_credit ?? 0);
-    const nonCreditPaid = Object.entries(payInfos).reduce((s, [k, v]) => (!['ON_CREDIT', 'on_credit'].includes(k) ? s + Number(v || 0) : s), 0);
-    const orderTotal = Number(o.calculation_infos?.total ?? o.total_sellprice ?? o.grand_total ?? o.total_amount ?? 0);
+    // Check if initial order was on credit or partially on credit
+    const initialPayments = extractPayments(o.payment_infos);
+    let initialNonCreditPaid = 0;
+    let initialCreditAmount = 0;
 
-    const initialDue = onCredit > 0 ? onCredit : (orderTotal > 0 ? Math.max(0, orderTotal - nonCreditPaid) : Number(o.pending_amount || 0));
+    initialPayments.forEach(p => {
+      if (p.method.toUpperCase().includes('CREDIT')) {
+        initialCreditAmount += (p.amount || 0);
+      } else {
+        initialNonCreditPaid += (p.amount || 0);
+      }
+    });
+
+    if (o.payment_method && String(o.payment_method).toUpperCase().includes('CREDIT') && initialCreditAmount === 0 && initialNonCreditPaid === 0) {
+      initialCreditAmount = Number(o.total_sellprice ?? o.calculation_infos?.total ?? o.total_amount) || 0;
+    }
+
+    // Exchanges
+    let totalReplacementsValue = 0;
+    let totalExchangedReturnedValue = 0;
+    let exchangeNonCreditPaid = 0;
+    let exchangeCreditAdded = 0;
+
+    (o.exchanges || []).forEach((exch: any) => {
+      let repVal = Number(exch.total_replacement_amount) || 0;
+      const repItems = exch.replaced_items || exch.replacement_items || [];
+      if (repVal === 0 && repItems.length > 0) {
+        repItems.forEach((r: any) => {
+          const rQty = Number(r.entered_qty ?? r.quantity ?? 1) || 1;
+          const rPrice = Number(r.total_amount ?? ((r.sell_price || 0) * rQty)) || 0;
+          repVal += rPrice;
+        });
+      }
+      totalReplacementsValue += repVal;
+
+      let retVal = Number(exch.total_exchanged_amount) || 0;
+      const retItems = exch.items || exch.exchange_items || exch.returned_items || [];
+      if (retVal === 0 && retItems.length > 0) {
+        retItems.forEach((r: any) => {
+          const rQty = Number(r.quantity ?? 1) || 1;
+          const rPrice = Number(r.exchange_amount ?? r.total_amount ?? ((r.sell_price || 0) * rQty)) || 0;
+          retVal += rPrice;
+        });
+      }
+      totalExchangedReturnedValue += retVal;
+
+      const exchPayments = extractPayments(exch.payment_infos);
+      exchPayments.forEach(p => {
+        const pAmt = p.amount || 0;
+        if (p.method.toUpperCase().includes('CREDIT')) {
+          exchangeCreditAdded += pAmt;
+        } else {
+          exchangeNonCreditPaid += pAmt;
+        }
+      });
+    });
+
+    let totalRefundsValue = 0;
+    (o.returns || []).forEach((ret: any) => {
+      totalRefundsValue += (Number(ret.total_return_cost ?? ret.total_cost) || 0);
+    });
+
+    const baseOrderTotal = Number(o.total_sellprice ?? o.calculation_infos?.total ?? o.total_amount) || 0;
+    const netOrderTotal = Math.max(
+      0,
+      (totalReplacementsValue > 0 || totalExchangedReturnedValue > 0)
+        ? (baseOrderTotal - totalExchangedReturnedValue - totalRefundsValue + totalReplacementsValue)
+        : (baseOrderTotal - totalRefundsValue)
+    );
+
+    const isBilledCredit = initialCreditAmount > 0 || String(o.payment_method || '').toUpperCase().includes('CREDIT');
+    const totalDue = isBilledCredit
+      ? Math.max(0, netOrderTotal - initialNonCreditPaid - exchangeNonCreditPaid)
+      : Math.max(0, initialCreditAmount + exchangeCreditAdded);
+
     const clearedSoFar = (orderUiId ? (clearedMap[orderUiId] || 0) : 0) + (orderId && orderId !== orderUiId ? (clearedMap[orderId] || 0) : 0);
 
-    const remaining = Math.max(0, initialDue - clearedSoFar);
-    return maxOutstanding > 0 ? Math.min(remaining, maxOutstanding) : remaining;
+    const remaining = Math.max(0, (totalDue || 0) - (clearedSoFar || 0));
+    const result = maxOutstanding > 0 ? Math.min(remaining, maxOutstanding) : remaining;
+    return isNaN(result) ? 0 : result;
   };
 
   const outstandingOrders = useMemo(() => {
@@ -147,6 +266,10 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
 
     setIsClearing(true);
 
+    const orderDisplayId = selectedOrder.ui_id || selectedOrder.id.slice(0, 8).toUpperCase();
+    const autoNotes = `Collected ₹${amount.toFixed(2)} via ${paymentMethod} for order ${orderDisplayId}`;
+    const finalNotes = notes && notes.trim() ? `${autoNotes} - ${notes.trim()}` : autoNotes;
+
     const payload = {
       shop_id: localStorage.getItem('shop_id') || SHOP_ID,
       customer_id: customer.id,
@@ -155,9 +278,9 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
         method: paymentMethod as "UPI" | "CASH" | "CARD" | "BANK",
         amount: amount,
       }],
-      invoice_no: selectedOrder.ui_id || selectedOrder.id.slice(0, 8).toUpperCase(),
+      invoice_no: orderDisplayId,
       entity_id: selectedOrder.id,
-      notes: notes,
+      notes: finalNotes,
     };
 
     try {
@@ -184,7 +307,7 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
       onClose={handleClose}
       title={`Collect Payment: ${customer?.name || 'Customer'}`}
       footer={
-        <div className="flex justify-end gap-2 p-4 bg-slate-50/50 rounded-b-2xl border-t border-slate-100">
+        <div className="flex items-center justify-end gap-3 w-full">
           <button
             onClick={handleClose}
             className="px-5 py-2.5 rounded-lg text-xs font-semibold text-slate-500 hover:bg-white border border-transparent hover:border-slate-200 transition-all"
@@ -217,7 +340,7 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
                 className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm"
               />
             </div>
-            <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+            <div className="max-h-[360px] overflow-y-auto overscroll-contain space-y-2.5 pr-2 custom-scrollbar select-none" style={{ scrollbarGutter: "stable" }}>
               {ordersLoading ? (
                 <div className="p-4 text-center text-xs text-slate-500">Loading orders...</div>
               ) : outstandingOrders.length === 0 ? (
@@ -286,18 +409,18 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-semibold text-slate-400 ml-1">Payment Method</label>
-                <select
+              <div className="space-y-1">
+                <ReusableSelect
+                  label="Payment Method"
                   value={paymentMethod}
-                  onChange={e => setPaymentMethod(e.target.value)}
-                  className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
-                >
-                  <option value="CASH">Cash</option>
-                  <option value="UPI">UPI</option>
-                  <option value="CARD">Card</option>
-                  <option value="BANK">Bank Transfer</option>
-                </select>
+                  onValueChange={val => setPaymentMethod(val)}
+                  options={[
+                    { label: "Cash", value: "CASH" },
+                    { label: "UPI", value: "UPI" },
+                    { label: "Card", value: "CARD" },
+                    { label: "Bank Transfer", value: "BANK" }
+                  ]}
+                />
               </div>
               <div className="space-y-1.5">
                 <label className="text-[10px] font-semibold text-slate-400 ml-1">Amount to Clear</label>

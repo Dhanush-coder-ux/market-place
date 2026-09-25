@@ -1,10 +1,11 @@
+import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { useToast } from "@/context/ToastContext";
 import { useState, useRef, useEffect } from "react";
 import {
   Megaphone, RefreshCw, Gift, Sparkles,
   Inbox, Send, Clock,
   Copy, Trash2, Edit3, CheckCircle2,
-  Smile, Timer, ChevronDown, Calendar,
+  Smile, Timer, Calendar, FileText, UserCheck,
   Users, X,
 } from "lucide-react";
 import { useBusinessApi } from "@/context/BusinessApiContext";
@@ -635,19 +636,18 @@ export default function AnnouncementsPage() {
 
                 {/* Status */}
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-2">Status</label>
-                  <div className="relative">
-                    <select
-                      value={status}
-                      onChange={(e) => setStatus(e.target.value as StatusType)}
-                      className="w-full h-9 pl-3 pr-8 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 outline-none appearance-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 transition-all cursor-pointer"
-                    >
-                      <option value="Draft">Draft</option>
-                      <option value="Scheduled">Scheduled</option>
-                      <option value="Published">Published</option>
-                    </select>
-                    <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                  </div>
+                  <ReusableSelect
+                    label="Status"
+                    options={[
+                      { label: "Draft", value: "Draft", icon: <FileText size={13} className="text-slate-400" /> },
+                      { label: "Scheduled", value: "Scheduled", icon: <Calendar size={13} className="text-amber-500" /> },
+                      { label: "Published", value: "Published", icon: <Send size={13} className="text-blue-500" /> }
+                    ]}
+                    value={status}
+                    onValueChange={(val) => setStatus(val as StatusType)}
+                    placeholder="Select Status"
+                    className="h-9 py-1 px-3 text-xs bg-slate-50"
+                  />
                 </div>
 
                 {/* Schedule date/time — show when Scheduled */}
@@ -691,22 +691,18 @@ export default function AnnouncementsPage() {
 
                 {/* Audience */}
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-2 flex items-center gap-1.5">
-                    <Users size={12} />
-                    Audience
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={audience}
-                      onChange={(e) => setAudience(e.target.value)}
-                      className="w-full h-9 pl-3 pr-8 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 outline-none appearance-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 transition-all cursor-pointer"
-                    >
-                      {AUDIENCE_OPTIONS.map((o) => (
-                        <option key={o.value} value={o.value}>{o.label}</option>
-                      ))}
-                    </select>
-                    <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                  </div>
+                  <ReusableSelect
+                    label="Audience"
+                    options={AUDIENCE_OPTIONS.map((o) => ({
+                      label: o.label,
+                      value: o.value,
+                      icon: o.value === "all" ? <Users size={13} className="text-slate-400" /> : o.value === "returning" ? <UserCheck size={13} className="text-blue-500" /> : <Sparkles size={13} className="text-emerald-500" />
+                    }))}
+                    value={audience}
+                    onValueChange={(val) => setAudience(val)}
+                    placeholder="Select Audience"
+                    className="h-9 py-1 px-3 text-xs bg-slate-50"
+                  />
                 </div>
 
                 <div className="border-t border-slate-100" />
@@ -774,33 +770,33 @@ export default function AnnouncementsPage() {
             {/* Filters */}
             <div className="px-5 py-3.5 border-b border-slate-100 flex items-center gap-3 flex-wrap bg-slate-50/60">
               {/* Type filter */}
-              <div className="relative">
-                <select
+              <div className="w-36">
+                <ReusableSelect
+                  options={[
+                    { label: "All Types", value: "All" },
+                    ...(Object.keys(TYPE_CONFIG) as AnnouncementType[]).map((t) => ({ label: t, value: t }))
+                  ]}
                   value={filterType}
-                  onChange={(e) => setFilterType(e.target.value as AnnouncementType | "All")}
-                  className="h-8 pl-3 pr-7 bg-white border border-slate-200 rounded-lg text-[12px] font-medium text-slate-600 outline-none appearance-none focus:border-blue-400 cursor-pointer"
-                >
-                  <option value="All">All Types</option>
-                  {(Object.keys(TYPE_CONFIG) as AnnouncementType[]).map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-                <ChevronDown size={11} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  onValueChange={(val) => setFilterType(val as AnnouncementType | "All")}
+                  placeholder="All Types"
+                  className="h-8 py-0 px-2 text-xs bg-white"
+                />
               </div>
 
               {/* Status filter */}
-              <div className="relative">
-                <select
+              <div className="w-36">
+                <ReusableSelect
+                  options={[
+                    { label: "All Statuses", value: "All" },
+                    { label: "Draft", value: "Draft" },
+                    { label: "Scheduled", value: "Scheduled" },
+                    { label: "Published", value: "Published" }
+                  ]}
                   value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value as StatusType | "All")}
-                  className="h-8 pl-3 pr-7 bg-white border border-slate-200 rounded-lg text-[12px] font-medium text-slate-600 outline-none appearance-none focus:border-blue-400 cursor-pointer"
-                >
-                  <option value="All">All Statuses</option>
-                  <option value="Draft">Draft</option>
-                  <option value="Scheduled">Scheduled</option>
-                  <option value="Published">Published</option>
-                </select>
-                <ChevronDown size={11} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  onValueChange={(val) => setFilterStatus(val as StatusType | "All")}
+                  placeholder="All Statuses"
+                  className="h-8 py-0 px-2 text-xs bg-white"
+                />
               </div>
 
               <div className="flex-1" />

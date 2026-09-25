@@ -497,7 +497,7 @@ const Billing = () => {
           onClick={() => navigate("/")}
           className="ml-1 font-bold text-blue-600 hover:text-blue-700 hover:underline cursor-pointer"
         >
-          marketplace
+          inventQ
         </button>
       </div>
     </div>

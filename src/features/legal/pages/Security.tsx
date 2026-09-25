@@ -15,7 +15,7 @@ const Security = () => {
             </div>
             <div>
               <span className="font-black text-lg text-slate-900 tracking-tight leading-none block">
-                RetailerPro
+                inventQ
               </span>
               <span className="text-[9.5px] font-extrabold tracking-widest text-slate-400 uppercase leading-none block mt-0.5">
                 FROM ANTARIS SOFTWARE
@@ -43,7 +43,7 @@ const Security = () => {
             Platform Security
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 font-medium">
-            How RetailerPro safeguards your store data, transactions, and business continuity.
+            How inventQ safeguards your store data, transactions, and business continuity.
           </p>
         </div>
 

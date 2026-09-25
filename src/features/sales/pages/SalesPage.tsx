@@ -28,7 +28,15 @@ type OriginType = "Offline" | "Offline Return" | "Online";
 type SaleStatus = "Completed" | "Pending" | "Cancelled";
 type SaleRecord = OrderResponse;
 
-const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
+const fmt = (n?: number) => {
+  if (n === undefined || n === null || isNaN(Number(n))) return "₹0";
+  const num = Number(n);
+  const formatted = num.toLocaleString("en-IN", {
+    minimumFractionDigits: num % 1 !== 0 ? 2 : 0,
+    maximumFractionDigits: 2,
+  });
+  return `₹${formatted}`;
+};
 
 function parseSaleDateTime(dateVal?: any): Date {
   if (!dateVal) return new Date();
@@ -296,7 +304,44 @@ const SalesListPage: React.FC = () => {
       }
 
       // Derive total from calculation_infos if present (new Order Service format)
-      const total = Number(s.total_sellprice ?? s.calculation_infos?.total ?? s.calculation_infos?.grand_total ?? s.item_infos?.total_order_amount ?? s.total_amount ?? (Array.isArray(s.items) ? s.items.reduce((acc: number, item: any) => acc + (Number(item.total_amount) || ((Number(item.sell_price) || 0) * (Number(item.quantity) || 1))), 0) : 0) ?? s.total ?? 0);
+      let total = Number(s.total_sellprice ?? s.calculation_infos?.total ?? s.calculation_infos?.grand_total ?? s.item_infos?.total_order_amount ?? s.total_amount ?? (Array.isArray(s.items) ? s.items.reduce((acc: number, item: any) => acc + (Number(item.total_amount) || ((Number(item.sell_price) || 0) * (Number(item.quantity) || 1))), 0) : 0) ?? s.total ?? 0);
+
+      // Account for exchange replacements and returns in sales list
+      if (Array.isArray(s.exchanges) && s.exchanges.length > 0) {
+        let totalReplacements = 0;
+        let totalExchangedReturns = 0;
+        s.exchanges.forEach((exch: any) => {
+          let repVal = Number(exch.total_replacement_amount || 0);
+          const repItems = exch.replaced_items || exch.replacement_items || [];
+          if (repVal === 0 && repItems.length > 0) {
+            repItems.forEach((r: any) => {
+              const rQty = Number(r.entered_qty ?? r.quantity ?? 1);
+              repVal += Number(r.total_amount ?? ((r.sell_price || 0) * rQty));
+            });
+          }
+          totalReplacements += repVal;
+
+          let exchVal = Number(exch.total_exchanged_amount || 0);
+          const retItems = exch.items || exch.exchange_items || exch.returned_items || [];
+          if (exchVal === 0 && retItems.length > 0) {
+            retItems.forEach((r: any) => {
+              const rQty = Number(r.quantity || 1);
+              exchVal += Number(r.exchange_amount ?? r.total_amount ?? ((r.sell_price || 0) * rQty));
+            });
+          }
+          totalExchangedReturns += exchVal;
+        });
+        if (totalReplacements > 0 || totalExchangedReturns > 0) {
+          total = Math.max(0, total - totalExchangedReturns + totalReplacements);
+        }
+      }
+      if (Array.isArray(s.returns) && s.returns.length > 0) {
+        let totalRefunds = 0;
+        s.returns.forEach((ret: any) => {
+          totalRefunds += Number(ret.total_return_cost ?? ret.total_cost ?? 0);
+        });
+        total = Math.max(0, total - totalRefunds);
+      }
 
       // Derive total quantity
       let totalQty = s.total_quantity || s.item_infos?.total_order_qty || s.item_infos?.total_order_quantity || 0;

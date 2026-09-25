@@ -1,11 +1,18 @@
-import { useMemo, useState, useEffect } from "react";
-import { useRef } from "react";
 import {
-  Edit2, Plus, Search,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ReusableSelect } from "@/components/ui/ReusableSelect";
+import { useMemo, useState, useEffect } from "react";
+import {
+  Edit2, Plus, Search, RotateCcw, Globe, ShieldCheck, Ban, RefreshCw,
   AlertCircle, Eye, EyeOff,
   CheckCircle2, XCircle, LayoutGrid, List,
   Tag, Loader2,
-  MoreVertical, ChevronDown, Sliders, GripVertical, Trash2,
+  MoreVertical, Sliders, GripVertical, Trash2,
   ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { inventoryApi, inventoryCustomFieldsApi } from "../../../services/api/inventory";
@@ -39,10 +46,57 @@ interface Product {
   gst: string;
   isActive: boolean;
   haveTracking?: boolean;
+  returnPolicy?: {
+    type?: string;
+    title?: string;
+    subtitle?: string;
+    details?: string;
+    allow_returns?: boolean;
+    is_exchange_only?: boolean;
+  };
   raw: any;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const POLICY_OPTIONS = [
+  {
+    value: "store_default",
+    label: "Use Store Default Policy (Inherit)",
+    icon: <Globe size={14} className="text-blue-500" />
+  },
+  {
+    value: "7_days_return",
+    label: "7-day Returns",
+    icon: <ShieldCheck size={14} className="text-emerald-500" />
+  },
+  {
+    value: "3_days_return",
+    label: "3-day Returns",
+    icon: <ShieldCheck size={14} className="text-emerald-500" />
+  },
+  {
+    value: "10_days_return",
+    label: "10-day Returns",
+    icon: <ShieldCheck size={14} className="text-emerald-500" />
+  },
+  {
+    value: "14_days_return",
+    label: "14-day Returns",
+    icon: <ShieldCheck size={14} className="text-emerald-500" />
+  },
+  {
+    value: "exchange_only",
+    label: "Replacement / Exchange Only",
+    icon: <RefreshCw size={14} className="text-amber-500" />
+  },
+  {
+    value: "no_returns",
+    label: "No Returns (Non-Returnable / Perishable)",
+    icon: <Ban size={14} className="text-rose-500" />
+  }
+];
+
 function stockStyle(stock: number, haveTracking: boolean = true): { textColor: string; label: string; indicator: string } {
   if (haveTracking === false) return { textColor: "text-slate-600", label: "Not Tracked", indicator: "bg-emerald-400" };
   if (stock === 0) return { textColor: "text-red-600", label: "Out of stock", indicator: "bg-red-400" };
@@ -336,112 +390,126 @@ function ProductRow({
 }
 
 // ─── Row More Menu ─────────────────────────────────────────────────────────────
-function RowMoreMenu({ onEdit, onToggleVisibility, visible, actionLoading }: { onEdit: () => void; onToggleVisibility: () => void; visible: boolean; actionLoading?: boolean }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useState(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  });
-
+function RowMoreMenu({
+  onEdit,
+  onToggleVisibility,
+  visible,
+  actionLoading,
+}: {
+  onEdit: () => void;
+  onToggleVisibility: () => void;
+  visible: boolean;
+  actionLoading?: boolean;
+}) {
   return (
-    <div ref={ref} className="relative flex justify-end">
-      <button
-        onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
-        className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:border-slate-300 hover:bg-slate-50 transition-all cursor-pointer"
-        title="More actions"
-      >
-        <MoreVertical size={13} strokeWidth={2} />
-      </button>
-      {open && (
-        <div className="absolute right-0 top-8 z-30 bg-white rounded-xl shadow-lg border border-slate-200 py-1 min-w-[160px]">
+    <div className="flex justify-end">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
           <button
-            onClick={(e) => { e.stopPropagation(); onEdit(); setOpen(false); }}
-            className="w-full flex items-center gap-2 px-3.5 py-2 text-[12.5px] font-medium text-slate-700 hover:bg-slate-50 cursor-pointer transition-colors text-left"
+            type="button"
+            className="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:border-slate-300 hover:bg-slate-50 transition-all cursor-pointer outline-none"
+            title="More actions"
           >
-            <Sliders size={12} className="text-blue-500" />
-            Custom Fields
+            <MoreVertical size={13} strokeWidth={2} />
           </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); onToggleVisibility(); setOpen(false); }}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-48 bg-white border border-slate-200 rounded-xl shadow-xl p-1 z-[9999]">
+          <DropdownMenuItem
+            onClick={onEdit}
+            className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 cursor-pointer rounded-lg transition-colors"
+          >
+            <Sliders size={13} className="text-blue-500 shrink-0" />
+            <span>Custom Fields</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={onToggleVisibility}
             disabled={actionLoading}
-            className="w-full flex items-center gap-2 px-3.5 py-2 text-[12.5px] font-medium text-slate-700 hover:bg-slate-50 cursor-pointer transition-colors text-left disabled:opacity-50"
+            className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 cursor-pointer rounded-lg transition-colors disabled:opacity-50"
           >
-            {visible
-              ? <><EyeOff size={12} className="text-slate-400" /> Hide from App</>
-              : <><Eye size={12} className="text-emerald-500" /> Show on App</>
-            }
-          </button>
-          <div className="h-px bg-slate-100 mx-3 my-1" />
-          <button
-            onClick={(e) => { e.stopPropagation(); onEdit(); setOpen(false); }}
-            className="w-full flex items-center gap-2 px-3.5 py-2 text-[12.5px] font-medium text-slate-700 hover:bg-slate-50 cursor-pointer transition-colors text-left"
+            {visible ? (
+              <>
+                <EyeOff size={13} className="text-slate-400 shrink-0" />
+                <span>Hide from App</span>
+              </>
+            ) : (
+              <>
+                <Eye size={13} className="text-emerald-500 shrink-0" />
+                <span>Show on App</span>
+              </>
+            )}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator className="my-1 bg-slate-100" />
+          <DropdownMenuItem
+            onClick={onEdit}
+            className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 cursor-pointer rounded-lg transition-colors"
           >
-            <Edit2 size={12} className="text-slate-400" />
-            Edit Product
-          </button>
-        </div>
-      )}
+            <Edit2 size={13} className="text-slate-400 shrink-0" />
+            <span>Edit Product</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }
 
 // ─── Card More Menu ────────────────────────────────────────────────────────────
-function CardMoreMenu({ onEdit, onToggleVisibility, visible, actionLoading }: { onEdit: () => void; onToggleVisibility: () => void; visible: boolean; actionLoading?: boolean }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useState(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  });
-
+function CardMoreMenu({
+  onEdit,
+  onToggleVisibility,
+  visible,
+  actionLoading,
+}: {
+  onEdit: () => void;
+  onToggleVisibility: () => void;
+  visible: boolean;
+  actionLoading?: boolean;
+}) {
   return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
-        className="w-7 h-7 rounded-lg border border-slate-200 bg-white flex items-center justify-center text-slate-400 hover:text-slate-600 hover:border-slate-300 transition-all cursor-pointer"
-        title="More actions"
-      >
-        <MoreVertical size={13} strokeWidth={2} />
-      </button>
-      {open && (
-        <div className="absolute right-0 bottom-9 z-30 bg-white rounded-xl shadow-lg border border-slate-200 py-1 min-w-[160px]">
-          <button
-            onClick={(e) => { e.stopPropagation(); onEdit(); setOpen(false); }}
-            className="w-full flex items-center gap-2 px-3.5 py-2 text-[12.5px] font-medium text-slate-700 hover:bg-slate-50 cursor-pointer transition-colors text-left"
-          >
-            <Sliders size={12} className="text-blue-500" />
-            Custom Fields
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); onToggleVisibility(); setOpen(false); }}
-            disabled={actionLoading}
-            className="w-full flex items-center gap-2 px-3.5 py-2 text-[12.5px] font-medium text-slate-700 hover:bg-slate-50 cursor-pointer transition-colors text-left disabled:opacity-50"
-          >
-            {visible
-              ? <><EyeOff size={12} className="text-slate-400" /> Hide from App</>
-              : <><Eye size={12} className="text-emerald-500" /> Show on App</>
-            }
-          </button>
-          <div className="h-px bg-slate-100 mx-3 my-1" />
-          <button
-            onClick={(e) => { e.stopPropagation(); onEdit(); setOpen(false); }}
-            className="w-full flex items-center gap-2 px-3.5 py-2 text-[12.5px] font-medium text-slate-700 hover:bg-slate-50 cursor-pointer transition-colors text-left"
-          >
-            <Edit2 size={12} className="text-slate-400" />
-            Edit Product
-          </button>
-        </div>
-      )}
-    </div>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="w-7 h-7 rounded-lg border border-slate-200 bg-white flex items-center justify-center text-slate-400 hover:text-slate-600 hover:border-slate-300 transition-all cursor-pointer outline-none"
+          title="More actions"
+        >
+          <MoreVertical size={13} strokeWidth={2} />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48 bg-white border border-slate-200 rounded-xl shadow-xl p-1 z-[9999]">
+        <DropdownMenuItem
+          onClick={onEdit}
+          className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 cursor-pointer rounded-lg transition-colors"
+        >
+          <Sliders size={13} className="text-blue-500 shrink-0" />
+          <span>Custom Fields</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={onToggleVisibility}
+          disabled={actionLoading}
+          className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 cursor-pointer rounded-lg transition-colors disabled:opacity-50"
+        >
+          {visible ? (
+            <>
+              <EyeOff size={13} className="text-slate-400 shrink-0" />
+              <span>Hide from App</span>
+            </>
+          ) : (
+            <>
+              <Eye size={13} className="text-emerald-500 shrink-0" />
+              <span>Show on App</span>
+            </>
+          )}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator className="my-1 bg-slate-100" />
+        <DropdownMenuItem
+          onClick={onEdit}
+          className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 cursor-pointer rounded-lg transition-colors"
+        >
+          <Edit2 size={13} className="text-slate-400 shrink-0" />
+          <span>Edit Product</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -468,6 +536,8 @@ const ProductDashboard = () => {
 
   // Additional Details State
   const [additionalSections, setAdditionalSections] = useState<{ id: string; title: string; content: string }[]>([]);
+  const [productPolicyType, setProductPolicyType] = useState<string>("store_default");
+  const [productPolicySubtitle, setProductPolicySubtitle] = useState<string>("");
 
   const addSection = () => {
     if (additionalSections.length >= 3) return;
@@ -539,9 +609,22 @@ const ProductDashboard = () => {
         const batchCount = Array.isArray(p.batch_infos) ? p.batch_infos.length : 0;
         const variantCount = p.variants && typeof p.variants === "object" ? Object.keys(p.variants).length : 0;
 
+        let prodReturnPolicy = p.return_policy || p.additional_infos?.return_policy;
+        if (!prodReturnPolicy && p.custom_fields) {
+          const rfVal = p.custom_fields.return_policy || p.custom_fields.refund_policy;
+          if (rfVal) {
+            try {
+              prodReturnPolicy = typeof rfVal === 'string' ? JSON.parse(rfVal) : rfVal;
+            } catch (e) {
+              prodReturnPolicy = { type: rfVal, title: rfVal };
+            }
+          }
+        }
+
         return {
           id: p.id,
           name: p.name || "Unnamed Product",
+          returnPolicy: prodReturnPolicy,
           description: p.description || "",
           price,
           buyPrice,
@@ -639,6 +722,9 @@ const ProductDashboard = () => {
   const handleOpenEdit = (product: Product) => {
     setEditingProduct(product);
     setAdditionalSections([]);
+    const existingPolicy = product.returnPolicy || {};
+    setProductPolicyType(existingPolicy.type || "store_default");
+    setProductPolicySubtitle(existingPolicy.subtitle || "");
     loadCustomFieldsForProduct(product, shopFields);
   };
 
@@ -686,13 +772,51 @@ const ProductDashboard = () => {
         });
       }
       const onlinePrice = editingProduct.onlineSellPrice !== undefined ? editingProduct.onlineSellPrice : editingProduct.price;
+      
+      let returnPolicyToSave = null;
+      if (productPolicyType !== "store_default") {
+        let title = "7-day returns";
+        let allowRet = true;
+        let isExch = false;
+        let details = "Items can be returned within 7 days of delivery.";
+
+        if (productPolicyType === "3_days_return") {
+          title = "3-day returns";
+          details = "Items can be returned within 3 days of delivery.";
+        } else if (productPolicyType === "10_days_return") {
+          title = "10-day returns";
+          details = "Items can be returned within 10 days of delivery.";
+        } else if (productPolicyType === "14_days_return") {
+          title = "14-day returns";
+          details = "Items can be returned within 14 days of delivery.";
+        } else if (productPolicyType === "exchange_only") {
+          title = "Replacement / Exchange only";
+          isExch = true;
+          details = "Replacement or exchange only for size mismatch or defect.";
+        } else if (productPolicyType === "no_returns") {
+          title = "No returns on this item";
+          allowRet = false;
+          details = "This item is non-returnable and non-refundable.";
+        }
+
+        returnPolicyToSave = {
+          type: productPolicyType,
+          title,
+          subtitle: productPolicySubtitle || (allowRet ? "Unused items, original packaging" : "Freshly made — please check before confirming"),
+          details,
+          allow_returns: allowRet,
+          is_exchange_only: isExch
+        };
+      }
+
       await inventoryApi.updateInventory({
         id: editingProduct.id,
         shop_id: SHOP_ID,
         visible_online: editingProduct.visibleOnApp,
         description: editingProduct.description,
         online_sell_price: onlinePrice,
-      });
+        return_policy: returnPolicyToSave,
+      } as any);
       showToast("Product updated successfully", "success");
       setEditingProduct(null);
       loadProducts();
@@ -785,18 +909,18 @@ const ProductDashboard = () => {
         </div>
 
         {/* Category filter */}
-        <div className="relative min-w-[160px]">
-          <Tag className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={12} />
-          <select
+        <div className="min-w-[170px]">
+          <ReusableSelect
+            options={categoriesList.map((cat) => ({
+              label: cat,
+              value: cat,
+              icon: <Tag size={13} className="text-slate-400" />
+            }))}
             value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="w-full h-9 appearance-none bg-slate-50 border border-slate-200 rounded-lg pl-7 pr-7 text-sm font-medium text-slate-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 transition-all cursor-pointer"
-          >
-            {categoriesList.map((cat) => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
-          </select>
-          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={12} />
+            onValueChange={(val) => setCategoryFilter(val)}
+            placeholder="All Categories"
+            className="h-9 py-1 px-3 text-xs bg-slate-50 border-slate-200"
+          />
         </div>
 
         {/* Visibility filter */}
@@ -972,16 +1096,20 @@ const ProductDashboard = () => {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 px-4 py-3 bg-white rounded-xl border border-slate-200 shadow-sm">
             <div className="flex items-center gap-3 text-xs text-slate-500">
               <span>Rows per page:</span>
-              <select
-                value={limit}
-                onChange={(e) => handleLimitChange(Number(e.target.value))}
-                className="px-2.5 py-1 border border-slate-200 rounded-lg font-semibold text-slate-700 bg-white hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 cursor-pointer"
-              >
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-              </select>
+              <div className="w-20">
+                <ReusableSelect
+                  options={[
+                    { label: "10", value: "10" },
+                    { label: "20", value: "20" },
+                    { label: "50", value: "50" },
+                    { label: "100", value: "100" }
+                  ]}
+                  value={String(limit)}
+                  onValueChange={(val) => handleLimitChange(Number(val))}
+                  placeholder="10"
+                  className="h-7 py-0 px-2 text-xs bg-white"
+                />
+              </div>
               <span className="text-slate-400 border-l border-slate-200 pl-3">
                 Showing {products.length} products on Page {page}
               </span>
@@ -1087,6 +1215,51 @@ const ProductDashboard = () => {
                 placeholder="Enter product description..."
                 className="w-full h-24 resize-none border border-slate-200 rounded-lg p-3 text-[12px] outline-none focus:border-blue-500 bg-white"
               />
+            </div>
+
+            {/* Product Return & Refund Policy */}
+            <div className="space-y-3 pt-2 border-t border-slate-100">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <RotateCcw size={12} className="text-slate-400" />
+                    RETURN &amp; REFUND POLICY
+                  </p>
+                  <p className="text-[11.5px] text-slate-500 mt-0.5">
+                    Choose whether this item follows your store policy or has special return rules.
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <ReusableSelect
+                  label="Policy Override"
+                  options={POLICY_OPTIONS}
+                  value={productPolicyType}
+                  onValueChange={(val) => setProductPolicyType(val)}
+                  placeholder="Select Policy Override"
+                  className="h-9 py-1 px-3 text-xs bg-white"
+                />
+              </div>
+
+              {productPolicyType !== "store_default" && (
+                <div>
+                  <label className="block text-[11px] font-medium text-slate-600 mb-1">
+                    Condition / Reason Subtitle
+                  </label>
+                  <input
+                    type="text"
+                    value={productPolicySubtitle}
+                    onChange={(e) => setProductPolicySubtitle(e.target.value)}
+                    placeholder={
+                      productPolicyType === "no_returns" 
+                        ? "e.g. Freshly made — please check before confirming" 
+                        : "e.g. Unused items, original packaging"
+                    }
+                    className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 outline-none focus:border-blue-500"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Additional Details */}

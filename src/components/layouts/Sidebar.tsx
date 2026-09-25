@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, FC, useMemo, useCallback, memo } from "react";
 import { NavLink, Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, ChevronDown, ListMinus, Plus, Printer, ArrowRight, Store, Loader2, Check, PlusCircle, LogOut } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, ListMinus, Plus, Printer, ArrowRight, Store, Loader2, Check, PlusCircle, LogOut, X } from "lucide-react";
 import { usePurchaseSettings } from "@/context/PurchaseContext";
 import type { SidebarLink, SubItem, SubGroup, SubLink } from "@/utils/constants";
 import { employeeApi } from "@/services/api/employee";
@@ -65,9 +65,10 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
   const [shops, setShops] = useState<Array<{ id: string; name: string; logo_url?: string; categories?: string[]; visible_online?: boolean }>>([]);
   const [shopsLoading, setShopsLoading] = useState(true);
   const [currentShopId, setCurrentShopId] = useState<string | null>(() => localStorage.getItem("shop_id"));
+  const cachedShopName = localStorage.getItem("shop_name") || "Shop A";
   const [selectedShop, setSelectedShop] = useState<{ name: string; initial: string; logo_url?: string }>({
-    name: "Loading...",
-    initial: "S",
+    name: cachedShopName,
+    initial: (cachedShopName.charAt(0) || "S").toUpperCase(),
   });
   const shopMenuRef = useRef<HTMLDivElement>(null);
 
@@ -98,7 +99,7 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
     }
 
     const displayName = name || "Admin User";
-    const displayEmail = email || "admin@marketplace.io";
+    const displayEmail = email || "admin@inventq.io";
     const initial = (displayName.charAt(0) || displayEmail.charAt(0) || "U").toUpperCase();
 
     return { name: displayName, email: displayEmail, initial };
@@ -487,6 +488,15 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
               transition={{ duration: 0.15 }}
               className="relative w-full max-w-[340px] bg-white rounded-xl shadow-2xl overflow-hidden"
             >
+              {/* Close Button */}
+              <button
+                onClick={() => setPromptData(null)}
+                className="absolute top-3.5 right-3.5 w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-400 hover:text-slate-600 flex items-center justify-center transition-colors cursor-pointer z-10"
+                aria-label="Close"
+              >
+                <X size={15} />
+              </button>
+
               <div className="p-6">
                 <div className="w-11 h-11 rounded-lg bg-blue-50 flex items-center justify-center mb-4">
                   <Printer size={22} className="text-blue-600" />
@@ -512,8 +522,8 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
                 </div>
               </div>
               <div className="px-6 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                <span className="text-[10px] font-semibold text-slate-400 tracking-wide">Recommended for POS</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                <span className="text-[10px] font-bold text-slate-500 tracking-wide">inventQ Billing</span>
               </div>
             </motion.div>
           </div>

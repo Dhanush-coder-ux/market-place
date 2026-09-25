@@ -1,3 +1,4 @@
+import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import React from "react";
 import { createPortal } from "react-dom";
 import { LucideIcon } from "lucide-react";
@@ -224,15 +225,18 @@ export interface FormSelectProps extends React.SelectHTMLAttributes<HTMLSelectEl
  * @example
  * <FormSelect label="Payment Method" options={["UPI","Cash","Card"]} value={method} onChange={...} />
  */
-export function FormSelect({ label, options, ...props }: FormSelectProps) {
+export function FormSelect({ label, options, value, onChange, ...props }: any) {
+  const selectOptions = (options || []).map((o: any) => typeof o === "string" ? { label: o, value: o } : o);
   return (
-    <div>
-      {label && <label className="block text-sm font-semibold text-slate-700 mb-2">{label}</label>}
-      <select className={`${inputBase} bg-white`} {...props}>
-        {options.map((o) => (
-          <option key={o}>{o}</option>
-        ))}
-      </select>
+    <div className="w-full">
+      <ReusableSelect
+        label={label}
+        value={value ?? props.defaultValue ?? ""}
+        onValueChange={(val) => {
+          if (onChange) onChange({ target: { value: val } } as any);
+        }}
+        options={selectOptions}
+      />
     </div>
   );
 }

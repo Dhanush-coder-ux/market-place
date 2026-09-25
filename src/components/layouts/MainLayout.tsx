@@ -1,4 +1,7 @@
-import { useEffect } from "react";
+import { SubscriptionExpiredLockScreen } from "@/features/subscription/components/SubscriptionExpiredLockScreen";
+import { subscriptionApi } from "@/services/api/subscription";
+import { SubscriptionAlertBanner } from "@/features/subscription/components/SubscriptionAlertBanner";
+import { useState, useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import Breadcrumb from "../common/BreadCrums";
 import { Navbar } from "./Navbar";
@@ -237,6 +240,19 @@ const MainLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { actions, bottomActions } = useHeader();
+  const [subData, setSubData] = useState<any>(null);
+  const shopId = localStorage.getItem("shop_id") || "default_shop";
+
+  useEffect(() => {
+    let active = true;
+    subscriptionApi.getCurrentSubscription(shopId).then((res) => {
+      if (active && res) setSubData(res);
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [shopId, location.pathname]);
+
+  const isExpired = subData?.status === "expired";
+  const isPricingPage = location.pathname === "/pricing";
 
   useEffect(() => {
     const token = localStorage.getItem("auth_token");
@@ -292,30 +308,37 @@ const MainLayout = () => {
       {/* Right column: navbar sits at the top, content below */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {!hideNav && <Navbar />}
+        <SubscriptionAlertBanner />
 
         <main className="flex-1 flex flex-col min-w-0 relative overflow-hidden">
           <div className={`flex-1 flex flex-col min-h-0 overflow-hidden relative ${hideNav ? (isBillingPage ? "p-0" : "p-2.5 md:p-4") : isStorePage ? "p-0 pb-20 md:pb-0" : isBillingPage ? "pl-6 pr-3.5 pt-4 pb-2 md:pl-8 lg:pl-10 lg:pr-6" : "p-1.5 md:p-2 lg:p-2.5"} ${!bottomActions && "pb-20 md:pb-0"}`}>
 
-            {!isStorePage && (
-              <div className="">
-                {!hideNav && !isDetails && <Breadcrumb />}
+            {isExpired && !isPricingPage ? (
+              <SubscriptionExpiredLockScreen planName={subData?.plan_name} />
+            ) : (
+              <>
+                {!isStorePage && (
+                  <div className="">
+                    {!hideNav && !isDetails && <Breadcrumb />}
 
-                {!hideNav && !isDetails && (
-                  <div className={isBillingPage ? "pl-3.5 pt-1" : ""}>
-                    <Title title={title} icon={icon} actions={actions} />
+                    {!hideNav && !isDetails && (
+                      <div className={isBillingPage ? "pl-3.5 pt-1" : ""}>
+                        <Title title={title} icon={icon} actions={actions} />
+                      </div>
+                    )}
                   </div>
                 )}
-              </div>
-            )}
 
-            {isListPage || isDetails ? (
-              <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-                <Outlet />
-              </div>
-            ) : (
-              <div className="flex-1 overflow-y-auto custom-scrollbar mobile-scroll pb-16 md:pb-6">
-                <Outlet />
-              </div>
+                {isListPage || isDetails ? (
+                  <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                    <Outlet />
+                  </div>
+                ) : (
+                  <div className="flex-1 overflow-y-auto custom-scrollbar mobile-scroll pb-16 md:pb-6">
+                    <Outlet />
+                  </div>
+                )}
+              </>
             )}
           </div>
 

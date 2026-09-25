@@ -19,6 +19,7 @@ interface RazorpayCheckoutModalProps {
   billingCycle: "monthly" | "annual";
   selectedAddons: Record<string, number>;
   addonsCatalog: AddonItem[];
+  amountDue?: number;
   onSuccess: () => void;
 }
 
@@ -30,6 +31,7 @@ export const RazorpayCheckoutModal: React.FC<RazorpayCheckoutModalProps> = ({
   billingCycle,
   selectedAddons,
   addonsCatalog,
+  amountDue,
   onSuccess,
 }) => {
   const { showToast } = useToast();
@@ -59,7 +61,7 @@ export const RazorpayCheckoutModal: React.FC<RazorpayCheckoutModalProps> = ({
     });
 
   const addonsTotal = activeAddonsList.reduce((acc, item) => acc + item.price, 0);
-  const grandTotal = basePrice + addonsTotal;
+  const grandTotal = amountDue !== undefined ? amountDue : (basePrice + addonsTotal);
 
   const loadRazorpayScript = (): Promise<boolean> => {
     return new Promise((resolve) => {
@@ -91,7 +93,7 @@ export const RazorpayCheckoutModal: React.FC<RazorpayCheckoutModalProps> = ({
       const orderData = await subscriptionApi.createRazorpayOrder(orderPayload);
       const scriptLoaded = await loadRazorpayScript();
 
-      const userEmail = localStorage.getItem("user_email") || "owner@marketplace.io";
+      const userEmail = localStorage.getItem("user_email") || "owner@inventq.io";
       const userName = localStorage.getItem("user_name") || "Shop Owner";
 
       // 2. Handle Mock Mode or Real Razorpay Gateway
@@ -273,7 +275,7 @@ export const RazorpayCheckoutModal: React.FC<RazorpayCheckoutModalProps> = ({
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Sparkles size={14} className="text-blue-500 shrink-0" />
-                  <span>Cancel or switch anytime</span>
+                  <span>100% Secure SSL Payment</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <CreditCard size={14} className="text-slate-400 shrink-0" />

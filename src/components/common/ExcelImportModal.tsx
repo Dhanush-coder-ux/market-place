@@ -1,3 +1,4 @@
+import { ReusableSelect } from "@/components/ui/ReusableSelect";
 /**
  * ExcelImportModal.tsx  (v2)
  *
@@ -524,19 +525,13 @@ const MappingPanel: FC<{
                         <span className="text-[10px] text-slate-400 font-medium">Select below</span>
                       )}
                     </div>
-                    <select
+                    <ReusableSelect
                       value={mappedId || ""}
-                      onChange={(e) => onCategoryMap(text, e.target.value)}
-                      className={`w-full text-[11px] border rounded-lg px-2.5 py-2 focus:outline-none transition-colors ${mappedId
-                        ? "border-emerald-300 bg-emerald-50/50 text-emerald-800 focus:border-emerald-400"
-                        : "border-amber-300 bg-amber-50/50 text-slate-700 focus:border-amber-400"
-                        }`}
-                    >
-                      <option value="">— Choose category —</option>
-                      {filteredCats.map((c) => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
-                    </select>
+                      placeholder="— Choose category —"
+                      onValueChange={(val) => onCategoryMap(text, val)}
+                      options={filteredCats.map((c) => ({ label: c.name, value: c.id }))}
+                      className="text-[11px]"
+                    />
                   </div>
                 );
               })}
@@ -585,19 +580,13 @@ const MappingPanel: FC<{
                         <span className="text-[10px] text-slate-400 font-medium">Select below</span>
                       )}
                     </div>
-                    <select
+                    <ReusableSelect
                       value={mappedId || ""}
-                      onChange={(e) => onUnitMap(text, e.target.value)}
-                      className={`w-full text-[11px] border rounded-lg px-2.5 py-2 focus:outline-none transition-colors ${mappedId
-                        ? "border-emerald-300 bg-emerald-50/50 text-emerald-800 focus:border-emerald-400"
-                        : "border-amber-300 bg-amber-50/50 text-slate-700 focus:border-amber-400"
-                        }`}
-                    >
-                      <option value="">— Choose unit —</option>
-                      {filteredUnits.map((u) => (
-                        <option key={u.id} value={u.id}>{u.name}</option>
-                      ))}
-                    </select>
+                      placeholder="— Choose unit —"
+                      onValueChange={(val) => onUnitMap(text, val)}
+                      options={filteredUnits.map((u) => ({ label: u.name, value: u.id }))}
+                      className="text-[11px]"
+                    />
                   </div>
                 );
               })}

@@ -15,7 +15,7 @@ const PrivacyPolicy = () => {
             </div>
             <div>
               <span className="font-black text-lg text-slate-900 tracking-tight leading-none block">
-                RetailerPro
+                inventQ
               </span>
               <span className="text-[9.5px] font-extrabold tracking-widest text-slate-400 uppercase leading-none block mt-0.5">
                 FROM ANTARIS SOFTWARE

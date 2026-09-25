@@ -1,3 +1,4 @@
+import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import {
@@ -397,11 +398,15 @@ const ReturnPageContent: React.FC<{ sale: SaleRecord; productMap: Record<string,
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] text-slate-400 w-12 shrink-0">Reason</span>
-                          <select value={reason} onChange={e => m.setReason(item.id, e.target.value as ReturnReason)}
-                            className="flex-1 h-8 px-2 text-[11px] border border-slate-200 rounded-lg bg-white text-slate-700 outline-none focus:border-blue-500 font-semibold">
-                            <option value="">Select reason…</option>
-                            {RETURN_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
-                          </select>
+                          <div className="flex-1">
+                            <ReusableSelect
+                              value={reason}
+                              placeholder="Select reason…"
+                              onValueChange={val => m.setReason(item.id, val as ReturnReason)}
+                              options={RETURN_REASONS.map(r => ({ label: r, value: r }))}
+                              className="h-8 text-[11px]"
+                            />
+                          </div>
                         </div>
                       </div>
                     )}
@@ -614,10 +619,15 @@ const ReturnPageContent: React.FC<{ sale: SaleRecord; productMap: Record<string,
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-[10px] text-slate-400 w-12">Reason</span>
-                        <select value={reason} onChange={e => m.setReason(item.id, e.target.value as ReturnReason)} className="flex-1 h-8 px-2 text-[11px] border border-slate-200 rounded-lg bg-white text-slate-700 outline-none focus:border-blue-500 font-semibold">
-                          <option value="">Select reason…</option>
-                          {RETURN_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
-                        </select>
+                        <div className="flex-1">
+                          <ReusableSelect
+                            value={reason}
+                            placeholder="Select reason…"
+                            onValueChange={val => m.setReason(item.id, val as ReturnReason)}
+                            options={RETURN_REASONS.map(r => ({ label: r, value: r }))}
+                            className="h-8 text-[11px]"
+                          />
+                        </div>
                       </div>
                     </div>
                   )}
@@ -638,7 +648,19 @@ const ReturnPageContent: React.FC<{ sale: SaleRecord; productMap: Record<string,
                     </div>
                     {state.payments.map((p, idx) => (
                       <div key={idx} className="flex items-center gap-2">
-                        <SelectDropdown value={p.mode} onChange={mode => m.updatePayment(idx, { mode })} options={["Cash", "UPI", "Card", "Bank Transfer", ...(customerOutstanding > 0 ? ["On Credit"] : [])]} displayMap={{ "On Credit": "Clear Outstanding" }} />
+                        {(() => {
+                        const isCollecting = state.mode === "exchange" && totals.diff > 0;
+                        const hasCustomer = !!(sale?.customer_id || sale?.customer?.customer_id || (sale?.customer as any)?.id);
+                        const paymentOptions = [
+                          "Cash",
+                          "UPI",
+                          "Card",
+                          "Bank Transfer",
+                          ...(isCollecting ? (hasCustomer ? ["On Credit"] : []) : (customerOutstanding > 0 ? ["On Credit"] : []))
+                        ];
+                        const displayMap = isCollecting ? undefined : { "On Credit": "Clear Outstanding" };
+                        return <SelectDropdown value={p.mode} onChange={mode => m.updatePayment(idx, { mode })} options={paymentOptions} displayMap={displayMap} />;
+                      })()}
                         <input type="number" value={p.amount === 0 ? "" : p.amount} onChange={e => m.updatePayment(idx, { amount: Number(e.target.value) })} placeholder="Amount" className="flex-1 h-10 px-3 text-[13px] border-2 border-slate-100 rounded-lg bg-white text-slate-800 outline-none focus:border-blue-500 font-semibold text-right" />
                         {state.payments.length > 1 && <button onClick={() => m.removePayment(idx)} className="w-10 h-10 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-100 flex items-center justify-center border border-rose-100"><X size={14} /></button>}
                       </div>

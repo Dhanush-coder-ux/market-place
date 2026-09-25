@@ -834,7 +834,42 @@ export function CustomerPurchasesTable({ rows, loading, onNavigateToSale }: Cust
                       year: 'numeric'
                     })
                     : '—';
-                  const total = Number(order.calculation_infos?.total ?? order.total_sellprice ?? order.item_infos?.total_order_amount ?? order.grand_total ?? order.total_amount ?? order.total ?? 0);
+                  let total = Number(order.calculation_infos?.total ?? order.total_sellprice ?? order.item_infos?.total_order_amount ?? order.grand_total ?? order.total_amount ?? order.total ?? 0);
+                  if (Array.isArray(order.exchanges) && order.exchanges.length > 0) {
+                    let totalReplacements = 0;
+                    let totalExchangedReturns = 0;
+                    order.exchanges.forEach((exch: any) => {
+                      let repVal = Number(exch.total_replacement_amount || 0);
+                      const repItems = exch.replaced_items || exch.replacement_items || [];
+                      if (repVal === 0 && repItems.length > 0) {
+                        repItems.forEach((r: any) => {
+                          const rQty = Number(r.entered_qty ?? r.quantity ?? 1);
+                          repVal += Number(r.total_amount ?? ((r.sell_price || 0) * rQty));
+                        });
+                      }
+                      totalReplacements += repVal;
+
+                      let exchVal = Number(exch.total_exchanged_amount || 0);
+                      const retItems = exch.items || exch.exchange_items || exch.returned_items || [];
+                      if (exchVal === 0 && retItems.length > 0) {
+                        retItems.forEach((r: any) => {
+                          const rQty = Number(r.quantity || 1);
+                          exchVal += Number(r.exchange_amount ?? r.total_amount ?? ((r.sell_price || 0) * rQty));
+                        });
+                      }
+                      totalExchangedReturns += exchVal;
+                    });
+                    if (totalReplacements > 0 || totalExchangedReturns > 0) {
+                      total = Math.max(0, total - totalExchangedReturns + totalReplacements);
+                    }
+                  }
+                  if (Array.isArray(order.returns) && order.returns.length > 0) {
+                    let totalRefunds = 0;
+                    order.returns.forEach((ret: any) => {
+                      totalRefunds += Number(ret.total_return_cost ?? ret.total_cost ?? 0);
+                    });
+                    total = Math.max(0, total - totalRefunds);
+                  }
                   const products = order.items || order.products || order.datas?.items || order.datas?.products || [];
                   const itemCount = order.item_infos?.total_order_qty ?? order.total_quantity ?? order.datas?.total_quantity ?? products.length;
                   const unit = products[0]?.product?.unit || products[0]?.unit || products[0]?.datas?.unit || (itemCount === 1 ? "Item" : "Units");

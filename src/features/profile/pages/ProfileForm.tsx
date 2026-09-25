@@ -9,7 +9,6 @@ import {
   Save,
   Bookmark,
   Info,
-  AlertCircle
 } from "lucide-react";
 import { useHeader } from "@/context/HeaderContext";
 import { useToast } from "@/context/ToastContext";
@@ -20,8 +19,8 @@ import { GradientButton } from "@/components/ui/GradientButton";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import LocationMapPicker from "@/components/ui/LocationMapPicker";
 import Loader from "@/components/common/Loader";
-
-// ─── Interfaces ─────────────────────────────────────────────────────────────
+import Input from "@/components/ui/Input";
+import { NavigationBlocker } from "@/components/common/NavigationBlocker";
 
 export interface ProfileData {
   name: string;
@@ -38,8 +37,6 @@ export interface ProfileData {
   description: string;
 }
 
-// ─── Options ────────────────────────────────────────────────────────────────
-
 const categoryOptions = [
   { label: "Electronics", value: "electronics" },
   { label: "Clothing & Apparel", value: "clothing" },
@@ -50,130 +47,6 @@ const categoryOptions = [
   { label: "Sports & Outdoors", value: "sports" },
   { label: "Other", value: "other" },
 ];
-
-// ─── Shared Styles (from ProductForm) ───────────────────────────────────────
-
-const STYLES = `
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-
-  .pf-root { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; background: #f8fafc; }
-  .pf-root::before {
-    content: '';
-    position: fixed;
-    top: 0; left: 0; right: 0; height: 100vh;
-    background: radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.04), transparent 50%),
-                radial-gradient(circle at 85% 30%, rgba(16, 185, 129, 0.04), transparent 50%);
-    pointer-events: none;
-    z-index: 0;
-  }
-  
-  .pf-input:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 4px rgba(99,102,241,0.1); }
-  .pf-input { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
-  .pf-input:hover:not(:disabled) { border-color: #cbd5e1; }
-  
-  .pf-section-enter { animation: secIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-  @keyframes secIn { from { opacity:0; transform: translateY(12px); } to { opacity:1; transform: translateY(0); } }
-  .pf-fade-in { animation: fadeIn 0.3s ease forwards; }
-  @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
-
-  .pf-card { 
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
-    background: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(226, 232, 240, 0.8);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -2px rgba(0, 0, 0, 0.02);
-  }
-  .pf-card:hover { 
-    box-shadow: 0 12px 24px -8px rgba(99, 102, 241, 0.08); 
-    transform: translateY(-2px);
-    border-color: rgba(99, 102, 241, 0.2);
-  }
-
-  .pf-bottom-bar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 50;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    border-top: 1px solid rgba(226, 232, 240, 0.8);
-    padding: 12px 24px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    box-shadow: 0 -4px 20px rgba(0,0,0,0.03);
-  }
-`;
-
-// ─── UI Components (from ProductForm) ───────────────────────────────────────
-
-interface LabelProps { text: string; required?: boolean; hint?: string; tooltip?: string; }
-const Label: React.FC<LabelProps> = ({ text, required, hint, tooltip }) => (
-  <div className="flex items-center gap-1.5 mb-2">
-    <label className="block text-xs font-semibold text-slate-600 uppercase tracking-wider">
-      {text}{required && <span className="text-red-500 ml-1 text-sm leading-none">*</span>}
-      {hint && <span className="ml-2 normal-case font-medium text-slate-400 capitalize-first tracking-normal">({hint})</span>}
-    </label>
-    {tooltip && (
-      <div className="group relative flex items-center">
-        <Info size={13} className="text-slate-400 cursor-help hover:text-indigo-500 transition-colors" />
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-52 p-3 bg-slate-800 text-white text-[11px] rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl normal-case font-medium tracking-normal leading-relaxed">
-          {tooltip}
-          <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-800" />
-        </div>
-      </div>
-    )}
-  </div>
-);
-
-interface InputFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  label?: string;
-  required?: boolean;
-  hint?: string;
-  leftEl?: React.ReactNode;
-  rightEl?: React.ReactNode;
-  error?: string;
-  tooltip?: string;
-}
-const InputField: React.FC<InputFieldProps> = ({ label, required, hint, leftEl, rightEl, error, tooltip, className = "", ...rest }) => (
-  <div className={`transition-opacity duration-200 ${rest.disabled ? "opacity-50" : ""}`}>
-    {label && <Label text={label} required={required} hint={hint} tooltip={tooltip} />}
-    <div className="relative group">
-      {leftEl && <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none group-hover:text-indigo-400 transition-colors">{leftEl}</span>}
-      <input
-        {...rest}
-        className={`pf-input w-full px-4 py-3 text-sm font-medium border border-slate-200/80 rounded-xl bg-white/80 backdrop-blur-sm text-slate-800 placeholder-slate-400 ${leftEl ? "pl-10" : ""} ${rightEl ? "pr-14" : ""} ${error ? "border-red-300 bg-red-50/30" : ""} ${rest.disabled ? "bg-slate-50 cursor-not-allowed" : ""} ${className}`}
-      />
-      {rightEl && <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-semibold">{rightEl}</span>}
-    </div>
-    {error && <p className="mt-1.5 text-xs font-medium text-red-500 flex items-center gap-1.5"><AlertCircle size={12} />{error}</p>}
-  </div>
-);
-
-const SectionCard: React.FC<{ icon: React.ReactNode; iconBg: string; title: string; subtitle?: string; children: React.ReactNode; extra?: React.ReactNode }> = ({ icon, iconBg, title, subtitle, children, extra }) => (
-  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 py-8 border-b border-slate-200/50 last:border-0 relative z-10">
-    <div className="lg:col-span-1">
-      <div className="sticky top-24">
-        <div className="flex items-center gap-4 mb-3">
-          <div className={`w-11 h-11 rounded-2xl ${iconBg} flex items-center justify-center shrink-0 shadow-sm border border-white/50`}>
-            {icon}
-          </div>
-          <h2 className="text-lg font-bold text-slate-800 tracking-tight">{title}</h2>
-        </div>
-        {subtitle && <p className="text-sm text-slate-500 leading-relaxed pr-6">{subtitle}</p>}
-        {extra && <div className="mt-4">{extra}</div>}
-      </div>
-    </div>
-    <div className="lg:col-span-2">
-      <div className="pf-card rounded-2xl overflow-hidden p-7 bg-white/60">
-        {children}
-      </div>
-    </div>
-  </div>
-);
-
-// ─── ProfileForm ────────────────────────────────────────────────────────────
 
 const ProfileForm: React.FC = () => {
   const { id: pathId } = useParams();
@@ -186,6 +59,7 @@ const ProfileForm: React.FC = () => {
   const { setGstType } = usePurchaseSettings();
 
   const [submitting, setSubmitting] = useState(false);
+  const [loadingData, setLoadingData] = useState(!!id);
 
   const initialFormData: ProfileData = {
     name: "",
@@ -204,32 +78,38 @@ const ProfileForm: React.FC = () => {
 
   const [formData, setFormData] = useState<ProfileData>(initialFormData);
 
-  // Load Data/Draft
   useEffect(() => {
     if (id) {
-      getData(`${ENDPOINTS.SHOPS}/by/${id}`).then((res) => {
-        if (res && res.data) {
-          const shop = res.data;
-          const b = shop.business_infos || {};
-          const a = shop.address || {};
+      setLoadingData(true);
+      getData(`${ENDPOINTS.SHOPS}/by/${id}`)
+        .then((res) => {
+          if (res && res.data) {
+            const shop = res.data;
+            const b = shop.business_infos || {};
+            const a = shop.address || {};
 
-          setFormData({
-            name: shop.name || "",
-            category: Array.isArray(shop.categories) ? shop.categories : (shop.categories ? [shop.categories] : []),
-            description: shop.description || "",
-            full_address: a.full_address || "",
-            landmark: a.landmark || "",
-            pincode: a.zip_code || "",
-            latitude: String(a.latitude || ""),
-            longitude: String(a.longitude || ""),
-            business_type: b.type || "SOLO_PROPRIETOR",
-            gst_registered: b.gst_infos?.registered ?? false,
-            gst_number: b.gst_infos?.number || "",
-            currency: b.currency || "INR",
-          });
-          setGstType(b.gst_infos?.registered ? "registered" : "non-registered");
-        }
-      });
+            setFormData({
+              name: shop.name || "",
+              category: Array.isArray(shop.categories)
+                ? shop.categories
+                : shop.categories
+                ? [shop.categories]
+                : [],
+              description: shop.description || "",
+              full_address: a.full_address || "",
+              landmark: a.landmark || "",
+              pincode: a.zip_code || "",
+              latitude: String(a.latitude || ""),
+              longitude: String(a.longitude || ""),
+              business_type: b.type || "SOLO_PROPRIETOR",
+              gst_registered: b.gst_infos?.registered ?? false,
+              gst_number: b.gst_infos?.number || "",
+              currency: b.currency || "INR",
+            });
+            setGstType(b.gst_infos?.registered ? "registered" : "non-registered");
+          }
+        })
+        .finally(() => setLoadingData(false));
     } else {
       const draftId = searchParams.get("draftId");
       if (draftId) {
@@ -237,10 +117,10 @@ const ProfileForm: React.FC = () => {
         const draft = drafts.find((d: any) => d.id === draftId);
         if (draft) setFormData(draft.data);
       }
+      setLoadingData(false);
     }
-  }, [id, searchParams]);
+  }, [id, searchParams, getData, setGstType]);
 
-  // Bottom Action Bar (ProductForm style)
   useEffect(() => {
     setBottomActions(
       <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300">
@@ -248,25 +128,24 @@ const ProfileForm: React.FC = () => {
           <button
             type="button"
             onClick={handleSaveDraft}
-            disabled={submitting}
-            className="px-4 h-9 rounded-lg border border-slate-200 text-slate-600 font-semibold text-xs bg-white hover:bg-slate-50 transition-all flex items-center gap-2"
+            className="px-4 h-8 rounded-lg border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2 whitespace-nowrap overflow-hidden"
           >
             <Bookmark size={14} className="shrink-0" />
-            Save draft
+            <span className="truncate">Save Draft</span>
           </button>
         )}
         <GradientButton
-          icon={<Save size={15} />}
-          onClick={() => handleSubmit()}
+          icon={<Save size={16} />}
+          onClick={handleSubmit}
           disabled={submitting}
-          className="rounded-lg shadow-md text-xs px-6 h-9 flex items-center"
+          className="rounded-lg shadow-md text-xs px-8 h-8 flex items-center"
         >
-          {submitting ? "Saving..." : id ? "Save Changes" : "Create Shop"}
+          {submitting ? "..." : id ? "Save Changes" : "Create Shop"}
         </GradientButton>
       </div>
     );
     return () => setBottomActions(null);
-  }, [setBottomActions, formData, submitting, id]);
+  }, [setBottomActions, submitting, id, formData]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -354,45 +233,36 @@ const ProfileForm: React.FC = () => {
   if (loading && id) return <div className="py-20 text-center"><Loader /></div>;
 
   return (
-    <div className="pf-root min-h-screen pb-32 relative">
-      <style>{STYLES}</style>
-      
-      {/* Main Container */}
-      <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:animate-in md:fade-in md:duration-500 relative z-10">
-        
-        {/* Header Title */}
-        <div className="mb-8 border-b border-slate-200/60 pb-6">
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">{id ? "Edit Shop Profile" : "Create New Shop"}</h1>
-          <p className="text-sm text-slate-500 mt-2">Fill out the details below to set up your shop's profile and settings.</p>
-        </div>
-
-        <div className="space-y-4">
-          
-          {/* SECTION 1: Shop Identity */}
-            <SectionCard
-              icon={<Store size={17} className="text-blue-600" />}
-              iconBg="bg-blue-50"
-              title="Shop Identity"
-              subtitle="Brand and visual presence"
-            >
-              <div className="space-y-5">
-                <div className="space-y-2">
-                  <InputField
-                    label="Shop Name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    placeholder="e.g. Sunrise Mart"
-                    required
-                    className="font-bold text-lg py-3"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label text="Categories" required />
+    <div className="min-h-screen bg-slate-50/50 font-sans">
+      <NavigationBlocker data={formData} isLoading={loadingData} isSubmitting={submitting} />
+      <div className="mx-auto space-y-4 relative">
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-6 gap-6 items-start">
+          {/* BOX 1: IDENTITY (Spans 6 cols) */}
+          <div className="lg:col-span-6 bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md h-full">
+            <div className="px-6 py-4 bg-gradient-to-r from-blue-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
+                <Store size={18} />
+              </div>
+              <h2 className="text-xs font-bold text-slate-800">Shop Identity</h2>
+            </div>
+            <div className="p-8 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Input
+                  label="Shop Name"
+                  required
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  placeholder="e.g. Sunrise Mart"
+                  leftIcon={<Store size={16} className="text-slate-300" />}
+                />
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-500 ml-1">
+                    Categories <span className="text-red-500 ml-1">*</span>
+                  </label>
                   <SearchSelect
                     value={formData.category}
-                    onChange={(val) => setFormData(prev => ({ ...prev, category: val as string[] }))}
+                    onChange={(val) => setFormData((prev) => ({ ...prev, category: val as string[] }))}
                     options={categoryOptions}
                     labelKey="label"
                     valueKey="value"
@@ -400,147 +270,156 @@ const ProfileForm: React.FC = () => {
                     placeholder="Select categories..."
                   />
                 </div>
-
-                <div className="space-y-1.5">
-                  <Label text="Description" hint="Optional" />
-                  <textarea
-                    name="description"
-                    value={formData.description}
-                    onChange={handleChange}
-                    rows={4}
-                    className="pf-input w-full bg-white/80 backdrop-blur-sm border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium text-slate-700 focus:ring-0 transition-all placeholder:text-slate-400 resize-none hover:border-slate-300"
-                    placeholder="Tell customers what makes your shop special..."
-                  />
-                </div>
               </div>
-            </SectionCard>
-
-            {/* SECTION 2: Contact & Location */}
-            <SectionCard
-              icon={<MapPin size={17} className="text-emerald-600" />}
-              iconBg="bg-emerald-50"
-              title="Contact & Location"
-              subtitle="Where customers can find you"
-            >
-              <div className="space-y-5">
-
-                {/* Interactive Map Picker */}
-                <div className="space-y-1.5">
-                  <Label text="Pick Location on Map" tooltip="Click on the map or search to set your shop's exact location. Coordinates will be captured automatically." />
-                  <LocationMapPicker
-                    lat={parseFloat(formData.latitude) || undefined}
-                    lng={parseFloat(formData.longitude) || undefined}
-                    onChange={(coords, address) => {
-                      setFormData(prev => ({
-                        ...prev,
-                        latitude: String(coords.lat),
-                        longitude: String(coords.lng),
-                        full_address: address || prev.full_address,
-                      }));
-                    }}
-                  />
-                </div>
-
-                <div className="space-y-1.5 mt-4">
-                  <Label text="Full Address" />
-                  <textarea
-                    name="full_address"
-                    value={formData.full_address}
-                    onChange={handleChange}
-                    rows={3}
-                    className="pf-input w-full bg-white/80 backdrop-blur-sm border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium text-slate-700 focus:ring-0 transition-all placeholder:text-slate-400 resize-none hover:border-slate-300"
-                    placeholder="Full street address including area"
-                  />
-                </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <InputField
-                    label="PIN Code"
-                    name="pincode"
-                    value={formData.pincode}
-                    onChange={handleChange}
-                    placeholder="600001"
-                    leftEl={<Hash size={14} />}
-                  />
-                  <InputField
-                    label="Landmark"
-                    name="landmark"
-                    value={formData.landmark}
-                    onChange={handleChange}
-                    placeholder="e.g. Near City Mall"
-                    leftEl={<MapPin size={14} />}
-                  />
-                </div>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-slate-500 ml-1">
+                  Description
+                </label>
+                <textarea
+                  name="description"
+                  value={formData.description}
+                  onChange={handleChange}
+                  rows={4}
+                  className="w-full px-4 py-3 rounded-lg border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 transition-all duration-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none resize-none"
+                  placeholder="Tell customers what makes your shop special..."
+                />
               </div>
-            </SectionCard>
+            </div>
+          </div>
 
-            {/* SECTION 3: Legal & Tax Information */}
-            <SectionCard
-              icon={<BadgeCheck size={17} className="text-purple-600" />}
-              iconBg="bg-purple-50"
-              title="Legal & Tax"
-              subtitle="Business registration and compliance"
-            >
-              <div className="space-y-5">
-
-
-                <div className="space-y-4 p-5 bg-slate-50/50 backdrop-blur-sm border border-slate-200/60 rounded-xl transition-all hover:bg-slate-50">
-                  <label className="flex items-center gap-3 cursor-pointer group">
-                    <div className="relative flex items-center justify-center">
-                      <input 
-                        type="checkbox" 
-                        checked={formData.gst_registered}
-                        onChange={(e) => setFormData(p => ({ ...p, gst_registered: e.target.checked }))}
-                        className="peer w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 transition-all cursor-pointer shadow-sm"
-                      />
+          {/* BOX 2: CONTACT & LOCATION (Spans 4 cols) */}
+          <div className="lg:col-span-4 bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md h-full">
+            <div className="px-6 py-4 bg-gradient-to-r from-emerald-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600">
+                <MapPin size={18} />
+              </div>
+              <h2 className="text-xs font-bold text-slate-800">Contact & Location</h2>
+            </div>
+            <div className="p-8 space-y-6">
+              <div className="space-y-1.5">
+                <label className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 ml-1">
+                  Pick Location on Map
+                  <div className="group relative">
+                    <Info size={12} className="text-slate-400 cursor-help hover:text-blue-500 transition-colors" />
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-slate-800 text-white text-[10px] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl">
+                      Click on the map or search to set your shop's exact location. Coordinates will be captured automatically.
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-800" />
                     </div>
-                    <span className="text-sm font-semibold text-slate-700 group-hover:text-indigo-700 transition-colors">GST Registered Business</span>
-                  </label>
-                  {formData.gst_registered && (
-                    <div className="pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                      <InputField
-                        label="GST Number"
-                        name="gst_number"
-                        value={formData.gst_number}
-                        onChange={handleChange}
-                        placeholder="22AAAAA0000A1Z5"
-                        leftEl={<FileText size={14} />}
-                      />
-                    </div>
-                  )}
-                </div>
+                  </div>
+                </label>
+                <LocationMapPicker
+                  lat={parseFloat(formData.latitude) || undefined}
+                  lng={parseFloat(formData.longitude) || undefined}
+                  onChange={(coords, address) => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      latitude: String(coords.lat),
+                      longitude: String(coords.lng),
+                      full_address: address || prev.full_address,
+                    }));
+                  }}
+                />
               </div>
-            </SectionCard>
 
-            {/* What happens next — only on create */}
-            {!id && (
-              <div className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6 shadow-sm mt-8 relative z-10">
-                <h3 className="text-base font-bold text-indigo-900 mb-4 flex items-center gap-2">
-                  What happens next?
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                  {[
-                    "Your shop is created and saved securely.",
-                    "You'll be redirected to the shop selector.",
-                    "Select your new shop to enter its dashboard.",
-                    "Use the Setup Wizard to launch your store."
-                  ].map((text, idx) => (
-                    <div key={idx} className="flex items-start gap-3 bg-white/50 p-4 rounded-xl">
-                      <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
-                        {idx + 1}
-                      </div>
-                      <p className="text-sm font-medium text-indigo-800 leading-relaxed">{text}</p>
-                    </div>
-                  ))}
-                </div>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-slate-500 ml-1">
+                  Full Address
+                </label>
+                <textarea
+                  name="full_address"
+                  value={formData.full_address}
+                  onChange={handleChange}
+                  rows={3}
+                  className="w-full px-4 py-3 rounded-lg border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 transition-all duration-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none resize-none"
+                  placeholder="Full street address including area"
+                />
               </div>
-            )}
-            
-        </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Input
+                  label="PIN Code"
+                  name="pincode"
+                  value={formData.pincode}
+                  onChange={handleChange}
+                  placeholder="600001"
+                  leftIcon={<Hash size={16} className="text-slate-300" />}
+                />
+                <Input
+                  label="Landmark"
+                  name="landmark"
+                  value={formData.landmark}
+                  onChange={handleChange}
+                  placeholder="e.g. Near City Mall"
+                  leftIcon={<MapPin size={16} className="text-slate-300" />}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* BOX 3: LEGAL & TAX (Spans 2 cols) */}
+          <div className="lg:col-span-2 bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md h-full">
+            <div className="px-6 py-4 bg-gradient-to-r from-purple-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center text-purple-600">
+                <BadgeCheck size={18} />
+              </div>
+              <h2 className="text-xs font-bold text-slate-800">Legal & Tax</h2>
+            </div>
+            <div className="p-8 space-y-6">
+              <label className="flex items-center gap-3 cursor-pointer group p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={formData.gst_registered}
+                  onChange={(e) => setFormData((p) => ({ ...p, gst_registered: e.target.checked }))}
+                  className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
+                <span className="text-sm font-semibold text-slate-700">
+                  GST Registered Business
+                </span>
+              </label>
+
+              {formData.gst_registered && (
+                <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                  <Input
+                    label="GST Number"
+                    name="gst_number"
+                    value={formData.gst_number}
+                    onChange={handleChange}
+                    placeholder="22AAAAA0000A1Z5"
+                    leftIcon={<FileText size={16} className="text-slate-300" />}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        </form>
+
+        {!id && (
+          <div className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6 shadow-sm mt-8 relative z-10">
+            <h3 className="text-base font-bold text-indigo-900 mb-4 flex items-center gap-2">
+              What happens next?
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                "Your shop is created and saved securely.",
+                "You'll be redirected to the shop selector.",
+                "Select your new shop to enter its dashboard.",
+                "Use the Setup Wizard to launch your store.",
+              ].map((text, idx) => (
+                <div key={idx} className="flex items-start gap-3 bg-white/50 p-4 rounded-xl">
+                  <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
+                    {idx + 1}
+                  </div>
+                  <p className="text-sm font-medium text-indigo-800 leading-relaxed">
+                    {text}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
 export default ProfileForm;
-

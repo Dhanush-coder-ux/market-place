@@ -130,6 +130,8 @@ export function SearchSelect<T extends BaseOption>({
   // Ant Design expects standard values in onChange. We intercept it to also pass the raw T object back.
   const handleChange = useCallback((val: any, antdOption: any) => {
     setSearchValue(""); // Clear on select
+    setOpen(false);
+    selectRef.current?.blur();
     if (!onChange) return;
 
     if (Array.isArray(antdOption)) {

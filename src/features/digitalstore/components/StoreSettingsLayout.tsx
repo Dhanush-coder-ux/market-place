@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
+  RotateCcw,
   Store,
   Clock,
   Truck,
@@ -17,7 +18,7 @@ import OperatingHours from "../pages/OperatingHours";
 import DeliveryPreferences from "../pages/Deliveryinfo";
 import { useToast } from "@/context/ToastContext";
 
-type SettingSection = "details" | "hours" | "delivery" | "vacation" | "danger";
+type SettingSection = "details" | "hours" | "delivery" | "returns" | "vacation" | "danger";
 
 interface SidebarItem {
   id: SettingSection;
@@ -48,13 +49,151 @@ export function StoreSettingsLayout({ shop }: { shop: any }) {
   const [hoursStatus, setHoursStatus] = useState<React.ReactNode>(null);
   const [deliveryStatus, setDeliveryStatus] = useState<React.ReactNode>(null);
 
-  // Vacation Mode State
-  const [vacationEnabled, setVacationEnabled] = useState(false);
-  const [vacationMessage, setVacationMessage] = useState(
-    "We are temporarily closed for staff training. We will resume taking orders shortly."
+  // Return & Refund Policy State
+  const initialReturns = shop?.additional_infos?.return_policy || {};
+  const [policyType, setPolicyType] = useState<string>(
+    initialReturns?.type || "7_days_return"
   );
-  const [resumeDate, setResumeDate] = useState("");
+  const [policyTitle, setPolicyTitle] = useState<string>(
+    initialReturns?.title || "7-day returns"
+  );
+  const [policySubtitle, setPolicySubtitle] = useState<string>(
+    initialReturns?.subtitle || "Unused items, original packaging"
+  );
+  const [policyDetails, setPolicyDetails] = useState<string>(
+    initialReturns?.details || "Items can be returned within 7 days of delivery if unused and in original packaging. Refund will be issued after inspection."
+  );
+  const [allowReturns, setAllowReturns] = useState<boolean>(
+    initialReturns?.allow_returns ?? true
+  );
+  const [isExchangeOnly, setIsExchangeOnly] = useState<boolean>(
+    initialReturns?.is_exchange_only ?? false
+  );
+  const [savingReturns, setSavingReturns] = useState(false);
+  const [savedReturns, setSavedReturns] = useState(false);
+
+  useEffect(() => {
+    const rPolicy = shop?.additional_infos?.return_policy || {};
+    if (rPolicy.type) setPolicyType(rPolicy.type);
+    if (rPolicy.title) setPolicyTitle(rPolicy.title);
+    if (rPolicy.subtitle) setPolicySubtitle(rPolicy.subtitle);
+    if (rPolicy.details) setPolicyDetails(rPolicy.details);
+    if (rPolicy.allow_returns !== undefined) setAllowReturns(rPolicy.allow_returns);
+    if (rPolicy.is_exchange_only !== undefined) setIsExchangeOnly(rPolicy.is_exchange_only);
+  }, [shop]);
+
+  const handleSelectPolicyPreset = (typeKey: string) => {
+    setPolicyType(typeKey);
+    setSavedReturns(false);
+    if (typeKey === "7_days_return") {
+      setPolicyTitle("7-day returns");
+      setPolicySubtitle("Unused items, original packaging");
+      setPolicyDetails("Items can be returned within 7 days of delivery if unused and in original packaging. Refund will be issued after inspection.");
+      setAllowReturns(true);
+      setIsExchangeOnly(false);
+    } else if (typeKey === "3_days_return") {
+      setPolicyTitle("3-day returns");
+      setPolicySubtitle("Unused items, original packaging");
+      setPolicyDetails("Items can be returned within 3 days of delivery. Refund will be issued after store inspection.");
+      setAllowReturns(true);
+      setIsExchangeOnly(false);
+    } else if (typeKey === "10_days_return") {
+      setPolicyTitle("10-day returns");
+      setPolicySubtitle("Unused items, tags intact");
+      setPolicyDetails("Items can be returned within 10 days of delivery with all original tags intact.");
+      setAllowReturns(true);
+      setIsExchangeOnly(false);
+    } else if (typeKey === "14_days_return") {
+      setPolicyTitle("14-day returns");
+      setPolicySubtitle("Unused items, original packaging");
+      setPolicyDetails("Items can be returned within 14 days of delivery. Refund will be credited to original payment method.");
+      setAllowReturns(true);
+      setIsExchangeOnly(false);
+    } else if (typeKey === "exchange_only") {
+      setPolicyTitle("Replacement / Exchange only");
+      setPolicySubtitle("Size issues or defective items only");
+      setPolicyDetails("No cash refunds. Free replacement or exchange is provided for defective items or size mismatch reported within 5 days.");
+      setAllowReturns(true);
+      setIsExchangeOnly(true);
+    } else if (typeKey === "no_returns") {
+      setPolicyTitle("No returns on this item");
+      setPolicySubtitle("Freshly made / Perishable — please check before confirming");
+      setPolicyDetails("This item is non-returnable and non-refundable due to hygiene, freshness, or custom preparation.");
+      setAllowReturns(false);
+      setIsExchangeOnly(false);
+    }
+  };
+
+  const handleSaveReturns = async () => {
+    if (!shop?.id) {
+      showToast("Shop not found", "error");
+      return;
+    }
+    setSavingReturns(true);
+    setSavedReturns(false);
+    try {
+      const returnPolicyObj = {
+        type: policyType,
+        title: policyTitle,
+        subtitle: policySubtitle,
+        details: policyDetails,
+        allow_returns: allowReturns,
+        is_exchange_only: isExchangeOnly,
+        updated_at: new Date().toISOString()
+      };
+      const existingAdd = shop?.additional_infos || {};
+      const updatedAdd = {
+        ...existingAdd,
+        return_policy: returnPolicyObj,
+        refund_policy: returnPolicyObj,
+      };
+
+      await shopApi.updateShop({
+        id: shop.id,
+        additional_infos: updatedAdd,
+      });
+
+      if (shop) {
+        shop.additional_infos = updatedAdd;
+      }
+      setSavedReturns(true);
+      showToast("Return & Refund policy saved successfully! Updated on Digital Store app.", "success");
+    } catch (e: any) {
+      showToast(e?.message || "Failed to save return policy", "error");
+    } finally {
+      setSavingReturns(false);
+    }
+  };
+
+  // Vacation Mode State
+  const initialVacation = shop?.vacation_infos || shop?.additional_infos?.vacation_infos || {};
+  const [vacationEnabled, setVacationEnabled] = useState<boolean>(
+    shop?.vacation_mode ?? shop?.additional_infos?.vacation_mode ?? initialVacation?.enabled ?? false
+  );
+  const [vacationMessage, setVacationMessage] = useState<string>(
+    shop?.additional_infos?.vacation_message || initialVacation?.message || "We are temporarily taking a break. We will resume taking orders shortly."
+  );
+  const [resumeDate, setResumeDate] = useState<string>(
+    shop?.additional_infos?.vacation_resume_date || initialVacation?.resume_date || ""
+  );
   const [savingVacation, setSavingVacation] = useState(false);
+  const [savedVacation, setSavedVacation] = useState(false);
+
+  useEffect(() => {
+    const vInfos = shop?.vacation_infos || shop?.additional_infos?.vacation_infos || {};
+    const isVac = shop?.vacation_mode ?? shop?.additional_infos?.vacation_mode ?? vInfos?.enabled ?? false;
+    setVacationEnabled(Boolean(isVac));
+    if (shop?.additional_infos?.vacation_message || vInfos?.message) {
+      setVacationMessage(shop?.additional_infos?.vacation_message || vInfos?.message);
+    }
+    if (shop?.additional_infos?.vacation_resume_date || vInfos?.resume_date) {
+      setResumeDate(shop?.additional_infos?.vacation_resume_date || vInfos?.resume_date);
+    }
+  }, [shop]);
+
+  useEffect(() => {
+    if (savedVacation) setSavedVacation(false);
+  }, [vacationEnabled, vacationMessage, resumeDate]);
 
   // Danger Zone State
   const [confirmDelete, setConfirmDelete] = useState("");
@@ -64,16 +203,55 @@ export function StoreSettingsLayout({ shop }: { shop: any }) {
     { id: "details",  label: "Store Details",  icon: Store,         description: "Name, logo, contact info" },
     { id: "hours",    label: "Store Hours",    icon: Clock,         description: "Open / close schedule" },
     { id: "delivery", label: "Delivery",       icon: Truck,         description: "Zones, charges, lead time" },
+    { id: "returns",  label: "Return & Refund Policy", icon: RotateCcw, description: "Default return window & rules" },
     { id: "vacation", label: "Vacation Mode",  icon: Palmtree,      description: "Temporarily pause orders" },
     { id: "danger",   label: "Danger Zone",    icon: AlertTriangle, description: "Deactivate or delete store" },
   ];
 
-  const handleSaveVacation = () => {
+  const handleSaveVacation = async () => {
+    if (!shop?.id) {
+      showToast("Shop not found", "error");
+      return;
+    }
     setSavingVacation(true);
-    setTimeout(() => {
+    setSavedVacation(false);
+    try {
+      const vInfos = {
+        enabled: vacationEnabled,
+        message: vacationMessage,
+        resume_date: resumeDate,
+      };
+      const existingAdd = shop?.additional_infos || {};
+      const updatedAdd = {
+        ...existingAdd,
+        vacation_mode: vacationEnabled,
+        vacation_message: vacationMessage,
+        vacation_resume_date: resumeDate,
+        vacation_infos: vInfos,
+      };
+
+      await shopApi.updateShop({
+        id: shop.id,
+        additional_infos: updatedAdd,
+      });
+
+      if (shop) {
+        shop.additional_infos = updatedAdd;
+        shop.vacation_mode = vacationEnabled;
+        shop.vacation_infos = vInfos;
+      }
+      setSavedVacation(true);
+      showToast(
+        vacationEnabled
+          ? "Vacation mode turned ON. Online orders are now paused."
+          : "Vacation mode turned OFF. Online orders are active.",
+        "success"
+      );
+    } catch (e: any) {
+      showToast(e?.message || "Failed to save vacation mode settings", "error");
+    } finally {
       setSavingVacation(false);
-      showToast("Vacation mode settings saved", "success");
-    }, 800);
+    }
   };
 
   const handleDeleteStore = () => {
@@ -154,7 +332,7 @@ export function StoreSettingsLayout({ shop }: { shop: any }) {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
               {/* Form */}
               <div className="lg:col-span-7">
-                <ShopProfileForm />
+                <ShopProfileForm editPath="/setup-digital-store" />
               </div>
 
               {/* Sidebar info */}
@@ -259,6 +437,188 @@ export function StoreSettingsLayout({ shop }: { shop: any }) {
           </div>
         )}
 
+
+        {/* ── Return & Refund Policy ── */}
+        {activeSection === "returns" && (
+          <div className="max-w-3xl animate-in fade-in duration-200">
+            <div className="mb-6 flex items-start justify-between">
+              <div>
+                <h2 className="text-base font-semibold text-slate-900">Return &amp; Refund Policy</h2>
+                <p className="text-sm text-slate-500 mt-0.5">
+                  Set your store's default return window and refund rules. Applies globally to all products unless overridden individually.
+                </p>
+              </div>
+              <button
+                onClick={handleSaveReturns}
+                disabled={savingReturns || savedReturns}
+                className={`inline-flex items-center gap-2 h-9 px-4 ${savedReturns ? 'bg-emerald-600 hover:bg-emerald-700 opacity-90' : 'bg-blue-600 hover:bg-blue-700'} disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-all shrink-0 ml-4 cursor-pointer`}
+              >
+                {savedReturns ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Save className="w-3.5 h-3.5" />}
+                {savingReturns ? "Saving…" : savedReturns ? "Saved" : "Save Changes"}
+              </button>
+            </div>
+
+            {/* Choose Policy Preset */}
+            <div className="bg-white rounded-xl border border-slate-200 p-5 mb-5 shadow-sm">
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-3">
+                1. Select Store Default Policy Template
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                {[
+                  {
+                    id: "7_days_return",
+                    title: "7-Day Returns",
+                    desc: "Standard retail, clothing & electronics.",
+                    badge: "Returns Accepted",
+                    color: "emerald"
+                  },
+                  {
+                    id: "3_days_return",
+                    title: "3-Day Returns",
+                    desc: "Short window for perishable items.",
+                    badge: "Short Window",
+                    color: "emerald"
+                  },
+                  {
+                    id: "10_days_return",
+                    title: "10-Day Returns",
+                    desc: "Extended return window for general goods.",
+                    badge: "Extended",
+                    color: "emerald"
+                  },
+                  {
+                    id: "14_days_return",
+                    title: "14-Day Returns",
+                    desc: "Generous return policy for trusted stores.",
+                    badge: "14 Days",
+                    color: "emerald"
+                  },
+                  {
+                    id: "exchange_only",
+                    title: "Replacement Only",
+                    desc: "Size mismatch or defective items only.",
+                    badge: "Exchange Only",
+                    color: "amber"
+                  },
+                  {
+                    id: "no_returns",
+                    title: "No Returns",
+                    desc: "Fresh food, bakery, personal hygiene.",
+                    badge: "Non-Returnable",
+                    color: "rose"
+                  },
+                ].map((item) => {
+                  const isSelected = policyType === item.id;
+                  const colorClasses = item.color === "emerald" 
+                    ? "text-emerald-700 bg-emerald-50 border-emerald-200" 
+                    : item.color === "amber"
+                    ? "text-amber-700 bg-amber-50 border-amber-200"
+                    : "text-rose-700 bg-rose-50 border-rose-200";
+                  return (
+                    <div
+                      key={item.id}
+                      onClick={() => handleSelectPolicyPreset(item.id)}
+                      className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all ${isSelected
+                        ? "border-blue-600 bg-blue-50/50 shadow-sm"
+                        : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${colorClasses}`}>
+                          {item.badge}
+                        </span>
+                        {isSelected && <CheckCircle2 className="w-4 h-4 text-blue-600" />}
+                      </div>
+                      <h4 className="text-sm font-bold text-slate-800">{item.title}</h4>
+                      <p className="text-[11.5px] text-slate-500 mt-1 leading-snug">{item.desc}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Policy Details & Preview */}
+            <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-4 shadow-sm">
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                2. Policy Details &amp; Customer Facing Text
+              </label>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Display Headline / Badge
+                  </label>
+                  <input
+                    type="text"
+                    value={policyTitle}
+                    onChange={(e) => { setPolicyTitle(e.target.value); setSavedReturns(false); }}
+                    placeholder="e.g. 7-day returns"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 outline-none focus:border-blue-400 focus:bg-white transition-all font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Condition Subtitle (Short)
+                  </label>
+                  <input
+                    type="text"
+                    value={policySubtitle}
+                    onChange={(e) => { setPolicySubtitle(e.target.value); setSavedReturns(false); }}
+                    placeholder="e.g. Unused items, original packaging"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 outline-none focus:border-blue-400 focus:bg-white transition-all"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Full Policy Description (Shown on Checkout &amp; Order Details)
+                </label>
+                <textarea
+                  rows={3}
+                  value={policyDetails}
+                  onChange={(e) => { setPolicyDetails(e.target.value); setSavedReturns(false); }}
+                  placeholder="Explain return and refund steps for customers..."
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 outline-none focus:border-blue-400 focus:bg-white transition-all resize-none"
+                />
+              </div>
+
+              {/* Live Digital App Preview */}
+              <div className="mt-4 pt-4 border-t border-slate-100">
+                <label className="block text-[10.5px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                  Live Preview on Customer App (Product Page Banner)
+                </label>
+                <div 
+                  className={`p-3.5 rounded-xl border flex items-center justify-between ${
+                    !allowReturns 
+                      ? "bg-rose-50/70 border-rose-200 text-rose-900" 
+                      : isExchangeOnly 
+                      ? "bg-amber-50/70 border-amber-200 text-amber-900" 
+                      : "bg-emerald-50/70 border-emerald-200 text-emerald-900"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                      !allowReturns 
+                        ? "bg-rose-100 text-rose-600" 
+                        : isExchangeOnly 
+                        ? "bg-amber-100 text-amber-600" 
+                        : "bg-emerald-100 text-emerald-600"
+                    }`}>
+                      <RotateCcw className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold">{policyTitle || "7-day returns"}</div>
+                      <div className="text-[11px] opacity-80 mt-0.5">{policySubtitle || "Unused items, original packaging"}</div>
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold opacity-60">›</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ── Vacation Mode ── */}
         {activeSection === "vacation" && (
           <div className="max-w-2xl animate-in fade-in duration-200">
@@ -271,11 +631,11 @@ export function StoreSettingsLayout({ shop }: { shop: any }) {
               </div>
               <button
                 onClick={handleSaveVacation}
-                disabled={savingVacation}
-                className="inline-flex items-center gap-2 h-9 px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-all shrink-0 ml-4"
+                disabled={savingVacation || savedVacation}
+                className={`inline-flex items-center gap-2 h-9 px-4 ${savedVacation ? 'bg-emerald-600 hover:bg-emerald-700 opacity-90' : 'bg-blue-600 hover:bg-blue-700'} disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-all shrink-0 ml-4`}
               >
-                <Save className="w-3.5 h-3.5" />
-                {savingVacation ? "Saving…" : "Save Changes"}
+                {savedVacation ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Save className="w-3.5 h-3.5" />}
+                {savingVacation ? "Saving…" : savedVacation ? "Saved" : "Save Changes"}
               </button>
             </div>
 

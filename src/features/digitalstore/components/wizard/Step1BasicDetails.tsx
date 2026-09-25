@@ -1,3 +1,4 @@
+import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { ChangeEvent, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import { StoreFormData } from "@/features/digitalstore/type";
@@ -285,17 +286,19 @@ export default function Step1BasicDetails({ form, setForm, errors, setErrors }: 
             />
           </div>
           <div>
-            <FieldLabel required>Store Category</FieldLabel>
-            <select
-              name="category"
+            <ReusableSelect
+              label="Store Category"
+              required
+              options={CATEGORIES.map((cat) => ({
+                label: cat,
+                value: cat,
+                icon: <Tag size={13} className="text-slate-400" />
+              }))}
               value={form.category}
-              onChange={handleChange}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 outline-none text-sm transition-all duration-200 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 bg-white appearance-none cursor-pointer"
-            >
-              {CATEGORIES.map((cat) => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
+              onValueChange={(val) => setForm((prev: any) => ({ ...prev, category: val }))}
+              placeholder="Select Category"
+              className="h-11 py-2 px-3.5 text-sm bg-white rounded-xl border-slate-200"
+            />
           </div>
         </div>
 

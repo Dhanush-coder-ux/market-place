@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { CheckCircle, ArrowUpRight, History, Loader2 } from "lucide-react";
 import { subscriptionApi } from "@/services/api/subscription";
+import { inventoryApi } from "@/services/api/inventory";
+import { employeeApi } from "@/services/api/employee";
+import { shopApi } from "@/services/api/shop";
 import { SubscriptionData, TransactionItem } from "../types";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/context/ToastContext";
@@ -14,13 +17,80 @@ export const SubscriptionSettingsTab: React.FC = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
 
+  const extractList = (res: any): any[] => {
+    if (!res) return [];
+    if (Array.isArray(res)) return res;
+    if (Array.isArray(res.data)) return res.data;
+    if (Array.isArray(res.datas)) return res.datas;
+    if (Array.isArray(res.data?.inventories)) return res.data.inventories;
+    if (Array.isArray(res.datas?.inventories)) return res.datas.inventories;
+    if (Array.isArray(res.data?.employees)) return res.data.employees;
+    if (Array.isArray(res.datas?.employees)) return res.datas.employees;
+    if (Array.isArray(res.data?.shops)) return res.data.shops;
+    if (Array.isArray(res.datas?.shops)) return res.datas.shops;
+    if (Array.isArray(res.items)) return res.items;
+    if (Array.isArray(res.employees)) return res.employees;
+    if (Array.isArray(res.shops)) return res.shops;
+    if (Array.isArray(res.inventories)) return res.inventories;
+    if (typeof res.data === "object" && res.data !== null) {
+      for (const key of Object.keys(res.data)) {
+        if (Array.isArray(res.data[key])) return res.data[key];
+      }
+    }
+    if (typeof res.datas === "object" && res.datas !== null) {
+      for (const key of Object.keys(res.datas)) {
+        if (Array.isArray(res.datas[key])) return res.datas[key];
+      }
+    }
+    return [];
+  };
+
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [sub, txs] = await Promise.all([
+      const [sub, txs, invRes, empRes, shopsRes] = await Promise.all([
         subscriptionApi.getCurrentSubscription(shopId).catch(() => null),
         subscriptionApi.getTransactions(shopId).catch(() => []),
+        inventoryApi.getInventoriesByShop(shopId, { limit: "1000" }).catch(() => null),
+        employeeApi.getEmployeesByShop(shopId).catch(() => null),
+        shopApi.getMyShops().catch(() => null),
       ]);
+
+      const normalizeVariants = (raw: any): any[] => {
+        if (!raw) return [];
+        if (Array.isArray(raw)) return raw;
+        if (typeof raw === "object") return Object.values(raw);
+        return [];
+      };
+
+      let liveSkus = 0;
+      const invItems = extractList(invRes);
+      invItems.forEach((item: any) => {
+        const datas = (item.additional_infos as any) || (item.datas as any) || {};
+        const rawVariants = item.variant_infos || item.variants || datas.variant_infos || datas.variants || datas.combinations;
+        const variants = normalizeVariants(rawVariants).filter((v: any) => v && (v.id !== null || v.sku || v.name || v.attributes));
+        if (variants.length > 0) {
+          liveSkus += variants.length;
+        } else {
+          liveSkus += 1;
+        }
+      });
+
+      const empList = extractList(empRes);
+      const liveEmployees = empList.length;
+
+      const shopList = extractList(shopsRes);
+      const liveLocations = Math.max(1, shopList.length);
+
+      if (sub) {
+        sub.usage = {
+          ...sub.usage,
+          current_skus: liveSkus,
+          current_users: liveEmployees,
+          current_locations: liveLocations,
+        };
+      }
+
       setSubData(sub);
       setTransactions(txs || []);
     } catch (e) {

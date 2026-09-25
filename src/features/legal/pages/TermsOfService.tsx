@@ -15,7 +15,7 @@ const TermsOfService = () => {
             </div>
             <div>
               <span className="font-black text-lg text-slate-900 tracking-tight leading-none block">
-                RetailerPro
+                inventQ
               </span>
               <span className="text-[9.5px] font-extrabold tracking-widest text-slate-400 uppercase leading-none block mt-0.5">
                 FROM ANTARIS SOFTWARE
@@ -51,21 +51,21 @@ const TermsOfService = () => {
           <section className="space-y-2.5">
             <h2 className="text-base sm:text-lg font-extrabold text-slate-900">1. Acceptance of Terms</h2>
             <p>
-              These Terms of Service govern your access to and use of RetailerPro, a comprehensive business management platform operated by Antaris Software Private Limited ("Antaris", "we", "us"). By creating an account, onboarding a shop, or using the service, you agree to be bound by these terms. If you are accepting on behalf of a business entity, you confirm you are authorized to bind that entity.
+              These Terms of Service govern your access to and use of inventQ, a comprehensive business management platform operated by Antaris Software Private Limited ("Antaris", "we", "us"). By creating an account, onboarding a shop, or using the service, you agree to be bound by these terms. If you are accepting on behalf of a business entity, you confirm you are authorized to bind that entity.
             </p>
           </section>
 
           <section className="space-y-2.5">
             <h2 className="text-base sm:text-lg font-extrabold text-slate-900">2. Description of the Platform</h2>
             <p>
-              RetailerPro provides cloud-native tools for retail store management, including high-speed counter billing and POS invoicing, barcode catalog management, multi-branch inventory tracking, supplier ledgers, customer credit management, analytics reporting, and self-hosted digital storefronts.
+              inventQ provides cloud-native tools for retail store management, including high-speed counter billing and POS invoicing, barcode catalog management, multi-branch inventory tracking, supplier ledgers, customer credit management, analytics reporting, and self-hosted digital storefronts.
             </p>
           </section>
 
           <section className="space-y-2.5">
             <h2 className="text-base sm:text-lg font-extrabold text-slate-900">3. 0% Commission Policy</h2>
             <p>
-              RetailerPro operates on a zero-commission model for independent retailer transactions. You receive 100% of order values from your customer sales without hidden percentage cutoffs or listing fees. Any optional third-party payment gateway processing fees or delivery logistics are settled directly and transparently.
+              inventQ operates on a zero-commission model for independent retailer transactions. You receive 100% of order values from your customer sales without hidden percentage cutoffs or listing fees. Any optional third-party payment gateway processing fees or delivery logistics are settled directly and transparently.
             </p>
           </section>
 

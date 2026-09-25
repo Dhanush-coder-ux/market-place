@@ -1,3 +1,4 @@
+import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import React, { useState } from 'react';
 
 export interface FieldConfig {
@@ -70,18 +71,12 @@ export const DynamicForm: React.FC<DynamicFormProps> = ({
           </label>
           
           {field.type === 'select' ? (
-            <select
-              name={field.name}
+            <ReusableSelect
+              placeholder={`Select ${field.label}`}
               value={formData[field.name] || ''}
-              onChange={handleChange}
-              className="p-2 border rounded focus:ring shadow-sm"
-              required={field.required}
-            >
-              <option value="" disabled>Select {field.label}</option>
-              {field.options?.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
+              onValueChange={(val) => handleChange({ target: { name: field.name, value: val } } as any)}
+              options={field.options || []}
+            />
           ) : field.type === 'textarea' ? (
              <textarea
               name={field.name}

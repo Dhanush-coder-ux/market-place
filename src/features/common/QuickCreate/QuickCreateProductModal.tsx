@@ -268,11 +268,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
     }
   };
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchDropdowns();
-    }
-  }, [isOpen]);
+  const [baseName, setBaseName] = useState(initialName || "");
 
   const [form, setForm] = useState({
     name: initialName,
@@ -297,6 +293,22 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
     mfg_date: "",
     exp_date: "",
   });
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchDropdowns();
+      if (initialName) {
+        setBaseName(initialName);
+        setForm((prev) => ({
+          ...prev,
+          name: initialName,
+          brand: "",
+        }));
+      }
+    } else {
+      setBaseName("");
+    }
+  }, [isOpen, initialName]);
 
   // --- Variant State ---
   const [variantTypes, setVariantTypes] = useState<VariantType[]>([]);
@@ -340,7 +352,25 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    if (name === "gst") {
+    if (name === "name") {
+      setForm((p) => {
+        const stripped = p.brand && value.startsWith(p.brand + " ")
+          ? value.slice(p.brand.length + 1)
+          : value;
+        setBaseName(stripped);
+        return {
+          ...p,
+          name: p.brand ? `${p.brand} ${stripped}`.trim() : stripped,
+        };
+      });
+    } else if (name === "brand") {
+      const fullName = value ? `${value} ${baseName}`.trim() : baseName;
+      setForm((p) => ({
+        ...p,
+        brand: value,
+        name: fullName,
+      }));
+    } else if (name === "gst") {
       const sanitized = value.replace(/[^0-9.]/g, "");
       setForm((prev) => ({ ...prev, gst: sanitized }));
     } else {

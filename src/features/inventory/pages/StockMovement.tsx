@@ -1,3 +1,4 @@
+import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
   Search,
@@ -434,9 +435,12 @@ function AddMovementModal({ onClose }: { onClose: () => void }) {
             <div key={label as string}>
               <label className="block text-xs text-slate-500 font-semibold   mb-1.5">{label as string}</label>
               {type === "select" ? (
-                <select className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2.5 text-slate-900 text-sm font-medium focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 shadow-sm transition-all">
-                  {(placeholder as string[]).map(o => <option value={o} key={o}>{o.replace('_', ' ')}</option>)}
-                </select>
+                <ReusableSelect
+                  value=""
+                  placeholder="Select option"
+                  onValueChange={() => {}}
+                  options={(placeholder as string[]).map(o => ({ label: o.replace('_', ' '), value: o }))}
+                />
               ) : type === "textarea" ? (
                 <textarea rows={2} className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2.5 text-slate-900 text-sm font-medium placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 resize-none shadow-sm transition-all" placeholder={placeholder as string} />
               ) : (

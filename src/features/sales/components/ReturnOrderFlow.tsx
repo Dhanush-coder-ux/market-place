@@ -1,3 +1,4 @@
+import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
@@ -399,14 +400,13 @@ const ItemSelector: React.FC<{ items: SaleItem[]; returnItems: Record<string, nu
                       </div>
                       {hasSerials && <SerialReturnPicker allSerials={item.serial_numbers as any[]} selected={selectedSerials as any[]} required={qty} onChange={s => onSerialChange(item.id, s)} />}
                       <div className="mt-2" onClick={e => e.stopPropagation()}>
-                        <select
+                        <ReusableSelect
                           value={reason}
-                          onChange={e => onReasonChange(item.id, e.target.value as ReturnReason)}
-                          className="w-full h-8 px-2 text-[11px] border border-slate-200 rounded-md bg-white text-slate-700 outline-none focus:border-blue-500 font-semibold"
-                        >
-                          <option value="">Select Return Reason</option>
-                          {RETURN_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
-                        </select>
+                          placeholder="Select Return Reason"
+                          onValueChange={val => onReasonChange(item.id, val as ReturnReason)}
+                          options={RETURN_REASONS.map(r => ({ label: r, value: r }))}
+                          className="h-8 text-[11px]"
+                        />
                       </div>
                     </div>
                   )}
@@ -698,9 +698,9 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
         const sum = state.payments.reduce((acc, p) => acc + p.amount, 0);
         const target = Math.abs(totals.diff);
 
-        // Check On Credit amounts don't exceed outstanding
+        // Check On Credit amounts don't exceed outstanding when refunding / clearing outstanding
         const onCreditTotal = state.payments.filter(p => p.mode === "On Credit").reduce((acc, p) => acc + p.amount, 0);
-        if (onCreditTotal > customerOutstanding) {
+        if ((state.mode === "refund" || totals.diff < 0) && onCreditTotal > customerOutstanding) {
           errs.settlement = `"Clear Outstanding" amount cannot exceed customer balance ${fmt(customerOutstanding)}.`;
         } else if (state.mode === "refund" && Math.abs(sum - target) > 0.01) {
           errs.settlement = `Total refund must equal ${fmt(target)}. Currently: ${fmt(sum)}.`;
@@ -723,7 +723,7 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
         const newPayments = [...s.payments];
         if (newPayments.length === 1) {
           let maxAllowed = d;
-          if (newPayments[0].mode === "On Credit" && customerOutstanding > 0) {
+          if (newPayments[0].mode === "On Credit" && (state.mode === "refund" || totals.diff < 0) && customerOutstanding > 0) {
             maxAllowed = Math.min(maxAllowed, customerOutstanding);
           }
           newPayments[0] = { ...newPayments[0], amount: maxAllowed };
@@ -1516,51 +1516,72 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                           <span className="font-mono font-bold text-[14px] text-amber-700">{fmt(customerOutstanding)}</span>
                         </div>
                       )}
-                      <div className="space-y-2">
-                        {state.payments.map((p, idx) => (
-                          <div key={idx} className="flex flex-col gap-1">
-                            <div className="flex items-center gap-2">
-                              <SelectDropdown
-                                value={p.mode}
-                                onChange={mode => m.updatePayment(idx, { mode })}
-                                options={["Cash", "UPI", "Card", "Bank Transfer", ...(customerOutstanding > 0 ? ["On Credit"] : [])]}
-                                displayMap={{ "On Credit": "Clear Outstanding" }}
-                              />
-                              <input
-                                type="number"
-                                value={p.amount === 0 ? "" : p.amount}
-                                max={p.mode === "On Credit" ? customerOutstanding : undefined}
-                                onChange={e => {
-                                  const entered = Number(e.target.value);
-                                  m.updatePayment(idx, { amount: entered });
-                                }}
-                                placeholder="Amount"
-                                className="flex-1 h-10 px-3 text-[13px] border-2 border-slate-100 rounded-lg bg-white text-slate-800 outline-none focus:border-blue-500 font-semibold text-right placeholder:text-slate-300"
-                              />
-                              {state.payments.length > 1 && (
-                                <button
-                                  onClick={() => m.removePayment(idx)}
-                                  className="w-10 h-10 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-100 flex items-center justify-center transition-all border border-rose-100"
-                                >
-                                  <X size={14} />
-                                </button>
-                              )}
-                            </div>
-                            {p.mode === "On Credit" && customerOutstanding > 0 && (
-                              <p className="text-[10px] text-amber-600 font-semibold flex items-center gap-1 ml-1">
-                                <AlertCircle size={10} />
-                                Max clearable: {fmt(Math.min(Math.abs(totals.diff), customerOutstanding))} (outstanding: {fmt(customerOutstanding)})
-                              </p>
-                            )}
+                      {(() => {
+                        const isCollecting = state.mode === "exchange" && totals.diff > 0;
+                        const hasCustomer = !!(sale?.customer_id || sale?.customer?.customer_id || (sale?.customer as any)?.id);
+                        const paymentOptions = [
+                          "Cash",
+                          "UPI",
+                          "Card",
+                          "Bank Transfer",
+                          ...(isCollecting ? (hasCustomer ? ["On Credit"] : []) : (customerOutstanding > 0 ? ["On Credit"] : []))
+                        ];
+                        const displayMap = isCollecting ? undefined : { "On Credit": "Clear Outstanding" };
+
+                        return (
+                          <div className="space-y-2">
+                            {state.payments.map((p, idx) => (
+                              <div key={idx} className="flex flex-col gap-1">
+                                <div className="flex items-center gap-2">
+                                  <SelectDropdown
+                                    value={p.mode}
+                                    onChange={mode => m.updatePayment(idx, { mode })}
+                                    options={paymentOptions}
+                                    displayMap={displayMap}
+                                  />
+                                  <input
+                                    type="number"
+                                    value={p.amount === 0 ? "" : p.amount}
+                                    max={(state.mode === "refund" || totals.diff < 0) && p.mode === "On Credit" ? customerOutstanding : undefined}
+                                    onChange={e => {
+                                      const entered = Number(e.target.value);
+                                      m.updatePayment(idx, { amount: entered });
+                                    }}
+                                    placeholder="Amount"
+                                    className="flex-1 h-10 px-3 text-[13px] border-2 border-slate-100 rounded-lg bg-white text-slate-800 outline-none focus:border-blue-500 font-semibold text-right placeholder:text-slate-300"
+                                  />
+                                  {state.payments.length > 1 && (
+                                    <button
+                                      onClick={() => m.removePayment(idx)}
+                                      className="w-10 h-10 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-100 flex items-center justify-center transition-all border border-rose-100"
+                                    >
+                                      <X size={14} />
+                                    </button>
+                                  )}
+                                </div>
+                                {p.mode === "On Credit" && (state.mode === "refund" || totals.diff < 0) && customerOutstanding > 0 && (
+                                  <p className="text-[10px] text-amber-600 font-semibold flex items-center gap-1 ml-1">
+                                    <AlertCircle size={10} />
+                                    Max clearable: {fmt(Math.min(Math.abs(totals.diff), customerOutstanding))} (outstanding: {fmt(customerOutstanding)})
+                                  </p>
+                                )}
+                                {p.mode === "On Credit" && totals.diff > 0 && (
+                                  <p className="text-[10px] text-blue-600 font-semibold flex items-center gap-1 ml-1">
+                                    <AlertCircle size={10} />
+                                    Amount will be added to customer's outstanding credit balance
+                                  </p>
+                                )}
+                              </div>
+                            ))}
+                            <button
+                              onClick={m.addPayment}
+                              className="w-full py-2.5 mt-2 border-2 border-dashed border-slate-200 rounded-lg text-[11px] font-bold text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-all flex items-center justify-center gap-1.5"
+                            >
+                              <Plus size={12} /> Add Split Payment
+                            </button>
                           </div>
-                        ))}
-                        <button
-                          onClick={m.addPayment}
-                          className="w-full py-2.5 mt-2 border-2 border-dashed border-slate-200 rounded-lg text-[11px] font-bold text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-all flex items-center justify-center gap-1.5"
-                        >
-                          <Plus size={12} /> Add Split Payment
-                        </button>
-                      </div>
+                        );
+                      })()}
 
                       {state.errors.settlement && <p className="mt-2.5 flex items-center gap-1.5 text-[12px] text-red-500 font-bold"><AlertCircle size={12} />{state.errors.settlement}</p>}
                     </div>

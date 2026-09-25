@@ -1,3 +1,4 @@
+import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import React, { useCallback, useMemo } from "react";
 import { FieldDefinition } from "./context/InputBuilderContext";
 import { SearchSelect } from "./SearchSelect"; // ← your existing component
@@ -136,27 +137,13 @@ const DropdownField: React.FC<DynamicFieldProps> = ({ field, value, onChange, di
   return (
     <FieldWrapper hideLabel={hideLabel}>
       {!hideLabel && <Label text={field.label_name} required={field.required} hint={field.field_description} />}
-      <select
-        name={field.field_name}
+      <ReusableSelect
         value={value ?? ""}
-        required={field.required}
         disabled={disabled ?? !field.can_update}
-        className={`${baseInput} appearance-none cursor-pointer bg-no-repeat`}
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
-          backgroundPosition: "right 0.5rem center",
-          backgroundSize: "1.5em 1.5em",
-          paddingRight: "2.5rem",
-        }}
-        onChange={(e) => onChange(field.field_name, e.target.value)}
-      >
-        <option value="">{field.placeholder || "Select…"}</option>
-        {options.map((opt) => (
-          <option key={opt} value={opt}>
-            {opt}
-          </option>
-        ))}
-      </select>
+        placeholder={field.placeholder || "Select…"}
+        onValueChange={(val) => onChange(field.field_name, val)}
+        options={options.map((opt) => ({ label: opt, value: opt }))}
+      />
     </FieldWrapper>
   );
 };

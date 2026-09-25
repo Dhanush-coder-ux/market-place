@@ -674,11 +674,7 @@ const AnalyticsDashboard = () => {
               </div>
             </div>
 
-            <div className="mt-4 pt-3.5 border-t border-slate-100 flex gap-2 flex-wrap">
-              <span className="text-[10.5px] font-medium px-2 py-0.5 rounded-md text-slate-500 bg-slate-100">
-                Clean orders
-              </span>
-            </div>
+
           </div>
 
           {/* AOV */}

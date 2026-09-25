@@ -3,6 +3,27 @@ import { ENDPOINTS } from "@/services/endpoints";
 let refreshPromise: Promise<string | null> | null = null;
 
 export const getGatewayBaseUrl = (): string => {
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname;
+    // Check runtime window.__ENV__ if present
+    const runtimeEnv = (window as any).__ENV__?.VITE_GATEWAY_URL;
+    if (runtimeEnv && typeof runtimeEnv === "string" && runtimeEnv.trim()) {
+      let rUrl = runtimeEnv.trim().replace(/\/+$/, "");
+      if (!rUrl.endsWith("/api")) rUrl += "/api";
+      return rUrl;
+    }
+
+    // Auto-detect production / development domain so build-time static env doesn't lock to localhost
+    if (host !== "localhost" && host !== "127.0.0.1") {
+      if (host.includes("dev.inventq.in") || host.includes("dev.app.inventq.in")) {
+        return "https://dev.gateway.inventq.in/api";
+      }
+      if (host.includes("inventq.in")) {
+        return "https://gateway.inventq.in/api";
+      }
+    }
+  }
+
   let url = (import.meta.env.VITE_GATEWAY_URL || "http://127.0.0.1:8000/api").replace(/\/+$/, "");
   if (!url.endsWith("/api")) {
     url += "/api";

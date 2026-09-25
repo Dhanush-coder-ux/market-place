@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Download, X, Loader2, CheckCircle2, Banknote, Smartphone, Wallet, Plus, Printer } from "lucide-react";
+import { Download, X, Loader2, CheckCircle2, Plus, Printer } from "lucide-react";
 import type { BillingItem } from "../types";
 import { shopApi } from "../../../services/api/shop";
+import { InvoiceRenderer } from "./InvoiceRenderer";
 
 type BillStatus = "COMPLETED" | "PENDING" | "CANCELLED";
 
@@ -23,14 +24,6 @@ interface InvoicePreviewModalProps {
   onNewBill?: () => void;
 }
 
-const formatINR = (v: number, d = 2) =>
-  v.toLocaleString("en-IN", { minimumFractionDigits: d, maximumFractionDigits: d });
-
-const payMeta: Record<string, { label: string; icon: React.ReactNode }> = {
-  cash:   { label: "Cash",       icon: <Banknote   size={12} strokeWidth={1.5} /> },
-  upi:    { label: "UPI / Card", icon: <Smartphone size={12} strokeWidth={1.5} /> },
-  credit: { label: "Credit",     icon: <Wallet      size={12} strokeWidth={1.5} /> },
-};
 
 const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
   isOpen, onClose, items, customerName, phone,
@@ -39,18 +32,20 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
 }) => {
   const invoiceRef = useRef<HTMLDivElement>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-  const filledItems = items.filter(i => !!i.name);
   const today   = new Date();
   const dateStr = today.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
   const timeStr = today.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
 
-  const primaryPayment = payments[0] || { mode: "cash" };
-  const modeInfo       = payMeta[primaryPayment.mode] || payMeta.cash;
+
 
   const [shopData, setShopData] = useState<any>(null);
+  const [template, setTemplate] = useState("default");
 
   useEffect(() => {
     const shopId = localStorage.getItem("shop_id");
+    const savedTmpl = localStorage.getItem("invoice_template");
+    if (savedTmpl) setTemplate(savedTmpl);
+    
     if (isOpen && shopId) {
       shopApi.getShopById(shopId).then(res => {
         const data = res?.data ?? res;
@@ -58,6 +53,8 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
       }).catch(console.error);
     }
   }, [isOpen]);
+
+
 
   // ── PDF Download ─────────────────────────────────────────────────────────────
   const handleDownload = async () => {
@@ -213,144 +210,24 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
         </div>
 
         {/* Scrollable Receipt Paper */}
-        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-2 sm:p-5 print:p-0 print:overflow-visible custom-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
-          <div ref={invoiceRef} className="print-area bg-white rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.06)] border border-slate-200/40 mx-auto max-w-[560px] print:max-w-none print:border-none print:shadow-none print:rounded-none">
-
-            {/* ── Receipt Header ─────────────────────────── */}
-            <div className="px-6 pt-6 pb-4 border-b border-slate-100">
-              <div className="flex justify-between items-start">
-                {/* Company Info */}
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center print:bg-blue-600">
-                      <span className="text-white text-[11px] font-semibold">{shopData?.name?.substring(0, 2)?.toUpperCase() || "MP"}</span>
-                    </div>
-                    <div>
-                      <p className="text-[14px] font-semibold text-slate-800 leading-tight">{shopData?.name || shopData?.shop_name || "MarketPlace"}</p>
-                      <p className="text-[10px] text-slate-600 font-normal">{shopData?.category_infos?.name || "Retail & Distribution"}</p>
-                    </div>
-                  </div>
-                  <p className="text-[10px] text-slate-600 mt-2 leading-relaxed">
-                    {(shopData?.business_infos?.gst_infos?.number || shopData?.gst_infos?.number || shopData?.gst_number || shopData?.gst) &&
-                      (shopData?.business_infos?.gst_infos?.number || shopData?.gst_infos?.number || shopData?.gst_number || shopData?.gst) !== "N/A" && (
-                        <>GSTIN: {shopData?.business_infos?.gst_infos?.number || shopData?.gst_infos?.number || shopData?.gst_number || shopData?.gst}<br /></>
-                      )}
-                    {shopData?.address?.full_address || shopData?.address_infos?.address_line_1 || (typeof shopData?.address === 'string' ? shopData.address : null) || "Address N/A"}
-                  </p>
-                </div>
-
-                {/* Invoice Meta */}
-                <div className="text-right">
-                  <p className="text-[9px] font-medium text-blue-500 mb-0.5 print:text-blue-600">Order Receipt</p>
-                  {orderId && <p className="text-[12px] font-bold text-slate-700 mb-1">#{orderId}</p>}
-                  <div className="mt-2 space-y-0.5">
-                    <p className="text-[10px] text-slate-600">{dateStr} · {timeStr}</p>
-                    <div className="inline-flex items-center gap-1 text-[10px] font-medium text-slate-600 bg-slate-50 border border-slate-100 rounded px-1.5 py-0.5 mt-1 print:bg-white print:border-slate-200">
-                      {modeInfo.icon} {payments.length > 1 ? "Split Payment" : modeInfo.label}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* ── Customer & Status ──────────────────────── */}
-            <div className="px-6 py-3 border-b border-slate-100 flex items-center justify-between">
-              <div>
-                <p className="text-[9px] font-medium text-slate-600 mb-0.5">Bill To</p>
-                <p className="text-[13px] font-medium text-slate-800">{customerName || "Walk-in Customer"}</p>
-                <p className="text-[10px] text-slate-600 font-mono">{phone || "—"}</p>
-              </div>
-            </div>
-
-            {/* ── Items Table ────────────────────────────── */}
-            <div className="px-0">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-slate-50/60 border-b border-slate-100 print:bg-slate-50">
-                    <th className="text-left text-[9px] font-medium text-slate-600 pl-6 pr-2 py-2 w-8">#</th>
-                    <th className="text-left text-[9px] font-medium text-slate-600 px-2 py-2">Product</th>
-                    <th className="text-center text-[9px] font-medium text-slate-600 px-2 py-2 w-12">Qty</th>
-                    <th className="text-right text-[9px] font-medium text-slate-600 px-2 py-2 w-20">Price</th>
-                    {includeGst && <th className="text-right text-[9px] font-medium text-slate-600 px-2 py-2 w-14">GST</th>}
-                    <th className="text-right text-[9px] font-medium text-slate-600 pl-2 pr-6 py-2 w-24">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filledItems.map((item, i) => {
-                    const [baseName, variantName] = item.name.split(' - ');
-                    return (
-                      <tr key={i} className={`border-b border-slate-50 ${i % 2 === 1 ? "bg-slate-50/30" : ""} hover:bg-blue-50/20 transition-colors print:hover:bg-transparent`}>
-                        <td className="pl-6 pr-2 py-2.5 text-[10px] text-slate-600 tabular-nums">{i + 1}</td>
-                        <td className="px-2 py-2.5">
-                          <p className="text-[12px] font-medium text-slate-800 leading-tight">{baseName}</p>
-                          {variantName && <p className="text-[10px] text-slate-600 mt-0.5">{variantName}</p>}
-                          {item.code && <p className="text-[9px] text-slate-600 font-mono mt-0.5">{item.code}</p>}
-                        </td>
-                        <td className="px-2 py-2.5 text-center text-[11px] text-slate-700 tabular-nums">{item.qty}</td>
-                        <td className="px-2 py-2.5 text-right text-[11px] text-slate-600 tabular-nums">₹{formatINR(item.price)}</td>
-                        {includeGst && <td className="px-2 py-2.5 text-right text-[10px] text-slate-600 tabular-nums">{item.gst ?? 18}%</td>}
-                        <td className="pl-2 pr-6 py-2.5 text-right text-[12px] font-medium text-slate-800 tabular-nums">₹{formatINR(item.tprice)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* ── Summary ────────────────────────────────── */}
-            <div className="px-6 py-4 border-t border-slate-100">
-              <div className="flex justify-end">
-                <div className="w-[220px] space-y-1.5">
-                  <div className="flex justify-between text-[11px] text-slate-600">
-                    <span>Subtotal</span>
-                    <span className="tabular-nums">₹{formatINR(totalAmount)}</span>
-                  </div>
-                  {includeGst && (
-                    <div className="flex justify-between text-[11px] text-slate-600">
-                      <span>Total GST</span>
-                      <span className="tabular-nums">₹{formatINR(gstAmount)}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-[11px] text-slate-600">
-                    <span>Discount</span>
-                    <span className="tabular-nums">₹0.00</span>
-                  </div>
-                  <div className="border-t border-slate-200/60 pt-1.5 mt-1">
-                    <div className="flex justify-between text-[14px] font-semibold text-slate-800">
-                      <span>Grand Total</span>
-                      <span className="tabular-nums text-blue-600 print:text-blue-700">₹{formatINR(finalAmount)}</span>
-                    </div>
-                  </div>
-                  {payments.map((p, idx) => (
-                    <div key={idx} className="flex justify-between text-[11px] text-slate-600">
-                      <span>Paid ({payMeta[p.mode]?.label || p.mode})</span>
-                      <span className="tabular-nums">₹{formatINR(p.amount)}</span>
-                    </div>
-                  ))}
-                  <div className="flex justify-between text-[11px] font-medium text-emerald-600">
-                    <span>Balance</span>
-                    <span className="tabular-nums">₹0.00</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* ── Footer ─────────────────────────────────── */}
-            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/30 rounded-b-xl print:bg-white">
-              <div className="flex justify-between items-end">
-                <div>
-                  <p className="text-[11px] font-medium text-slate-800 mb-0.5">Thank you for your purchase!</p>
-                  <p className="text-[9px] text-slate-600 leading-relaxed max-w-[260px]">
-                    Goods once sold will not be taken back. All disputes subject to local jurisdiction.
-                  </p>
-                </div>
-                <div className="text-right">
-                  <div className="w-24 border-b border-slate-300 mb-1" />
-                  <p className="text-[9px] text-slate-600">Authorized Signatory</p>
-                </div>
-              </div>
-              <p className="text-center text-[8px] text-slate-500 mt-3">This is a computer-generated receipt and does not require a physical signature.</p>
-            </div>
+        <div className={`flex-1 min-h-0 overflow-y-auto overflow-x-hidden py-4 print:p-0 print:overflow-visible custom-scrollbar`} style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="print-area">
+            <InvoiceRenderer
+              templateId={template}
+              shopData={shopData}
+              orderId={orderId}
+              dateStr={dateStr}
+              timeStr={timeStr}
+              payments={payments}
+              customerName={customerName}
+              phone={phone}
+              items={items}
+              includeGst={includeGst}
+              totalAmount={totalAmount}
+              gstAmount={gstAmount}
+              finalAmount={finalAmount}
+              invoiceRef={invoiceRef}
+            />
           </div>
         </div>
 

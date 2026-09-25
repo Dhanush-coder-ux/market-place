@@ -9,6 +9,7 @@ import {
   Store,
   AlertTriangle,
   X,
+  LayoutTemplate,
 } from "lucide-react";
 
 import { Switch } from "@/components/ui/switch";
@@ -17,6 +18,7 @@ import { CustomListSettings } from "@/features/Setting/pages/CustomListSettings"
 import { ShopProfileForm } from "@/features/Setting/pages/ShopProfileForm";
 import { BusinessCategorySettings } from "@/features/Setting/pages/BusinessCategorySettings";
 import { SubscriptionSettingsTab } from "@/features/subscription/components/SubscriptionSettingsTab";
+import { InvoiceTemplateSettings } from "@/features/Setting/pages/InvoiceTemplateSettings";
 import { CreditCard } from "lucide-react";
 import { usePurchaseSettings } from "@/context/PurchaseContext";
 import { shopApi } from "@/services/api/shop";
@@ -60,6 +62,13 @@ const MENU_ITEMS = [
     icon: CreditCard,
     description: "Subscription, limits & Razorpay payments",
     accent: "blue",
+  },
+  {
+    id: "templates",
+    label: "Invoice Templates",
+    icon: LayoutTemplate,
+    description: "Choose invoice design",
+    accent: "violet",
   },
   {
     id: "activity",
@@ -157,6 +166,9 @@ export const ProfileSettingsPage = () => {
     switch (activeTab) {
       case "subscription":
         return wrapper(<SubscriptionSettingsTab />);
+
+      case "templates":
+        return wrapper(<InvoiceTemplateSettings />);
 
       case "shopprofile":
         return <ShopProfileForm />;

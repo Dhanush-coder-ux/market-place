@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from "react";
 import { notificationApi, NotificationItem, NotificationCreate } from "@/services/api/notification";
+import { getGatewayBaseUrl } from "@/services/api/tokenManager";
 
 interface NotificationContextType {
   notifications: NotificationItem[];
@@ -126,7 +127,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         const envWs = import.meta.env.VITE_WS_URL;
         if (envWs) return envWs.replace(/\/+$/, "");
 
-        const gatewayUrl = (import.meta.env.VITE_GATEWAY_URL || "https://marketplace.debuggers.co.in/api/").trim();
+        const gatewayUrl = getGatewayBaseUrl();
         const base = gatewayUrl
           .replace(/^http:\/\//i, "ws://")
           .replace(/^https:\/\//i, "wss://")

@@ -47,10 +47,16 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
   invoiceRef,
   scale = 1
 }) => {
-  const config = INVOICE_TEMPLATES[templateId] || INVOICE_TEMPLATES.default;
+  const config = INVOICE_TEMPLATES[templateId] || INVOICE_TEMPLATES.minimal || INVOICE_TEMPLATES.modern;
   const primaryPayment = payments[0] || { mode: "cash", amount: finalAmount };
   const modeInfo = payMeta[primaryPayment.mode] || payMeta.cash;
   const filledItems = items.filter((i) => !!i.name);
+
+  const logoUrl =
+    shopData?.logo_url ||
+    shopData?.logo ||
+    shopData?.business_infos?.logo_url ||
+    (typeof shopData?.image_url === "string" ? shopData.image_url : null);
 
   return (
     <div 
@@ -58,15 +64,26 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
     >
       <div 
          ref={invoiceRef} 
-         className={`${config.container} w-[560px] shrink-0`}
+         className={`${config.container} w-full max-w-[560px] shrink-0`}
          style={scale !== 1 ? { transform: `scale(${scale})`, transformOrigin: 'top center', marginBottom: `-${(1 - scale) * 100}%` } : undefined}
       >
         {/* Header */}
         <div className={config.header.wrapper}>
-          <div className="flex gap-4 items-start">
-             <div className={config.header.logoBg}>
-               <span className={config.header.logoText}>{shopData?.name?.substring(0, 2)?.toUpperCase() || "MP"}</span>
-             </div>
+          <div className="flex gap-3.5 items-start">
+             {logoUrl ? (
+               <div className="w-11 h-11 rounded-xl overflow-hidden shrink-0 bg-white border border-slate-200/80 shadow-xs flex items-center justify-center p-1">
+                 <img
+                   src={logoUrl}
+                   alt={shopData?.name || "Shop Logo"}
+                   className="w-full h-full object-contain rounded-lg"
+                   crossOrigin="anonymous"
+                 />
+               </div>
+             ) : (
+               <div className={config.header.logoBg}>
+                 <span className={config.header.logoText}>{shopData?.name?.substring(0, 2)?.toUpperCase() || "MP"}</span>
+               </div>
+             )}
              <div>
                 <h2 className={config.header.businessName}>{shopData?.name || shopData?.shop_name || "inventQ"}</h2>
                 <p className={config.header.businessCategory}>{shopData?.category_infos?.name || "Retail & Distribution"}</p>

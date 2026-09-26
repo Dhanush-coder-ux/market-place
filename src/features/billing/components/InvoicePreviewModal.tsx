@@ -24,7 +24,6 @@ interface InvoicePreviewModalProps {
   onNewBill?: () => void;
 }
 
-
 const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
   isOpen, onClose, items, customerName, phone,
   payments, includeGst, totalAmount, gstAmount, finalAmount,
@@ -36,10 +35,8 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
   const dateStr = today.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
   const timeStr = today.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
 
-
-
   const [shopData, setShopData] = useState<any>(null);
-  const [template, setTemplate] = useState("default");
+  const [template, setTemplate] = useState("minimal");
 
   useEffect(() => {
     const shopId = localStorage.getItem("shop_id");
@@ -54,28 +51,18 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
     }
   }, [isOpen]);
 
-
-
   // ── PDF Download ─────────────────────────────────────────────────────────────
   const handleDownload = async () => {
     if (!invoiceRef.current || isGeneratingPdf) return;
     setIsGeneratingPdf(true);
 
     try {
-      // ── Import dom-to-image-more + jsPDF ─────────────────────────────────────
-      // dom-to-image-more renders via the browser's native SVG foreignObject
-      // pipeline — it never parses CSS itself, so Tailwind v4's oklch() / oklab()
-      // colors work perfectly (html2canvas crashed on them).
       const [dtimMod, jspdfMod] = await Promise.all([
         import('dom-to-image-more'),
         import('jspdf'),
       ]);
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const domtoimage = (dtimMod.default ?? dtimMod) as any;
-
-      // jsPDF ships as { jsPDF } | { default: { jsPDF } } | { default: fn }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const jspdfAny  = jspdfMod as any;
       const JsPDFCtor =
         jspdfAny.jsPDF ??
@@ -88,8 +75,6 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
 
       const el = invoiceRef.current;
 
-      // ── Capture invoice as a high-res JPEG ───────────────────────────────────
-      // scale:2 for retina sharpness; filter removes .no-print elements.
       const dataUrl: string = await domtoimage.toJpeg(el, {
         quality: 0.95,
         bgcolor: '#ffffff',
@@ -109,7 +94,6 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
         throw new Error('dom-to-image-more returned an empty image.');
       }
 
-      // ── Load the data URL into a canvas for slicing ───────────────────────────
       const img = new Image();
       img.src = dataUrl;
       await new Promise<void>((res, rej) => {
@@ -122,7 +106,6 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
       src.height = img.naturalHeight;
       src.getContext('2d')!.drawImage(img, 0, 0);
 
-      // ── Tile across A4 pages in jsPDF ────────────────────────────────────────
       const pdf    = new JsPDFCtor({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
       const pageW  = pdf.internal.pageSize.getWidth();   // 210 mm
       const pageH  = pdf.internal.pageSize.getHeight();  // 297 mm
@@ -130,9 +113,8 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
       const printW = pageW - margin * 2;   // 190 mm
       const printH = pageH - margin * 2;   // 277 mm
 
-      // At 2× scale: logical pixel width = naturalWidth / 2
       const pxPerMm    = (src.width / 2) / printW;
-      const pagePixels = printH * pxPerMm * 2;  // canvas-px per A4 page height
+      const pagePixels = printH * pxPerMm * 2;
 
       let top       = 0;
       let firstPage = true;
@@ -141,7 +123,6 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
         const slicePx = Math.min(pagePixels, src.height - top);
         const sliceMm = slicePx / (pxPerMm * 2);
 
-        // Draw only this vertical strip into a temp canvas
         const strip  = document.createElement('canvas');
         strip.width  = src.width;
         strip.height = Math.ceil(slicePx);
@@ -162,7 +143,8 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
 
     } catch (err) {
       console.error('[InvoicePreviewModal] PDF generation failed:', err);
-      alert(`PDF download failed:\n${(err as Error)?.message ?? String(err)}`);
+      alert(`PDF download failed:
+${(err as Error)?.message ?? String(err)}`);
     } finally {
       setIsGeneratingPdf(false);
     }
@@ -178,7 +160,7 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center p-2 sm:p-6 print:p-0">
+    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center p-3 sm:p-6 print:p-0">
       {/* Styles for Printing */}
       <style dangerouslySetInnerHTML={{
         __html: `
@@ -199,18 +181,23 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
       <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm no-print" onClick={onClose} />
 
       {/* Modal Container */}
-      <div className="relative bg-slate-100 rounded-lg shadow-[0_24px_80px_rgba(0,0,0,0.3)] w-full max-w-[640px] max-h-[calc(100dvh-1rem)] sm:max-h-[calc(100dvh-3rem)] flex flex-col overflow-hidden animate-in zoom-in-95 duration-300 print:max-h-none print:bg-white print:rounded-none print:shadow-none print:w-full print:max-w-none print:animate-none print:transform-none">
+      <div className="relative bg-slate-100 rounded-2xl shadow-[0_24px_80px_rgba(0,0,0,0.35)] w-full max-w-[620px] max-h-[88vh] h-[88vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 print:max-h-none print:h-auto print:bg-white print:rounded-none print:shadow-none print:w-full print:max-w-none print:animate-none print:transform-none">
 
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-5 py-3 bg-white border-b border-slate-200/60 shrink-0 no-print">
-          <h3 className="text-[14px] font-semibold text-slate-700">Order Preview</h3>
-          <button onClick={onClose} className="w-7 h-7 rounded-md flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
-            <X size={16} strokeWidth={1.5} />
+        <div className="flex items-center justify-between px-5 py-3.5 bg-white border-b border-slate-200/80 shrink-0 no-print">
+          <div className="flex items-center gap-2">
+            <h3 className="text-[14px] font-bold text-slate-800">Order Preview</h3>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
+            <X size={18} strokeWidth={1.75} />
           </button>
         </div>
 
-        {/* Scrollable Receipt Paper */}
-        <div className={`flex-1 min-h-0 overflow-y-auto overflow-x-hidden py-4 print:p-0 print:overflow-visible custom-scrollbar`} style={{ WebkitOverflowScrolling: 'touch' }}>
+        {/* Scrollable Receipt Paper (modal-content ensures no-scroll doesn't block scrolling) */}
+        <div 
+          className="modal-content flex-1 min-h-0 overflow-y-auto overflow-x-hidden py-4 px-3 sm:px-6 print:p-0 print:overflow-visible custom-scrollbar" 
+          style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
+        >
           <div className="print-area">
             <InvoiceRenderer
               templateId={template}
@@ -232,7 +219,7 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
         </div>
 
         {/* Sticky Action Footer */}
-        <div className={`flex items-center ${orderId ? 'justify-between' : 'justify-end'} px-5 py-3 bg-white border-t border-slate-200/60 shrink-0 gap-2 no-print`}>
+        <div className={`flex items-center ${orderId ? 'justify-between' : 'justify-end'} px-5 py-3.5 bg-white border-t border-slate-200/80 shrink-0 gap-2 no-print`}>
           {orderId && (
             <div className="flex gap-2">
               <button
@@ -261,15 +248,15 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
           <div className="flex gap-2">
             {!orderId ? (
               <>
-                <button onClick={onClose} className="px-4 py-2 rounded-lg border border-slate-200/60 text-[12px] font-medium text-slate-500 hover:bg-slate-50 transition-colors">
+                <button onClick={onClose} className="px-4 py-2 rounded-lg border border-slate-200 text-[12px] font-medium text-slate-500 hover:bg-slate-50 transition-colors">
                   Cancel
                 </button>
                 <button
                   onClick={() => onConfirm("COMPLETED")}
                   disabled={isSubmitting}
-                  className={`flex items-center gap-1.5 px-5 py-2 rounded-lg text-[12px] font-medium text-white transition-all duration-200 ${isSubmitting ? "bg-slate-300 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600 shadow-[0_1px_3px_rgba(59,130,246,0.3)]"}`}
+                  className={`flex items-center gap-1.5 px-5 py-2 rounded-lg text-[12px] font-semibold text-white transition-all duration-200 ${isSubmitting ? "bg-slate-300 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 shadow-sm"}`}
                 >
-                  {isSubmitting ? <><Loader2 size={13} className="animate-spin" /> Saving...</> : <><CheckCircle2 size={13} /> Confirm Order</>}
+                  {isSubmitting ? <><Loader2 size={13} className="animate-spin" /> Saving...</> : <><CheckCircle2 size={14} /> Confirm Order</>}
                 </button>
               </>
             ) : (

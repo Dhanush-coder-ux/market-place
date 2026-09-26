@@ -30,7 +30,7 @@ const mockData = {
 
 export const InvoiceTemplateSettings: React.FC = () => {
   const { showToast } = useToast();
-  const [activeTemplate, setActiveTemplate] = useState("default");
+  const [activeTemplate, setActiveTemplate] = useState("minimal");
 
   useEffect(() => {
     const saved = localStorage.getItem("invoice_template");

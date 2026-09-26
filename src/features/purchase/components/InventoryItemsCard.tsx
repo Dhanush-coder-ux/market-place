@@ -807,7 +807,7 @@ export const InventoryItemsCard = ({
 
         {/* Product Table */}
         <div className="overflow-x-auto custom-scrollbar w-full" style={{ position: 'relative' }}>
-          <table className="min-w-[1260px] w-full border-collapse whitespace-nowrap" style={{ tableLayout: 'fixed' }}>
+          <table className="min-w-[1410px] w-full border-collapse whitespace-nowrap" style={{ tableLayout: 'fixed' }}>
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-200 sticky top-0 z-10">
                 <th className="py-2.5 px-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '45px' }}>#</th>
@@ -817,6 +817,7 @@ export const InventoryItemsCard = ({
                 <th className="py-2.5 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '130px' }}>Subtotal</th>
                 <th className="py-2.5 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '120px' }}>Allocated</th>
                 <th className="py-2.5 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '85px' }}>Tax (GST)</th>
+                <th className="py-2.5 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '140px' }}>Landed Cost</th>
                 <th className="py-2.5 px-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '260px' }}>Pricing & Margin / Unit (optional)</th>
                 <th className="py-2.5 px-3 text-right text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '90px' }}>Actions</th>
               </tr>
@@ -839,9 +840,11 @@ export const InventoryItemsCard = ({
                 const rowGstTotal = q * rowGstPerUnit;
                 const rowGrandTotal = q * (rowBaseCost + rowGstPerUnit);
 
-                const allocTotal = stats.allocations[index]?.alloc || 0;
+                const allocTotal = stats?.allocations?.[index]?.alloc || 0;
                 const allocPerUnit = q > 0 ? allocTotal / q : 0;
-                const netCostPerUnit = stats.allocations[index]?.netCostPerUnit ?? (rowBaseCost + allocPerUnit);
+                const netCostPerUnit = stats?.allocations?.[index]?.netCostPerUnit ?? (rowBaseCost + allocPerUnit);
+                const landedCostPerUnit = rowBaseCost + rowGstPerUnit + allocPerUnit;
+                const landedCostTotal = q * landedCostPerUnit;
                 const costForSp = gstMode === "inclusive" ? rowBaseCost + rowGstPerUnit : rowBaseCost;
                 const netCostForSp = costForSp + allocPerUnit;
 
@@ -1086,6 +1089,23 @@ export const InventoryItemsCard = ({
                         </div>
                       </td>
 
+                      {/* Landed Cost */}
+                      <td className="py-2.5 px-2 align-top overflow-hidden">
+                        <div className="flex flex-col w-full">
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-xs font-black text-slate-900 tabular-nums truncate" title={`₹${landedCostPerUnit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}>
+                              ₹{landedCostPerUnit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                            <span className="text-[9px] text-slate-400 font-bold">/u</span>
+                          </div>
+                          {q > 0 && (
+                            <span className="text-[9.5px] text-slate-400 font-semibold mt-1 truncate" title={`Total Landed: ₹${landedCostTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}>
+                              Total: <span className="text-emerald-700 font-bold">₹{landedCostTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
                       {/* Pricing & Margin */}
                       <td className="py-2.5 px-2 align-top pr-6">
                         <div className="flex flex-col gap-1.5">
@@ -1171,7 +1191,7 @@ export const InventoryItemsCard = ({
                     {/* Expanded Sub-row */}
                     {isExpanded && (
                       <tr className="bg-slate-50/50">
-                        <td colSpan={9} className="p-0 border-b border-slate-100">
+                        <td colSpan={10} className="p-0 border-b border-slate-100">
                           <div className="px-12 py-4 space-y-4 animate-in fade-in slide-in-from-top-1 duration-200">
 
                             {/* Row 1: Batch & Serial Tracking */}

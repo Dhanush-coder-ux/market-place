@@ -116,6 +116,11 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
           setCurrentShopId(shop.id);
           setSelectedShop({ name: shop.name, initial: shop.name.charAt(0).toUpperCase(), logo_url: shop.logo_url });
           localStorage.setItem("shop_name", shop.name);
+          if (shop.logo_url) {
+            localStorage.setItem("shop_logo", shop.logo_url);
+          } else {
+            localStorage.removeItem("shop_logo");
+          }
         }
       })
       .catch(() => setSelectedShop({ name: "My Shop", initial: "M" }))
@@ -133,11 +138,16 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const handleShopSwitch = useCallback((shop: { id: string; name: string }) => {
+  const handleShopSwitch = useCallback((shop: { id: string; name: string; logo_url?: string }) => {
     setCurrentShopId(shop.id);
     setShopId(shop.id);
     localStorage.setItem("shop_id", shop.id);
     localStorage.setItem("shop_name", shop.name);
+    if (shop.logo_url) {
+      localStorage.setItem("shop_logo", shop.logo_url);
+    } else {
+      localStorage.removeItem("shop_logo");
+    }
     setIsShopMenuOpen(false);
     window.location.reload();
   }, []);

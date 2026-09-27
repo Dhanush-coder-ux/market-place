@@ -103,49 +103,25 @@ const Login = () => {
     };
   }, [isPaused, currentScene]);
 
-  const handleSignIn = useCallback(async (isSignUp: boolean = false) => {
+  const handleSignIn = async () => {
     setLoading(true);
     try {
       const response = await authApi.getLoginUrl();
-      const signinUrl = response?.signin_url || response?.url || response?.data?.signin_url || response?.data?.url;
-      const signupUrl = response?.signup_url || response?.data?.signup_url || signinUrl;
-      const targetUrl = isSignUp ? signupUrl : signinUrl;
+      const url = response?.signin_url || response?.url || response?.data?.signin_url || response?.data?.url;
 
-      if (typeof targetUrl === "string" && targetUrl.startsWith("http")) {
-        window.location.href = targetUrl;
+      if (typeof url === "string" && url.startsWith("http")) {
+        window.location.href = url;
       } else {
         console.error("Unexpected login URL response:", response);
         showToast("Invalid login URL received from server.", "error");
-        setLoading(false);
       }
     } catch (error) {
       console.error(error);
       showToast("Failed to initialize login. Please try again later.", "error");
+    } finally {
       setLoading(false);
     }
-  }, [showToast]);
-
-  // Check existing token or trigger auto-login if coming from landing page
-  useEffect(() => {
-    const token = localStorage.getItem("auth_token") || localStorage.getItem("access_token");
-    const sessionId = localStorage.getItem("session_id");
-    const shopId = localStorage.getItem("shop_id");
-    const params = new URLSearchParams(window.location.search);
-    const fromLanding = params.get("from") === "landing" || params.get("autologin") === "true";
-    const isSignUp = params.get("action") === "signup" || params.get("mode") === "signup";
-
-    if (token && (shopId || sessionId)) {
-      window.location.href = "/dashboard";
-      return;
-    } else if (token && !shopId && !sessionId) {
-      window.location.href = "/shop-select";
-      return;
-    }
-
-    if (fromLanding) {
-      handleSignIn(isSignUp);
-    }
-  }, [handleSignIn]);
+  };
 
   const handleDial = (rawNumber: string) => {
     window.location.href = `tel:${rawNumber}`;
@@ -263,30 +239,7 @@ const Login = () => {
         {/* Top Header & Brand */}
         <div className="relative z-10 space-y-6">
           <div className="flex items-center gap-3.5">
-            <span className="w-[47px] h-[47px] rounded-[13px] bg-white text-blue-600 grid place-items-center flex-none shadow-lg">
-              <svg viewBox="0 0 100 100" className="w-7 h-7" aria-label="Antaris">
-                <defs>
-                  <linearGradient id="mg_logo" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#2563EB" />
-                    <stop offset="100%" stopColor="#1E3A8A" />
-                  </linearGradient>
-                </defs>
-                <path
-                  fill="url(#mg_logo)"
-                  fillRule="evenodd"
-                  d="M50 2 Q54 22 60 35 L97 29 Q78 42 66 52 L79 96 Q62 82 50 74 Q38 82 21 96 L34 52 Q22 42 3 29 L40 35 Q46 22 50 2 Z M50 24 L59 67 L41 67 Z"
-                />
-              </svg>
-            </span>
-            <div>
-              <div className="font-bold text-[24px] tracking-tight text-white flex items-baseline">
-                <span>invent</span>
-                <span className="text-amber-300 font-extrabold">Q</span>
-              </div>
-              <div className="text-[10.5px] text-blue-100/70 tracking-[0.13em] uppercase font-semibold mt-0.5">
-                from Antaris Software
-              </div>
-            </div>
+            <img src="/logo/inventQ.png" alt="inventQ" className="h-[52px] w-auto object-contain drop-shadow-lg" />
           </div>
 
           {/* Eyebrow badge */}
@@ -550,9 +503,8 @@ const Login = () => {
                 key={idx}
                 type="button"
                 onClick={() => goToScene(idx)}
-                className={`showcase-dot h-2 rounded-full overflow-hidden relative transition-all duration-300 ${
-                  currentScene === idx ? "on w-8 bg-white/25" : "w-2 bg-white/25 hover:bg-white/45"
-                }`}
+                className={`showcase-dot h-2 rounded-full overflow-hidden relative transition-all duration-300 ${currentScene === idx ? "on w-8 bg-white/25" : "w-2 bg-white/25 hover:bg-white/45"
+                  }`}
                 aria-label={`Go to scene ${idx + 1}`}
               >
                 <i className="absolute inset-0 w-0 bg-amber-300 rounded-full block" />
@@ -607,7 +559,7 @@ const Login = () => {
             </div>
 
             <button
-              onClick={() => handleSignIn(false)}
+              onClick={handleSignIn}
               disabled={loading}
               className="w-full h-12 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 active:from-blue-800 active:to-blue-900 text-white font-semibold text-[14.5px] flex items-center justify-center gap-2 shadow-lg shadow-blue-600/25 active:scale-98 transition-all disabled:opacity-50 disabled:pointer-events-none group"
             >

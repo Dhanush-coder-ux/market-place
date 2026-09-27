@@ -1,12 +1,12 @@
-import { useState, useEffect, useRef, FC, useMemo, useCallback, memo } from "react";
-import { NavLink, Link, useLocation, useNavigate } from "react-router-dom";
+import { useState, useEffect, FC, useMemo, useCallback, memo } from "react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, ChevronDown, ListMinus, Plus, Printer, ArrowRight, Store, Loader2, Check, PlusCircle, LogOut, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ListMinus, Printer, ArrowRight, X, Plus } from "lucide-react";
 import { usePurchaseSettings } from "@/context/PurchaseContext";
 import type { SidebarLink, SubItem, SubGroup, SubLink } from "@/utils/constants";
 import { employeeApi } from "@/services/api/employee";
 import { apiClient } from "@/services/api/apiClient";
-import { ENDPOINTS, setShopId } from "@/services/endpoints";
+import { ENDPOINTS } from "@/services/endpoints";
 import { fetchMyShops } from "@/services/api/shopHelpers";
 
 // ─── Type Guards ─────────────────────────────────────────────────────────────
@@ -58,19 +58,11 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
   const [activeAccordion, setActiveAccordion] = useState<string | null>(null);
   const [promptData, setPromptData] = useState<{ path: string; open: boolean } | null>(null);
   const { settings } = usePurchaseSettings();
-  const navigate = useNavigate();
+
 
   // ── Shop selector state ──────────────────────────────────────────────────────
-  const [isShopMenuOpen, setIsShopMenuOpen] = useState(false);
   const [shops, setShops] = useState<Array<{ id: string; name: string; logo_url?: string; categories?: string[]; visible_online?: boolean }>>([]);
-  const [shopsLoading, setShopsLoading] = useState(true);
   const [currentShopId, setCurrentShopId] = useState<string | null>(() => localStorage.getItem("shop_id"));
-  const cachedShopName = localStorage.getItem("shop_name") || "Shop A";
-  const [selectedShop, setSelectedShop] = useState<{ name: string; initial: string; logo_url?: string }>({
-    name: cachedShopName,
-    initial: (cachedShopName.charAt(0) || "S").toUpperCase(),
-  });
-  const shopMenuRef = useRef<HTMLDivElement>(null);
 
   // ── User profile state ───────────────────────────────────────────────────────
   const [userInfo, setUserInfo] = useState<{ name: string; email: string; initial: string }>(() => {
@@ -114,51 +106,10 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
         const shop = list.find((s: any) => s.id === shopId) ?? list[0];
         if (shop) {
           setCurrentShopId(shop.id);
-          setSelectedShop({ name: shop.name, initial: shop.name.charAt(0).toUpperCase(), logo_url: shop.logo_url });
-          localStorage.setItem("shop_name", shop.name);
-          if (shop.logo_url) {
-            localStorage.setItem("shop_logo", shop.logo_url);
-          } else {
-            localStorage.removeItem("shop_logo");
-          }
         }
       })
-      .catch(() => setSelectedShop({ name: "My Shop", initial: "M" }))
-      .finally(() => setShopsLoading(false));
+      .catch(() => {});
   }, []);
-
-  // Close shop menu on outside click
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (shopMenuRef.current && !shopMenuRef.current.contains(e.target as Node)) {
-        setIsShopMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  const handleShopSwitch = useCallback((shop: { id: string; name: string; logo_url?: string }) => {
-    setCurrentShopId(shop.id);
-    setShopId(shop.id);
-    localStorage.setItem("shop_id", shop.id);
-    localStorage.setItem("shop_name", shop.name);
-    if (shop.logo_url) {
-      localStorage.setItem("shop_logo", shop.logo_url);
-    } else {
-      localStorage.removeItem("shop_logo");
-    }
-    setIsShopMenuOpen(false);
-    window.location.reload();
-  }, []);
-
-  const handleSignOut = useCallback(() => {
-    localStorage.removeItem("auth_token");
-    localStorage.removeItem("user_id");
-    localStorage.removeItem("shop_id");
-    localStorage.removeItem("refresh_token");
-    navigate("/login");
-  }, [navigate]);
   // ── End shop selector state ──────────────────────────────────────────────────
 
   const handleNavigation = useCallback((path: string, askNewTab?: boolean) => {
@@ -309,122 +260,16 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
         }}
       />
 
-      {/* Header */}
-      <div className="relative flex-shrink-0 border-b border-white/10 z-[110]">
-        <div ref={shopMenuRef} className="relative">
-          <div
-            className={`flex items-center h-14 px-3 gap-2.5 cursor-pointer hover:bg-white/[0.06] transition-colors duration-150 ${isOpen ? "" : "justify-center"}`}
-            onClick={() => isOpen && setIsShopMenuOpen((v) => !v)}
-          >
-            {/* Shop avatar */}
-            <div className="w-8 h-8 rounded-[9px] bg-white/10 border border-white/20 flex items-center justify-center shrink-0 overflow-hidden flex-none">
-              {selectedShop.logo_url ? (
-                <img src={selectedShop.logo_url} alt="" className="w-full h-full object-cover" />
-              ) : selectedShop.initial !== "S" ? (
-                <span className="text-[14px] font-black text-white">{selectedShop.initial}</span>
-              ) : (
-                <Store size={14} className="text-white/70" />
-              )}
-            </div>
-
-            <AnimatePresence mode="wait">
-              {isOpen && (
-                <motion.div
-                  key="shopname"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.12 }}
-                  className="flex-1 min-w-0 flex items-center gap-1"
-                >
-                  <div className="min-w-0 flex-1 flex flex-col">
-                    <span className="text-[13px] font-bold tracking-[-0.01em] text-white truncate leading-tight">
-                      {selectedShop.name}
-                    </span>
-                    <span className="text-[10px] text-white/50 leading-tight font-medium">Switch workspace</span>
-                  </div>
-                  <ChevronDown
-                    size={13}
-                    strokeWidth={2}
-                    className={`text-white/50 shrink-0 transition-transform duration-150 ${isShopMenuOpen ? "rotate-180" : ""}`}
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* Shop dropdown panel (Light theme to match UI standard) */}
-          <AnimatePresence>
-            {isShopMenuOpen && isOpen && (
-              <motion.div
-                initial={{ opacity: 0, y: -6, scale: 0.97 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -6, scale: 0.97 }}
-                transition={{ duration: 0.13 }}
-                className="absolute top-full left-2 right-2 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-[9999] overflow-hidden"
-              >
-                {/* Shop list */}
-                <div className="px-1.5 pt-1.5 pb-1">
-                  <p className="text-[10px] font-bold text-slate-400 px-2 py-1.5">My Shops</p>
-                  <div className="max-h-[200px] overflow-y-auto">
-                    {shopsLoading ? (
-                      <div className="flex items-center justify-center py-4">
-                        <Loader2 size={15} className="animate-spin text-slate-400" />
-                      </div>
-                    ) : shops.length === 0 ? (
-                      <p className="text-xs text-slate-400 text-center py-3">No shops found</p>
-                    ) : (
-                      shops.map((shop) => (
-                        <button
-                          key={shop.id}
-                          onClick={() => handleShopSwitch(shop)}
-                          className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors duration-100 ${
-                            currentShopId === shop.id
-                              ? "bg-blue-50 text-blue-700"
-                              : "hover:bg-slate-50 text-slate-700"
-                          }`}
-                        >
-                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold border shrink-0 ${
-                            currentShopId === shop.id ? "bg-white border-blue-200 text-blue-600" : "bg-slate-100 border-slate-200 text-slate-500"
-                          }`}>
-                            {shop.name.charAt(0).toUpperCase()}
-                          </div>
-                          <div className="flex flex-col min-w-0 flex-1">
-                            <span className="font-semibold text-[12.5px] truncate">{shop.name}</span>
-                            {shop.categories && shop.categories.length > 0 && (
-                              <span className="text-[10px] text-slate-400 capitalize truncate">{shop.categories[0]}</span>
-                            )}
-                          </div>
-                          {currentShopId === shop.id && <Check size={13} className="text-blue-500 shrink-0" />}
-                        </button>
-                      ))
-                    )}
-                  </div>
-                </div>
-
-                {/* Divider + actions */}
-                <div className="border-t border-slate-100 px-1.5 py-1.5 flex flex-col gap-0.5">
-                  <Link
-                    to="/create-shop"
-                    onClick={() => setIsShopMenuOpen(false)}
-                    className="flex items-center gap-2 px-2.5 py-2 rounded-lg text-blue-600 hover:bg-blue-50 text-[12.5px] font-semibold transition-colors"
-                  >
-                    <PlusCircle size={13} strokeWidth={2} />
-                    Create New Shop
-                  </Link>
-                  <button
-                    onClick={handleSignOut}
-                    className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-red-500 hover:bg-red-50 text-[12.5px] font-semibold transition-colors"
-                  >
-                    <LogOut size={13} strokeWidth={2} />
-                    Sign Out
-                  </button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+      {/* Brand Logo */}
+      <div className={`relative flex-shrink-0 flex items-center ${isOpen ? 'px-4 pt-5 pb-2' : 'justify-center pt-5 pb-2'}`}>
+        <img 
+          src={isOpen ? "/logo/inventQ.png" : "/logo/logo.png"} 
+          alt="inventQ" 
+          className={isOpen ? "h-[38px] w-auto object-contain drop-shadow-md" : "h-[32px] w-auto object-contain"}
+        />
       </div>
+
+
 
       {/* ── Floating collapse toggle — right edge of sidebar ── */}
       <button

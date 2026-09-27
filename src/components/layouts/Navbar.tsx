@@ -23,6 +23,10 @@ import {
   Printer,
 } from "lucide-react";
 import { useNotifications } from "@/context/NotificationContext";
+import { fetchMyShops } from "@/services/api/shopHelpers";
+import { setShopId } from "@/services/endpoints";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChevronDown, Loader2, Check, LogOut } from "lucide-react";
 
 // -----------------------------
 // Route Config
@@ -57,6 +61,71 @@ export const Navbar = () => {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  // ── Shop selector state ──────────────────────────────────────────────────────
+  const [isShopMenuOpen, setIsShopMenuOpen] = useState(false);
+  const [shops, setShops] = useState<Array<{ id: string; name: string; logo_url?: string; categories?: string[]; visible_online?: boolean }>>([]);
+  const [shopsLoading, setShopsLoading] = useState(true);
+  const [currentShopId, setCurrentShopId] = useState<string | null>(() => localStorage.getItem("shop_id"));
+  const cachedShopName = localStorage.getItem("shop_name") || "Shop A";
+  const [selectedShop, setSelectedShop] = useState<{ name: string; initial: string; logo_url?: string }>({
+    name: cachedShopName,
+    initial: (cachedShopName.charAt(0) || "S").toUpperCase(),
+  });
+  const shopMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fetchMyShops()
+      .then((list) => {
+        setShops(list);
+        const shopId = localStorage.getItem("shop_id");
+        const shop = list.find((s: any) => s.id === shopId) ?? list[0];
+        if (shop) {
+          setCurrentShopId(shop.id);
+          setSelectedShop({ name: shop.name, initial: shop.name.charAt(0).toUpperCase(), logo_url: shop.logo_url });
+          localStorage.setItem("shop_name", shop.name);
+          if (shop.logo_url) {
+            localStorage.setItem("shop_logo", shop.logo_url);
+          } else {
+            localStorage.removeItem("shop_logo");
+          }
+        }
+      })
+      .catch(() => setSelectedShop({ name: "My Shop", initial: "M" }))
+      .finally(() => setShopsLoading(false));
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (shopMenuRef.current && !shopMenuRef.current.contains(e.target as Node)) {
+        setIsShopMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const handleShopSwitch = (shop: { id: string; name: string; logo_url?: string }) => {
+    setCurrentShopId(shop.id);
+    setShopId(shop.id);
+    localStorage.setItem("shop_id", shop.id);
+    localStorage.setItem("shop_name", shop.name);
+    if (shop.logo_url) {
+      localStorage.setItem("shop_logo", shop.logo_url);
+    } else {
+      localStorage.removeItem("shop_logo");
+    }
+    setIsShopMenuOpen(false);
+    window.location.reload();
+  };
+
+  const handleSignOut = () => {
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("user_id");
+    localStorage.removeItem("shop_id");
+    localStorage.removeItem("refresh_token");
+    navigate("/login");
+  };
 
   // Real-time WebSocket Notifications from Context
   const { unreadCount, notifications, latestNotification, isIslandExpanded } = useNotifications();
@@ -103,6 +172,106 @@ export const Navbar = () => {
   return (
     <>
       <div className="sticky top-0 z-40 w-full flex items-center justify-between px-4 lg:px-6 bg-white/80 backdrop-blur-md border-b border-slate-200/60 shadow-sm h-14">
+
+        {/* Shop Selector */}
+        <div ref={shopMenuRef} className="relative mr-4 z-50">
+          <div
+            className="flex items-center h-9 px-2.5 gap-2 cursor-pointer bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors duration-150"
+            onClick={() => setIsShopMenuOpen((v) => !v)}
+          >
+            {/* Shop avatar */}
+            <div className="w-6 h-6 rounded bg-white border border-slate-200 flex items-center justify-center shrink-0 overflow-hidden">
+              {selectedShop.logo_url ? (
+                <img src={selectedShop.logo_url} alt="" className="w-full h-full object-cover" />
+              ) : selectedShop.initial !== "S" ? (
+                <span className="text-[12px] font-bold text-slate-700">{selectedShop.initial}</span>
+              ) : (
+                <Store size={12} className="text-slate-400" />
+              )}
+            </div>
+
+            <div className="flex-1 min-w-[100px] flex items-center gap-1 hidden sm:flex">
+              <div className="min-w-0 flex-1 flex flex-col">
+                <span className="text-[12px] font-bold text-slate-700 truncate leading-tight">
+                  {selectedShop.name}
+                </span>
+              </div>
+              <ChevronDown
+                size={13}
+                strokeWidth={2}
+                className={`text-slate-400 shrink-0 transition-transform duration-150 ${isShopMenuOpen ? "rotate-180" : ""}`}
+              />
+            </div>
+          </div>
+
+          <AnimatePresence>
+            {isShopMenuOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: -6, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -6, scale: 0.97 }}
+                transition={{ duration: 0.13 }}
+                className="absolute top-full left-0 mt-1.5 w-[220px] bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden"
+              >
+                <div className="px-1.5 pt-1.5 pb-1">
+                  <p className="text-[10px] font-bold text-slate-400 px-2 py-1.5">My Shops</p>
+                  <div className="max-h-[200px] overflow-y-auto">
+                    {shopsLoading ? (
+                      <div className="flex items-center justify-center py-4">
+                        <Loader2 size={15} className="animate-spin text-slate-400" />
+                      </div>
+                    ) : shops.length === 0 ? (
+                      <p className="text-xs text-slate-400 text-center py-3">No shops found</p>
+                    ) : (
+                      shops.map((shop) => (
+                        <button
+                          key={shop.id}
+                          onClick={() => handleShopSwitch(shop)}
+                          className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors duration-100 ${
+                            currentShopId === shop.id
+                              ? "bg-blue-50 text-blue-700"
+                              : "hover:bg-slate-50 text-slate-700"
+                          }`}
+                        >
+                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold border shrink-0 ${
+                            currentShopId === shop.id ? "bg-white border-blue-200 text-blue-600" : "bg-slate-100 border-slate-200 text-slate-500"
+                          }`}>
+                            {shop.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="flex flex-col min-w-0 flex-1">
+                            <span className="font-semibold text-[12.5px] truncate">{shop.name}</span>
+                            {shop.categories && shop.categories.length > 0 && (
+                              <span className="text-[10px] text-slate-400 capitalize truncate">{shop.categories[0]}</span>
+                            )}
+                          </div>
+                          {currentShopId === shop.id && <Check size={13} className="text-blue-500 shrink-0" />}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-100 px-1.5 py-1.5 flex flex-col gap-0.5">
+                  <Link
+                    to="/create-shop"
+                    onClick={() => setIsShopMenuOpen(false)}
+                    className="flex items-center gap-2 px-2.5 py-2 rounded-lg text-blue-600 hover:bg-blue-50 text-[12.5px] font-semibold transition-colors"
+                  >
+                    <PlusCircle size={13} strokeWidth={2} />
+                    Create New Shop
+                  </Link>
+                  <button
+                    onClick={handleSignOut}
+                    className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-red-500 hover:bg-red-50 text-[12.5px] font-semibold transition-colors"
+                  >
+                    <LogOut size={13} strokeWidth={2} />
+                    Sign Out
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
         {/* Search */}
         <div className="relative flex-1 mr-3 lg:mr-6 hidden md:flex" ref={searchRef}>

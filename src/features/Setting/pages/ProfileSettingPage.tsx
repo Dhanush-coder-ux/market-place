@@ -58,13 +58,6 @@ const MENU_ITEMS = [
     accent: "amber",
   },
   {
-    id: "subscription",
-    label: "Plans & Billing",
-    icon: CreditCard,
-    description: "Subscription, limits & Razorpay payments",
-    accent: "blue",
-  },
-  {
     id: "templates",
     label: "Invoice Templates",
     icon: LayoutTemplate,
@@ -77,6 +70,13 @@ const MENU_ITEMS = [
     icon: Activity,
     description: "System audit trail",
     accent: "rose",
+  },
+  {
+    id: "subscription",
+    label: "Plans & Billing",
+    icon: CreditCard,
+    description: "Subscription, limits & Razorpay payments",
+    accent: "blue",
   },
 ];
 

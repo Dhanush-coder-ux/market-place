@@ -31,25 +31,39 @@ const mockData = {
 export const InvoiceTemplateSettings: React.FC = () => {
   const { showToast } = useToast();
   const [activeTemplate, setActiveTemplate] = useState("minimal");
+  const [savedTemplate, setSavedTemplate] = useState("minimal");
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem("invoice_template");
     if (saved && INVOICE_TEMPLATES[saved]) {
       setActiveTemplate(saved);
+      setSavedTemplate(saved);
     }
   }, []);
 
   const handleSelect = (id: string) => {
     setActiveTemplate(id);
-    localStorage.setItem("invoice_template", id);
-    showToast("Invoice template updated successfully", "success");
   };
+
+  const handleSave = () => {
+    setIsSaving(true);
+    // Simulate network request for better UX
+    setTimeout(() => {
+      localStorage.setItem("invoice_template", activeTemplate);
+      setSavedTemplate(activeTemplate);
+      setIsSaving(false);
+      showToast("Invoice template updated successfully", "success");
+    }, 400);
+  };
+
+  const hasChanges = activeTemplate !== savedTemplate;
 
   return (
     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col md:flex-row h-[80vh] max-h-[900px] min-h-[600px]">
       {/* Left Column: Template Selection */}
       <div className="w-full md:w-5/12 lg:w-1/3 bg-white border-r border-slate-200 flex flex-col">
-        <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/50">
+        <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center sticky top-0 z-20">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center">
               <LayoutTemplate size={17} className="text-violet-600" />
@@ -63,6 +77,17 @@ export const InvoiceTemplateSettings: React.FC = () => {
               </p>
             </div>
           </div>
+          <button
+            onClick={handleSave}
+            disabled={!hasChanges || isSaving}
+            className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 ${
+              hasChanges
+                ? "bg-violet-600 text-white hover:bg-violet-700 shadow-sm active:scale-95"
+                : "bg-emerald-50 text-emerald-600 cursor-not-allowed border border-emerald-200/60"
+            }`}
+          >
+            {isSaving ? "Saving..." : !hasChanges ? "Saved" : "Save Changes"}
+          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-5 space-y-5 bg-slate-50/30 custom-scrollbar">

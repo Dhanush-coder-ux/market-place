@@ -13,6 +13,7 @@ import { createRoot } from 'react-dom/client'
 import App from './App'
 import { PurchaseSettingsProvider } from '@/context/PurchaseContext';
 import { ApiProvider } from '@/context/ApiContext';
+import { ThemeProvider } from '@/context/ThemeContext';
 import "primereact/resources/themes/lara-light-cyan/theme.css";
 import "primereact/resources/primereact.min.css";
 import "primeicons/primeicons.css";
@@ -50,6 +51,7 @@ document.addEventListener(
 );
 
 createRoot(document.getElementById('root')!).render(
+    <ThemeProvider>
     <ApiProvider>
       <PurchaseSettingsProvider>
         <InputBuilderProvider>
@@ -65,4 +67,5 @@ createRoot(document.getElementById('root')!).render(
         </InputBuilderProvider>
       </PurchaseSettingsProvider>
     </ApiProvider>
+    </ThemeProvider>
 )

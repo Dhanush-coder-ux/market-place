@@ -24,7 +24,7 @@ export const GradientButton: React.FC<ButtonProps> = ({
 
   // Ultra-premium modern variants with micro-interactions
   const variants = {
-    primary: "bg-gradient-to-r from-blue-500 via-blue-500 to-blue-500 bg-[length:200%_auto] text-white shadow-[0_4px_12px_rgba(59,130,246,0.35)] hover:shadow-[0_6px_20px_rgba(59,130,246,0.45)] hover:-translate-y-0.5 hover:bg-[position:right_center] focus-visible:ring-blue-500",
+    primary: "text-white hover:-translate-y-0.5 hover:bg-[position:right_center]",
     
     outline: "bg-white border border-slate-200 text-slate-700 shadow-[0_1px_2px_rgba(0,0,0,0.05)] hover:border-slate-300 hover:text-slate-900 hover:bg-slate-50 hover:shadow-md hover:-translate-y-0.5 focus-visible:ring-slate-300",
     
@@ -32,6 +32,12 @@ export const GradientButton: React.FC<ButtonProps> = ({
     
     ghost: "bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-slate-300",
   };
+
+  // Theme-aware inline styles for primary variant
+  const themeStyles: React.CSSProperties = variant === 'primary' ? {
+    background: `linear-gradient(to right, var(--t-primary), var(--t-secondary, var(--t-primary)))`,
+    boxShadow: `0 4px 12px var(--t-btn-shadow)`,
+  } : {};
 
   const combinedClasses = `${baseStyles} ${variants[variant]} ${className}`;
 
@@ -55,14 +61,14 @@ export const GradientButton: React.FC<ButtonProps> = ({
   // Render as Link if path exists, otherwise render as Button
   if (path) {
     return (
-      <Link to={path} className={combinedClasses}>
+      <Link to={path} className={combinedClasses} style={themeStyles}>
         {content}
       </Link>
     );
   }
 
   return (
-    <button className={combinedClasses} {...props}>
+    <button className={combinedClasses} style={themeStyles} {...props}>
       {content}
     </button>
   );

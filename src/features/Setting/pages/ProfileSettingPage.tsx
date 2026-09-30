@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   X,
   LayoutTemplate,
+  Palette,
 } from "lucide-react";
 
 import { Switch } from "@/components/ui/switch";
@@ -20,6 +21,7 @@ import { BusinessCategorySettings } from "@/features/Setting/pages/BusinessCateg
 import PricingPlansPage from "@/features/subscription/pages/PricingPlansPage";
 import { useSearchParams } from "react-router-dom";
 import { InvoiceTemplateSettings } from "@/features/Setting/pages/InvoiceTemplateSettings";
+import { ThemeSwitcher } from "@/features/Setting/components/ThemeSwitcher";
 import { CreditCard } from "lucide-react";
 import { usePurchaseSettings } from "@/context/PurchaseContext";
 import { shopApi } from "@/services/api/shop";
@@ -70,6 +72,13 @@ const MENU_ITEMS = [
     icon: Activity,
     description: "System audit trail",
     accent: "rose",
+  },
+  {
+    id: "theme",
+    label: "Theme",
+    icon: Palette,
+    description: "Switch colour scheme",
+    accent: "emerald",
   },
   {
     id: "subscription",
@@ -176,6 +185,9 @@ export const ProfileSettingsPage = () => {
     switch (activeTab) {
       case "subscription":
         return wrapper(<PricingPlansPage isEmbedded={true} />);
+
+      case "theme":
+        return wrapper(<ThemeSwitcher />);
 
       case "templates":
         return wrapper(<InvoiceTemplateSettings />);
@@ -385,9 +397,10 @@ export const ProfileSettingsPage = () => {
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl border-b-2 text-[13px] font-bold whitespace-nowrap shrink-0 transition-all ${isActive
-                  ? "border-blue-600 text-blue-600 bg-blue-50/50"
+                  ? ""
                   : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
                   }`}
+                style={isActive ? { borderColor: 'var(--t-primary)', color: 'var(--t-primary)', backgroundColor: 'var(--t-primary-lighter)' } : undefined}
               >
                 <Icon size={15} />
                 {item.label}

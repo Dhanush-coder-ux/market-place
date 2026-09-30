@@ -85,7 +85,109 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
+  /* ── Centralised Theme Tokens (available in Tailwind as theme-* classes) ── */
+  --color-theme-primary: var(--t-primary);
+  --color-theme-primary-hover: var(--t-primary-hover);
+  --color-theme-primary-light: var(--t-primary-light);
+  --color-theme-primary-lighter: var(--t-primary-lighter);
+  --color-theme-secondary: var(--t-secondary);
+  --color-theme-accent: var(--t-accent);
+  --color-theme-accent-hover: var(--t-accent-hover);
+  --color-theme-ring: var(--t-ring);
+  --color-theme-sidebar-from: var(--t-sidebar-from);
+  --color-theme-sidebar-via: var(--t-sidebar-via);
+  --color-theme-sidebar-to: var(--t-sidebar-to);
+}
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   CENTRALISED THEME TOKENS
+   These variables control the entire app palette. Switching `data-theme`
+   on <html> changes every sidebar, button, badge, ring, focus-state, and
+   gradient color in one shot.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── DEFAULT: Classic Blue ── */
+:root,
+:root[data-theme="blue"] {
+  /* Sidebar gradient stops */
+  --t-sidebar-from: #2563EB;
+  --t-sidebar-via:  #1D4ED8;
+  --t-sidebar-to:   #1E3A8A;
+  /* Primary brand colour (buttons, active tabs, links) */
+  --t-primary:        #2563EB;
+  --t-primary-hover:  #1D4ED8;
+  --t-primary-light:  #DBEAFE;  /* blue-100 */
+  --t-primary-lighter: #EFF6FF; /* blue-50  */
+  /* Secondary */
+  --t-secondary:      #3B82F6;
+  /* Gold / Accent */
+  --t-accent:         #3B82F6;
+  --t-accent-hover:   #2563EB;
+  /* Focus ring */
+  --t-ring:           #93C5FD;
+  /* Sidebar button hover text */
+  --t-sidebar-btn-hover-text: #1D4ED8;
+  /* Gradient button shadow color */
+  --t-btn-shadow:     rgba(59,130,246,0.35);
+  --t-btn-shadow-hover: rgba(59,130,246,0.45);
+  /* Theme-color meta tag value */
+  --t-meta-color:     #2563EB;
+}
+
+/* ── Forest Green Theme ── */
+:root[data-theme="green"] {
+  /* Sidebar gradient stops */
+  --t-sidebar-from: #286038;
+  --t-sidebar-via:  #103020;
+  --t-sidebar-to:   #083020;
+  /* Primary brand colour */
+  --t-primary:        #286038;
+  --t-primary-hover:  #103020;
+  --t-primary-light:  #D5E8D0;  /* soft sage tint */
+  --t-primary-lighter: #EAF4E6; /* lightest sage */
+  /* Secondary */
+  --t-secondary:      #88B878;
+  /* Gold / Accent */
+  --t-accent:         #C49850;
+  --t-accent-hover:   #D4A85C;
+  /* Focus ring */
+  --t-ring:           #A8C898;
+  /* Sidebar button hover text */
+  --t-sidebar-btn-hover-text: #286038;
+  /* Gradient button shadow color */
+  --t-btn-shadow:     rgba(40,96,56,0.35);
+  --t-btn-shadow-hover: rgba(40,96,56,0.45);
+  /* Theme-color meta tag value */
+  --t-meta-color:     #103020;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GLOBAL BLUE→GREEN COLOUR REMAP
+   Override Tailwind v4's blue palette when green theme is active. This makes
+   every `bg-blue-*`, `text-blue-*`, `border-blue-*`, `ring-blue-*`, etc.
+   automatically resolve to the green palette — zero per-component changes.
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root[data-theme="green"] {
+  /* ── Blue palette → Green palette ── */
+  --color-blue-50:  #EAF4E6;
+  --color-blue-100: #D5E8D0;
+  --color-blue-200: #A8C898;
+  --color-blue-300: #88B878;
+  --color-blue-400: #5A9A50;
+  --color-blue-500: #286038;
+  --color-blue-600: #286038;
+  --color-blue-700: #103020;
+  --color-blue-800: #083020;
+  --color-blue-900: #062818;
+  --color-blue-950: #041C10;
+
+  /* ── Sky palette → Sage palette (cards, info panels) ── */
+  --color-sky-50:  #EAF4E6;
+  --color-sky-100: #D5E8D0;
+  --color-sky-200: #A8C898;
+  --color-sky-300: #88B878;
+  --color-sky-400: #5A9A50;
+  --color-sky-500: #286038;
 }
 
 :root {

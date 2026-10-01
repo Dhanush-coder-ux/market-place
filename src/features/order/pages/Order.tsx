@@ -80,7 +80,13 @@ const Order = () => {
   }, []);
 
   useEffect(() => {
-    const params: any = { limit: "50", offset: "1" };
+    const params: any = {
+      limit: "50",
+      offset: "1",
+      origin: "ONLINE",
+      online_only: true,
+      exclude_offline: true,
+    };
     if (status && status !== "ALL") params.status = status;
     if (dateRange?.startDate) {
       params.from_date = dateRange.startDate.toISOString().split("T")[0];
@@ -184,7 +190,7 @@ const Order = () => {
 
   const onlineOrders = orders.filter((o) => {
     const origin = (o.origin || "").toUpperCase();
-    return origin === "ONLINE" || origin === "" || Boolean(o.online_details);
+    return origin === "ONLINE" || Boolean((o as any).online_details);
   });
   const filteredOrders = onlineOrders;
   const totalOrders = onlineOrders.length;

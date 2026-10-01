@@ -35,10 +35,14 @@ export interface StoreFormData {
 export interface DeliveryConfig {
   id?: number;
   enabled: boolean;
+  pricingModel?: "FLAT" | "DISTANCE_TIERED";
   speed: string;
   freeThreshold: number;
   radius?: number;
   minOrderAmount?: number;
+  deliveryCharge?: number;
+  baseDistance?: number;
+  extraDistanceStep?: number;
   chargePerKm?: number;
   manageStore?: boolean;
   partners?: boolean;

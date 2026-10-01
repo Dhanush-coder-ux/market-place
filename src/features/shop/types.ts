@@ -22,6 +22,9 @@ export interface DeliveryOptionFormData {
   delivery_charge?: number;
   charge_per_km?: number;
   radius?: number;
+  base_distance?: number;
+  extra_distance_step?: number;
+  pricing_model?: "FLAT" | "DISTANCE_TIERED";
   delivery_by: DeliveryByEnum;
   enabled?: boolean;
 }

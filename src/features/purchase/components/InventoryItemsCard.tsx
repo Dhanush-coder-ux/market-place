@@ -18,6 +18,7 @@ import { SHOP_ID } from "@/services/endpoints";
 import Input from "@/components/ui/Input";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { useToast } from "@/context/ToastContext";
+import { usePurchaseSettings } from "@/context/PurchaseContext";
 import { InlineSerialManager } from "@/components/common/InlineSerialManager";
 import { useQuickCreate } from "@/features/common/QuickCreate/QuickCreateContext";
 import { AntBadge } from "@/components/ui/AntBadge";
@@ -137,6 +138,8 @@ export const InventoryItemsCard = ({
 
   const { showToast } = useToast();
   const { openQuickCreate } = useQuickCreate();
+  const { settings } = usePurchaseSettings();
+  const isGstRegistered = settings?.gstType === "registered";
 
   const [variantModal, setVariantModal] = useState<{
     isOpen: boolean;
@@ -340,7 +343,7 @@ export const InventoryItemsCard = ({
         sellingPrice: "",
         marginPercent: "",
         marginAmount: "",
-        marginType: "percent",
+        marginType: "sellingPrice",
         taxGst: 18,
         sku: "",
         unit: "pc",
@@ -560,7 +563,7 @@ export const InventoryItemsCard = ({
         sellingPrice: "",
         marginPercent: "",
         marginAmount: "",
-        marginType: "percent",
+        marginType: "sellingPrice",
         taxGst: 18,
         sku: "",
         unit: "pc",
@@ -817,7 +820,25 @@ export const InventoryItemsCard = ({
                 <th className="py-2.5 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '130px' }}>Subtotal</th>
                 <th className="py-2.5 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '120px' }}>Allocated</th>
                 <th className="py-2.5 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '85px' }}>Tax (GST)</th>
-                <th className="py-2.5 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '140px' }}>Landed Cost</th>
+                <th className="py-2.5 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '140px' }}>
+                  <div className="flex items-center gap-1">
+                    <span>Landed Cost</span>
+                    <span
+                      className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${
+                        isGstRegistered
+                          ? "bg-blue-50 text-blue-600 border border-blue-200/60"
+                          : "bg-amber-50 text-amber-700 border border-amber-200/60"
+                      }`}
+                      title={
+                        isGstRegistered
+                          ? "GST excluded from Landed Cost (eligible for Input Tax Credit)"
+                          : "GST included in Landed Cost (non-registered entity)"
+                      }
+                    >
+                      {isGstRegistered ? "Excl. GST" : "Incl. GST"}
+                    </span>
+                  </div>
+                </th>
                 <th className="py-2.5 px-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '260px' }}>Pricing & Margin / Unit (optional)</th>
                 <th className="py-2.5 px-3 text-right text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '90px' }}>Actions</th>
               </tr>
@@ -843,9 +864,15 @@ export const InventoryItemsCard = ({
                 const allocTotal = stats?.allocations?.[index]?.alloc || 0;
                 const allocPerUnit = q > 0 ? allocTotal / q : 0;
                 const netCostPerUnit = stats?.allocations?.[index]?.netCostPerUnit ?? (rowBaseCost + allocPerUnit);
-                const landedCostPerUnit = rowBaseCost + rowGstPerUnit + allocPerUnit;
+
+                // 💡 Conditional Landed Cost:
+                // - Registered shop: GST is claimed via Input Tax Credit (ITC), so landed cost = baseCost + allocPerUnit
+                // - Non-registered shop: GST is an incurred cost, so landed cost = baseCost + GST + allocPerUnit
+                const landedCostPerUnit = isGstRegistered
+                  ? (rowBaseCost + allocPerUnit)
+                  : (rowBaseCost + rowGstPerUnit + allocPerUnit);
                 const landedCostTotal = q * landedCostPerUnit;
-                const costForSp = gstMode === "inclusive" ? rowBaseCost + rowGstPerUnit : rowBaseCost;
+                const costForSp = isGstRegistered ? rowBaseCost : (rowBaseCost + rowGstPerUnit);
                 const netCostForSp = costForSp + allocPerUnit;
 
                 let computedSellPrice = Number(product.sellingPrice) || 0;

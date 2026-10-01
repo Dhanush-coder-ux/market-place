@@ -50,21 +50,21 @@ export function StoreSettingsLayout({ shop }: { shop: any }) {
   const [deliveryStatus, setDeliveryStatus] = useState<React.ReactNode>(null);
 
   // Return & Refund Policy State
-  const initialReturns = shop?.additional_infos?.return_policy || {};
+  const initialReturns = shop?.return_policy || shop?.refund_policy || shop?.additional_infos?.return_policy || shop?.additional_infos?.refund_policy || {};
   const [policyType, setPolicyType] = useState<string>(
-    initialReturns?.type || "7_days_return"
+    initialReturns?.type || "no_returns"
   );
   const [policyTitle, setPolicyTitle] = useState<string>(
-    initialReturns?.title || "7-day returns"
+    initialReturns?.title || "No returns"
   );
   const [policySubtitle, setPolicySubtitle] = useState<string>(
-    initialReturns?.subtitle || "Unused items, original packaging"
+    initialReturns?.subtitle || "For: bakeries, food, flowers, perishables"
   );
   const [policyDetails, setPolicyDetails] = useState<string>(
-    initialReturns?.details || "Items can be returned within 7 days of delivery if unused and in original packaging. Refund will be issued after inspection."
+    initialReturns?.details || "Once sold, items cannot be returned or exchanged. Please check your order carefully before confirming."
   );
   const [allowReturns, setAllowReturns] = useState<boolean>(
-    initialReturns?.allow_returns ?? true
+    initialReturns?.allow_returns ?? false
   );
   const [isExchangeOnly, setIsExchangeOnly] = useState<boolean>(
     initialReturns?.is_exchange_only ?? false
@@ -73,7 +73,7 @@ export function StoreSettingsLayout({ shop }: { shop: any }) {
   const [savedReturns, setSavedReturns] = useState(false);
 
   useEffect(() => {
-    const rPolicy = shop?.additional_infos?.return_policy || {};
+    const rPolicy = shop?.return_policy || shop?.refund_policy || shop?.additional_infos?.return_policy || shop?.additional_infos?.refund_policy || {};
     if (rPolicy.type) setPolicyType(rPolicy.type);
     if (rPolicy.title) setPolicyTitle(rPolicy.title);
     if (rPolicy.subtitle) setPolicySubtitle(rPolicy.subtitle);
@@ -85,41 +85,29 @@ export function StoreSettingsLayout({ shop }: { shop: any }) {
   const handleSelectPolicyPreset = (typeKey: string) => {
     setPolicyType(typeKey);
     setSavedReturns(false);
-    if (typeKey === "7_days_return") {
-      setPolicyTitle("7-day returns");
-      setPolicySubtitle("Unused items, original packaging");
+    if (typeKey === "no_returns") {
+      setPolicyTitle("No returns");
+      setPolicySubtitle("For: bakeries, food, flowers, perishables");
+      setPolicyDetails("Once sold, items cannot be returned or exchanged. Please check your order carefully before confirming.");
+      setAllowReturns(false);
+      setIsExchangeOnly(false);
+    } else if (typeKey === "exchange_only") {
+      setPolicyTitle("Exchange only");
+      setPolicySubtitle("For: boutiques, footwear, textiles");
+      setPolicyDetails("Items can be exchanged within 3 days if unused and in original packaging. Refunds are not available.");
+      setAllowReturns(true);
+      setIsExchangeOnly(true);
+    } else if (typeKey === "7_days_return") {
+      setPolicyTitle("Return within 7 days");
+      setPolicySubtitle("For: general retail, electronics, accessories");
       setPolicyDetails("Items can be returned within 7 days of delivery if unused and in original packaging. Refund will be issued after inspection.");
       setAllowReturns(true);
       setIsExchangeOnly(false);
-    } else if (typeKey === "3_days_return") {
-      setPolicyTitle("3-day returns");
-      setPolicySubtitle("Unused items, original packaging");
-      setPolicyDetails("Items can be returned within 3 days of delivery. Refund will be issued after store inspection.");
+    } else if (typeKey === "damaged_only") {
+      setPolicyTitle("Damaged or wrong items only");
+      setPolicySubtitle("For: groceries, kirana, pharmacy");
+      setPolicyDetails("Returns are accepted only if the item is damaged or incorrect. Please report within 24 hours of delivery with a photo.");
       setAllowReturns(true);
-      setIsExchangeOnly(false);
-    } else if (typeKey === "10_days_return") {
-      setPolicyTitle("10-day returns");
-      setPolicySubtitle("Unused items, tags intact");
-      setPolicyDetails("Items can be returned within 10 days of delivery with all original tags intact.");
-      setAllowReturns(true);
-      setIsExchangeOnly(false);
-    } else if (typeKey === "14_days_return") {
-      setPolicyTitle("14-day returns");
-      setPolicySubtitle("Unused items, original packaging");
-      setPolicyDetails("Items can be returned within 14 days of delivery. Refund will be credited to original payment method.");
-      setAllowReturns(true);
-      setIsExchangeOnly(false);
-    } else if (typeKey === "exchange_only") {
-      setPolicyTitle("Replacement / Exchange only");
-      setPolicySubtitle("Size issues or defective items only");
-      setPolicyDetails("No cash refunds. Free replacement or exchange is provided for defective items or size mismatch reported within 5 days.");
-      setAllowReturns(true);
-      setIsExchangeOnly(true);
-    } else if (typeKey === "no_returns") {
-      setPolicyTitle("No returns on this item");
-      setPolicySubtitle("Freshly made / Perishable — please check before confirming");
-      setPolicyDetails("This item is non-returnable and non-refundable due to hygiene, freshness, or custom preparation.");
-      setAllowReturns(false);
       setIsExchangeOnly(false);
     }
   };
@@ -141,11 +129,11 @@ export function StoreSettingsLayout({ shop }: { shop: any }) {
         is_exchange_only: isExchangeOnly,
         updated_at: new Date().toISOString()
       };
-      const existingAdd = shop?.additional_infos || {};
+      const existingAdd = { ...(shop?.additional_infos || {}) };
+      delete existingAdd.refund_policy;
       const updatedAdd = {
         ...existingAdd,
         return_policy: returnPolicyObj,
-        refund_policy: returnPolicyObj,
       };
 
       await shopApi.updateShop({
@@ -155,6 +143,8 @@ export function StoreSettingsLayout({ shop }: { shop: any }) {
 
       if (shop) {
         shop.additional_infos = updatedAdd;
+        shop.return_policy = returnPolicyObj;
+        delete shop.refund_policy;
       }
       setSavedReturns(true);
       showToast("Return & Refund policy saved successfully! Updated on Digital Store app.", "success");
@@ -463,49 +453,35 @@ export function StoreSettingsLayout({ shop }: { shop: any }) {
               <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-3">
                 1. Select Store Default Policy Template
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 {[
                   {
-                    id: "7_days_return",
-                    title: "7-Day Returns",
-                    desc: "Standard retail, clothing & electronics.",
-                    badge: "Returns Accepted",
-                    color: "emerald"
-                  },
-                  {
-                    id: "3_days_return",
-                    title: "3-Day Returns",
-                    desc: "Short window for perishable items.",
-                    badge: "Short Window",
-                    color: "emerald"
-                  },
-                  {
-                    id: "10_days_return",
-                    title: "10-Day Returns",
-                    desc: "Extended return window for general goods.",
-                    badge: "Extended",
-                    color: "emerald"
-                  },
-                  {
-                    id: "14_days_return",
-                    title: "14-Day Returns",
-                    desc: "Generous return policy for trusted stores.",
-                    badge: "14 Days",
-                    color: "emerald"
+                    id: "no_returns",
+                    title: "1 · No returns",
+                    desc: "For: bakeries, food, flowers, perishables",
+                    badge: "Non-Returnable",
+                    color: "rose"
                   },
                   {
                     id: "exchange_only",
-                    title: "Replacement Only",
-                    desc: "Size mismatch or defective items only.",
+                    title: "2 · Exchange only",
+                    desc: "For: boutiques, footwear, textiles",
                     badge: "Exchange Only",
                     color: "amber"
                   },
                   {
-                    id: "no_returns",
-                    title: "No Returns",
-                    desc: "Fresh food, bakery, personal hygiene.",
-                    badge: "Non-Returnable",
-                    color: "rose"
+                    id: "7_days_return",
+                    title: "3 · Return within 7 days",
+                    desc: "For: general retail, electronics, accessories",
+                    badge: "7-Day Return",
+                    color: "emerald"
+                  },
+                  {
+                    id: "damaged_only",
+                    title: "4 · Damaged or wrong items only",
+                    desc: "For: groceries, kirana, pharmacy",
+                    badge: "Damaged / Wrong Only",
+                    color: "blue"
                   },
                 ].map((item) => {
                   const isSelected = policyType === item.id;
@@ -513,6 +489,8 @@ export function StoreSettingsLayout({ shop }: { shop: any }) {
                     ? "text-emerald-700 bg-emerald-50 border-emerald-200" 
                     : item.color === "amber"
                     ? "text-amber-700 bg-amber-50 border-amber-200"
+                    : item.color === "blue"
+                    ? "text-blue-700 bg-blue-50 border-blue-200"
                     : "text-rose-700 bg-rose-50 border-rose-200";
                   return (
                     <div

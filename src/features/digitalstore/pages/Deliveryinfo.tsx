@@ -1,18 +1,34 @@
 import { useToast } from "@/context/ToastContext";
 import React, { useState, useEffect } from "react";
-import { IndianRupee, MapPin, ShoppingBag, Truck, Zap, Globe, Timer, Check, Loader2, Sparkles } from "lucide-react";
+import {
+  IndianRupee,
+  MapPin,
+  ShoppingBag,
+  Truck,
+  Zap,
+  Globe,
+  Timer,
+  Check,
+  Loader2,
+  Sparkles,
+  Calculator,
+  ArrowRight
+} from "lucide-react";
 import { useBusinessApi } from "@/context/BusinessApiContext";
 import { SHOP_ID } from "@/services/endpoints";
 
 export type DeliveryConfig = {
   id?: number;
   enabled: boolean;
+  pricingModel: "FLAT" | "DISTANCE_TIERED";
   speed: string;
   minOrderAmount: number | "";
   deliveryCharge: number | "";
+  baseDistance: number | "";
+  extraDistanceStep: number | "";
+  chargePerKm: number | "";
   freeThreshold: number | "";
   radius: number | "";
-  chargePerKm: number | "";
   deliveryBy: "PARTNERS" | "INHOUSE";
 };
 
@@ -100,6 +116,8 @@ function InputField({
   onChange,
   type = "number",
   placeholder,
+  step,
+  helperText
 }: {
   label: string;
   icon: React.ElementType;
@@ -110,6 +128,8 @@ function InputField({
   onChange: (v: any) => void;
   type?: "number" | "text";
   placeholder?: string;
+  step?: string;
+  helperText?: string;
 }) {
   return (
     <div>
@@ -126,6 +146,7 @@ function InputField({
         <input
           type={type}
           min={type === "number" ? "0" : undefined}
+          step={step}
           value={value ?? ""}
           onChange={(e) => {
             if (type === "number") {
@@ -143,6 +164,9 @@ function InputField({
           </span>
         )}
       </div>
+      {helperText && (
+        <p className="text-[10.5px] text-slate-400 mt-1 font-medium">{helperText}</p>
+      )}
     </div>
   );
 }
@@ -158,6 +182,15 @@ export function DeliveryCardInner({
 }) {
   const Icon = meta.icon;
   const enabled = data.enabled;
+  const isPickup = meta.badge === "Pickup";
+  const isDistanceTiered = data.pricingModel === "DISTANCE_TIERED";
+
+  const baseCharge = Number(data.deliveryCharge) || 0;
+  const baseKm = Number(data.baseDistance) || 0;
+  const stepKm = Number(data.extraDistanceStep) || 1;
+  const extraCharge = Number(data.chargePerKm) || 0;
+  const maxRadius = Number(data.radius) || 0;
+  const freeAbove = Number(data.freeThreshold) || 0;
 
   return (
     <div
@@ -211,10 +244,129 @@ export function DeliveryCardInner({
 
       {/* Expanded settings */}
       {enabled && (
-        <div className="px-5 pb-5 pt-0 border-t border-slate-200/60 animate-in slide-in-from-top-1 fade-in duration-200">
-          <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {meta.badge !== "Pickup" && (
-              <>
+        <div className="px-5 pb-5 pt-0 border-t border-slate-200/60 animate-in slide-in-from-top-1 fade-in duration-200 space-y-4">
+          {!isPickup ? (
+            <>
+              {/* Pricing Mode Selector */}
+              <div className="pt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 bg-white/70 p-3 rounded-xl border border-slate-200/80">
+                <div>
+                  <span className="text-xs font-bold text-slate-700 block">Pricing Calculation Method</span>
+                  <span className="text-[11px] text-slate-500">Choose how delivery charge is calculated for customer orders</span>
+                </div>
+                <div className="inline-flex p-1 bg-slate-100 rounded-xl border border-slate-200/60">
+                  <button
+                    type="button"
+                    onClick={() => onChange("pricingModel", "FLAT")}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      !isDistanceTiered
+                        ? "bg-white text-blue-600 shadow-xs"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <Truck size={13} />
+                    Flat Charge
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onChange("pricingModel", "DISTANCE_TIERED")}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      isDistanceTiered
+                        ? "bg-white text-blue-600 shadow-xs"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <MapPin size={13} />
+                    Distance-Based
+                  </button>
+                </div>
+              </div>
+
+              {/* Form Fields Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Distance-Based Inputs */}
+                {isDistanceTiered ? (
+                  <>
+                    <InputField
+                      label="Base Delivery Charge"
+                      icon={Truck}
+                      iconColor="text-blue-500"
+                      value={data.deliveryCharge}
+                      onChange={(v) => onChange("deliveryCharge", v)}
+                      prefix="₹"
+                      placeholder="100"
+                      helperText="Charge for delivery up to the base distance"
+                    />
+
+                    <InputField
+                      label="Base Distance Limit"
+                      icon={MapPin}
+                      iconColor="text-blue-500"
+                      value={data.baseDistance}
+                      onChange={(v) => onChange("baseDistance", v)}
+                      suffix="km"
+                      placeholder="10"
+                      helperText="E.g. ₹100 is charged for up to 10 km"
+                    />
+
+                    <InputField
+                      label="Extra Distance Step"
+                      icon={MapPin}
+                      iconColor="text-indigo-500"
+                      value={data.extraDistanceStep}
+                      onChange={(v) => onChange("extraDistanceStep", v)}
+                      suffix="km"
+                      placeholder="1"
+                      helperText="For every additional 1, 2, or 3 km"
+                    />
+
+                    <InputField
+                      label="Extra Fee per Step"
+                      icon={IndianRupee}
+                      iconColor="text-indigo-500"
+                      value={data.chargePerKm}
+                      onChange={(v) => onChange("chargePerKm", v)}
+                      prefix="₹"
+                      placeholder="10"
+                      helperText="Additional charge per distance step (e.g. ₹10)"
+                    />
+                  </>
+                ) : (
+                  /* Flat Rate Input */
+                  <InputField
+                    label="Flat Delivery Charge"
+                    icon={Truck}
+                    iconColor="text-slate-500"
+                    value={data.deliveryCharge}
+                    onChange={(v) => onChange("deliveryCharge", v)}
+                    prefix="₹"
+                    placeholder="40"
+                    helperText="Fixed charge regardless of delivery distance"
+                  />
+                )}
+
+                {/* Common fields */}
+                <InputField
+                  label="Free Delivery Above"
+                  icon={IndianRupee}
+                  iconColor="text-emerald-500"
+                  value={data.freeThreshold}
+                  onChange={(v) => onChange("freeThreshold", v)}
+                  prefix="₹"
+                  placeholder="500"
+                  helperText="Orders above this amount get free shipping (0 to disable)"
+                />
+
+                <InputField
+                  label="Maximum Delivery Radius"
+                  icon={MapPin}
+                  iconColor="text-purple-500"
+                  value={data.radius}
+                  onChange={(v) => onChange("radius", v)}
+                  suffix="km"
+                  placeholder="15"
+                  helperText="Maximum range your store delivers to (0 for unlimited)"
+                />
+
                 <InputField
                   label="Minimum Order Value"
                   icon={ShoppingBag}
@@ -223,6 +375,7 @@ export function DeliveryCardInner({
                   onChange={(v) => onChange("minOrderAmount", v)}
                   prefix="₹"
                   placeholder="0"
+                  helperText="Minimum cart value required to place an order"
                 />
 
                 <InputField
@@ -233,40 +386,77 @@ export function DeliveryCardInner({
                   value={data.speed}
                   onChange={(v) => onChange("speed", v)}
                   placeholder={meta.defaultSpeed}
+                  helperText="Display text shown to buyers (e.g. 2–3 Business Days)"
                 />
+              </div>
 
-                <InputField
-                  label="Delivery Charge"
-                  icon={Truck}
-                  iconColor="text-slate-500"
-                  value={data.deliveryCharge}
-                  onChange={(v) => onChange("deliveryCharge", v)}
-                  prefix="₹"
-                  placeholder="40"
-                />
+              {/* Dynamic Rate Summary / Calculator Card */}
+              <div className="bg-white/80 rounded-xl p-3.5 border border-slate-200/80 shadow-xs">
+                <div className="flex items-center gap-2 mb-2">
+                  <Calculator size={14} className="text-blue-600" />
+                  <span className="text-xs font-bold text-slate-800">Live Delivery Calculation Preview</span>
+                </div>
+                {isDistanceTiered ? (
+                  <div className="space-y-2">
+                    <p className="text-[11.5px] text-slate-600 leading-relaxed">
+                      Customers pay <span className="font-bold text-slate-800">₹{baseCharge}</span> for the first{" "}
+                      <span className="font-bold text-slate-800">{baseKm} km</span>. Every extra{" "}
+                      <span className="font-bold text-slate-800">{stepKm} km</span> adds{" "}
+                      <span className="font-bold text-emerald-600">+₹{extraCharge}</span>.
+                      {maxRadius > 0 && <span> Maximum deliverable radius: <span className="font-bold text-slate-800">{maxRadius} km</span>.</span>}
+                      {freeAbove > 0 && <span> Free delivery for orders <span className="font-bold text-emerald-600">≥ ₹{freeAbove}</span>.</span>}
+                    </p>
 
-                <InputField
-                  label="Free Delivery Above"
-                  icon={IndianRupee}
-                  iconColor="text-emerald-500"
-                  value={data.freeThreshold}
-                  onChange={(v) => onChange("freeThreshold", v)}
-                  prefix="₹"
-                  placeholder="500"
-                />
-              </>
-            )}
-
-            <InputField
-              label="Delivery Radius (Optional)"
-              icon={MapPin}
-              iconColor="text-indigo-500"
-              value={data.radius}
-              onChange={(v) => onChange("radius", v)}
-              suffix="km"
-              placeholder="10"
-            />
-          </div>
+                    {/* Example distance breakdown chips */}
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                      <span className="text-[10.5px] font-semibold text-slate-400">Sample rates:</span>
+                      <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[11px] font-bold border border-blue-100">
+                        Up to {baseKm || 5} km: ₹{baseCharge}
+                      </span>
+                      <ArrowRight size={10} className="text-slate-300" />
+                      <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-[11px] font-bold border border-indigo-100">
+                        {(baseKm || 5) + stepKm} km: ₹{baseCharge + extraCharge}
+                      </span>
+                      <ArrowRight size={10} className="text-slate-300" />
+                      <span className="px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 text-[11px] font-bold border border-purple-100">
+                        {(baseKm || 5) + (stepKm * 2)} km: ₹{baseCharge + (extraCharge * 2)}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-[11.5px] text-slate-600 leading-relaxed">
+                    Flat rate of <span className="font-bold text-slate-800">₹{baseCharge}</span> delivery fee applied to all orders
+                    {maxRadius > 0 ? <span> within <span className="font-bold text-slate-800">{maxRadius} km</span></span> : " across all serviceable areas"}.
+                    {freeAbove > 0 && <span> Orders above <span className="font-bold text-emerald-600">₹{freeAbove}</span> get free shipping.</span>}
+                  </p>
+                )}
+              </div>
+            </>
+          ) : (
+            /* Store Pickup Settings */
+            <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <InputField
+                label="Pickup Availability / Speed"
+                icon={Timer}
+                iconColor="text-emerald-500"
+                type="text"
+                value={data.speed}
+                onChange={(v) => onChange("speed", v)}
+                placeholder="Same Day"
+                helperText="Estimated time order is ready for customer pickup"
+              />
+              <InputField
+                label="Pickup Radius Limit (Optional)"
+                icon={MapPin}
+                iconColor="text-emerald-500"
+                value={data.radius}
+                onChange={(v) => onChange("radius", v)}
+                suffix="km"
+                placeholder="5"
+                helperText="Geographical radius of customers allowed for pickup"
+              />
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -281,42 +471,54 @@ export default function DeliveryPreferences({ onStatusChange }: { onStatusChange
   const [deliveryConfigs, setDeliveryConfigs] = useState<Record<string, DeliveryConfig>>({
     normal: {
       enabled: true,
+      pricingModel: "DISTANCE_TIERED",
       speed: "2–3 Business Days",
       minOrderAmount: 0,
-      deliveryCharge: 40,
+      deliveryCharge: 100,
+      baseDistance: 10,
+      extraDistanceStep: 1,
+      chargePerKm: 10,
       freeThreshold: 500,
       radius: 15,
-      chargePerKm: 0,
       deliveryBy: "PARTNERS",
     },
     express: {
       enabled: false,
+      pricingModel: "DISTANCE_TIERED",
       speed: "Within 12 Hours",
       minOrderAmount: 100,
-      deliveryCharge: 80,
+      deliveryCharge: 150,
+      baseDistance: 5,
+      extraDistanceStep: 1,
+      chargePerKm: 15,
       freeThreshold: 800,
       radius: 10,
-      chargePerKm: 0,
       deliveryBy: "PARTNERS",
     },
     sameday: {
       enabled: false,
+      pricingModel: "FLAT",
       speed: "Within 3–4 Hours",
       minOrderAmount: 200,
       deliveryCharge: 120,
+      baseDistance: 0,
+      extraDistanceStep: 1,
+      chargePerKm: 0,
       freeThreshold: 1200,
       radius: 8,
-      chargePerKm: 0,
       deliveryBy: "INHOUSE",
     },
     pickuponly: {
       enabled: true,
+      pricingModel: "FLAT",
       speed: "Same Day",
       minOrderAmount: 0,
       deliveryCharge: 0,
+      baseDistance: 0,
+      extraDistanceStep: 1,
+      chargePerKm: 0,
       freeThreshold: 0,
       radius: 5,
-      chargePerKm: 0,
       deliveryBy: "INHOUSE",
     }
   });
@@ -341,18 +543,22 @@ export default function DeliveryPreferences({ onStatusChange }: { onStatusChange
             const next = { ...prev };
             dataList.forEach((item: any) => {
               const matchedMeta = DELIVERY_OPTIONS_CONFIG.find(
-                (m) => m.backendType === item.type || m.legacyBackendTypes.includes(item.type)
+                (m) => m.backendType === item.type || m.legacyBackendTypes?.includes(item.type)
               );
               if (matchedMeta) {
+                const isDistance = item.pricing_model === "DISTANCE_TIERED" || (item.base_distance > 0 || (item.charge_per_km > 0 && item.base_distance !== undefined));
                 next[matchedMeta.key] = {
                   id: item.id,
                   enabled: item.enabled !== undefined ? item.enabled : true,
+                  pricingModel: isDistance ? "DISTANCE_TIERED" : "FLAT",
                   speed: item.speed || matchedMeta.defaultSpeed,
                   minOrderAmount: item.min_order_amount ?? 0,
-                  deliveryCharge: item.delivery_charge ?? (item.charge_per_km ?? 0),
+                  deliveryCharge: item.delivery_charge ?? 0,
+                  baseDistance: item.base_distance ?? 10,
+                  extraDistanceStep: item.extra_distance_step ?? 1,
+                  chargePerKm: item.charge_per_km ?? 0,
                   freeThreshold: item.free_shipping_amount ?? 0,
                   radius: item.radius ?? 0,
-                  chargePerKm: item.charge_per_km ?? 0,
                   deliveryBy: item.delivery_by === "INHOUSE" ? "INHOUSE" : "PARTNERS",
                 };
               }
@@ -411,13 +617,17 @@ export default function DeliveryPreferences({ onStatusChange }: { onStatusChange
     try {
       const promises = DELIVERY_OPTIONS_CONFIG.map(async (meta) => {
         const conf = deliveryConfigs[meta.key];
+        const isDist = conf.pricingModel === "DISTANCE_TIERED";
         const payload = {
           type: meta.backendType,
           speed: conf.speed || meta.defaultSpeed,
           free_shipping_amount: Number(conf.freeThreshold) || 0,
           min_order_amount: Number(conf.minOrderAmount) || 0,
           delivery_charge: Number(conf.deliveryCharge) || 0,
-          charge_per_km: Number(conf.chargePerKm) || 0,
+          charge_per_km: isDist ? (Number(conf.chargePerKm) || 0) : 0,
+          base_distance: isDist ? (Number(conf.baseDistance) || 0) : 0,
+          extra_distance_step: isDist ? (Number(conf.extraDistanceStep) || 1) : 1,
+          pricing_model: conf.pricingModel || "FLAT",
           radius: Number(conf.radius) || 0,
           delivery_by: conf.deliveryBy,
           enabled: conf.enabled,
@@ -444,6 +654,7 @@ export default function DeliveryPreferences({ onStatusChange }: { onStatusChange
 
       await Promise.all(promises);
       setSaveSuccess(true);
+      showToast("Delivery preferences updated successfully", "success");
       setTimeout(() => setSaveSuccess(false), 4000);
     } catch (err) {
       console.error("Failed to save delivery preferences:", err);
@@ -475,7 +686,7 @@ export default function DeliveryPreferences({ onStatusChange }: { onStatusChange
               <h1 className="text-[20px] font-extrabold text-slate-800 tracking-tight">Delivery Options</h1>
             </div>
             <p className="text-[13px] text-slate-400 ml-12">
-              Configure shipping fees, estimated delivery times, and minimum order values for each delivery type.
+              Configure shipping fees, distance-based incremental charges, and estimated delivery times for each shipping option.
             </p>
           </div>
         </div>
@@ -497,7 +708,7 @@ export default function DeliveryPreferences({ onStatusChange }: { onStatusChange
       <div className="flex items-start gap-2.5 bg-blue-50/60 border border-blue-100 rounded-2xl px-4 py-3.5">
         <Sparkles size={16} className="text-blue-500 mt-0.5 shrink-0" />
         <p className="text-[12px] text-blue-800 leading-relaxed">
-          <span className="font-bold">Pro Tip:</span> Offering free delivery above a threshold (e.g. ₹500) significantly boosts your average order value.
+          <span className="font-bold">Pro Tip:</span> Offering distance-tiered delivery (e.g. ₹100 for first 10 km, then ₹10 per extra km) ensures fair delivery compensation while staying competitive for local buyers.
         </p>
       </div>
 

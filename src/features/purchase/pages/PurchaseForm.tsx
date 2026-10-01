@@ -28,6 +28,7 @@ import { useHeader } from "@/context/HeaderContext";
 import { useToast } from "@/context/ToastContext";
 import Loader from "@/components/common/Loader";
 import { InventoryItemsCard } from "@/features/purchase/components/InventoryItemsCard";
+import { usePurchaseSettings } from "@/context/PurchaseContext";
 import { useQuickCreate } from "@/features/common/QuickCreate/QuickCreateContext";
 import PurchaseSuccessModal from "../components/purchaseSuccessModal";
 import { parseGst } from "./PurchaseHistory";
@@ -94,6 +95,8 @@ const PurchaseForm = () => {
   const [purchaseVersion, setPurchaseVersion] = useState<string | null>(null);
 
   const { openQuickCreate } = useQuickCreate();
+  const { settings } = usePurchaseSettings();
+  const isGstRegistered = settings?.gstType === "registered";
   const [soldStockWarnings, setSoldStockWarnings] = useState<string[]>([]);
   const [originalSupplierId, setOriginalSupplierId] = useState<string | null>(null);
   const [originalSupplierName, setOriginalSupplierName] = useState<string | null>(null);
@@ -111,7 +114,7 @@ const PurchaseForm = () => {
 
   const defaultProductRow: ProductItem = {
     id: crypto.randomUUID(), name: "", quantity: "", costPrice: "", sellingPrice: "",
-    marginPercent: "", marginAmount: "", marginType: "percent",
+    marginPercent: "", marginAmount: "", marginType: "sellingPrice",
     unit: "pc", unit_infos: undefined, selectedUnit: "pc", taxGst: 18, storageLoc: "", reorderPoint: "", expiryDate: "", manufacturingDate: "", batchTracking: false, serialTracking: false, serialNumbers: "", batchNum: "", batch_id: "", serialno_id: "", sku: "", variant: "", size: ""
   };
 
@@ -547,8 +550,7 @@ const PurchaseForm = () => {
         const rowBaseCost = baseCost;
         const rowGstPerUnit = gstMode === "inclusive"
           ? rawCostPrice - rowBaseCost
-          : 0; // Exclude GST from cost when exclusive (input-tax credit)
-        const costForSp = rowBaseCost + rowGstPerUnit;
+          : rawCostPrice * (gstRate / 100);
 
         let allocated = 0;
         if (costMethod === "By Unit" && stats.totalQty > 0) {
@@ -566,14 +568,19 @@ const PurchaseForm = () => {
             allocated = (stats.totalCharges / products.length) / (q > 0 ? q : 1);
           }
         }
+
+        // 💡 Landed Buy Price & Margin Calculation:
+        // - Registered shop: GST is claimed via Input Tax Credit (ITC), so landed cost = baseCost + allocated
+        // - Non-registered shop: GST is an incurred cost, so landed cost = baseCost + GST + allocated
+        const costForSp = isGstRegistered ? rowBaseCost : (rowBaseCost + rowGstPerUnit);
         const netCostForSp = costForSp + allocated;
 
         let finalSellPrice = 0;
-        if (p.marginType === "percent") {
-          const m = Number(p.marginPercent) || 0;
+        if (p.marginType === "percent" && Number(p.marginPercent) > 0) {
+          const m = Number(p.marginPercent);
           finalSellPrice = m < 100 ? netCostForSp / (1 - m / 100) : netCostForSp * (1 + m / 100);
         } else if (p.marginType === "amount" && Number(p.marginAmount) > 0) {
-          finalSellPrice = netCostForSp + (Number(p.marginAmount) || 0);
+          finalSellPrice = netCostForSp + Number(p.marginAmount);
         } else {
           finalSellPrice = Number(p.sellingPrice) || 0;
         }
@@ -601,7 +608,7 @@ const PurchaseForm = () => {
           storage_location_infos: p.storageLoc ? { name: p.storageLoc } : null,
           reorder_point_infos: p.reorderPoint ? { reorder_point: Number(p.reorderPoint) } : null,
           pricing_infos: {
-            buy_price: Number((baseCost + allocated).toFixed(2)),
+            buy_price: Number(rowBaseCost.toFixed(2)),
             sell_price: Number(finalSellPrice.toFixed(2))
           },
           gst: String(p.taxGst || 0).includes("%") ? String(p.taxGst || 0) : `${p.taxGst || 0}%`,

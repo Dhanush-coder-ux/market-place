@@ -15,6 +15,7 @@ import { useApi } from "@/context/ApiContext";
 import { SHOP_ID, ENDPOINTS } from "@/services/endpoints";
 import SkeletonLoader from "@/components/common/SkeletonLoader";
 import { useToast } from "@/context/ToastContext";
+import { usePurchaseSettings } from "@/context/PurchaseContext";
 import { AntBadge } from "@/components/ui/AntBadge";
 
 const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
@@ -687,6 +688,14 @@ const PurchaseDetail = () => {
   }
 
 
+  const { settings } = usePurchaseSettings();
+  const isGstRegistered = settings?.gstType === "registered";
+
+  const totalQty = po.products.reduce(
+    (sum, item) => sum + (item.quantity || 0),
+    0
+  );
+
   const subtotal = po.products.reduce(
     (sum, item) => sum + (item.buy_price || 0) * (item.quantity || 0),
     0
@@ -706,11 +715,15 @@ const PurchaseDetail = () => {
 
   const transportCharge = po.charges?.transport || 0;
   const otherCharge = po.charges?.other || 0;
-  const totalAdditional = transportCharge + otherCharge;
+  const totalAdditional = transportCharge + otherCharge || po.additional_charges_total || 0;
 
   const grandTotal =
     subtotal +
     totalGst;
+
+  const totalLandedCost = isGstRegistered
+    ? (subtotal + totalAdditional)
+    : (subtotal + totalGst + totalAdditional);
 
   const outstanding =
     po.outstanding !== undefined ? po.outstanding : Math.max(0, grandTotal - (po.paid_amount || 0));
@@ -893,6 +906,37 @@ const PurchaseDetail = () => {
                           </div>
                         </div>
                       )}
+
+                      {/* Total Landed Cost Summary */}
+                      <div className="mt-4 pt-4 border-t border-slate-100 p-3.5 bg-slate-50/80 rounded-xl border border-slate-200/60">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-black text-slate-800">Total Landed Cost</span>
+                            <span
+                              className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${
+                                isGstRegistered
+                                  ? "bg-blue-50 text-blue-600 border border-blue-200"
+                                  : "bg-amber-50 text-amber-700 border border-amber-200"
+                              }`}
+                              title={
+                                isGstRegistered
+                                  ? "GST excluded from landed cost (eligible for Input Tax Credit)"
+                                  : "GST included in landed cost (incurred tax expense)"
+                              }
+                            >
+                              {isGstRegistered ? "Excl. GST (ITC)" : "Incl. GST"}
+                            </span>
+                          </div>
+                          <span className="text-base font-black text-emerald-700 tabular-nums">
+                            {fmt(totalLandedCost)}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 font-medium mt-1">
+                          {isGstRegistered
+                            ? "Base inventory cost + additional charges (GST claimed back as Input Tax Credit)"
+                            : "Total inventory cost including GST and additional charges incurred"}
+                        </p>
+                      </div>
                     </div>
                   </SectionCard>
                 </div>
@@ -965,233 +1009,310 @@ const PurchaseDetail = () => {
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-slate-50/50 border-b border-slate-100">
-                        <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Product Details</th>
-                        <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center">Qty</th>
-                        <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center">Stock In/Out</th>
-                        <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center">Stock After</th>
-                        <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Unit Price</th>
-                        <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Total</th>
+                        <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Product Details</th>
+                        <th className="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center">Qty</th>
+                        <th className="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center">Stock In/Out</th>
+                        <th className="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center">Stock After</th>
+                        <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Buy Price</th>
+                        <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Tax (GST)</th>
+                        <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Allocated</th>
+                        <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <span>Landed Cost</span>
+                            <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${isGstRegistered ? 'bg-blue-50 text-blue-600 border border-blue-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
+                              {isGstRegistered ? "Excl. GST" : "Incl. GST"}
+                            </span>
+                          </div>
+                        </th>
+                        <th className="px-5 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Total</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
-                      {po.products.map((product, idx) => (
-                        <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border bg-indigo-50 border-indigo-100 overflow-hidden">
-                                {(() => {
-                                  const imgUrl = (product as any).image_url || (product as any).image || (product as any).product?.image_url || (product as any).product?.image || (product as any).datas?.image_url || (product as any).datas?.image;
-                                  const singleUrl = Array.isArray(imgUrl) ? imgUrl[0] : imgUrl;
-                                  return typeof singleUrl === "string" && singleUrl ? (
-                                    <img src={singleUrl} alt={product.name} className="w-full h-full object-cover" />
-                                  ) : (
-                                    <Package size={16} className="text-indigo-500" />
-                                  );
-                                })()}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-sm font-bold text-slate-800 truncate">{product.name}</p>
-                                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                                  {product.barcode && (
-                                    <span className="text-[10px] font-mono font-bold text-slate-400">{product.barcode}</span>
-                                  )}
-                                  {product.gst !== undefined && product.gst > 0 && (
-                                    <span className="text-[9px] font-extrabold text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 uppercase tracking-wider font-sans">
-                                      GST {product.gst}%
-                                    </span>
-                                  )}
-                                  {product.category && (
-                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide bg-slate-100 text-slate-500">
-                                      {product.category}
-                                    </span>
-                                  )}
+                      {po.products.map((product, idx) => {
+                        const q = Number(product.quantity) || 0;
+                        const baseBuyPrice = Number(product.buy_price) || 0;
+                        const gstVal = typeof product.gst === "string" ? parseFloat(String(product.gst).replace("%", "")) : Number(product.gst ?? 0);
+                        const rowGstPerUnit = (baseBuyPrice * gstVal) / 100;
+                        const rowGstTotal = q * rowGstPerUnit;
+
+                        const distributeBy = String((po as any).calculation_infos?.distribute_by || (po as any).calculation_infos?.divided_by || "").toUpperCase();
+                        let allocPerUnit = 0;
+                        if (totalAdditional > 0) {
+                          if (distributeBy === "BY_UNIT" && totalQty > 0) {
+                            allocPerUnit = totalAdditional / totalQty;
+                          } else if (distributeBy === "BY_VALUE" && subtotal > 0) {
+                            allocPerUnit = (baseBuyPrice / subtotal) * totalAdditional;
+                          } else if (distributeBy === "BY_EQUAL" && po.products.length > 0) {
+                            allocPerUnit = (totalAdditional / po.products.length) / (q > 0 ? q : 1);
+                          } else if (subtotal > 0) {
+                            allocPerUnit = (baseBuyPrice / subtotal) * totalAdditional;
+                          } else if (totalQty > 0) {
+                            allocPerUnit = totalAdditional / totalQty;
+                          }
+                        }
+                        const allocTotal = q * allocPerUnit;
+
+                        const landedCostPerUnit = isGstRegistered
+                          ? (baseBuyPrice + allocPerUnit)
+                          : (baseBuyPrice + rowGstPerUnit + allocPerUnit);
+                        const itemTotalLanded = q * landedCostPerUnit;
+
+                        return (
+                          <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="px-5 py-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border bg-indigo-50 border-indigo-100 overflow-hidden">
+                                  {(() => {
+                                    const imgUrl = (product as any).image_url || (product as any).image || (product as any).product?.image_url || (product as any).product?.image || (product as any).datas?.image_url || (product as any).datas?.image;
+                                    const singleUrl = Array.isArray(imgUrl) ? imgUrl[0] : imgUrl;
+                                    return typeof singleUrl === "string" && singleUrl ? (
+                                      <img src={singleUrl} alt={product.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                      <Package size={16} className="text-indigo-500" />
+                                    );
+                                  })()}
                                 </div>
-
-                                {/* Flat Format (PurchaseReadModel) Batches & Serials */}
-                                {product.variant && (
-                                  <div className="mt-2 pl-3 border-l-2 border-indigo-100 space-y-2.5">
-                                    <p className="text-[10px] font-extrabold text-[var(--at-variant-tx)] bg-[var(--at-variant-bg)] border border-[var(--at-variant-bd)] px-1.5 py-0.5 rounded-xl w-fit">• {product.variant.variant_name}</p>
+                                <div className="min-w-0">
+                                  <p className="text-sm font-bold text-slate-800 truncate">{product.name}</p>
+                                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                    {product.barcode && (
+                                      <span className="text-[10px] font-mono font-bold text-slate-400">{product.barcode}</span>
+                                    )}
+                                    {product.gst !== undefined && product.gst > 0 && (
+                                      <span className="text-[9px] font-extrabold text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 uppercase tracking-wider font-sans">
+                                        GST {product.gst}%
+                                      </span>
+                                    )}
+                                    {product.category && (
+                                      <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide bg-slate-100 text-slate-500">
+                                        {product.category}
+                                      </span>
+                                    )}
                                   </div>
-                                )}
 
-                                {product.batch && (
-                                  <div className="mt-2 pl-3 border-l-2 border-indigo-150 space-y-1.5">
-                                    <div className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md text-[10px] text-slate-650 shadow-sm">
-                                      <div className="flex justify-between items-center font-bold">
-                                        <span className="text-slate-800">Batch: {product.batch.batch_name || "Default"}</span>
-                                        <span className="text-indigo-600">Qty: {product.stocks_added ?? product.received_stocks ?? 0}</span>
-                                      </div>
-                                      {(product.batch.mfg_date || product.batch.exp_date) && (
-                                        <div className="flex gap-3 text-[9px] text-slate-400 mt-1 font-medium">
-                                          {product.batch.mfg_date && <span>MFG: {formatBatchDate(product.batch.mfg_date)}</span>}
-                                          {product.batch.exp_date && <span>EXP: {formatBatchDate(product.batch.exp_date)}</span>}
-                                        </div>
-                                      )}
+                                  {/* Flat Format (PurchaseReadModel) Batches & Serials */}
+                                  {product.variant && (
+                                    <div className="mt-2 pl-3 border-l-2 border-indigo-100 space-y-2.5">
+                                      <p className="text-[10px] font-extrabold text-[var(--at-variant-tx)] bg-[var(--at-variant-bg)] border border-[var(--at-variant-bd)] px-1.5 py-0.5 rounded-xl w-fit">• {product.variant.variant_name}</p>
                                     </div>
-                                  </div>
-                                )}
+                                  )}
 
-                                {product.serial_info && product.serial_info.serial_numbers && product.serial_info.serial_numbers.length > 0 && (
-                                  <div className="mt-2 pl-3 border-l-2 border-indigo-150 space-y-1.5">
-                                    <div className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md shadow-sm">
-                                      <p className="text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Serial Numbers:</p>
-                                      <div className="flex flex-wrap gap-1">
-                                        {product.serial_info.serial_numbers.map((sn: any) => (
-                                          <span key={typeof sn === 'object' ? ((sn as any).id || (sn as any).name) : sn} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-indigo-600 border border-slate-200 shadow-sm">{typeof sn === 'object' ? ((sn as any).name || (sn as any).id) : sn}</span>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  </div>
-                                )}
-
-                                {/* Old Nested Format Variant-Level Batches & Serials */}
-                                {(product.variants?.length ?? 0) > 0 && (
-                                  <div className="mt-2 pl-3 border-l-2 border-indigo-100 space-y-2.5">
-                                    {product.variants?.map((v, vIdx) => (
-                                      <div key={vIdx} className="space-y-1">
-                                        <p className="text-[10px] font-extrabold text-[var(--at-variant-tx)] bg-[var(--at-variant-bg)] border border-[var(--at-variant-bd)] px-1.5 py-0.5 rounded-xl w-fit">• {v.name} {v.buy_price !== undefined ? `(Buy: ${fmt(v.buy_price)})` : ""}</p>
-
-                                        {/* Variant Batches */}
-                                        {v.batches && v.batches.length > 0 && (
-                                          <div className="space-y-1 pl-2">
-                                            {v.batches.map((b, bIdx) => (
-                                              <div key={bIdx} className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md text-[10px] text-slate-600 shadow-sm">
-                                                <div className="flex justify-between items-center font-bold">
-                                                  <span className="text-slate-800">Batch: {b.name || "Default"}</span>
-                                                  <span className="text-indigo-600">Qty: {b.stocks}</span>
-                                                </div>
-                                                {(b.manufacturing_date || b.expiry_date) && (
-                                                  <div className="flex gap-3 text-[9px] text-slate-400 mt-1 font-medium">
-                                                    {b.manufacturing_date && <span>MFG: {formatBatchDate(b.manufacturing_date)}</span>}
-                                                    {b.expiry_date && <span>EXP: {formatBatchDate(b.expiry_date)}</span>}
-                                                  </div>
-                                                )}
-                                                {b.serial_numbers && b.serial_numbers.length > 0 && (
-                                                  <div className="mt-1.5">
-                                                    <p className="text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Serials:</p>
-                                                    <div className="flex flex-wrap gap-1">
-                                                      {b.serial_numbers.map(sn => (
-                                                        <span key={typeof sn === 'object' ? ((sn as any).id || (sn as any).name) : sn} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-indigo-600 border border-slate-200 shadow-sm">{typeof sn === 'object' ? ((sn as any).name || (sn as any).id) : sn}</span>
-                                                      ))}
-                                                    </div>
-                                                  </div>
-                                                )}
-                                              </div>
-                                            ))}
-                                          </div>
-                                        )}
-
-                                        {/* Variant-level Serials (if no batches) */}
-                                        {(!v.batches || v.batches.length === 0) && v.serials && v.serials.length > 0 && (
-                                          <div className="pl-2 space-y-1">
-                                            {v.serials.map((sObj, sIdx) => (
-                                              <div key={sIdx} className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md shadow-sm">
-                                                <p className="text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Serial Numbers:</p>
-                                                <div className="flex flex-wrap gap-1">
-                                                  {sObj.serial_numbers?.map(sn => (
-                                                    <span key={typeof sn === 'object' ? ((sn as any).id || (sn as any).name) : sn} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-indigo-600 border border-slate-200 shadow-sm">{typeof sn === 'object' ? ((sn as any).name || (sn as any).id) : sn}</span>
-                                                  ))}
-                                                </div>
-                                              </div>
-                                            ))}
-                                          </div>
-                                        )}
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-
-                                {/* Top-Level (No Variant) Batches */}
-                                {(!product.variants || product.variants.length === 0) && product.batches && product.batches.length > 0 && (
-                                  <div className="mt-2 pl-3 border-l-2 border-indigo-150 space-y-1.5">
-                                    {product.batches.map((b, bIdx) => (
-                                      <div key={bIdx} className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md text-[10px] text-slate-650 shadow-sm">
+                                  {product.batch && (
+                                    <div className="mt-2 pl-3 border-l-2 border-indigo-150 space-y-1.5">
+                                      <div className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md text-[10px] text-slate-650 shadow-sm">
                                         <div className="flex justify-between items-center font-bold">
-                                          <span className="text-slate-800">Batch: {b.name || "Default"}</span>
-                                          <span className="text-indigo-600">Qty: {b.stocks}</span>
+                                          <span className="text-slate-800">Batch: {product.batch.batch_name || "Default"}</span>
+                                          <span className="text-indigo-600">Qty: {product.stocks_added ?? product.received_stocks ?? 0}</span>
                                         </div>
-                                        {(b.manufacturing_date || b.expiry_date) && (
+                                        {(product.batch.mfg_date || product.batch.exp_date) && (
                                           <div className="flex gap-3 text-[9px] text-slate-400 mt-1 font-medium">
-                                            {b.manufacturing_date && <span>MFG: {formatBatchDate(b.manufacturing_date)}</span>}
-                                            {b.expiry_date && <span>EXP: {formatBatchDate(b.expiry_date)}</span>}
-                                          </div>
-                                        )}
-                                        {b.serial_numbers && b.serial_numbers.length > 0 && (
-                                          <div className="mt-1.5">
-                                            <p className="text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Serials:</p>
-                                            <div className="flex flex-wrap gap-1">
-                                              {b.serial_numbers.map(sn => (
-                                                <span key={typeof sn === 'object' ? ((sn as any).id || (sn as any).name) : sn} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-indigo-600 border border-slate-200 shadow-sm">{typeof sn === 'object' ? ((sn as any).name || (sn as any).id) : sn}</span>
-                                              ))}
-                                            </div>
+                                            {product.batch.mfg_date && <span>MFG: {formatBatchDate(product.batch.mfg_date)}</span>}
+                                            {product.batch.exp_date && <span>EXP: {formatBatchDate(product.batch.exp_date)}</span>}
                                           </div>
                                         )}
                                       </div>
-                                    ))}
-                                  </div>
-                                )}
+                                    </div>
+                                  )}
 
-                                {/* Top-Level (No Variant) Serials */}
-                                {(!product.variants || product.variants.length === 0) && product.serials && product.serials.length > 0 && (
-                                  <div className="mt-2 pl-3 border-l-2 border-indigo-150 space-y-1.5">
-                                    {product.serials.map((sObj, sIdx) => (
-                                      <div key={sIdx} className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md shadow-sm">
+                                  {product.serial_info && product.serial_info.serial_numbers && product.serial_info.serial_numbers.length > 0 && (
+                                    <div className="mt-2 pl-3 border-l-2 border-indigo-150 space-y-1.5">
+                                      <div className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md shadow-sm">
                                         <p className="text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Serial Numbers:</p>
                                         <div className="flex flex-wrap gap-1">
-                                          {sObj.serial_numbers?.map(sn => (
+                                          {product.serial_info.serial_numbers.map((sn: any) => (
                                             <span key={typeof sn === 'object' ? ((sn as any).id || (sn as any).name) : sn} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-indigo-600 border border-slate-200 shadow-sm">{typeof sn === 'object' ? ((sn as any).name || (sn as any).id) : sn}</span>
                                           ))}
                                         </div>
                                       </div>
-                                    ))}
-                                  </div>
-                                )}
+                                    </div>
+                                  )}
+
+                                  {/* Old Nested Format Variant-Level Batches & Serials */}
+                                  {(product.variants?.length ?? 0) > 0 && (
+                                    <div className="mt-2 pl-3 border-l-2 border-indigo-100 space-y-2.5">
+                                      {product.variants?.map((v, vIdx) => (
+                                        <div key={vIdx} className="space-y-1">
+                                          <p className="text-[10px] font-extrabold text-[var(--at-variant-tx)] bg-[var(--at-variant-bg)] border border-[var(--at-variant-bd)] px-1.5 py-0.5 rounded-xl w-fit">• {v.name} {v.buy_price !== undefined ? `(Buy: ${fmt(v.buy_price)})` : ""}</p>
+
+                                          {/* Variant Batches */}
+                                          {v.batches && v.batches.length > 0 && (
+                                            <div className="space-y-1 pl-2">
+                                              {v.batches.map((b, bIdx) => (
+                                                <div key={bIdx} className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md text-[10px] text-slate-600 shadow-sm">
+                                                  <div className="flex justify-between items-center font-bold">
+                                                    <span className="text-slate-800">Batch: {b.name || "Default"}</span>
+                                                    <span className="text-indigo-600">Qty: {b.stocks}</span>
+                                                  </div>
+                                                  {(b.manufacturing_date || b.expiry_date) && (
+                                                    <div className="flex gap-3 text-[9px] text-slate-400 mt-1 font-medium">
+                                                      {b.manufacturing_date && <span>MFG: {formatBatchDate(b.manufacturing_date)}</span>}
+                                                      {b.expiry_date && <span>EXP: {formatBatchDate(b.expiry_date)}</span>}
+                                                    </div>
+                                                  )}
+                                                  {b.serial_numbers && b.serial_numbers.length > 0 && (
+                                                    <div className="mt-1.5">
+                                                      <p className="text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Serials:</p>
+                                                      <div className="flex flex-wrap gap-1">
+                                                        {b.serial_numbers.map(sn => (
+                                                          <span key={typeof sn === 'object' ? ((sn as any).id || (sn as any).name) : sn} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-indigo-600 border border-slate-200 shadow-sm">{typeof sn === 'object' ? ((sn as any).name || (sn as any).id) : sn}</span>
+                                                        ))}
+                                                      </div>
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              ))}
+                                            </div>
+                                          )}
+
+                                          {/* Variant-level Serials (if no batches) */}
+                                          {(!v.batches || v.batches.length === 0) && v.serials && v.serials.length > 0 && (
+                                            <div className="pl-2 space-y-1">
+                                              {v.serials.map((sObj, sIdx) => (
+                                                <div key={sIdx} className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md shadow-sm">
+                                                  <p className="text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Serial Numbers:</p>
+                                                  <div className="flex flex-wrap gap-1">
+                                                    {sObj.serial_numbers?.map(sn => (
+                                                      <span key={typeof sn === 'object' ? ((sn as any).id || (sn as any).name) : sn} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-indigo-600 border border-slate-200 shadow-sm">{typeof sn === 'object' ? ((sn as any).name || (sn as any).id) : sn}</span>
+                                                    ))}
+                                                  </div>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+
+                                  {/* Top-Level (No Variant) Batches */}
+                                  {(!product.variants || product.variants.length === 0) && product.batches && product.batches.length > 0 && (
+                                    <div className="mt-2 pl-3 border-l-2 border-indigo-150 space-y-1.5">
+                                      {product.batches.map((b, bIdx) => (
+                                        <div key={bIdx} className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md text-[10px] text-slate-650 shadow-sm">
+                                          <div className="flex justify-between items-center font-bold">
+                                            <span className="text-slate-800">Batch: {b.name || "Default"}</span>
+                                            <span className="text-indigo-600">Qty: {b.stocks}</span>
+                                          </div>
+                                          {(b.manufacturing_date || b.expiry_date) && (
+                                            <div className="flex gap-3 text-[9px] text-slate-400 mt-1 font-medium">
+                                              {b.manufacturing_date && <span>MFG: {formatBatchDate(b.manufacturing_date)}</span>}
+                                              {b.expiry_date && <span>EXP: {formatBatchDate(b.expiry_date)}</span>}
+                                            </div>
+                                          )}
+                                          {b.serial_numbers && b.serial_numbers.length > 0 && (
+                                            <div className="mt-1.5">
+                                              <p className="text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Serials:</p>
+                                              <div className="flex flex-wrap gap-1">
+                                                {b.serial_numbers.map(sn => (
+                                                  <span key={typeof sn === 'object' ? ((sn as any).id || (sn as any).name) : sn} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-indigo-600 border border-slate-200 shadow-sm">{typeof sn === 'object' ? ((sn as any).name || (sn as any).id) : sn}</span>
+                                                ))}
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+
+                                  {/* Top-Level (No Variant) Serials */}
+                                  {(!product.variants || product.variants.length === 0) && product.serials && product.serials.length > 0 && (
+                                    <div className="mt-2 pl-3 border-l-2 border-indigo-150 space-y-1.5">
+                                      {product.serials.map((sObj, sIdx) => (
+                                        <div key={sIdx} className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md shadow-sm">
+                                          <p className="text-[8px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Serial Numbers:</p>
+                                          <div className="flex flex-wrap gap-1">
+                                            {sObj.serial_numbers?.map(sn => (
+                                              <span key={typeof sn === 'object' ? ((sn as any).id || (sn as any).name) : sn} className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded bg-white text-indigo-600 border border-slate-200 shadow-sm">{typeof sn === 'object' ? ((sn as any).name || (sn as any).id) : sn}</span>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 text-center">
-                            <span className="text-xs font-black text-slate-600">{product.quantity}</span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-center">
-                            <span className="text-xs font-bold text-green-600">
-                              +{product.quantity}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-center">
-                            <span className="text-xs font-black text-blue-600">
-                              {product.stocks_before !== undefined && product.stocks_before !== null ? (product.stocks_before + product.quantity) : '—'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            {product.buy_price !== undefined ? (
+                            </td>
+                            <td className="px-3 py-4 text-center">
+                              <span className="text-xs font-black text-slate-600">{product.quantity}</span>
+                            </td>
+                            <td className="px-3 py-4 whitespace-nowrap text-center">
+                              <span className="text-xs font-bold text-green-600">
+                                +{product.quantity}
+                              </span>
+                            </td>
+                            <td className="px-3 py-4 whitespace-nowrap text-center">
+                              <span className="text-xs font-black text-blue-600">
+                                {product.stocks_before !== undefined && product.stocks_before !== null ? (product.stocks_before + product.quantity) : '—'}
+                              </span>
+                            </td>
+                            {/* Buy Price */}
+                            <td className="px-4 py-4 text-right">
+                              {product.buy_price !== undefined ? (
+                                <span className="text-xs font-black text-slate-800 tabular-nums">{fmt(baseBuyPrice)}</span>
+                              ) : (
+                                <span className="text-xs text-slate-400">—</span>
+                              )}
+                            </td>
+                            {/* Tax (GST) */}
+                            <td className="px-4 py-4 text-right">
                               <div className="flex flex-col items-end">
-                                <span className="text-xs font-black text-slate-800 tabular-nums">{fmt(product.buy_price)}</span>
-                                {product.gst !== undefined && product.gst > 0 && (
+                                <span className="text-xs font-bold text-slate-700 tabular-nums">
+                                  {gstVal > 0 ? `${gstVal}%` : "0%"}
+                                </span>
+                                {rowGstTotal > 0 && (
                                   <span className="text-[9px] text-indigo-600 font-semibold mt-0.5 whitespace-nowrap">
-                                    ₹{(product.buy_price * (1 + product.gst / 100)).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} incl. {product.gst}% GST
+                                    +₹{rowGstTotal.toFixed(2)}
                                   </span>
                                 )}
                               </div>
-                            ) : (
-                              <span className="text-xs text-slate-400">—</span>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            {product.buy_price !== undefined ? (
+                            </td>
+                            {/* Allocated */}
+                            <td className="px-4 py-4 text-right">
                               <div className="flex flex-col items-end">
-                                <span className="text-sm font-black text-slate-800 tabular-nums">{fmt(product.buy_price * product.quantity)}</span>
-                                {product.gst !== undefined && product.gst > 0 && (
-                                  <span className="text-[9px] text-indigo-600 font-semibold mt-0.5 whitespace-nowrap">
-                                    ₹{((product.buy_price * product.quantity) * (1 + product.gst / 100)).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} incl. GST
+                                <span className="text-xs font-black text-slate-800 tabular-nums">
+                                  ₹{allocTotal > 0 ? allocTotal.toFixed(2) : "0.00"}
+                                </span>
+                                {allocPerUnit > 0 && (
+                                  <span className="text-[9px] text-blue-600 font-semibold mt-0.5 whitespace-nowrap">
+                                    (+₹{allocPerUnit.toFixed(2)}/u)
                                   </span>
                                 )}
                               </div>
-                            ) : (
-                              <span className="text-xs text-slate-400">—</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
+                            </td>
+                            {/* Landed Cost */}
+                            <td className="px-4 py-4 text-right">
+                              <div className="flex flex-col items-end">
+                                <div className="flex items-baseline gap-0.5">
+                                  <span className="text-xs font-black text-slate-900 tabular-nums">
+                                    ₹{landedCostPerUnit.toFixed(2)}
+                                  </span>
+                                  <span className="text-[9px] text-slate-400 font-bold">/u</span>
+                                </div>
+                                {q > 0 && (
+                                  <span className="text-[9px] text-emerald-700 font-bold mt-0.5 whitespace-nowrap">
+                                    Tot: ₹{itemTotalLanded.toFixed(2)}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            {/* Total */}
+                            <td className="px-5 py-4 text-right">
+                              {product.buy_price !== undefined ? (
+                                <div className="flex flex-col items-end">
+                                  <span className="text-sm font-black text-slate-800 tabular-nums">{fmt(baseBuyPrice * q)}</span>
+                                  {gstVal > 0 && (
+                                    <span className="text-[9px] text-indigo-600 font-semibold mt-0.5 whitespace-nowrap">
+                                      ₹{(baseBuyPrice * q + rowGstTotal).toFixed(2)} incl. GST
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-xs text-slate-400">—</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

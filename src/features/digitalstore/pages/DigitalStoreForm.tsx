@@ -110,6 +110,10 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
                     freeThreshold: d.free_shipping_amount ?? loadedDeliveryOptions[key].freeThreshold,
                     radius: d.radius ?? loadedDeliveryOptions[key].radius,
                     minOrderAmount: d.min_order_amount ?? loadedDeliveryOptions[key].minOrderAmount,
+                    deliveryCharge: d.delivery_charge ?? loadedDeliveryOptions[key].deliveryCharge,
+                    baseDistance: d.base_distance ?? loadedDeliveryOptions[key].baseDistance,
+                    extraDistanceStep: d.extra_distance_step ?? loadedDeliveryOptions[key].extraDistanceStep,
+                    pricingModel: d.pricing_model ?? loadedDeliveryOptions[key].pricingModel,
                     chargePerKm: d.charge_per_km ?? loadedDeliveryOptions[key].chargePerKm,
                     partners: d.delivery_by !== "INHOUSE",
                     manageStore: d.delivery_by === "INHOUSE",
@@ -190,10 +194,14 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
         delivery_options: Object.entries(form.deliveryOptions).filter(([_, d]) => d.enabled).map(([key, d]) => ({
           type: key === "instant" ? "INSTANT" : key === "standard" ? "STANDARD" : key === "pickuponly" ? "PICKUP_ONLY" : "NATIONWIDE",
           speed: d.speed,
-          free_shipping_amount: d.freeThreshold,
-          radius: d.radius,
-          min_order_amount: d.minOrderAmount,
-          charge_per_km: d.chargePerKm,
+          free_shipping_amount: d.freeThreshold || 0,
+          radius: d.radius || 0,
+          min_order_amount: d.minOrderAmount || 0,
+          delivery_charge: d.deliveryCharge || 0,
+          charge_per_km: d.chargePerKm || 0,
+          base_distance: d.baseDistance || 0,
+          extra_distance_step: d.extraDistanceStep || 1,
+          pricing_model: d.pricingModel || "FLAT",
           delivery_by: d.partners ? "PARTNERS" : "INHOUSE"
         }))
       };
@@ -279,15 +287,15 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
         if (form.selectedProducts && Object.keys(form.selectedProducts).length > 0) {
           for (const [productId, prodConfig] of Object.entries(form.selectedProducts)) {
             try {
-              const sellPrice = prodConfig.online_selling_price ?? 0;
-              await inventoryApi.updateInventory({
+              const payloadToUpdate: any = {
                 id: productId,
                 shop_id: newShopId,
                 visible_online: true,
-                buy_price: 0,
-                sell_price: sellPrice,
-                online_sell_price: prodConfig.online_selling_price,
-              });
+              };
+              if (prodConfig.online_selling_price !== undefined) {
+                payloadToUpdate.online_sell_price = prodConfig.online_selling_price;
+              }
+              await inventoryApi.updateInventory(payloadToUpdate);
             } catch (prodErr) {
               console.error(`Failed to update product ${productId} online price:`, prodErr);
             }

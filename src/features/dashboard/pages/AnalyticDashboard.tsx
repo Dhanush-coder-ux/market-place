@@ -27,7 +27,7 @@ import { useBusinessApi } from "@/context/BusinessApiContext";
 import { useToast } from "@/context/ToastContext";
 import { useNotifications } from "@/context/NotificationContext";
 import { apiClient } from "@/services/api/apiClient";
-import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import { ENDPOINTS, SHOP_ID, getShopId } from "@/services/endpoints";
 import { CustomTooltip } from "../components/CustomTooltip";
 import { SectionCard } from "../components/SectionCard";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
@@ -133,28 +133,36 @@ const startOfDay = (d: Date) => {
   return r;
 };
 
-const formatDateParam = (d: Date) => d.toISOString();
+const formatDateParam = (d: Date) => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
 
 // ── DATE RANGES ──────────────────────────────────────────────────────────────
 
-type RangeKey = "today" | "month" | "year" | "custom";
+type RangeKey = "today" | "month" | "year" | "all" | "custom";
 
 const RANGE_LABELS: Record<RangeKey, string> = {
   today: "Today",
   month: "This Month",
   year: "This Year",
+  all: "All Time",
   custom: "Custom",
 };
 
-const getRangeDate = (key: RangeKey): { start: Date; end: Date } => {
+const getRangeDate = (key: RangeKey): { start: Date; end: Date } | null => {
   const now = new Date();
   switch (key) {
     case "today":
-      return { start: startOfDay(now), end: now };
+      return { start: startOfDay(now), end: new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59) };
     case "month":
-      return { start: new Date(now.getFullYear(), now.getMonth(), 1), end: now };
+      return { start: new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0), end: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59) };
     case "year":
-      return { start: new Date(now.getFullYear(), 0, 1), end: now };
+      return { start: new Date(now.getFullYear(), 0, 1, 0, 0, 0), end: new Date(now.getFullYear(), 11, 31, 23, 59, 59) };
+    case "all":
+      return null;
     case "custom":
       return { start: startOfDay(now), end: now };
   }
@@ -176,11 +184,16 @@ const AnalyticsDashboard = () => {
 
   const { latestNotification } = useNotifications();
 
+  const getActiveShopId = useCallback(() => {
+    return localStorage.getItem("shop_id") || getShopId() || SHOP_ID || "";
+  }, []);
+
   const handleSync = async () => {
     setIsSyncing(true);
     const userId = localStorage.getItem("user_id") || "";
+    const shopId = getActiveShopId();
     try {
-      await apiClient.post(`${ENDPOINTS.ANALYTICS_DASHBOARD}sync?shop_id=${SHOP_ID}&user_id=${userId}`, {});
+      await apiClient.post(`${ENDPOINTS.ANALYTICS_DASHBOARD}sync?shop_id=${shopId}&user_id=${userId}`, {});
       showToast("Sync started in background. You will receive a notification when finished.", "info");
     } catch (err: any) {
       showToast(err.message || "Failed to start sync", "error");
@@ -188,8 +201,6 @@ const AnalyticsDashboard = () => {
       setIsSyncing(false);
     }
   };
-
-
 
   const [selectedSupplier, setSelectedSupplier] = useState<string>("");
   const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -199,8 +210,10 @@ const AnalyticsDashboard = () => {
   // Fetch product list for names mapping
   useEffect(() => {
     const fetchProducts = async () => {
+      const shopId = getActiveShopId();
+      if (!shopId) return;
       try {
-        const res = await apiClient.get(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}?limit=100`);
+        const res = await apiClient.get(`${ENDPOINTS.INVENTORIES}/by/shop/${shopId}?limit=100`);
         if (res?.data) {
           const arr = Array.isArray(res.data) ? res.data : (res.data.datas || []);
           setProductsList(arr);
@@ -208,13 +221,15 @@ const AnalyticsDashboard = () => {
       } catch (e) { }
     };
     fetchProducts();
-  }, []);
+  }, [getActiveShopId]);
 
   // ── Fetch Suppliers and Categories for Filter ──
   useEffect(() => {
+    const shopId = getActiveShopId();
+    if (!shopId) return;
     const fetchSuppliers = async () => {
       try {
-        const res = await apiClient.get(`${ENDPOINTS.SUPPLIERS}/by/shop/${SHOP_ID}?limit=100`);
+        const res = await apiClient.get(`${ENDPOINTS.SUPPLIERS}/by/shop/${shopId}?limit=100`);
         if (res?.data) {
           const arr = Array.isArray(res.data) ? res.data : (res.data.datas || []);
           setSuppliers(arr);
@@ -225,7 +240,7 @@ const AnalyticsDashboard = () => {
     fetchSuppliers();
     const fetchCustomCategories = async () => {
       try {
-        const res = await apiClient.get(`${ENDPOINTS.SHOP_CATEGORIES}`, { shop_id: SHOP_ID });
+        const res = await apiClient.get(`${ENDPOINTS.SHOP_CATEGORIES}`, { shop_id: shopId });
         if (res?.data) {
           const arr = Array.isArray(res.data) ? res.data : (res.data.datas || []);
           const names = arr.map((c: any) => c.name).filter(Boolean);
@@ -234,7 +249,7 @@ const AnalyticsDashboard = () => {
       } catch (e) { }
     };
     fetchCustomCategories();
-  }, []);
+  }, [getActiveShopId]);
 
   // ── Compute dates ──
   const dateRange = useMemo(() => {
@@ -252,23 +267,26 @@ const AnalyticsDashboard = () => {
     setLoading(true);
     setError(null);
     try {
+      const shopId = getActiveShopId();
       const queryParams: Record<string, string> = {
-        shop_id: SHOP_ID,
-        start_date: formatDateParam(dateRange.start),
-        end_date: formatDateParam(dateRange.end),
+        shop_id: shopId,
       };
+      if (dateRange?.start && dateRange?.end) {
+        queryParams.start_date = formatDateParam(dateRange.start);
+        queryParams.end_date = formatDateParam(dateRange.end);
+      }
       if (selectedSupplier) queryParams.supplier_id = selectedSupplier;
 
       const res = await analytics.getUnifiedDashboard(queryParams);
       if (res) {
-        setStats(res.data || res);
+        setStats(res.data || res.datas || res);
       }
     } catch (e: any) {
       setError(e.message || "Failed to load dashboard");
     } finally {
       setLoading(false);
     }
-  }, [analytics, dateRange, selectedSupplier]);
+  }, [analytics, dateRange, selectedSupplier, getActiveShopId]);
 
   useEffect(() => {
     if (activeRange !== "custom" || (customStart && customEnd)) {
@@ -288,24 +306,34 @@ const AnalyticsDashboard = () => {
   }, [latestNotification, fetchStats]);
 
   // ── Derived metrics ──
-  const salesOverall = stats?.overview?.sales ?? {};
-  const purchaseOverall = stats?.overview?.purchase ?? {};
-  const customerOverall = stats?.overview?.customer ?? {};
+  const salesOverall = stats?.overview?.sales ?? stats?.dashboard?.sales?.overall ?? {};
+  const purchaseOverall = stats?.overview?.purchase ?? stats?.dashboard?.purchase?.overall ?? {};
+  const customerOverall = stats?.overview?.customer ?? stats?.dashboard?.customer?.overall ?? {};
+  const supplierOverall = stats?.overview?.supplier ?? stats?.dashboard?.supplier?.overall ?? {};
 
-  const totalOrders = salesOverall.total_sales ?? 0;
-  const netRevenue = salesOverall.total_sales_amounts ?? 0;
+  const topProductsRaw = stats?.top?.top_products || stats?.dashboard?.inventory?.top_products || [];
+  const topSuppliersRaw = stats?.top?.top_suppliers || stats?.dashboard?.supplier?.top_suppliers || [];
+
+  const topProductsTotalSales = topProductsRaw.reduce((sum: number, p: any) => sum + Number(p.total_sales_amounts || p.total_offline_sales_amount || p.total_revenue || 0), 0);
+  const topProductsTotalOrders = topProductsRaw.reduce((sum: number, p: any) => sum + Number(p.total_offline_sales || 0) + Number(p.total_online_sales || 0) || (Number(p.total_sales_stocks || 0) > 0 ? 1 : 0), 0);
+
+  const topSuppliersTotalPurchase = topSuppliersRaw.reduce((sum: number, s: any) => sum + Number(s.total_purchase_amounts || s.total_cleared_amounts || 0), 0) || Number(supplierOverall.total_cleared_amounts || 0);
+  const topSuppliersTotalPurchasesCount = topSuppliersRaw.reduce((sum: number, s: any) => sum + Number(s.total_purchases || 0), 0) || (topSuppliersTotalPurchase > 0 ? 1 : 0);
+
+  const totalOrders = (salesOverall.total_sales && salesOverall.total_sales > 0) ? salesOverall.total_sales : topProductsTotalOrders;
+  const netRevenue = (salesOverall.total_sales_amounts && salesOverall.total_sales_amounts > 0) ? salesOverall.total_sales_amounts : topProductsTotalSales;
   const totalCost = salesOverall.total_cost ?? 0;
 
-  const totalPurchaseAmount = purchaseOverall.total_purchase_amounts ?? 0;
-  const totalPurchaseCount = purchaseOverall.total_purchase ?? 0;
+  const totalPurchaseAmount = (purchaseOverall.total_purchase_amounts && purchaseOverall.total_purchase_amounts > 0) ? purchaseOverall.total_purchase_amounts : topSuppliersTotalPurchase;
+  const totalPurchaseCount = (purchaseOverall.total_purchase && purchaseOverall.total_purchase > 0) ? purchaseOverall.total_purchase : topSuppliersTotalPurchasesCount;
   const totalPurchaseStocks = purchaseOverall.total_purchase_stocks ?? 0;
-  const totalPurchaseOutstanding = purchaseOverall.total_outstanding_amounts ?? 0;
+  const totalPurchaseOutstanding = purchaseOverall.total_outstanding_amounts || supplierOverall.total_outstandings || 0;
 
-  const totalProfit = salesOverall.total_profit ?? Math.max(0, netRevenue - totalCost);
+  const totalProfit = salesOverall.total_profit !== undefined ? Number(salesOverall.total_profit) : Math.max(0, netRevenue - totalCost);
   const aov = totalOrders > 0 ? netRevenue / totalOrders : 0;
   const grossMargin = netRevenue > 0 ? (totalProfit / netRevenue) * 100 : 0;
   
-  const customerOutstanding = customerOverall.total_outstandings ?? 0;
+  const customerOutstanding = customerOverall?.total_outstandings ?? 0;
   const receivedAmount = Math.max(0, netRevenue - customerOutstanding);
 
   const totalReturnsCount = 0;
@@ -331,13 +359,33 @@ const AnalyticsDashboard = () => {
 
   // Format daily trend for chart
   const dailyTrend = useMemo(() => {
-    const salesTrend = (stats?.trends?.sales && stats.trends.sales.length > 0)
+    let salesTrend = (stats?.trends?.sales && stats.trends.sales.length > 0)
       ? stats.trends.sales
       : (stats?.dashboard?.sales?.trend || []);
 
-    const purchaseTrend = (stats?.trends?.purchases && stats.trends.purchases.length > 0)
+    let purchaseTrend = (stats?.trends?.purchases && stats.trends.purchases.length > 0)
       ? stats.trends.purchases
       : (stats?.dashboard?.purchase?.trend || []);
+
+    // Fallback if sales/purchase trends are empty but data exists
+    if (salesTrend.length === 0 && netRevenue > 0) {
+      const todayStr = new Date().toISOString().split("T")[0];
+      salesTrend = [{ _id: todayStr, date: todayStr, total_sales_amounts: netRevenue, total_sales: totalOrders, total_profit: totalProfit }];
+    }
+
+    if (purchaseTrend.length === 0) {
+      const supTrend = stats?.trends?.suppliers || stats?.dashboard?.supplier?.trend || [];
+      if (supTrend.length > 0) {
+        purchaseTrend = supTrend.map((st: any) => ({
+          _id: st._id || st.date,
+          date: st._id || st.date,
+          total_purchase_amounts: st.total_cleared_amounts || st.total_purchase_amounts || 0,
+        }));
+      } else if (totalPurchaseAmount > 0) {
+        const todayStr = new Date().toISOString().split("T")[0];
+        purchaseTrend = [{ _id: todayStr, date: todayStr, total_purchase_amounts: totalPurchaseAmount }];
+      }
+    }
 
     const map: Record<string, any> = {};
 
@@ -370,14 +418,19 @@ const AnalyticsDashboard = () => {
     });
 
     return Object.values(map).sort((a: any, b: any) => a.date.localeCompare(b.date));
-  }, [stats]);
+  }, [stats, netRevenue, totalOrders, totalProfit, totalPurchaseAmount]);
 
   // Payment Breakdown
   const paymentBreakdown = useMemo(() => {
-    const offlineAmt = salesOverall.total_offline_sales_amount ?? 0;
-    const onlineAmt = salesOverall.total_online_sales_amount ?? 0;
-    const offlineCount = salesOverall.total_offline_sales ?? 0;
-    const onlineCount = salesOverall.total_online_sales ?? 0;
+    let offlineAmt = salesOverall.total_offline_sales_amount ?? 0;
+    let onlineAmt = salesOverall.total_online_sales_amount ?? 0;
+    let offlineCount = salesOverall.total_offline_sales ?? 0;
+    let onlineCount = salesOverall.total_online_sales ?? 0;
+
+    if (offlineAmt === 0 && onlineAmt === 0 && netRevenue > 0) {
+      offlineAmt = netRevenue;
+      offlineCount = totalOrders || 1;
+    }
 
     const data = [];
     if (offlineAmt > 0 || offlineCount > 0) {
@@ -390,7 +443,7 @@ const AnalyticsDashboard = () => {
       data.push({ name: "Offline", value: 0, count: 0, color: "#10b981" });
     }
     return data;
-  }, [salesOverall]);
+  }, [salesOverall, netRevenue, totalOrders]);
 
   // Top Products
   const topProducts = useMemo(() => {
@@ -458,15 +511,18 @@ const AnalyticsDashboard = () => {
             <div>
               <h1 className="text-xl md:text-2xl font-semibold text-slate-700 tracking-tight">Dashboard</h1>
               <p className="text-xs font-semibold text-slate-400 mt-0.5">
-                {dateRange.start.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} —{" "}
-                {dateRange.end.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                {activeRange === "all"
+                  ? "All Time Overview"
+                  : dateRange?.start && dateRange?.end
+                  ? `${dateRange.start.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} — ${dateRange.end.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`
+                  : "All Time Overview"}
               </p>
             </div>
 
             {/* Time filters & Actions */}
             <div className="flex items-center gap-2 flex-wrap">
               <div className="bg-slate-100 p-1 rounded-xl flex items-center gap-1">
-                {(["today", "month", "year", "custom"] as RangeKey[]).map((r) => (
+                {(["today", "month", "year", "all", "custom"] as RangeKey[]).map((r) => (
                   <button
                     key={r}
                     onClick={() => setActiveRange(r)}
@@ -712,9 +768,9 @@ const AnalyticsDashboard = () => {
             <div className="lg:col-span-2">
               <SectionCard title="Revenue & Profit Trend">
                 <div className="p-5">
-                  <div className="h-[280px] w-full">
+                  <div className="h-[280px] w-full min-w-0">
                     {dailyTrend.length > 0 ? (
-                      <ResponsiveContainer width="100%" height="100%">
+                      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={280}>
                         <AreaChart data={dailyTrend} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
                           <defs>
                             <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
@@ -851,8 +907,8 @@ const AnalyticsDashboard = () => {
           <div className="xl:col-span-1">
             <SectionCard title="Sales by Payment">
               <div className="p-5 flex flex-col justify-between h-[340px]">
-                <div className="h-[180px] w-full flex items-center justify-center">
-                  <ResponsiveContainer width="100%" height="100%">
+                <div className="h-[180px] w-full min-w-0 flex items-center justify-center">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={180}>
                     <PieChart>
                       <Pie
                         data={paymentBreakdown}

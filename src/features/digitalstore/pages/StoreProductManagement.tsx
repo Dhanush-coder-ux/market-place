@@ -66,34 +66,24 @@ const POLICY_OPTIONS = [
     icon: <Globe size={14} className="text-blue-500" />
   },
   {
-    value: "7_days_return",
-    label: "7-day Returns",
-    icon: <ShieldCheck size={14} className="text-emerald-500" />
-  },
-  {
-    value: "3_days_return",
-    label: "3-day Returns",
-    icon: <ShieldCheck size={14} className="text-emerald-500" />
-  },
-  {
-    value: "10_days_return",
-    label: "10-day Returns",
-    icon: <ShieldCheck size={14} className="text-emerald-500" />
-  },
-  {
-    value: "14_days_return",
-    label: "14-day Returns",
-    icon: <ShieldCheck size={14} className="text-emerald-500" />
+    value: "no_returns",
+    label: "1 · No returns",
+    icon: <Ban size={14} className="text-rose-500" />
   },
   {
     value: "exchange_only",
-    label: "Replacement / Exchange Only",
+    label: "2 · Exchange only",
     icon: <RefreshCw size={14} className="text-amber-500" />
   },
   {
-    value: "no_returns",
-    label: "No Returns (Non-Returnable / Perishable)",
-    icon: <Ban size={14} className="text-rose-500" />
+    value: "7_days_return",
+    label: "3 · Return within 7 days",
+    icon: <ShieldCheck size={14} className="text-emerald-500" />
+  },
+  {
+    value: "damaged_only",
+    label: "4 · Damaged or wrong items only",
+    icon: <AlertCircle size={14} className="text-blue-500" />
   }
 ];
 
@@ -611,7 +601,7 @@ const ProductDashboard = () => {
 
         let prodReturnPolicy = p.return_policy || p.additional_infos?.return_policy;
         if (!prodReturnPolicy && p.custom_fields) {
-          const rfVal = p.custom_fields.return_policy || p.custom_fields.refund_policy;
+          const rfVal = p.custom_fields.return_policy;
           if (rfVal) {
             try {
               prodReturnPolicy = typeof rfVal === 'string' ? JSON.parse(rfVal) : rfVal;
@@ -775,34 +765,42 @@ const ProductDashboard = () => {
       
       let returnPolicyToSave = null;
       if (productPolicyType !== "store_default") {
-        let title = "7-day returns";
+        let title = "Return within 7 days";
         let allowRet = true;
         let isExch = false;
-        let details = "Items can be returned within 7 days of delivery.";
+        let subtitle = "For: general retail, electronics, accessories";
+        let details = "Items can be returned within 7 days of delivery if unused and in original packaging. Refund will be issued after inspection.";
 
-        if (productPolicyType === "3_days_return") {
-          title = "3-day returns";
-          details = "Items can be returned within 3 days of delivery.";
-        } else if (productPolicyType === "10_days_return") {
-          title = "10-day returns";
-          details = "Items can be returned within 10 days of delivery.";
-        } else if (productPolicyType === "14_days_return") {
-          title = "14-day returns";
-          details = "Items can be returned within 14 days of delivery.";
-        } else if (productPolicyType === "exchange_only") {
-          title = "Replacement / Exchange only";
-          isExch = true;
-          details = "Replacement or exchange only for size mismatch or defect.";
-        } else if (productPolicyType === "no_returns") {
-          title = "No returns on this item";
+        if (productPolicyType === "no_returns") {
+          title = "No returns";
+          subtitle = "For: bakeries, food, flowers, perishables";
+          details = "Once sold, items cannot be returned or exchanged. Please check your order carefully before confirming.";
           allowRet = false;
-          details = "This item is non-returnable and non-refundable.";
+          isExch = false;
+        } else if (productPolicyType === "exchange_only") {
+          title = "Exchange only";
+          subtitle = "For: boutiques, footwear, textiles";
+          details = "Items can be exchanged within 3 days if unused and in original packaging. Refunds are not available.";
+          allowRet = true;
+          isExch = true;
+        } else if (productPolicyType === "7_days_return") {
+          title = "Return within 7 days";
+          subtitle = "For: general retail, electronics, accessories";
+          details = "Items can be returned within 7 days of delivery if unused and in original packaging. Refund will be issued after inspection.";
+          allowRet = true;
+          isExch = false;
+        } else if (productPolicyType === "damaged_only") {
+          title = "Damaged or wrong items only";
+          subtitle = "For: groceries, kirana, pharmacy";
+          details = "Returns are accepted only if the item is damaged or incorrect. Please report within 24 hours of delivery with a photo.";
+          allowRet = true;
+          isExch = false;
         }
 
         returnPolicyToSave = {
           type: productPolicyType,
           title,
-          subtitle: productPolicySubtitle || (allowRet ? "Unused items, original packaging" : "Freshly made — please check before confirming"),
+          subtitle: productPolicySubtitle || subtitle,
           details,
           allow_returns: allowRet,
           is_exchange_only: isExch

@@ -118,6 +118,7 @@ export interface DirectPurchaseData {
   returns?: any[];
   refund_amount?: number;
   notes?: string;
+  calculation_infos?: any;
 }
 
 type ViewMode = "grid" | "horizontal" | "vertical";
@@ -330,6 +331,7 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
     returns: (p as any).returns || d2?.returns || (p as any).purchase_returns || d2?.purchase_returns || [],
     refund_amount: Number((p as any).refund_amount || (p as any).return?.refund_amount || 0),
     notes: (p as any).notes || d2?.notes || d2?.purchaseDetails?.referenceNo || "",
+    calculation_infos: (p as any).calculation_infos || d2?.calculation_infos || (p as any).calculations || d2?.calculations || null,
   };
 }
 

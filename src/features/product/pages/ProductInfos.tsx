@@ -476,10 +476,26 @@ const ProductRow = React.memo(
             if (key === "sell_price") value = computedSellPrice;
             if (key === "stocks") value = computedStock;
 
-            if (key === "category") value = (p as any).category_infos?.name || datas.category || p.category || p.category_id;
+            if (key === "category") {
+              const catName = (p as any).category_infos?.name || datas.category || p.category;
+              value = catName || (p.category_id && !p.category_id.includes("-") ? p.category_id : "Uncategorized");
+            }
             if (key === "unit") value = (p as any).unit_infos?.name || datas.unit || p.unit || (p as any).unit_id;
 
             if (key === "buy_price" || key === "sell_price" || key === "price") {
+              let displayPrice = formatCurrency(value);
+              if (hasVariants && combinations.length > 0) {
+                const prices = combinations.map((c: any) => {
+                  const pInfo = c.pricing_infos || c;
+                  return key === "buy_price" ? (pInfo.buy_price ?? c.buy_price) : (pInfo.sell_price ?? c.sell_price);
+                }).filter((pr: any) => pr !== undefined && pr !== null && !isNaN(Number(pr)) && Number(pr) > 0);
+                if (prices.length > 0) {
+                  const minP = Math.min(...prices);
+                  const maxP = Math.max(...prices);
+                  displayPrice = minP === maxP ? formatCurrency(minP) : `${formatCurrency(minP)} - ${formatCurrency(maxP)}`;
+                }
+              }
+
               return (
                 <td key={key} className="px-3 py-2.5 whitespace-nowrap">
                   <span
@@ -488,7 +504,7 @@ const ProductRow = React.memo(
                       : "text-[13px] font-semibold text-slate-700"
                       }`}
                   >
-                    {hasVariants ? "—" : formatCurrency(value)}
+                    {displayPrice}
                   </span>
                 </td>
               );

@@ -1102,6 +1102,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       }
 
       showToast(id ? "Product updated successfully" : "Product created successfully", "success");
+      // Invalidate API cache so product list updates immediately
+      window.dispatchEvent(new CustomEvent('clear-api-cache'));
 
       // ── Navigate: after update → back to list; after create → product detail ──
       setTimeout(() => {

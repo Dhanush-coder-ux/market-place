@@ -320,12 +320,25 @@ const AnalyticsDashboard = () => {
   const topSuppliersTotalPurchase = topSuppliersRaw.reduce((sum: number, s: any) => sum + Number(s.total_purchase_amounts || s.total_cleared_amounts || 0), 0) || Number(supplierOverall.total_cleared_amounts || 0);
   const topSuppliersTotalPurchasesCount = topSuppliersRaw.reduce((sum: number, s: any) => sum + Number(s.total_purchases || 0), 0) || (topSuppliersTotalPurchase > 0 ? 1 : 0);
 
-  const totalOrders = (salesOverall.total_sales && salesOverall.total_sales > 0) ? salesOverall.total_sales : topProductsTotalOrders;
-  const netRevenue = (salesOverall.total_sales_amounts && salesOverall.total_sales_amounts > 0) ? salesOverall.total_sales_amounts : topProductsTotalSales;
-  const totalCost = salesOverall.total_cost ?? 0;
+  const isFiltered = activeRange !== "all";
 
-  const totalPurchaseAmount = (purchaseOverall.total_purchase_amounts && purchaseOverall.total_purchase_amounts > 0) ? purchaseOverall.total_purchase_amounts : topSuppliersTotalPurchase;
-  const totalPurchaseCount = (purchaseOverall.total_purchase && purchaseOverall.total_purchase > 0) ? purchaseOverall.total_purchase : topSuppliersTotalPurchasesCount;
+  const totalOrders = isFiltered
+    ? Number(salesOverall.total_sales ?? 0)
+    : ((salesOverall.total_sales && salesOverall.total_sales > 0) ? salesOverall.total_sales : topProductsTotalOrders);
+
+  const netRevenue = isFiltered
+    ? Number(salesOverall.total_sales_amounts ?? 0)
+    : ((salesOverall.total_sales_amounts && salesOverall.total_sales_amounts > 0) ? salesOverall.total_sales_amounts : topProductsTotalSales);
+
+  const totalCost = Number(salesOverall.total_cost ?? 0);
+
+  const totalPurchaseAmount = isFiltered
+    ? Number(purchaseOverall.total_purchase_amounts ?? 0)
+    : ((purchaseOverall.total_purchase_amounts && purchaseOverall.total_purchase_amounts > 0) ? purchaseOverall.total_purchase_amounts : topSuppliersTotalPurchase);
+
+  const totalPurchaseCount = isFiltered
+    ? Number(purchaseOverall.total_purchase ?? 0)
+    : ((purchaseOverall.total_purchase && purchaseOverall.total_purchase > 0) ? purchaseOverall.total_purchase : topSuppliersTotalPurchasesCount);
   const totalPurchaseStocks = purchaseOverall.total_purchase_stocks ?? 0;
   const totalPurchaseOutstanding = purchaseOverall.total_outstanding_amounts || supplierOverall.total_outstandings || 0;
 

@@ -12,8 +12,8 @@ const STYLES = `
     --app:#F7F8FB; --card:#FFFFFF; --panel:#F5F7FA; --panel2:#EEF1F6;
     --line:#E6EAF1; --line2:#D5DBE5;
     --ink:#12161F; --body:#3A414F; --muted:#7A8497; --faint:#A7B0C0;
-    --brand:#2563eb; --brand-600:#1d4ed8; --brand-700:#1e3a8a;
-    --brand-tint:#eff6ff; --brand-tint2:#dbeafe; --ring:rgba(37,99,235,.22);
+    --brand:var(--t-primary); --brand-600:var(--t-primary-hover); --brand-700:var(--t-primary-hover);
+    --brand-tint:var(--t-primary-lighter); --brand-tint2:var(--t-primary-light); --ring:var(--t-ring);
     --gold:#F2A93B; --gold-lt:#FFC97A;
     --pos:#12995A; --pos-bg:#E3F7EC; --pos-bd:#8CDCB4; --pos-tx:#0E6B41;
     --warn:#B5761C; --warn-bg:#FEF4D8; --warn-bd:#F3CE79; --warn-tx:#8B5A15;
@@ -63,7 +63,7 @@ const STYLES = `
   .pb-root .cur-wrap { display:grid; grid-template-columns:1.25fr 1fr; gap:15px; margin-bottom:22px; }
   @media(max-width:980px){ .pb-root .cur-wrap { grid-template-columns:1fr; } }
   
-  .pb-root .curplan { background:linear-gradient(to bottom right, #2563eb, #1d4ed8, #1e3a8a); border-radius:var(--r); padding:22px 24px; color:#fff; position:relative; overflow:hidden; box-shadow:var(--sh-m); transition: background 0.3s ease; }
+  .pb-root .curplan { background:linear-gradient(to bottom right, var(--t-sidebar-from), var(--t-sidebar-via), var(--t-sidebar-to)); border-radius:var(--r); padding:22px 24px; color:#fff; position:relative; overflow:hidden; box-shadow:var(--sh-m); transition: background 0.3s ease; }
   .pb-root .curplan.is-expired-card { background:linear-gradient(to bottom right, #dc2626, #b91c1c, #7f1d1d); }
   .pb-root .curplan .act.expired { background:rgba(254,202,202,.2); border:1px solid rgba(254,202,202,.4); color:#fecaca; }
   .pb-root .curplan::after { content:""; position:absolute; right:-60px; top:-60px; width:220px; height:220px; opacity:.07; background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath fill='%23fff' fill-rule='evenodd' d='M50 2 Q54 22 60 35 L97 29 Q78 42 66 52 L79 96 Q62 82 50 74 Q38 82 21 96 L34 52 Q22 42 3 29 L40 35 Q46 22 50 2 Z M50 24 L59 67 L41 67 Z'/%3E%3C/svg%3E") no-repeat center/contain; }
@@ -131,16 +131,16 @@ const STYLES = `
     box-shadow: 0 4px 12px rgba(0,0,0,0.05);
   }
   .pb-root .plan-card.is-current {
-    border: 2px solid #2563eb;
-    box-shadow: 0 4px 20px -2px rgba(37,99,235,0.15);
+    border: 2px solid var(--t-primary);
+    box-shadow: 0 4px 20px -2px var(--t-btn-shadow);
   }
   .pb-root .plan-card.is-selected {
-    border: 2px solid #2563eb;
-    box-shadow: 0 0 0 3px rgba(37,99,235,0.18);
+    border: 2px solid var(--t-primary);
+    box-shadow: 0 0 0 3px var(--t-ring);
   }
   
   .pb-root .plan-top-banner {
-    background: #2563eb;
+    background: var(--t-primary);
     color: #ffffff;
     text-align: center;
     font-size: 11px;
@@ -227,12 +227,12 @@ const STYLES = `
     border-color: #cbd5e1;
   }
   .pb-root .plan-btn.btn-primary {
-    background: #2563eb;
+    background: var(--t-primary);
     color: #ffffff;
     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
   }
   .pb-root .plan-btn.btn-primary:hover {
-    background: #1d4ed8;
+    background: var(--t-primary-hover);
   }
   .pb-root .plan-btn.btn-current {
     background: #f1f5f9;
@@ -241,9 +241,9 @@ const STYLES = `
     cursor: default;
   }
   .pb-root .plan-btn.btn-selected {
-    background: #eff6ff;
-    border-color: #2563eb;
-    color: #2563eb;
+    background: var(--t-primary-lighter);
+    border-color: var(--t-primary);
+    color: var(--t-primary);
   }
   
   .pb-root .plan-divider {
@@ -444,7 +444,7 @@ const PricingPlansPage: React.FC<PricingPlansPageProps> = ({ isEmbedded = false 
     .brand-title {
       font-size: 26px;
       font-weight: 800;
-      color: #2563eb;
+      color: #10b981;
       letter-spacing: -0.5px;
     }
     .brand-sub {
@@ -474,7 +474,7 @@ const PricingPlansPage: React.FC<PricingPlansPageProps> = ({ isEmbedded = false 
     .inv-num {
       font-family: 'IBM Plex Mono', monospace;
       font-size: 13px;
-      color: #2563eb;
+      color: #10b981;
       font-weight: 600;
       margin-top: 4px;
     }
@@ -557,7 +557,7 @@ const PricingPlansPage: React.FC<PricingPlansPageProps> = ({ isEmbedded = false 
       margin-bottom: 20px;
     }
     .print-btn {
-      background: #2563eb;
+      background: #10b981;
       color: #fff;
       border: none;
       padding: 10px 22px;
@@ -568,7 +568,7 @@ const PricingPlansPage: React.FC<PricingPlansPageProps> = ({ isEmbedded = false 
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      box-shadow: 0 4px 10px rgba(37,99,235,0.2);
+      box-shadow: 0 4px 10px rgba(16,185,129,0.2);
     }
     @media print {
       body { background: #fff; padding: 0; }
@@ -652,7 +652,7 @@ const PricingPlansPage: React.FC<PricingPlansPageProps> = ({ isEmbedded = false 
       </div>
       <div class="total-final">
         <span>Total Paid</span>
-        <span style="color: #2563eb;">₹${amountStr}</span>
+        <span style="color: #10b981;">₹${amountStr}</span>
       </div>
     </div>
 
@@ -682,7 +682,7 @@ const PricingPlansPage: React.FC<PricingPlansPageProps> = ({ isEmbedded = false 
       return `
         <tr>
           <td style="padding:10px 14px; border-bottom:1px solid #e2e8f0; font-size:13px; color:#334155;">${dt}</td>
-          <td style="padding:10px 14px; border-bottom:1px solid #e2e8f0; font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:#2563eb; font-weight:600;">${rec}</td>
+          <td style="padding:10px 14px; border-bottom:1px solid #e2e8f0; font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:#10b981; font-weight:600;">${rec}</td>
           <td style="padding:10px 14px; border-bottom:1px solid #e2e8f0; font-size:13px; color:#1e293b;">${desc}</td>
           <td style="padding:10px 14px; border-bottom:1px solid #e2e8f0; font-size:12.5px; color:#64748b;">Razorpay Online</td>
           <td style="padding:10px 14px; border-bottom:1px solid #e2e8f0; font-size:12px; text-align:center;"><span style="background:#dcfce7; color:#15803d; padding:2px 8px; border-radius:999px; font-weight:700;">Paid</span></td>
@@ -723,7 +723,7 @@ const PricingPlansPage: React.FC<PricingPlansPageProps> = ({ isEmbedded = false 
       padding-bottom: 24px;
       border-bottom: 2px solid #f1f5f9;
     }
-    .brand { font-size: 24px; font-weight: 800; color: #2563eb; }
+    .brand { font-size: 24px; font-weight: 800; color: #10b981; }
     .title { font-size: 20px; font-weight: 700; color: #0f172a; text-align: right; }
     .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 24px 0; }
     .stat-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 16px; }
@@ -732,7 +732,7 @@ const PricingPlansPage: React.FC<PricingPlansPageProps> = ({ isEmbedded = false 
     table { width: 100%; border-collapse: collapse; margin: 20px 0; }
     th { background: #f8fafc; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; padding: 10px 14px; font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; }
     .no-print { text-align: center; margin-bottom: 20px; }
-    .btn { background: #2563eb; color: #fff; border: none; padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .btn { background: #10b981; color: #fff; border: none; padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
     @media print {
       body { background: #fff; padding: 0; }
       .box { border: none; box-shadow: none; padding: 0; }
@@ -767,7 +767,7 @@ const PricingPlansPage: React.FC<PricingPlansPageProps> = ({ isEmbedded = false 
       </div>
       <div class="stat-card">
         <div class="stat-label">Total Spend (Settled)</div>
-        <div class="stat-val" style="color:#2563eb;">₹${totalSpent.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
+        <div class="stat-val" style="color:#10b981;">₹${totalSpent.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
       </div>
     </div>
 

@@ -64,7 +64,7 @@ const MENU_ITEMS = [
     label: "Invoice Templates",
     icon: LayoutTemplate,
     description: "Choose invoice design",
-    accent: "violet",
+    accent: "blue",
   },
   {
     id: "activity",

@@ -734,7 +734,7 @@ const PurchaseForm = () => {
             type="button"
             onClick={() => handleSavePurchase(true)}
             disabled={submitting}
-            className="px-4 h-8 rounded-xl border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2 whitespace-nowrap overflow-hidden disabled:opacity-50"
+            className="px-4 h-8 rounded-xl border border-blue-100 text-blue-600 font-medium text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2 whitespace-nowrap overflow-hidden disabled:opacity-50"
           >
             <Bookmark size={14} className="shrink-0" />
             <span className="truncate">{id && existingStatus === "DRAFT" ? "Update Draft" : "Save Draft"}</span>
@@ -817,11 +817,11 @@ const PurchaseForm = () => {
                 <div className="flex items-start gap-3">
                   <Info className="text-amber-500 shrink-0 mt-0.5" size={20} />
                   <div>
-                    <h3 className="text-amber-800 font-bold text-sm uppercase tracking-wide">Warning: Stock Already Sold</h3>
+                    <h3 className="text-amber-800 font-medium text-sm uppercase tracking-wide">Warning: Stock Already Sold</h3>
                     <p className="text-amber-700 text-xs mt-1 leading-relaxed font-medium">
                       Some items from this purchase have already been sold. Editing their quantities or prices will retroactively affect historical profit margins.
                     </p>
-                    <ul className="list-disc list-inside text-amber-700 text-xs mt-2 font-semibold space-y-0.5">
+                    <ul className="list-disc list-inside text-amber-700 text-xs mt-2 font-medium space-y-0.5">
                       {soldStockWarnings.map((w, i) => (
                         <li key={i}>{w}</li>
                       ))}
@@ -838,13 +838,13 @@ const PurchaseForm = () => {
                   <PackageOpen size={20} />
                 </div>
                 <div className="flex-1">
-                  <h2 className="text-sm font-black text-slate-800 uppercase tracking-widest">Purchase Details</h2>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Basic information & supplier</p>
+                  <h2 className="text-sm font-medium text-slate-800 uppercase tracking-widest">Purchase Details</h2>
+                  <p className="text-[10px] text-slate-400 font-medium uppercase tracking-widest mt-0.5">Basic information & supplier</p>
                 </div>
                 {id && purchaseVersion && (
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Current Version</span>
-                    <span className="px-2.5 py-1 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 text-white text-[10px] font-black tracking-widest shadow-sm border border-blue-400/30">
+                    <span className="text-[9px] font-medium text-slate-400 uppercase tracking-widest">Current Version</span>
+                    <span className="px-2.5 py-1 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 text-white text-[10px] font-medium tracking-widest shadow-sm border border-blue-400/30">
                       {purchaseVersion.toUpperCase()}
                     </span>
                   </div>
@@ -853,7 +853,7 @@ const PurchaseForm = () => {
 
               <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Supplier *</label>
+                  <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1">Supplier *</label>
                   <SearchSelect
                     labelKey="name"
                     valueKey="id"
@@ -881,7 +881,7 @@ const PurchaseForm = () => {
                 </div>
 
                 <Input
-                  label="Supplier Invoice #"
+                  label="Supplier Invoice"
                   tooltip="Enter the invoice number provided by the supplier for this purchase."
                   required
                   placeholder="INV-2026-..."
@@ -906,8 +906,8 @@ const PurchaseForm = () => {
                         <User size={20} />
                       </div>
                       <div>
-                        <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest leading-none mb-0.5">Supplier</p>
-                        <p className="text-base font-black text-slate-800 tracking-tight">{supplierDetails.name || supplierDetails.supplier_name}</p>
+                        <p className="text-[9px] font-medium text-blue-400 uppercase tracking-widest leading-none mb-0.5">Supplier</p>
+                        <p className="text-base font-medium text-slate-800 tracking-tight">{supplierDetails.name || supplierDetails.supplier_name}</p>
                       </div>
                     </div>
 
@@ -917,8 +917,8 @@ const PurchaseForm = () => {
                           <Mail size={12} />
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Email</span>
-                          <span className="text-[10px] font-bold text-slate-600 truncate max-w-[150px]">
+                          <span className="text-[8px] font-medium text-slate-400 uppercase tracking-widest leading-none">Email</span>
+                          <span className="text-[10px] font-medium text-slate-600 truncate max-w-[150px]">
                             {supplierDetails.contact_infos?.email || supplierDetails.email || "Missing"}
                           </span>
                         </div>
@@ -929,8 +929,8 @@ const PurchaseForm = () => {
                           <Smartphone size={12} />
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Phone</span>
-                          <span className="text-[10px] font-bold text-slate-600">
+                          <span className="text-[8px] font-medium text-slate-400 uppercase tracking-widest leading-none">Phone</span>
+                          <span className="text-[10px] font-medium text-slate-600">
                             {supplierDetails.contact_infos?.mobile_number || supplierDetails.phone || supplierDetails.mobile_number || "Missing"}
                           </span>
                         </div>
@@ -941,8 +941,8 @@ const PurchaseForm = () => {
                           <FileText size={12} />
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">GST</span>
-                          <span className="text-[10px] font-bold text-slate-600 uppercase">
+                          <span className="text-[8px] font-medium text-slate-400 uppercase tracking-widest leading-none">GST</span>
+                          <span className="text-[10px] font-medium text-slate-600 uppercase">
                             {supplierDetails.gst_no || supplierDetails.gst_number || supplierDetails.gst || "Missing"}
                           </span>
                         </div>
@@ -953,8 +953,8 @@ const PurchaseForm = () => {
                           <MapPin size={12} />
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Address</span>
-                          <span className="text-[10px] font-bold text-slate-600 truncate max-w-[200px]" title={supplierDetails.location_infos?.full_address || supplierDetails.address?.full_address || (typeof supplierDetails.address === 'string' ? supplierDetails.address : "Missing")}>
+                          <span className="text-[8px] font-medium text-slate-400 uppercase tracking-widest leading-none">Address</span>
+                          <span className="text-[10px] font-medium text-slate-600 truncate max-w-[200px]" title={supplierDetails.location_infos?.full_address || supplierDetails.address?.full_address || (typeof supplierDetails.address === 'string' ? supplierDetails.address : "Missing")}>
                             {supplierDetails.location_infos?.full_address || supplierDetails.address?.full_address || (typeof supplierDetails.address === 'string' ? supplierDetails.address : "Missing")}
                           </span>
                         </div>
@@ -971,7 +971,7 @@ const PurchaseForm = () => {
                 <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600 border border-slate-200 shadow-sm">
                   <Banknote size={16} />
                 </div>
-                <h2 className="text-xs font-black text-slate-800 uppercase tracking-widest">Additional Charge & Details</h2>
+                <h2 className="text-xs font-medium text-slate-800 uppercase tracking-widest">Additional Charge & Details</h2>
               </div>
 
               <div className="p-6 flex flex-col gap-6">
@@ -980,18 +980,18 @@ const PurchaseForm = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Transport */}
                   <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 group cursor-help w-fit">
+                    <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest flex items-center gap-1.5 group cursor-help w-fit">
                       Transport Charge <span className="normal-case font-normal text-slate-400">(optional)</span>
                       <Tooltip message="Delivery or transportation costs charged by the supplier.">
                         <span className="cursor-help flex"><Info size={12} className="text-slate-400 group-hover:text-blue-500 transition-colors" /></span>
                       </Tooltip>
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-black">₹</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">₹</span>
                       <input
                         type="number"
                         placeholder="0"
-                        className="w-full h-11 pl-8 pr-3 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-400/10 transition-all tabular-nums shadow-sm"
+                        className="w-full h-11 pl-8 pr-3 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-400/10 transition-all tabular-nums shadow-sm"
                         value={charges.transport as any}
                         onChange={(e) => setCharges({ ...charges, transport: e.target.value ? Number(e.target.value) : "" })}
                       />
@@ -1000,18 +1000,18 @@ const PurchaseForm = () => {
 
                   {/* Other Charges */}
                   <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 group cursor-help w-fit">
+                    <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest flex items-center gap-1.5 group cursor-help w-fit">
                       Other Charges <span className="normal-case font-normal text-slate-400">(optional)</span>
                       <Tooltip message="Any additional fees, loading/unloading costs, or miscellaneous charges.">
                         <span className="cursor-help flex"><Info size={12} className="text-slate-400 group-hover:text-blue-500 transition-colors" /></span>
                       </Tooltip>
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-black">₹</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">₹</span>
                       <input
                         type="number"
                         placeholder="0"
-                        className="w-full h-11 pl-8 pr-3 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-400/10 transition-all tabular-nums shadow-sm"
+                        className="w-full h-11 pl-8 pr-3 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-400/10 transition-all tabular-nums shadow-sm"
                         value={charges.other as any}
                         onChange={(e) => setCharges({ ...charges, other: e.target.value ? Number(e.target.value) : "" })}
                       />
@@ -1021,7 +1021,7 @@ const PurchaseForm = () => {
 
                 {/* Distribute By */}
                 <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 group cursor-help w-fit">
+                  <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest flex items-center gap-1.5 group cursor-help w-fit">
                     Distribute By
                     <Tooltip message="How the additional charges should be distributed across the purchased items' cost price.">
                       <span className="cursor-help flex"><Info size={12} className="text-slate-400 group-hover:text-blue-500 transition-colors" /></span>
@@ -1037,14 +1037,14 @@ const PurchaseForm = () => {
                       <button
                         key={method.name}
                         onClick={() => setCostMethod(method.name)}
-                        className={`px-2 py-1.5 h-11 flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg border transition-all flex-1 whitespace-nowrap ${costMethod === method.name
+                        className={`px-2 py-1.5 h-11 flex items-center justify-center gap-1.5 text-[10px] font-medium uppercase tracking-wider rounded-lg border transition-all flex-1 whitespace-nowrap ${costMethod === method.name
                           ? "border-blue-500 bg-blue-50 text-blue-700 shadow-sm"
                           : "border-slate-200 bg-white text-slate-500 hover:border-blue-200 hover:bg-slate-50"
                           }`}
                       >
                         <span>{method.name}</span>
                         {method.recommended && (
-                          <span className="text-[8px] font-black text-blue-600 bg-blue-100/90 px-1 py-0.5 rounded shadow-2xs lowercase tracking-normal">Recommended</span>
+                          <span className="text-[8px] font-medium text-blue-600 bg-blue-100/90 px-1 py-0.5 rounded shadow-2xs lowercase tracking-normal">Recommended</span>
                         )}
                         <Tooltip message={method.tooltip}>
                           <span className="cursor-help flex items-center justify-center group/tooltip relative">
@@ -1065,11 +1065,11 @@ const PurchaseForm = () => {
                       onClick={() => setIsGstExpanded(!isGstExpanded)}
                       className="w-full flex justify-between items-center p-4 bg-slate-50 hover:bg-slate-100 transition-colors"
                     >
-                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                      <span className="text-[10px] font-medium text-slate-500 uppercase tracking-widest flex items-center gap-2">
                         GST Rate Breakdown
                       </span>
                       <div className="flex items-center gap-3">
-                        <span className="text-xs font-bold text-slate-700 tabular-nums">Total GST: ₹{stats.totalGst.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        <span className="text-xs font-medium text-slate-700 tabular-nums">Total GST: ₹{stats.totalGst.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         {isGstExpanded ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
                       </div>
                     </button>
@@ -1092,14 +1092,14 @@ const PurchaseForm = () => {
                               <span className="text-slate-500">
                                 GST {rate}% (on ₹{basePriceForRate.toLocaleString()})
                               </span>
-                              <span className="text-slate-800 font-bold tabular-nums">
+                              <span className="text-slate-800 font-medium tabular-nums">
                                 ₹{Number(amt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </span>
                             </div>
                           );
                         })}
                         <div className="text-[10px] text-slate-400 italic pt-2 border-t border-slate-200/30 flex flex-col gap-0.5 leading-normal">
-                          <span className="font-semibold text-slate-500">Breakdown explanation:</span>
+                          <span className="font-medium text-slate-500">Breakdown explanation:</span>
                           <span>Product base: ₹{stats.subtotal.toLocaleString()} + GST: ₹{stats.totalGst.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} = ₹{(stats.subtotal + stats.totalGst).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} with GST</span>
                         </div>
                       </div>
@@ -1141,29 +1141,29 @@ const PurchaseForm = () => {
                 <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 border border-blue-200 shadow-sm">
                   <Banknote size={16} />
                 </div>
-                <h2 className="text-xs font-black text-slate-800 uppercase tracking-widest">Payment Summary</h2>
+                <h2 className="text-xs font-medium text-slate-800 uppercase tracking-widest">Payment Summary</h2>
               </div>
 
               <div className="p-6 flex flex-col h-full bg-slate-50/50">
                 <div className="space-y-3 mb-6">
                   <div className="flex justify-between items-center text-[13px]">
                     <span className="text-slate-500 font-medium">Subtotal</span>
-                    <span className="font-bold text-slate-800 tabular-nums">₹{stats.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span className="font-medium text-slate-800 tabular-nums">₹{stats.subtotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                   <div className="flex justify-between items-center text-[13px]">
                     <span className="text-slate-500 font-medium">Total GST</span>
-                    <span className="font-bold text-slate-800 tabular-nums">₹{stats.totalGst.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span className="font-medium text-slate-800 tabular-nums">₹{stats.totalGst.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                   <div className="flex justify-between items-center text-[13px]">
                     <span className="text-slate-500 font-medium">Add. Charges</span>
-                    <span className="font-bold text-slate-800 tabular-nums">₹{stats.totalCharges.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span className="font-medium text-slate-800 tabular-nums">₹{stats.totalCharges.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                 </div>
 
                 <div className="pt-4 border-t-2 border-slate-200/50 mb-6">
                   <div className="flex justify-between items-end gap-2">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Grand Total</span>
-                    <span className="text-2xl font-black text-slate-900 tracking-tight tabular-nums truncate" title={`₹${stats.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}>₹{stats.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span className="text-[10px] font-medium text-slate-400 uppercase tracking-widest whitespace-nowrap">Grand Total</span>
+                    <span className="text-2xl font-medium text-slate-900 tracking-tight tabular-nums truncate" title={`₹${stats.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}>₹{stats.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                 </div>
 
@@ -1171,7 +1171,7 @@ const PurchaseForm = () => {
                 <div className="space-y-4 pt-4 border-t border-slate-200/50 mt-auto">
                   {/* Paid By (Dropdown) */}
                   <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5 group cursor-help w-fit">
+                    <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest flex items-center gap-1.5 group cursor-help w-fit">
                       Paid By
                       <Tooltip message="The method of payment used for this transaction.">
                         <span className="cursor-help flex"><Info size={12} className="text-slate-400 group-hover:text-blue-500 transition-colors" /></span>
@@ -1201,12 +1201,12 @@ const PurchaseForm = () => {
                     <>
                       {/* Paid Amount */}
                       <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center justify-between">
+                        <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest flex items-center justify-between">
                           <span>Paid Amount <span className="text-rose-500">*</span></span>
-                          <span className="text-emerald-500 font-bold uppercase tracking-wider">{payment.method}</span>
+                          <span className="text-emerald-500 font-medium uppercase tracking-wider">{payment.method}</span>
                         </label>
                         <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-600 text-sm font-bold">₹</span>
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-600 text-sm font-medium">₹</span>
                           <input
                             type="number"
                             placeholder="0"
@@ -1224,9 +1224,9 @@ const PurchaseForm = () => {
 
                       {/* Reference Number */}
                       <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center justify-between">
+                        <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest flex items-center justify-between">
                           <span>Reference / Txn No.</span>
-                          <span className="text-slate-400 font-bold uppercase tracking-wider text-[8px]">(Optional)</span>
+                          <span className="text-slate-400 font-medium uppercase tracking-wider text-[8px]">(Optional)</span>
                         </label>
                         <div className="relative">
                           <input
@@ -1244,8 +1244,8 @@ const PurchaseForm = () => {
                   {/* Outstanding Amount */}
                   <div className="flex flex-col gap-2">
                     <div className={`h-11 px-4 rounded-lg border shadow-sm flex items-center justify-between gap-2 transition-colors ${stats.outstanding > 0 ? "bg-rose-50 border-rose-200" : "bg-slate-50 border-slate-200"}`}>
-                      <span className={`text-[10px] font-bold uppercase tracking-wider shrink-0 ${stats.outstanding > 0 ? "text-rose-400" : "text-slate-400"}`}>Outstanding</span>
-                      <span className={`text-lg font-semibold tabular-nums truncate ${stats.outstanding > 0 ? "text-rose-600" : "text-slate-600"}`} title={`₹${stats.outstanding.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}>
+                      <span className={`text-[10px] font-medium uppercase tracking-wider shrink-0 ${stats.outstanding > 0 ? "text-rose-400" : "text-slate-400"}`}>Outstanding</span>
+                      <span className={`text-lg font-medium tabular-nums truncate ${stats.outstanding > 0 ? "text-rose-600" : "text-slate-600"}`} title={`₹${stats.outstanding.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}>
                         ₹{stats.outstanding.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     </div>

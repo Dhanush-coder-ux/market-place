@@ -49,7 +49,7 @@ const UnitDropdown = ({
       <button
         type="button"
         onClick={() => setOpen((p) => !p)}
-        className="flex items-center gap-1 px-2.5 py-0.5 text-[9px] font-black text-slate-500 uppercase bg-slate-100 hover:bg-slate-200 transition-colors rounded-full border border-slate-200 cursor-pointer shadow-sm select-none"
+        className="flex items-center gap-1 px-2.5 py-0.5 text-[9px] font-medium text-slate-500 uppercase bg-slate-100 hover:bg-slate-200 transition-colors rounded-full border border-slate-200 cursor-pointer shadow-sm select-none"
       >
         {current}
         <svg
@@ -78,7 +78,7 @@ const UnitDropdown = ({
                 onChange(u.name);
                 setOpen(false);
               }}
-              className={`w-full text-left px-3 py-1.5 text-[11px] font-bold uppercase transition-colors
+              className={`w-full text-left px-3 py-1.5 text-[11px] font-medium uppercase transition-colors
                 ${u.name === current
                   ? "bg-blue-50 text-blue-700"
                   : "text-slate-600 hover:bg-slate-50"
@@ -605,7 +605,7 @@ export const InventoryItemsCard = ({
                   <PackageOpen size={20} />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-slate-800 text-sm">Select Variants</h3>
+                  <h3 className="font-medium text-slate-800 text-sm">Select Variants</h3>
                   <p className="text-xs text-slate-400 mt-0.5">Variations for <span className="text-slate-600 font-medium">{variantModal.baseProduct}</span></p>
                 </div>
               </div>
@@ -630,10 +630,10 @@ export const InventoryItemsCard = ({
                       <div className={`absolute top-5 right-5 h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-200 group-hover:border-blue-300'}`}>
                         {isSelected && <Check size={12} strokeWidth={4} />}
                       </div>
-                      <h4 className="font-black text-slate-800 text-sm pr-8 tracking-tight">{variant.name}</h4>
+                      <h4 className="font-medium text-slate-800 text-sm pr-8 tracking-tight">{variant.name}</h4>
                       {variant.batchCount > 0 && (
                         <div className="flex flex-wrap items-center gap-2 mt-2">
-                          <span className="flex items-center gap-1 text-[9px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100">
+                          <span className="flex items-center gap-1 text-[9px] font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100">
                             <Package size={8} /> {variant.batchCount} Batches
                           </span>
                         </div>
@@ -673,7 +673,7 @@ export const InventoryItemsCard = ({
                   <Package size={18} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-800 text-sm">Select Batch</h3>
+                  <h3 className="font-medium text-slate-800 text-sm">Select Batch</h3>
                   <p className="text-[10px] text-slate-500 mt-0.5">
                     {batchModal.productName} {batchModal.variantName ? `(${batchModal.variantName})` : ""}
                   </p>
@@ -697,7 +697,7 @@ export const InventoryItemsCard = ({
                   className="w-full p-4 rounded-lg border-2 border-dashed border-slate-200 text-slate-500 hover:border-amber-400 hover:text-amber-600 hover:bg-amber-50 transition-all flex flex-col items-center gap-1 group"
                 >
                   <Plus size={20} className="group-hover:scale-110 transition-transform" />
-                  <span className="text-xs font-bold  ">Create New Batch</span>
+                  <span className="text-xs font-medium  ">Create New Batch</span>
                 </button>
               )}
 
@@ -705,7 +705,7 @@ export const InventoryItemsCard = ({
                 <div className="absolute inset-0 flex items-center" aria-hidden="true">
                   <div className="w-full border-t border-slate-100"></div>
                 </div>
-                <div className="relative flex justify-center text-[10px]  font-bold text-slate-300">
+                <div className="relative flex justify-center text-[10px]  font-medium text-slate-300">
                   <span className="bg-white px-2">Existing Batches</span>
                 </div>
               </div>
@@ -719,7 +719,7 @@ export const InventoryItemsCard = ({
                       className="flex items-center justify-between p-4 rounded-lg border border-slate-200 bg-white hover:border-amber-300 hover:shadow-md transition-all text-left group"
                     >
                       <div className="space-y-1">
-                        <p className="text-sm font-bold text-slate-800 group-hover:text-amber-700 transition-colors">
+                        <p className="text-sm font-medium text-slate-800 group-hover:text-amber-700 transition-colors">
                           {batch.name || batch.batch_number}
                         </p>
                         <div className="flex items-center gap-3 text-[10px] text-slate-400 font-medium">
@@ -728,8 +728,8 @@ export const InventoryItemsCard = ({
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-[10px] text-slate-400  font-bold ">In Stock</p>
-                        <p className="text-xs font-black text-slate-700">
+                        <p className="text-[10px] text-slate-400  font-medium ">In Stock</p>
+                        <p className="text-xs font-medium text-slate-700">
                           {Number(batch.stock_infos?.available_stocks ?? batch.stock_infos?.physical_stocks ?? batch.stocks ?? batch.quantity ?? batch.qty ?? 0)} pcs
                         </p>
                       </div>
@@ -755,7 +755,7 @@ export const InventoryItemsCard = ({
               <Package size={16} />
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-slate-800">Inventory Items</h2>
+              <h2 className="text-sm font-medium text-slate-800">Inventory Items</h2>
               <p className="text-[11px] text-slate-400">Add products to this {typeText.toLowerCase()}</p>
             </div>
           </div>
@@ -766,7 +766,7 @@ export const InventoryItemsCard = ({
                   <button
                     type="button"
                     onClick={() => setGstMode("inclusive")}
-                    className={`px-2.5 py-0.5 flex items-center justify-center rounded-md text-[10px] font-black uppercase tracking-wider transition-all duration-200 cursor-pointer h-6 ${gstMode === "inclusive"
+                    className={`px-2.5 py-0.5 flex items-center justify-center rounded-md text-[10px] font-medium uppercase tracking-wider transition-all duration-200 cursor-pointer h-6 ${gstMode === "inclusive"
                       ? "bg-white text-blue-600 shadow-sm border border-slate-200/40"
                       : "text-slate-500 hover:text-slate-700"
                       }`}
@@ -776,7 +776,7 @@ export const InventoryItemsCard = ({
                   <button
                     type="button"
                     onClick={() => setGstMode("exclusive")}
-                    className={`px-2.5 py-0.5 flex items-center justify-center rounded-md text-[10px] font-black uppercase tracking-wider transition-all duration-200 cursor-pointer h-6 ${gstMode === "exclusive"
+                    className={`px-2.5 py-0.5 flex items-center justify-center rounded-md text-[10px] font-medium uppercase tracking-wider transition-all duration-200 cursor-pointer h-6 ${gstMode === "exclusive"
                       ? "bg-white text-blue-600 shadow-sm border border-slate-200/40"
                       : "text-slate-500 hover:text-slate-700"
                       }`}
@@ -813,18 +813,18 @@ export const InventoryItemsCard = ({
           <table className="min-w-[1410px] w-full border-collapse whitespace-nowrap" style={{ tableLayout: 'fixed' }}>
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-200 sticky top-0 z-10">
-                <th className="py-2.5 px-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '45px' }}>#</th>
-                <th className="py-2.5 px-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '270px' }}>Item Description *</th>
-                <th className="py-2.5 px-2 text-center text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '110px' }}>Qty / Unit *</th>
-                <th className="py-2.5 px-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '160px' }}>{type === "PURCHASE" ? "Buy Price / Unit *" : "Material Cost *"}</th>
-                <th className="py-2.5 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '130px' }}>Subtotal</th>
-                <th className="py-2.5 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '120px' }}>Allocated</th>
-                <th className="py-2.5 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '85px' }}>Tax (GST)</th>
-                <th className="py-2.5 px-2 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '140px' }}>
+                <th className="py-2.5 px-3 text-left text-[10px] font-medium text-slate-400 uppercase tracking-wider" style={{ width: '45px' }}>#</th>
+                <th className="py-2.5 px-3 text-left text-[10px] font-medium text-slate-400 uppercase tracking-wider" style={{ width: '270px' }}>Item Description *</th>
+                <th className="py-2.5 px-2 text-center text-[10px] font-medium text-slate-400 uppercase tracking-wider" style={{ width: '110px' }}>Qty / Unit *</th>
+                <th className="py-2.5 px-3 text-left text-[10px] font-medium text-slate-400 uppercase tracking-wider" style={{ width: '160px' }}>{type === "PURCHASE" ? "Buy Price / Unit *" : "Material Cost *"}</th>
+                <th className="py-2.5 px-2 text-left text-[10px] font-medium text-slate-400 uppercase tracking-wider" style={{ width: '130px' }}>Subtotal</th>
+                <th className="py-2.5 px-2 text-left text-[10px] font-medium text-slate-400 uppercase tracking-wider" style={{ width: '120px' }}>Allocated</th>
+                <th className="py-2.5 px-2 text-left text-[10px] font-medium text-slate-400 uppercase tracking-wider" style={{ width: '85px' }}>Tax (GST)</th>
+                <th className="py-2.5 px-2 text-left text-[10px] font-medium text-slate-400 uppercase tracking-wider" style={{ width: '140px' }}>
                   <div className="flex items-center gap-1">
                     <span>Landed Cost</span>
                     <span
-                      className={`text-[8px] font-bold px-1.5 py-0.5 rounded ${
+                      className={`text-[8px] font-medium px-1.5 py-0.5 rounded ${
                         isGstRegistered
                           ? "bg-blue-50 text-blue-600 border border-blue-200/60"
                           : "bg-amber-50 text-amber-700 border border-amber-200/60"
@@ -839,8 +839,8 @@ export const InventoryItemsCard = ({
                     </span>
                   </div>
                 </th>
-                <th className="py-2.5 px-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '260px' }}>Pricing & Margin / Unit (optional)</th>
-                <th className="py-2.5 px-3 text-right text-[10px] font-black text-slate-400 uppercase tracking-wider" style={{ width: '90px' }}>Actions</th>
+                <th className="py-2.5 px-3 text-left text-[10px] font-medium text-slate-400 uppercase tracking-wider" style={{ width: '260px' }}>Pricing & Margin / Unit (optional)</th>
+                <th className="py-2.5 px-3 text-right text-[10px] font-medium text-slate-400 uppercase tracking-wider" style={{ width: '90px' }}>Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
@@ -896,7 +896,7 @@ export const InventoryItemsCard = ({
                     >
                       {/* Index */}
                       <td className="py-2.5 px-3 align-top">
-                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-black ${hasProduct ? `bg-${themeColor}-600 text-white shadow-sm shadow-${themeColor}-200` : 'bg-slate-100 text-slate-400'}`}>
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-medium ${hasProduct ? `bg-${themeColor}-600 text-white shadow-sm shadow-${themeColor}-200` : 'bg-slate-100 text-slate-400'}`}>
                           {index + 1}
                         </div>
                       </td>
@@ -934,7 +934,7 @@ export const InventoryItemsCard = ({
                           {hasProduct && (
                             <div className="flex flex-wrap items-center gap-1.5 px-1">
                               {product.variant && (
-                                <AntBadge variant="at-variant" type="tag" className="!text-[9px] !px-2 !py-0.5 !font-bold">
+                                <AntBadge variant="at-variant" type="tag" className="!text-[9px] !px-2 !py-0.5 !font-medium">
                                   {typeof product.variant === 'object' && product.variant !== null ? (product.variant.variant_name || product.variant.name) : product.variant}
                                 </AntBadge>
                               )}
@@ -946,7 +946,7 @@ export const InventoryItemsCard = ({
                               {product.batchTracking && (
                                 <span
                                   onClick={() => toggleSettings(index)}
-                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-black border transition-all cursor-pointer ${product.batchNum
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-medium border transition-all cursor-pointer ${product.batchNum
                                     ? "bg-amber-50 text-amber-700 border-amber-200"
                                     : "bg-rose-50/50 text-rose-600 border-rose-100/60 animate-pulse"
                                     }`}>
@@ -956,7 +956,7 @@ export const InventoryItemsCard = ({
                               {product.serialTracking && (
                                 <span
                                   onClick={() => toggleSettings(index)}
-                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-black border transition-all cursor-pointer ${(product.serialNumbers?.split(",").filter(Boolean).length || 0) >= (Number(product.quantity) || 0)
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-medium border transition-all cursor-pointer ${(product.serialNumbers?.split(",").filter(Boolean).length || 0) >= (Number(product.quantity) || 0)
                                     ? "bg-blue-50 text-blue-700 border-blue-200"
                                     : "bg-rose-50/50 text-rose-600 border-rose-100/60 animate-pulse"
                                     }`}>
@@ -968,27 +968,27 @@ export const InventoryItemsCard = ({
                                 </span>
                               )}
                               {product.taxGst !== undefined && product.taxGst !== null && (
-                                <AntBadge variant="lb-gst" type="tag" className="!text-[9px] !px-2 !py-0.5 !font-bold">
+                                <AntBadge variant="lb-gst" type="tag" className="!text-[9px] !px-2 !py-0.5 !font-medium">
                                   GST: {product.taxGst}%
                                 </AntBadge>
                               )}
                               {(product.reorderPoint !== undefined && product.reorderPoint !== null && product.reorderPoint !== "") && (
-                                <AntBadge variant="at-batch" type="tag" className="!text-[9px] !px-2 !py-0.5 !font-bold">
+                                <AntBadge variant="at-batch" type="tag" className="!text-[9px] !px-2 !py-0.5 !font-medium">
                                   Reorder: {product.reorderPoint}
                                 </AntBadge>
                               )}
                               {product.storageLoc && (
-                                <AntBadge variant="at-variant" type="tag" className="!text-[9px] !px-2 !py-0.5 !font-bold">
+                                <AntBadge variant="at-variant" type="tag" className="!text-[9px] !px-2 !py-0.5 !font-medium">
                                   Loc: {product.storageLoc}
                                 </AntBadge>
                               )}
                               {product.brand && (
-                                <AntBadge variant="lb-brand" type="tag" className="!text-[9px] !px-2 !py-0.5 !font-bold">
+                                <AntBadge variant="lb-brand" type="tag" className="!text-[9px] !px-2 !py-0.5 !font-medium">
                                   Brand: {product.brand}
                                 </AntBadge>
                               )}
                               {product.category && (
-                                <AntBadge variant="lb-store-online" type="tag" className="!text-[9px] !px-2 !py-0.5 !font-bold">
+                                <AntBadge variant="lb-store-online" type="tag" className="!text-[9px] !px-2 !py-0.5 !font-medium">
                                   Category: {product.category}
                                 </AntBadge>
                               )}
@@ -1004,7 +1004,7 @@ export const InventoryItemsCard = ({
                             type="number"
                             value={product.quantity as any}
                             onChange={(e) => handleProductChange(index, "quantity", e.target.value ? Number(e.target.value) : "")}
-                            className="!h-9 !w-24 !text-xs font-black rounded-lg border-slate-200 shadow-sm text-center !px-2"
+                            className="!h-9 !w-24 !text-xs font-medium rounded-lg border-slate-200 shadow-sm text-center !px-2"
                           />
                           {(() => {
                             const subUnits = product.unit_infos?.sub_units || [];
@@ -1022,7 +1022,7 @@ export const InventoryItemsCard = ({
                                 onChange={(u) => handleProductChange(index, "selectedUnit", u)}
                               />
                             ) : (
-                              <span className="text-[9px] text-slate-500 font-bold uppercase bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200 max-w-[80px] truncate" title={baseUnit}>
+                              <span className="text-[9px] text-slate-500 font-medium uppercase bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200 max-w-[80px] truncate" title={baseUnit}>
                                 {baseUnit}
                               </span>
                             );
@@ -1044,23 +1044,23 @@ export const InventoryItemsCard = ({
                                 }
                                 handleProductChange(index, "costPrice", val);
                               }}
-                              className="!h-9 !text-xs font-black rounded-lg border-slate-200 shadow-sm min-w-[90px] !pl-7 !pr-2"
-                              leftIcon={<span className="text-[10px] text-slate-400 font-black absolute left-1">₹</span>}
+                              className="!h-9 !text-xs font-medium rounded-lg border-slate-200 shadow-sm min-w-[90px] !pl-7 !pr-2"
+                              leftIcon={<span className="text-[10px] text-slate-400 font-medium absolute left-1">₹</span>}
                             />
-                            <span className="text-[9px] text-slate-400 font-bold whitespace-nowrap truncate max-w-[45px]" title={`/${product.unit || 'pc'}`}>
+                            <span className="text-[9px] text-slate-400 font-medium whitespace-nowrap truncate max-w-[45px]" title={`/${product.unit || 'pc'}`}>
                               /{product.unit || 'pc'}
                             </span>
                           </div>
                           {baseCost > 0 && (
-                            <div className="text-[9px] text-slate-400 font-bold mt-1.5 leading-normal bg-blue-50/40 border border-blue-100/50 rounded-md px-2 py-1 select-none animate-in fade-in duration-200 flex flex-wrap gap-x-1 items-center">
+                            <div className="text-[9px] text-slate-400 font-medium mt-1.5 leading-normal bg-blue-50/40 border border-blue-100/50 rounded-md px-2 py-1 select-none animate-in fade-in duration-200 flex flex-wrap gap-x-1 items-center">
                               <span>Base:</span>
-                              <span className="text-slate-700 font-black">₹{rowBaseCost.toFixed(2)}</span>
+                              <span className="text-slate-700 font-medium">₹{rowBaseCost.toFixed(2)}</span>
                               <span className="mx-0.5 text-slate-350">|</span>
                               <span>GST:</span>
-                              <span className="text-blue-600 font-black">+₹{rowGstPerUnit.toFixed(2)}</span>
+                              <span className="text-blue-600 font-medium">+₹{rowGstPerUnit.toFixed(2)}</span>
                               <span className="mx-0.5 text-slate-350">|</span>
                               <span>Tot:</span>
-                              <span className="text-emerald-600 font-black">₹{(rowBaseCost + rowGstPerUnit).toFixed(2)}</span>
+                              <span className="text-emerald-600 font-medium">₹{(rowBaseCost + rowGstPerUnit).toFixed(2)}</span>
                             </div>
                           )}
                         </div>
@@ -1069,10 +1069,10 @@ export const InventoryItemsCard = ({
                       {/* Subtotal */}
                       <td className="py-2.5 px-2 align-top overflow-hidden">
                         <div className="flex flex-col w-full">
-                          <span className="text-xs font-black text-slate-800 tabular-nums truncate" title={`₹${rowTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}>₹{rowTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          <span className="text-xs font-medium text-slate-800 tabular-nums truncate" title={`₹${rowTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}>₹{rowTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                           {q > 0 && (
-                            <span className="text-[9.5px] text-slate-400 font-semibold mt-1 truncate" title={`Total: ₹${rowGrandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}>
-                              Total: <span className="text-slate-600 font-bold">₹{rowGrandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            <span className="text-[9.5px] text-slate-400 font-medium mt-1 truncate" title={`Total: ₹${rowGrandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}>
+                              Total: <span className="text-slate-600 font-medium">₹{rowGrandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                             </span>
                           )}
                         </div>
@@ -1081,11 +1081,11 @@ export const InventoryItemsCard = ({
                       {/* Allocated */}
                       <td className="py-2.5 px-2 align-top overflow-hidden">
                         <div className="h-9 flex flex-col justify-center gap-0.5 w-full">
-                          <span className="text-xs font-black text-slate-800 tabular-nums truncate" title={`₹${allocTotal > 0 ? allocTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}`}>
+                          <span className="text-xs font-medium text-slate-800 tabular-nums truncate" title={`₹${allocTotal > 0 ? allocTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}`}>
                             ₹{allocTotal > 0 ? allocTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
                           </span>
                           {allocPerUnit > 0 && (
-                            <span className="text-[9px] text-blue-500 font-bold whitespace-nowrap truncate" title={`(+₹${allocPerUnit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/u)`}>
+                            <span className="text-[9px] text-blue-500 font-medium whitespace-nowrap truncate" title={`(+₹${allocPerUnit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/u)`}>
                               (+₹{allocPerUnit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/u)
                             </span>
                           )}
@@ -1100,17 +1100,17 @@ export const InventoryItemsCard = ({
                               type="number"
                               value={product.taxGst ?? ""}
                               onChange={(e) => handleProductChange(index, "taxGst", e.target.value ? Number(e.target.value) : 0)}
-                              className={`w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-black text-center focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none pr-6 ${!!product.inventory_id ? "bg-slate-50 opacity-60 cursor-not-allowed" : "bg-white"}`}
+                              className={`w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-center focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none pr-6 ${!!product.inventory_id ? "bg-slate-50 opacity-60 cursor-not-allowed" : "bg-white"}`}
                               min="0"
                               max="100"
                               placeholder="GST"
                               disabled={!!product.inventory_id}
                             />
-                            <span className="absolute right-2.5 text-[10px] text-slate-400 font-black pointer-events-none">%</span>
+                            <span className="absolute right-2.5 text-[10px] text-slate-400 font-medium pointer-events-none">%</span>
                           </div>
                           {rowGstTotal > 0 && (
-                            <span className="text-[9px] font-bold text-slate-400 block mt-1.5">
-                              GST: <span className="text-slate-600 font-black">₹{rowGstTotal.toFixed(2)}</span>
+                            <span className="text-[9px] font-medium text-slate-400 block mt-1.5">
+                              GST: <span className="text-slate-600 font-medium">₹{rowGstTotal.toFixed(2)}</span>
                             </span>
                           )}
                         </div>
@@ -1120,14 +1120,14 @@ export const InventoryItemsCard = ({
                       <td className="py-2.5 px-2 align-top overflow-hidden">
                         <div className="flex flex-col w-full">
                           <div className="flex items-baseline gap-1">
-                            <span className="text-xs font-black text-slate-900 tabular-nums truncate" title={`₹${landedCostPerUnit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}>
+                            <span className="text-xs font-medium text-slate-900 tabular-nums truncate" title={`₹${landedCostPerUnit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}>
                               ₹{landedCostPerUnit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
-                            <span className="text-[9px] text-slate-400 font-bold">/u</span>
+                            <span className="text-[9px] text-slate-400 font-medium">/u</span>
                           </div>
                           {q > 0 && (
-                            <span className="text-[9.5px] text-slate-400 font-semibold mt-1 truncate" title={`Total Landed: ₹${landedCostTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}>
-                              Total: <span className="text-emerald-700 font-bold">₹{landedCostTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            <span className="text-[9.5px] text-slate-400 font-medium mt-1 truncate" title={`Total Landed: ₹${landedCostTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}>
+                              Total: <span className="text-emerald-700 font-medium">₹{landedCostTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                             </span>
                           )}
                         </div>
@@ -1142,7 +1142,7 @@ export const InventoryItemsCard = ({
                                 <button
                                   key={m}
                                   onClick={() => handleProductChange(index, "marginType", m)}
-                                  className={`w-6 h-6 flex items-center justify-center rounded-md text-[9px] font-black transition-all ${product.marginType === m ? "bg-white text-blue-600 shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
+                                  className={`w-6 h-6 flex items-center justify-center rounded-md text-[9px] font-medium transition-all ${product.marginType === m ? "bg-white text-blue-600 shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
                                 >
                                   {m === "percent" ? "%" : m === "amount" ? "₹" : "SP"}
                                 </button>
@@ -1167,19 +1167,19 @@ export const InventoryItemsCard = ({
                                     showToast("New selling price applies to all existing stock", "info");
                                   }
                                 }}
-                                className="!h-7 !text-[11px] !font-bold !w-full"
+                                className="!h-7 !text-[11px] !font-medium !w-full"
                                 placeholder={product.marginType === "sellingPrice" ? "Price" : "Margin"}
                               />
                             </div>
                             <div className="flex items-center gap-1 px-1.5 py-1 bg-emerald-50/50 border border-emerald-100 rounded-md shrink-0 max-w-[100px]" title={`₹${computedSellPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}>
-                              <span className="text-[9px] font-black text-emerald-600 uppercase tracking-tighter shrink-0">SP</span>
-                              <span className="text-[11px] font-black text-emerald-700 tabular-nums truncate">
+                              <span className="text-[9px] font-medium text-emerald-600 uppercase tracking-tighter shrink-0">SP</span>
+                              <span className="text-[11px] font-medium text-emerald-700 tabular-nums truncate">
                                 ₹{computedSellPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </span>
                             </div>
                           </div>
                           {isUpdate && (
-                            <div className="text-[8.5px] text-amber-600 flex items-start gap-1 font-bold leading-tight bg-amber-50/80 p-1.5 rounded border border-amber-200/50 mt-2">
+                            <div className="text-[8.5px] text-amber-600 flex items-start gap-1 font-medium leading-tight bg-amber-50/80 p-1.5 rounded border border-amber-200/50 mt-2">
                               <Info size={10} className="shrink-0 mt-0.5" />
                               Note: New selling price applies to all existing stock.
                             </div>
@@ -1221,22 +1221,21 @@ export const InventoryItemsCard = ({
                         <td colSpan={10} className="p-0 border-b border-slate-100">
                           <div className="px-12 py-4 space-y-4 animate-in fade-in slide-in-from-top-1 duration-200">
 
-                            {/* Row 1: Batch & Serial Tracking */}
-                            <div className="flex gap-4">
+                            <div className="flex flex-wrap items-start gap-4">
                               {/* Batch Section */}
                               {(type !== "PURCHASE" || purchaseType !== "PO_CREATE") && product.batchTracking && (
-                                <div className="flex-1 bg-white p-4 rounded-lg border border-amber-200 shadow-sm">
-                                  <div className="flex items-center gap-2 mb-3">
-                                    <Package size={14} className="text-amber-500" />
-                                    <span className="text-xs font-bold text-amber-900">Batch Details</span>
+                                <div className="w-full max-w-[400px] bg-white p-3 rounded-lg border border-amber-200 shadow-sm shrink-0">
+                                  <div className="flex items-center gap-1.5 mb-2.5">
+                                    <Package size={12} className="text-amber-500" />
+                                    <span className="text-[11px] font-medium text-amber-900">Batch Details</span>
                                   </div>
-                                  <div className="grid grid-cols-3 gap-3">
+                                  <div className="grid grid-cols-3 gap-2">
                                     <Input
                                       label="Batch #"
                                       value={product.batchNum}
                                       onChange={(e) => handleProductChange(index, "batchNum", e.target.value)}
                                       disabled={product.batchNumReadOnly}
-                                      className="!h-9 !text-xs"
+                                      className="!h-7 !text-[11px] !py-1 !px-2"
                                     />
                                     <Input
                                       label="Mfg Date"
@@ -1244,7 +1243,7 @@ export const InventoryItemsCard = ({
                                       value={product.manufacturingDate}
                                       onChange={(e) => handleProductChange(index, "manufacturingDate", e.target.value)}
                                       disabled={product.batchNumReadOnly}
-                                      className="!h-9 !text-xs"
+                                      className="!h-7 !text-[11px] !py-1 !px-2"
                                     />
                                     <Input
                                       label="Expiry Date"
@@ -1252,7 +1251,7 @@ export const InventoryItemsCard = ({
                                       value={product.expiryDate}
                                       onChange={(e) => handleProductChange(index, "expiryDate", e.target.value)}
                                       disabled={product.batchNumReadOnly}
-                                      className="!h-9 !text-xs"
+                                      className="!h-7 !text-[11px] !py-1 !px-2"
                                     />
                                   </div>
                                 </div>
@@ -1260,10 +1259,10 @@ export const InventoryItemsCard = ({
 
                               {/* Serial Section */}
                               {(type !== "PURCHASE" || purchaseType !== "PO_CREATE") && product.serialTracking && (
-                                <div className="flex-1 bg-white p-4 rounded-lg border border-blue-200 shadow-sm">
-                                  <div className="flex items-center gap-2 mb-3">
-                                    <Check size={14} className="text-blue-500" />
-                                    <span className="text-xs font-bold text-blue-900">Serial Numbers</span>
+                                <div className="w-full max-w-[400px] bg-white p-3 rounded-lg border border-blue-200 shadow-sm shrink-0">
+                                  <div className="flex items-center gap-1.5 mb-2.5">
+                                    <Check size={12} className="text-blue-500" />
+                                    <span className="text-[11px] font-medium text-blue-900">Serial Numbers</span>
                                   </div>
                                   <InlineSerialManager
                                     serials={(product.serialNumbers || "").split(',').filter(Boolean)}
@@ -1278,13 +1277,11 @@ export const InventoryItemsCard = ({
                               )}
                             </div>
 
-                            {/* Row 2: Settings & Breakdown */}
-                            <div className="flex gap-4">
                               {expandedSettings.has(index) && (
-                                <div className="w-64 max-w-xs bg-white p-4 rounded-lg border border-slate-200 shadow-sm shrink-0">
+                                <div className="w-full max-w-[400px] bg-white p-3 rounded-lg border border-slate-200 shadow-sm shrink-0">
                                   <div className="flex items-center gap-2 mb-3">
                                     <Settings size={14} className="text-slate-500" />
-                                    <span className="text-xs font-bold text-slate-800">Additional Settings</span>
+                                    <span className="text-xs font-medium text-slate-800">Additional Settings</span>
                                   </div>
                                   <div className="grid grid-cols-1 gap-3">
                                     <Input
@@ -1302,21 +1299,21 @@ export const InventoryItemsCard = ({
                                 <div className="flex-1 bg-white p-4 rounded-lg border border-slate-200 shadow-sm animate-in fade-in slide-in-from-top-1 duration-200">
                                   <div className="flex items-center gap-2 mb-3">
                                     <Info size={14} className="text-slate-500" />
-                                    <span className="text-xs font-bold text-slate-800">Cost Breakdown</span>
+                                    <span className="text-xs font-medium text-slate-800">Cost Breakdown</span>
                                   </div>
                                   <div className="grid grid-cols-2 gap-6">
                                     <div className="space-y-1.5">
                                       <div className="flex justify-between text-[11px]">
                                         <span className="text-slate-500">Unit Cost (Base)</span>
-                                        <span className="font-bold text-slate-700">₹{baseCost.toFixed(2)}</span>
+                                        <span className="font-medium text-slate-700">₹{baseCost.toFixed(2)}</span>
                                       </div>
                                       {product.taxGst !== undefined && Number(product.taxGst) > 0 && (
                                         <>
                                           <div className="flex justify-between text-[11px]">
                                             <span className="text-slate-500">GST Cost ({product.taxGst}%)</span>
-                                            <span className="font-bold text-blue-650">+₹{(baseCost * Number(product.taxGst) / 100).toFixed(2)}</span>
+                                            <span className="font-medium text-blue-650">+₹{(baseCost * Number(product.taxGst) / 100).toFixed(2)}</span>
                                           </div>
-                                          <div className="flex justify-between text-[11px] font-semibold text-slate-750">
+                                          <div className="flex justify-between text-[11px] font-medium text-slate-750">
                                             <span className="text-slate-600">Unit Cost (incl. GST)</span>
                                             <span className="text-slate-800">₹{(baseCost * (1 + Number(product.taxGst) / 100)).toFixed(2)}</span>
                                           </div>
@@ -1324,31 +1321,31 @@ export const InventoryItemsCard = ({
                                       )}
                                       <div className="flex justify-between text-[11px] pt-1.5 border-t border-slate-100/60">
                                         <span className="text-blue-500">Allocated Cost</span>
-                                        <span className="font-bold text-blue-600">₹{allocPerUnit.toFixed(2)}</span>
+                                        <span className="font-medium text-blue-600">₹{allocPerUnit.toFixed(2)}</span>
                                       </div>
                                       <div className="flex justify-between text-xs pt-1.5 border-t border-slate-100">
-                                        <span className="font-bold text-slate-800">Net Cost / Unit</span>
-                                        <span className="font-black text-emerald-600">₹{netCostPerUnit.toFixed(2)}</span>
+                                        <span className="font-medium text-slate-800">Net Cost / Unit</span>
+                                        <span className="font-medium text-emerald-600">₹{netCostPerUnit.toFixed(2)}</span>
                                       </div>
                                       {product.taxGst !== undefined && Number(product.taxGst) > 0 && (
                                         <div className="flex justify-between text-[11px] pt-1 border-t border-slate-100/30">
-                                          <span className="font-semibold text-slate-700">Net Cost / Unit (incl. GST)</span>
-                                          <span className="font-bold text-emerald-700">₹{(netCostPerUnit + (baseCost * Number(product.taxGst) / 100)).toFixed(2)}</span>
+                                          <span className="font-medium text-slate-700">Net Cost / Unit (incl. GST)</span>
+                                          <span className="font-medium text-emerald-700">₹{(netCostPerUnit + (baseCost * Number(product.taxGst) / 100)).toFixed(2)}</span>
                                         </div>
                                       )}
                                     </div>
                                     <div className="space-y-1.5">
                                       <div className="flex justify-between text-[11px]">
                                         <span className="text-slate-500">Row Subtotal (Base)</span>
-                                        <span className="font-bold text-slate-700">₹{rowTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                        <span className="font-medium text-slate-700">₹{rowTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                       </div>
                                       {product.taxGst !== undefined && Number(product.taxGst) > 0 && (
                                         <>
                                           <div className="flex justify-between text-[11px]">
                                             <span className="text-slate-500">Row GST ({product.taxGst}%)</span>
-                                            <span className="font-bold text-blue-650">+₹{(rowTotal * Number(product.taxGst) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                            <span className="font-medium text-blue-650">+₹{(rowTotal * Number(product.taxGst) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                           </div>
-                                          <div className="flex justify-between text-[11px] font-semibold text-slate-750">
+                                          <div className="flex justify-between text-[11px] font-medium text-slate-750">
                                             <span className="text-slate-600">Row Subtotal (incl. GST)</span>
                                             <span className="text-slate-800">₹{(rowTotal * (1 + Number(product.taxGst) / 100)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                           </div>
@@ -1356,26 +1353,25 @@ export const InventoryItemsCard = ({
                                       )}
                                       <div className="flex justify-between text-[11px] pt-1.5 border-t border-slate-100/60">
                                         <span className="text-emerald-500">Expected Margin</span>
-                                        <span className="font-bold text-emerald-600">{effectiveMarginPct || '0'}%</span>
+                                        <span className="font-medium text-emerald-600">{effectiveMarginPct || '0'}%</span>
                                       </div>
                                       <div className="flex justify-between text-xs pt-1.5 border-t border-slate-100">
-                                        <span className="font-bold text-slate-800">Profit / Unit</span>
-                                        <span className="font-black text-emerald-600">₹{(computedSellPrice - netCostPerUnit).toFixed(2)}</span>
+                                        <span className="font-medium text-slate-800">Profit / Unit</span>
+                                        <span className="font-medium text-emerald-600">₹{(computedSellPrice - netCostPerUnit).toFixed(2)}</span>
                                       </div>
                                     </div>
                                   </div>
                                   {product.taxGst !== undefined && Number(product.taxGst) > 0 && (
                                     <div className="mt-4 p-2.5 bg-slate-50 border border-slate-150 rounded-xl flex items-center justify-between text-[11px] text-slate-600">
-                                      <span className="font-black text-slate-400 uppercase tracking-wider text-[9px]">Tax Formula:</span>
+                                      <span className="font-medium text-slate-400 uppercase tracking-wider text-[9px]">Tax Formula:</span>
                                       <span className="font-medium tabular-nums">
-                                        Base Cost <span className="font-semibold text-slate-700">₹{baseCost.toFixed(2)}</span> + GST Cost ({product.taxGst}%) <span className="font-semibold text-blue-600">₹{(baseCost * Number(product.taxGst) / 100).toFixed(2)}</span> = Total <span className="font-bold text-slate-800">₹{(baseCost * (1 + Number(product.taxGst) / 100)).toFixed(2)}</span>
+                                        Base Cost <span className="font-medium text-slate-700">₹{baseCost.toFixed(2)}</span> + GST Cost ({product.taxGst}%) <span className="font-medium text-blue-600">₹{(baseCost * Number(product.taxGst) / 100).toFixed(2)}</span> = Total <span className="font-medium text-slate-800">₹{(baseCost * (1 + Number(product.taxGst) / 100)).toFixed(2)}</span>
                                       </span>
                                     </div>
                                   )}
                                 </div>
                               )}
                             </div>
-                          </div>
                         </td>
                       </tr>
                     )}
@@ -1393,7 +1389,7 @@ export const InventoryItemsCard = ({
             className="w-full group flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-dashed border-slate-200 text-slate-400 hover:border-slate-300 hover:text-slate-600 hover:bg-white transition-all duration-200"
           >
             <Plus size={14} className="group-hover:rotate-90 transition-transform duration-200" />
-            <span className="text-xs font-bold">Add Another Item</span>
+            <span className="text-xs font-medium">Add Another Item</span>
           </button>
         </div>
       </div>

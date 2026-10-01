@@ -65,8 +65,8 @@ export const InvoiceTemplateSettings: React.FC = () => {
       <div className="w-full md:w-5/12 lg:w-1/3 bg-white border-r border-slate-200 flex flex-col">
         <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center sticky top-0 z-20">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center">
-              <LayoutTemplate size={17} className="text-violet-600" />
+            <div className="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center">
+              <LayoutTemplate size={17} className="text-blue-600" />
             </div>
             <div>
               <h3 className="text-sm font-bold text-slate-800">
@@ -82,8 +82,8 @@ export const InvoiceTemplateSettings: React.FC = () => {
             disabled={!hasChanges || isSaving}
             className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 ${
               hasChanges
-                ? "bg-violet-600 text-white hover:bg-violet-700 shadow-sm active:scale-95"
-                : "bg-emerald-50 text-emerald-600 cursor-not-allowed border border-emerald-200/60"
+                ? "bg-blue-600 text-white hover:bg-blue-700 shadow-sm active:scale-95"
+                : "bg-blue-50 text-blue-600 cursor-not-allowed border border-blue-200/60"
             }`}
           >
             {isSaving ? "Saving..." : !hasChanges ? "Saved" : "Save Changes"}
@@ -99,7 +99,7 @@ export const InvoiceTemplateSettings: React.FC = () => {
                 onClick={() => handleSelect(tmpl.id)}
                 className={`relative flex flex-col bg-white rounded-xl border-2 cursor-pointer transition-all duration-300 overflow-hidden group ${
                   isActive
-                    ? "border-violet-500 shadow-md ring-4 ring-violet-500/10"
+                    ? "border-blue-500 shadow-md ring-4 ring-blue-500/10"
                     : "border-slate-200 hover:border-slate-300 shadow-sm hover:shadow"
                 }`}
               >
@@ -116,7 +116,7 @@ export const InvoiceTemplateSettings: React.FC = () => {
                   <div className="flex justify-between items-center mb-1">
                     <h4 className="text-sm font-bold text-slate-800">{tmpl.name}</h4>
                     {isActive && (
-                       <div className="w-5 h-5 rounded-full bg-violet-500 flex items-center justify-center text-white">
+                       <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center text-white">
                          <Check size={12} strokeWidth={3} />
                        </div>
                     )}

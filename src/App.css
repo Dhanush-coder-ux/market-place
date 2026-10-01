@@ -111,54 +111,58 @@
 :root[data-theme="blue"] {
   /* Sidebar gradient stops */
   --t-sidebar-from: #2563EB;
-  --t-sidebar-via:  #1D4ED8;
-  --t-sidebar-to:   #1E3A8A;
+  --t-sidebar-via: #1D4ED8;
+  --t-sidebar-to: #1E3A8A;
   /* Primary brand colour (buttons, active tabs, links) */
-  --t-primary:        #2563EB;
-  --t-primary-hover:  #1D4ED8;
-  --t-primary-light:  #DBEAFE;  /* blue-100 */
-  --t-primary-lighter: #EFF6FF; /* blue-50  */
+  --t-primary: #2563EB;
+  --t-primary-hover: #1D4ED8;
+  --t-primary-light: #DBEAFE;
+  /* blue-100 */
+  --t-primary-lighter: #EFF6FF;
+  /* blue-50  */
   /* Secondary */
-  --t-secondary:      #3B82F6;
+  --t-secondary: #3B82F6;
   /* Gold / Accent */
-  --t-accent:         #3B82F6;
-  --t-accent-hover:   #2563EB;
+  --t-accent: #3B82F6;
+  --t-accent-hover: #2563EB;
   /* Focus ring */
-  --t-ring:           #93C5FD;
+  --t-ring: #93C5FD;
   /* Sidebar button hover text */
   --t-sidebar-btn-hover-text: #1D4ED8;
   /* Gradient button shadow color */
-  --t-btn-shadow:     rgba(59,130,246,0.35);
-  --t-btn-shadow-hover: rgba(59,130,246,0.45);
+  --t-btn-shadow: rgba(59, 130, 246, 0.35);
+  --t-btn-shadow-hover: rgba(59, 130, 246, 0.45);
   /* Theme-color meta tag value */
-  --t-meta-color:     #2563EB;
+  --t-meta-color: #2563EB;
 }
 
 /* ── Forest Green Theme ── */
 :root[data-theme="green"] {
   /* Sidebar gradient stops */
   --t-sidebar-from: #286038;
-  --t-sidebar-via:  #103020;
-  --t-sidebar-to:   #083020;
+  --t-sidebar-via: #103020;
+  --t-sidebar-to: #083020;
   /* Primary brand colour */
-  --t-primary:        #286038;
-  --t-primary-hover:  #103020;
-  --t-primary-light:  #D5E8D0;  /* soft sage tint */
-  --t-primary-lighter: #EAF4E6; /* lightest sage */
+  --t-primary: #286038;
+  --t-primary-hover: #103020;
+  --t-primary-light: #D5E8D0;
+  /* soft sage tint */
+  --t-primary-lighter: #EAF4E6;
+  /* lightest sage */
   /* Secondary */
-  --t-secondary:      #88B878;
+  --t-secondary: #88B878;
   /* Gold / Accent */
-  --t-accent:         #C49850;
-  --t-accent-hover:   #D4A85C;
+  --t-accent: #C49850;
+  --t-accent-hover: #D4A85C;
   /* Focus ring */
-  --t-ring:           #A8C898;
+  --t-ring: #A8C898;
   /* Sidebar button hover text */
   --t-sidebar-btn-hover-text: #286038;
   /* Gradient button shadow color */
-  --t-btn-shadow:     rgba(40,96,56,0.35);
-  --t-btn-shadow-hover: rgba(40,96,56,0.45);
+  --t-btn-shadow: rgba(40, 96, 56, 0.35);
+  --t-btn-shadow-hover: rgba(40, 96, 56, 0.45);
   /* Theme-color meta tag value */
-  --t-meta-color:     #103020;
+  --t-meta-color: #103020;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -169,7 +173,7 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 :root[data-theme="green"] {
   /* ── Blue palette → Green palette ── */
-  --color-blue-50:  #EAF4E6;
+  --color-blue-50: #EAF4E6;
   --color-blue-100: #D5E8D0;
   --color-blue-200: #A8C898;
   --color-blue-300: #88B878;
@@ -182,7 +186,7 @@
   --color-blue-950: #041C10;
 
   /* ── Sky palette → Sage palette (cards, info panels) ── */
-  --color-sky-50:  #EAF4E6;
+  --color-sky-50: #EAF4E6;
   --color-sky-100: #D5E8D0;
   --color-sky-200: #A8C898;
   --color-sky-300: #88B878;
@@ -795,9 +799,11 @@
     max-height: 0;
     opacity: 0.3;
   }
+
   5% {
     opacity: 1;
   }
+
   100% {
     max-height: 2000px;
     opacity: 1;
@@ -810,6 +816,7 @@
     clip-path: inset(0 0 100% 0);
     opacity: 0.4;
   }
+
   100% {
     clip-path: inset(0 0 0% 0);
     opacity: 1;
@@ -822,9 +829,11 @@
     width: 0%;
     opacity: 0;
   }
+
   10% {
     opacity: 1;
   }
+
   100% {
     width: 100%;
     opacity: 1;
@@ -836,6 +845,7 @@
   0% {
     transform: translateY(0);
   }
+
   100% {
     transform: translateY(6px);
   }
@@ -847,6 +857,7 @@
     transform: translateY(0) rotate(0deg);
     opacity: 1;
   }
+
   100% {
     transform: translateY(80px) rotate(2.5deg);
     opacity: 0;
@@ -855,10 +866,13 @@
 
 /* Printer LED blink during printing */
 @keyframes printerLedBlink {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 1;
     box-shadow: 0 0 6px 2px rgba(34, 197, 94, 0.6);
   }
+
   50% {
     opacity: 0.3;
     box-shadow: 0 0 2px 1px rgba(34, 197, 94, 0.2);
@@ -867,10 +881,13 @@
 
 /* Printer LED steady glow */
 @keyframes printerLedSteady {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 1;
     box-shadow: 0 0 6px 2px rgba(34, 197, 94, 0.5);
   }
+
   50% {
     opacity: 0.85;
     box-shadow: 0 0 4px 2px rgba(34, 197, 94, 0.4);
@@ -879,21 +896,41 @@
 
 /* Subtle paper jitter during feed */
 @keyframes paperJitter {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-0.3px); }
-  75% { transform: translateX(0.3px); }
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-0.3px);
+  }
+
+  75% {
+    transform: translateX(0.3px);
+  }
 }
 
 /* Modal backdrop fade in */
 @keyframes receiptModalFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 /* Modal backdrop fade out */
 @keyframes receiptModalFadeOut {
-  from { opacity: 1; }
-  to { opacity: 0; }
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
 }
 
 /* Printer body entrance */
@@ -902,6 +939,7 @@
     opacity: 0;
     transform: scale(0.92) translateY(16px);
   }
+
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
@@ -912,6 +950,7 @@
 .receipt-cut-edge {
   position: relative;
 }
+
 .receipt-cut-edge::after {
   content: '';
   position: absolute;
@@ -920,9 +959,9 @@
   right: 0;
   height: 6px;
   background: linear-gradient(135deg, #FAFAF8 33.33%, transparent 33.33%) -6px 0,
-              linear-gradient(225deg, #FAFAF8 33.33%, transparent 33.33%) -6px 0,
-              linear-gradient(315deg, #FAFAF8 33.33%, transparent 33.33%),
-              linear-gradient(45deg, #FAFAF8 33.33%, transparent 33.33%);
+    linear-gradient(225deg, #FAFAF8 33.33%, transparent 33.33%) -6px 0,
+    linear-gradient(315deg, #FAFAF8 33.33%, transparent 33.33%),
+    linear-gradient(45deg, #FAFAF8 33.33%, transparent 33.33%);
   background-size: 12px 6px;
   background-repeat: repeat-x;
 }
@@ -931,13 +970,11 @@
 .thermal-paper {
   background-color: #FAFAF8;
   background-image:
-    repeating-linear-gradient(
-      0deg,
+    repeating-linear-gradient(0deg,
       transparent,
       transparent 1px,
       rgba(0, 0, 0, 0.008) 1px,
-      rgba(0, 0, 0, 0.008) 2px
-    );
+      rgba(0, 0, 0, 0.008) 2px);
 }
 
 /* Receipt monospace font stack */
@@ -961,6 +998,7 @@
   padding-top: 2px;
   margin-top: 2px;
 }
+
 .receipt-separator-double::after {
   content: '';
   display: block;

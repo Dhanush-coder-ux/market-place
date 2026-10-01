@@ -173,7 +173,7 @@ const getRangeDate = (key: RangeKey): { start: Date; end: Date } | null => {
 const AnalyticsDashboard = () => {
   const { analytics } = useBusinessApi();
 
-  const [activeRange, setActiveRange] = useState<RangeKey>("month");
+  const [activeRange, setActiveRange] = useState<RangeKey>("all");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
   const [stats, setStats] = useState<UnifiedDashboardResponse | null>(null);
@@ -306,13 +306,13 @@ const AnalyticsDashboard = () => {
   }, [latestNotification, fetchStats]);
 
   // ── Derived metrics ──
-  const salesOverall = stats?.overview?.sales ?? stats?.dashboard?.sales?.overall ?? {};
-  const purchaseOverall = stats?.overview?.purchase ?? stats?.dashboard?.purchase?.overall ?? {};
-  const customerOverall = stats?.overview?.customer ?? stats?.dashboard?.customer?.overall ?? {};
-  const supplierOverall = stats?.overview?.supplier ?? stats?.dashboard?.supplier?.overall ?? {};
+  const salesOverall = stats?.overview?.sales ?? stats?.dashboard?.sales?.overall ?? stats?.dashboard?.sales ?? (stats as any)?.sales?.overall ?? (stats as any)?.sales ?? {};
+  const purchaseOverall = stats?.overview?.purchase ?? stats?.dashboard?.purchase?.overall ?? stats?.dashboard?.purchase ?? (stats as any)?.purchase?.overall ?? (stats as any)?.purchase ?? {};
+  const customerOverall = stats?.overview?.customer ?? stats?.dashboard?.customer?.overall ?? stats?.dashboard?.customer ?? (stats as any)?.customer?.overall ?? (stats as any)?.customer ?? {};
+  const supplierOverall = stats?.overview?.supplier ?? stats?.dashboard?.supplier?.overall ?? stats?.dashboard?.supplier ?? (stats as any)?.supplier?.overall ?? (stats as any)?.supplier ?? {};
 
-  const topProductsRaw = stats?.top?.top_products || stats?.dashboard?.inventory?.top_products || [];
-  const topSuppliersRaw = stats?.top?.top_suppliers || stats?.dashboard?.supplier?.top_suppliers || [];
+  const topProductsRaw = stats?.top?.top_products || stats?.dashboard?.inventory?.top_products || (stats as any)?.inventory?.top_products || (stats as any)?.top_products || [];
+  const topSuppliersRaw = stats?.top?.top_suppliers || stats?.dashboard?.supplier?.top_suppliers || (stats as any)?.supplier?.top_suppliers || (stats as any)?.top_suppliers || [];
 
   const topProductsTotalSales = topProductsRaw.reduce((sum: number, p: any) => sum + Number(p.total_sales_amounts || p.total_offline_sales_amount || p.total_revenue || 0), 0);
   const topProductsTotalOrders = topProductsRaw.reduce((sum: number, p: any) => sum + Number(p.total_offline_sales || 0) + Number(p.total_online_sales || 0) || (Number(p.total_sales_stocks || 0) > 0 ? 1 : 0), 0);
@@ -346,8 +346,8 @@ const AnalyticsDashboard = () => {
   const aov = totalOrders > 0 ? netRevenue / totalOrders : 0;
   const grossMargin = netRevenue > 0 ? (totalProfit / netRevenue) * 100 : 0;
   
-  const customerOutstanding = customerOverall?.total_outstandings ?? 0;
-  const receivedAmount = Math.max(0, netRevenue - customerOutstanding);
+  const customerOutstanding = Number(customerOverall?.total_outstandings ?? 0);
+  const receivedAmount = Number(customerOverall?.total_cleared_amounts ?? Math.max(0, netRevenue - customerOutstanding));
 
   const totalReturnsCount = 0;
 

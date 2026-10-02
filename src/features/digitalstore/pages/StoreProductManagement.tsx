@@ -12,7 +12,7 @@ import {
   AlertCircle, Eye, EyeOff,
   CheckCircle2, XCircle, LayoutGrid, List,
   Tag, Loader2,
-  MoreVertical, Sliders, GripVertical, Trash2,
+  MoreVertical, GripVertical, Trash2,
   ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { inventoryApi, inventoryCustomFieldsApi } from "../../../services/api/inventory";
@@ -404,13 +404,7 @@ function RowMoreMenu({
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-48 bg-white border border-slate-200 rounded-xl shadow-xl p-1 z-[9999]">
-          <DropdownMenuItem
-            onClick={onEdit}
-            className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 cursor-pointer rounded-lg transition-colors"
-          >
-            <Sliders size={13} className="text-blue-500 shrink-0" />
-            <span>Custom Fields</span>
-          </DropdownMenuItem>
+
           <DropdownMenuItem
             onClick={onToggleVisibility}
             disabled={actionLoading}
@@ -466,13 +460,7 @@ function CardMoreMenu({
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48 bg-white border border-slate-200 rounded-xl shadow-xl p-1 z-[9999]">
-        <DropdownMenuItem
-          onClick={onEdit}
-          className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 cursor-pointer rounded-lg transition-colors"
-        >
-          <Sliders size={13} className="text-blue-500 shrink-0" />
-          <span>Custom Fields</span>
-        </DropdownMenuItem>
+
         <DropdownMenuItem
           onClick={onToggleVisibility}
           disabled={actionLoading}
@@ -527,7 +515,22 @@ const ProductDashboard = () => {
   // Additional Details State
   const [additionalSections, setAdditionalSections] = useState<{ id: string; title: string; content: string }[]>([]);
   const [productPolicyType, setProductPolicyType] = useState<string>("store_default");
-  const [productPolicySubtitle, setProductPolicySubtitle] = useState<string>("");
+  const [productPolicyDetails, setProductPolicyDetails] = useState<string>("");
+
+  const handleSelectPolicyPreset = (typeKey: string) => {
+    setProductPolicyType(typeKey);
+    if (typeKey === "no_returns") {
+      setProductPolicyDetails("Once sold, items cannot be returned or exchanged. Please check your order carefully before confirming.");
+    } else if (typeKey === "exchange_only") {
+      setProductPolicyDetails("Items can be exchanged within 3 days if unused and in original packaging. Refunds are not available.");
+    } else if (typeKey === "7_days_return") {
+      setProductPolicyDetails("Items can be returned within 7 days of delivery if unused and in original packaging. Refund will be issued after inspection.");
+    } else if (typeKey === "damaged_only") {
+      setProductPolicyDetails("Returns are accepted only if the item is damaged or incorrect. Please report within 24 hours of delivery with a photo.");
+    } else if (typeKey === "store_default") {
+      setProductPolicyDetails("");
+    }
+  };
 
   const addSection = () => {
     if (additionalSections.length >= 3) return;
@@ -714,7 +717,7 @@ const ProductDashboard = () => {
     setAdditionalSections([]);
     const existingPolicy = product.returnPolicy || {};
     setProductPolicyType(existingPolicy.type || "store_default");
-    setProductPolicySubtitle(existingPolicy.subtitle || "");
+    setProductPolicyDetails(existingPolicy.details || existingPolicy.subtitle || "");
     loadCustomFieldsForProduct(product, shopFields);
   };
 
@@ -800,8 +803,8 @@ const ProductDashboard = () => {
         returnPolicyToSave = {
           type: productPolicyType,
           title,
-          subtitle: productPolicySubtitle || subtitle,
-          details,
+          subtitle,
+          details: productPolicyDetails || details,
           allow_returns: allowRet,
           is_exchange_only: isExch
         };
@@ -1234,7 +1237,7 @@ const ProductDashboard = () => {
                   label="Policy Override"
                   options={POLICY_OPTIONS}
                   value={productPolicyType}
-                  onValueChange={(val) => setProductPolicyType(val)}
+                  onValueChange={handleSelectPolicyPreset}
                   placeholder="Select Policy Override"
                   className="h-9 py-1 px-3 text-xs bg-white"
                 />
@@ -1243,18 +1246,17 @@ const ProductDashboard = () => {
               {productPolicyType !== "store_default" && (
                 <div>
                   <label className="block text-[11px] font-medium text-slate-600 mb-1">
-                    Condition / Reason Subtitle
+                    Policy Description
                   </label>
-                  <input
-                    type="text"
-                    value={productPolicySubtitle}
-                    onChange={(e) => setProductPolicySubtitle(e.target.value)}
+                  <textarea
+                    value={productPolicyDetails}
+                    onChange={(e) => setProductPolicyDetails(e.target.value)}
                     placeholder={
                       productPolicyType === "no_returns" 
-                        ? "e.g. Freshly made — please check before confirming" 
-                        : "e.g. Unused items, original packaging"
+                        ? "e.g. Once sold, items cannot be returned or exchanged." 
+                        : "e.g. Items can be returned within 7 days of delivery..."
                     }
-                    className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 outline-none focus:border-blue-500"
+                    className="w-full h-16 p-3 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 outline-none focus:border-blue-500 resize-none"
                   />
                 </div>
               )}

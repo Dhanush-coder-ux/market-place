@@ -252,7 +252,7 @@ const SalesListPage: React.FC = () => {
   const fetchPage = React.useCallback(async (limit: number, offset: number, filters: any) => {
     const params: any = { limit: limit.toString(), offset: offset.toString() };
     if (filters.search) params.q = filters.search;
-    
+
     if (filters.activeKpi === "Online Sales") params.exclude_offline = true;
     if (filters.activeKpi === "Offline Sales") params.exclude_online = true;
 
@@ -435,7 +435,7 @@ const SalesListPage: React.FC = () => {
         offlineAmount: offlineAmt,
         offlineCount: offlineCnt
       });
-    }).catch(() => {});
+    }).catch(() => { });
   }, [api.getData]);
 
   const filters = useMemo(() => ({

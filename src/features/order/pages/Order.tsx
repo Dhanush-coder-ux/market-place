@@ -1,13 +1,12 @@
 import { useState, useEffect } from "react";
 import {
-  Package, LayoutGrid, List, Inbox, PackageCheck, X, CheckCircle, Truck
+  LayoutGrid, List, X, Inbox
 } from "lucide-react";
 import OrdersHeader from "../components/OrdersHeader";
 import OrdersCard from "../components/OrdersCard";
 import Drawer from "@/components/common/Drawer";
 import OrderDetailView from "../components/OrdersDetailView";
 import { DateFilter } from "../components/DateFilter";
-import { StatCard } from "@/components/common/StatsCard";
 import SkeletonLoader from "@/components/common/SkeletonLoader";
 import { useApi } from "@/context/ApiContext";
 import { SHOP_ID } from "@/services/endpoints";
@@ -54,7 +53,7 @@ const Order = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [open, setOpen] = useState(false);
   const [dateRange, setDateRange] = useState<{ startDate: Date | null; endDate: Date | null } | null>(null);
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -203,15 +202,7 @@ const Order = () => {
     <div className="h-full overflow-y-auto bg-slate-50/60 font-sans pb-10">
       <div className="space-y-4">
 
-        <div className="flex-none overflow-x-auto pb-1">
-          <div className="flex gap-4 min-w-max">
-            <StatCard label="Total Orders" value={totalOrders} icon={Package} iconBg="bg-slate-100" iconColor="text-slate-600" />
-            <StatCard label="Pending" value={pending} icon={Inbox} iconBg="bg-amber-50" iconColor="text-amber-600" />
-            <StatCard label="Accepted" value={accepted} icon={CheckCircle} iconBg="bg-blue-50" iconColor="text-blue-600" />
-            <StatCard label="Out For Delivery" value={outForDelivery} icon={Truck} iconBg="bg-purple-50" iconColor="text-purple-600" />
-            <StatCard label="Delivered" value={delivered} icon={PackageCheck} iconBg="bg-emerald-50" iconColor="text-emerald-600" />
-          </div>
-        </div>
+
 
         {error && (
           <div className="flex items-center justify-between gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
@@ -227,6 +218,14 @@ const Order = () => {
           orderType=""
           setOrderType={() => { }}
           orderTypeOptions={[]}
+          counts={{
+            ALL: totalOrders,
+            PENDING: pending,
+            ACCEPTED: accepted,
+            OUT_FOR_DELIVERY: outForDelivery,
+            DELIVERED: delivered,
+            CANCELED: onlineOrders.filter((o) => (o.status || "").toUpperCase() === "CANCELED").length
+          }}
         />
 
         <div className="flex items-center justify-between pt-2">

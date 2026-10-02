@@ -26,6 +26,7 @@ export type OrdersHeaderProps = {
   status: string;
   setStatus: React.Dispatch<React.SetStateAction<string>>;
   setIsDateFilterOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  counts?: Record<string, number>;
 };
 
 // Backend response schemas

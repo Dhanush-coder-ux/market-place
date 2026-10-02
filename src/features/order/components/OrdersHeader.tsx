@@ -23,7 +23,8 @@ const pipelineTabs = [
 const OrdersHeader: React.FC<OrdersHeaderProps> = ({
   status,
   setStatus,
-  setIsDateFilterOpen
+  setIsDateFilterOpen,
+  counts
 }) => {
   // Treat an empty or null status as "ALL"
   const currentStatus = status || "ALL";
@@ -49,6 +50,15 @@ const OrdersHeader: React.FC<OrdersHeaderProps> = ({
               >
                 <Icon size={14} strokeWidth={isActive ? 2 : 1.5} />
                 {tab.label}
+                {counts && counts[tab.value] !== undefined && (
+                  <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                    isActive 
+                      ? "bg-blue-100 text-blue-700" 
+                      : "bg-slate-200 text-slate-600"
+                  }`}>
+                    {counts[tab.value]}
+                  </span>
+                )}
               </button>
             );
           })}

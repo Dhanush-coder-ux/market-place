@@ -212,20 +212,15 @@ const Login = () => {
       <aside
         className="w-full lg:w-[48%] xl:w-[46%] text-white p-8 lg:p-12 flex flex-col justify-between relative overflow-hidden shrink-0 shadow-2xl"
         style={{
-          background: `
-            radial-gradient(960px 540px at 6% 2%, #286038 0%, transparent 54%),
-            radial-gradient(800px 620px at 94% 98%, #083020 0%, transparent 58%),
-            linear-gradient(158deg, #286038 0%, #103020 50%, #083020 100%)
-          `
+          background: `linear-gradient(to bottom, #286038 0%, #174B2E 50%, #0D3522 100%)`
         }}
       >
         {/* Subtle grid texture watermark */}
         <div
-          className="absolute inset-0 opacity-[0.12] pointer-events-none"
+          className="absolute inset-0 opacity-[0.08] pointer-events-none"
           style={{
             backgroundImage: "linear-gradient(rgba(255,255,255,.18) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.18) 1px, transparent 1px)",
             backgroundSize: "46px 46px",
-            WebkitMaskImage: "radial-gradient(circle at 24% 12%, #000 0%, transparent 72%)"
           }}
         />
 

@@ -624,6 +624,7 @@ export default function SupplierDetail() {
                   amountPaid: p.paid_amount ?? p.payment_infos?.[0]?.amount ?? payment.amountPaid ?? 0,
                   outstandingAmount: p.outstanding_amount ?? p.outstanding ?? Math.max(0, (p.total_cost ?? p.item_infos?.total_pur_cost ?? pd.totalAmount ?? 0) - (p.paid_amount ?? p.payment_infos?.[0]?.amount ?? payment.amountPaid ?? 0)),
                   totalCost: p.total_cost ?? p.item_infos?.total_pur_cost ?? pd.totalAmount ?? 0,
+                  gstAmount: p.item_infos?.total_gst_amount ?? pd.gstAmount ?? pd.taxAmount ?? p.tax_amount ?? charges.gst_amount ?? p.charges_infos?.gst_amount ?? 0,
                   deliveryCharge: p.transport_charge ?? p.charges_infos?.transport_charge ?? charges.delivery_charge ?? 0,
                   otherCharge: p.other_charges ?? p.charges_infos?.other_charge ?? charges.other_charge ?? 0,
                   uiId: p.ui_id || d.ui_id || (p.purchase_id ? p.purchase_id.split('-')[0].toUpperCase() : p.id?.slice(-6)),

@@ -251,18 +251,11 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
       style={{
         width: isOpen ? 220 : 56,
         willChange: "width",
-        background: `linear-gradient(to bottom right, var(--t-sidebar-from), var(--t-sidebar-via), var(--t-sidebar-to))`,
+        background: `linear-gradient(to bottom, #286038 0%, #174B2E 50%, #0D3522 100%)`,
       }}
       className="relative flex flex-col h-full flex-shrink-0 border-r border-white/10 transition-[width] duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]"
     >
-      {/* Subtle inner texture overlay */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background:
-            "radial-gradient(ellipse at 30% 0%, rgba(255,255,255,0.06) 0%, transparent 60%), radial-gradient(ellipse at 80% 100%, rgba(0,0,0,0.16) 0%, transparent 60%)",
-        }}
-      />
+      {/* Subtle inner texture overlay (Removed to prevent shadow overlay as requested) */}
 
       {/* Brand Logo */}
       <div className={`relative flex-shrink-0 flex items-center ${isOpen ? 'px-4 pt-5 pb-2' : 'justify-center pt-5 pb-2'}`}>
@@ -281,7 +274,7 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
         aria-label={isOpen ? "Collapse sidebar" : "Expand sidebar"}
         aria-expanded={isOpen}
         className="absolute top-[72px] z-[100] w-6 h-6 rounded-full border shadow-md flex items-center justify-center text-white/70 hover:text-white transition-all duration-150 focus-visible:outline focus-visible:outline-1 focus-visible:outline-white/40"
-        style={{ right: -12, backgroundColor: 'var(--t-sidebar-from)', borderColor: 'var(--t-sidebar-via)', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.25)' }}
+        style={{ right: -12, backgroundColor: '#286038', borderColor: '#88B878', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.25)' }}
       >
         <motion.div animate={{ rotate: isOpen ? 0 : 180 }} transition={{ duration: 0.2 }}>
           <ChevronLeft size={12} strokeWidth={2.5} />
@@ -357,8 +350,8 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
               </button>
 
               <div className="p-6">
-                <div className="w-11 h-11 rounded-lg flex items-center justify-center mb-4" style={{ backgroundColor: 'var(--t-primary-lighter)' }}>
-                  <Printer size={22} style={{ color: 'var(--t-primary)' }} />
+                <div className="w-11 h-11 rounded-lg flex items-center justify-center mb-4" style={{ backgroundColor: '#F4F8F4' }}>
+                  <Printer size={22} style={{ color: '#286038' }} />
                 </div>
                 <h3 className="text-[16px] font-semibold text-slate-800 mb-1.5">Open billing terminal</h3>
                 <p className="text-[13px] text-slate-500 leading-relaxed mb-6">
@@ -369,7 +362,7 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
                   <button
                     onClick={() => confirmNavigation(true)}
                     className="w-full py-2.5 rounded-lg text-white text-[13.5px] font-semibold shadow-sm hover:opacity-90 active:scale-[0.98] transition-all duration-150 flex items-center justify-center gap-1.5"
-                    style={{ backgroundColor: 'var(--t-primary)', boxShadow: '0 1px 2px var(--t-btn-shadow)' }}
+                    style={{ backgroundColor: '#286038', boxShadow: '0 1px 2px rgba(40, 96, 56, 0.35)' }}
                   >
                     Open in new tab <ArrowRight size={15} />
                   </button>
@@ -382,7 +375,7 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
                 </div>
               </div>
               <div className="px-6 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: 'var(--t-primary)' }} />
+                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#286038' }} />
                 <span className="text-[10px] font-bold text-slate-500 tracking-wide">inventQ Billing</span>
               </div>
             </motion.div>
@@ -405,7 +398,7 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
           >
             <div
               className="border border-white/15 rounded-lg shadow-2xl py-2 w-[208px] overflow-hidden"
-              style={{ background: `linear-gradient(to bottom right, var(--t-sidebar-from), var(--t-sidebar-via), var(--t-sidebar-to))` }}
+              style={{ background: `linear-gradient(to bottom, #286038 0%, #174B2E 50%, #0D3522 100%)` }}
             >
               <div className="px-3.5 pb-2 mb-1 border-b border-white/10">
                 <span className="text-[10px] font-semibold text-white/60 uppercase tracking-wider">{hoveredItem.link.name}</span>
@@ -435,7 +428,7 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
           className={`flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-white/[0.06] transition-colors duration-150 cursor-default ${isOpen ? "justify-start" : "justify-center"}`}
         >
           <div
-            className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 shrink-0 flex items-center justify-center text-[11px] font-semibold text-white ring-2 ring-white/10"
+            className="w-7 h-7 rounded-full bg-gradient-to-br from-[#C49850] to-[#D4A850] shrink-0 flex items-center justify-center text-[11px] font-semibold text-white ring-2 ring-white/10"
             title={`${userInfo.name} (${userInfo.email})`}
           >
             {userInfo.initial}

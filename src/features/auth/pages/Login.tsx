@@ -136,7 +136,7 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col lg:flex-row font-sans bg-slate-50 text-slate-800 selection:bg-emerald-500/20">
+    <div className="min-h-screen w-full flex flex-col lg:flex-row font-sans bg-slate-50 text-slate-800 selection:bg-[#286038]/20">
       {/* =========================================================================
           INLINE STYLES FOR EXACT HTML ANIMATIONS & EFFECTS
           ========================================================================= */}
@@ -182,8 +182,8 @@ const Login = () => {
         @keyframes popIn { from { opacity: 0; transform: scale(.7); } to { opacity: 1; transform: scale(1); } }
         @keyframes fadeIn { to { opacity: 1; } }
         @keyframes draw { to { stroke-dashoffset: 0; } }
-        @keyframes fcSel { to { border-color: rgba(251,191,36,.75); background: rgba(251,191,36,.14); } }
-        @keyframes rip { 0% { opacity: .55; box-shadow: 0 0 0 0 rgba(251,191,36,.6); } 100% { opacity: 0; box-shadow: 0 0 0 16px rgba(251,191,36,0); } }
+        @keyframes fcSel { to { border-color: rgba(196,152,80,.75); background: rgba(196,152,80,.14); } }
+        @keyframes rip { 0% { opacity: .55; box-shadow: 0 0 0 0 rgba(196,152,80,.6); } 100% { opacity: 0; box-shadow: 0 0 0 16px rgba(196,152,80,0); } }
         @keyframes curMove {
           0% { opacity: 0; transform: translate(96px, 74px); }
           25% { opacity: 1; }
@@ -192,7 +192,7 @@ const Login = () => {
           100% { opacity: 0; transform: translate(50px, 16px); }
         }
         @keyframes collapse { to { opacity: 0; height: 0; padding-top: 0; padding-bottom: 0; margin-top: -6px; transform: translateX(-14px); } }
-        @keyframes keepGlow { 0% { background: rgba(255,255,255,.05); } 45% { background: rgba(251,191,36,.18); } 100% { background: rgba(255,255,255,.05); } }
+        @keyframes keepGlow { 0% { background: rgba(255,255,255,.05); } 45% { background: rgba(196,152,80,.18); } 100% { background: rgba(255,255,255,.05); } }
         @keyframes tapRing { 0% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.5); } }
         @keyframes travel { 0% { opacity: 0; transform: translateX(-8px); } 20% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; transform: translateX(20px); } }
 
@@ -213,9 +213,9 @@ const Login = () => {
         className="w-full lg:w-[48%] xl:w-[46%] text-white p-8 lg:p-12 flex flex-col justify-between relative overflow-hidden shrink-0 shadow-2xl"
         style={{
           background: `
-            radial-gradient(960px 540px at 6% 2%, #10B981 0%, transparent 54%),
-            radial-gradient(800px 620px at 94% 98%, #064E3B 0%, transparent 58%),
-            linear-gradient(158deg, #059669 0%, #047857 50%, #064E3B 100%)
+            radial-gradient(960px 540px at 6% 2%, #286038 0%, transparent 54%),
+            radial-gradient(800px 620px at 94% 98%, #083020 0%, transparent 58%),
+            linear-gradient(158deg, #286038 0%, #103020 50%, #083020 100%)
           `
         }}
       >
@@ -243,7 +243,7 @@ const Login = () => {
           </div>
 
           {/* Eyebrow badge */}
-          <div className="inline-flex items-center gap-2 text-[11px] font-bold tracking-[0.1em] uppercase text-amber-300 bg-white/10 border border-white/20 rounded-full px-3.5 py-1 backdrop-blur-sm">
+          <div className="inline-flex items-center gap-2 text-[11px] font-bold tracking-[0.1em] uppercase text-[#D4A850] bg-white/10 border border-white/20 rounded-full px-3.5 py-1 backdrop-blur-sm">
             <span>COMPLETE BUSINESS SOLUTION FOR INDEPENDENT RETAILERS</span>
           </div>
 
@@ -251,17 +251,17 @@ const Login = () => {
           <div className="space-y-3 max-w-[490px]">
             <h1 className="text-3xl sm:text-[34px] font-bold leading-[1.22] tracking-[-0.03em] text-white m-0">
               Everything you need to run your shop —{" "}
-              <span className="text-amber-300">from anywhere.</span>
+              <span className="text-[#D4A850]">from anywhere.</span>
             </h1>
             <div className="flex flex-wrap gap-x-5 gap-y-1 pt-1">
               <span className="inline-flex items-center gap-2 text-[13.5px] font-semibold text-white/95">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" /> Run your store.
+                <span className="w-1.5 h-1.5 rounded-full bg-[#C49850] shrink-0" /> Run your store.
               </span>
               <span className="inline-flex items-center gap-2 text-[13.5px] font-semibold text-white/95">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" /> Reach more customers.
+                <span className="w-1.5 h-1.5 rounded-full bg-[#C49850] shrink-0" /> Reach more customers.
               </span>
               <span className="inline-flex items-center gap-2 text-[13.5px] font-semibold text-white/95">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" /> Grow your business.
+                <span className="w-1.5 h-1.5 rounded-full bg-[#C49850] shrink-0" /> Grow your business.
               </span>
             </div>
           </div>
@@ -277,14 +277,14 @@ const Login = () => {
             {/* SCENE 1 : Dashboard */}
             <div className={`scene-item ${currentScene === 0 ? "on" : ""}`}>
               <div className="flex items-start gap-3 mb-3.5">
-                <div className="w-[34px] h-[34px] rounded-[10px] bg-amber-400/20 border border-amber-300/30 grid place-items-center shrink-0">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#FDE68A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[17px] h-[17px]">
+                <div className="w-[34px] h-[34px] rounded-[10px] bg-[#C49850]/20 border border-[#D4A850]/30 grid place-items-center shrink-0">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#D4A850" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[17px] h-[17px]">
                     <path d="M3 3v18h18" /><path d="m7 14 4-4 3 3 5-6" />
                   </svg>
                 </div>
                 <div>
                   <div className="font-semibold text-base text-white tracking-[-0.02em]">Know your numbers, daily</div>
-                  <div className="text-[12.5px] text-emerald-100/70 mt-0.5 leading-relaxed">Revenue, profit, margin and payments — calculated for you.</div>
+                  <div className="text-[12.5px] text-[#A8C898]/70 mt-0.5 leading-relaxed">Revenue, profit, margin and payments — calculated for you.</div>
                 </div>
               </div>
 
@@ -292,19 +292,19 @@ const Login = () => {
                 <div className="grid grid-cols-4 gap-2 mb-3">
                   <div className="dk-anim opacity-0 border-l-2 border-white/25 pl-2" style={{ "--d": ".08s" } as React.CSSProperties}>
                     <div className="font-semibold text-[15.5px] text-white tracking-tight leading-tight">{kpiValues.revenue}</div>
-                    <div className="text-[9px] text-emerald-100/60 mt-1 uppercase font-semibold tracking-wider">Net revenue</div>
+                    <div className="text-[9px] text-[#A8C898]/60 mt-1 uppercase font-semibold tracking-wider">Net revenue</div>
                   </div>
                   <div className="dk-anim opacity-0 border-l-2 border-white/25 pl-2" style={{ "--d": ".18s" } as React.CSSProperties}>
-                    <div className="font-semibold text-[15.5px] text-emerald-300 tracking-tight leading-tight">{kpiValues.profit}</div>
-                    <div className="text-[9px] text-emerald-100/60 mt-1 uppercase font-semibold tracking-wider">Total profit</div>
+                    <div className="font-semibold text-[15.5px] text-[#88B878] tracking-tight leading-tight">{kpiValues.profit}</div>
+                    <div className="text-[9px] text-[#A8C898]/60 mt-1 uppercase font-semibold tracking-wider">Total profit</div>
                   </div>
                   <div className="dk-anim opacity-0 border-l-2 border-white/25 pl-2" style={{ "--d": ".28s" } as React.CSSProperties}>
                     <div className="font-semibold text-[15.5px] text-white tracking-tight leading-tight">{kpiValues.orders}</div>
-                    <div className="text-[9px] text-emerald-100/60 mt-1 uppercase font-semibold tracking-wider">Orders</div>
+                    <div className="text-[9px] text-[#A8C898]/60 mt-1 uppercase font-semibold tracking-wider">Orders</div>
                   </div>
                   <div className="dk-anim opacity-0 border-l-2 border-white/25 pl-2" style={{ "--d": ".38s" } as React.CSSProperties}>
-                    <div className="font-semibold text-[15.5px] text-amber-300 tracking-tight leading-tight">{kpiValues.avgOrder}</div>
-                    <div className="text-[9px] text-emerald-100/60 mt-1 uppercase font-semibold tracking-wider">Avg. order</div>
+                    <div className="font-semibold text-[15.5px] text-[#D4A850] tracking-tight leading-tight">{kpiValues.avgOrder}</div>
+                    <div className="text-[9px] text-[#A8C898]/60 mt-1 uppercase font-semibold tracking-wider">Avg. order</div>
                   </div>
                 </div>
 
@@ -313,8 +313,8 @@ const Login = () => {
                   <svg viewBox="0 0 300 96" preserveAspectRatio="none" className="w-full h-full block overflow-visible">
                     <defs>
                       <linearGradient id="revfill_chart" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#FDE68A" stopOpacity="0.32" />
-                        <stop offset="100%" stopColor="#FDE68A" stopOpacity="0" />
+                        <stop offset="0%" stopColor="#D4A850" stopOpacity="0.32" />
+                        <stop offset="100%" stopColor="#D4A850" stopOpacity="0" />
                       </linearGradient>
                     </defs>
                     <line x1="0" y1="24" x2="300" y2="24" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
@@ -324,33 +324,33 @@ const Login = () => {
                     <path
                       className="trend-ln fill-none stroke-[2.2] stroke-linecap-round stroke-linejoin-round"
                       style={{ strokeDasharray: 420, strokeDashoffset: 420 }}
-                      stroke="#FDE68A"
+                      stroke="#D4A850"
                       d="M0,70 L50,58 L100,63 L150,40 L200,45 L250,24 L300,12"
                     />
                     <path
                       className="trend-ln p2 fill-none stroke-[2.2] stroke-linecap-round stroke-linejoin-round"
                       style={{ strokeDasharray: 420, strokeDashoffset: 420 }}
-                      stroke="#7EE2A8"
+                      stroke="#A8C898"
                       d="M0,84 L50,79 L100,81 L150,68 L200,71 L250,58 L300,50"
                     />
                   </svg>
                 </div>
 
-                <div className="flex items-center gap-3.5 -mt-1 text-[10px] text-emerald-100/70 font-semibold">
-                  <span className="flex items-center gap-1.5"><i className="w-3.5 h-[2.5px] rounded bg-amber-300 block" />Revenue</span>
-                  <span className="flex items-center gap-1.5"><i className="w-3.5 h-[2.5px] rounded bg-[#7EE2A8] block" />Profit</span>
-                  <span className="ml-auto text-emerald-100/60">Gross margin 25.8%</span>
+                <div className="flex items-center gap-3.5 -mt-1 text-[10px] text-[#A8C898]/70 font-semibold">
+                  <span className="flex items-center gap-1.5"><i className="w-3.5 h-[2.5px] rounded bg-[#D4A850] block" />Revenue</span>
+                  <span className="flex items-center gap-1.5"><i className="w-3.5 h-[2.5px] rounded bg-[#A8C898] block" />Profit</span>
+                  <span className="ml-auto text-[#A8C898]/60">Gross margin 25.8%</span>
                 </div>
 
                 {/* Animated Payment Split Bar */}
                 <div className="flex h-1.5 rounded-full overflow-hidden gap-0.5 mt-2.5 mb-1.5">
-                  <b className="paysplit-b block h-full rounded-l-full transition-all duration-700" style={{ "--w": "62%", width: 0, background: "#6EE7B7" } as React.CSSProperties} />
-                  <b className="paysplit-b block h-full transition-all duration-700" style={{ "--w": "28%", width: 0, background: "#7EE2A8" } as React.CSSProperties} />
+                  <b className="paysplit-b block h-full rounded-l-full transition-all duration-700" style={{ "--w": "62%", width: 0, background: "#88B878" } as React.CSSProperties} />
+                  <b className="paysplit-b block h-full transition-all duration-700" style={{ "--w": "28%", width: 0, background: "#A8C898" } as React.CSSProperties} />
                   <b className="paysplit-b block h-full rounded-r-full transition-all duration-700" style={{ "--w": "10%", width: 0, background: "#DDD6FE" } as React.CSSProperties} />
                 </div>
-                <div className="flex gap-3 text-[9.5px] text-emerald-100/60 font-semibold">
-                  <span className="flex items-center gap-1"><i className="w-1.5 h-1.5 rounded-full bg-[#6EE7B7] block" />UPI 62%</span>
-                  <span className="flex items-center gap-1"><i className="w-1.5 h-1.5 rounded-full bg-[#7EE2A8] block" />Cash 28%</span>
+                <div className="flex gap-3 text-[9.5px] text-[#A8C898]/60 font-semibold">
+                  <span className="flex items-center gap-1"><i className="w-1.5 h-1.5 rounded-full bg-[#88B878] block" />UPI 62%</span>
+                  <span className="flex items-center gap-1"><i className="w-1.5 h-1.5 rounded-full bg-[#A8C898] block" />Cash 28%</span>
                   <span className="flex items-center gap-1"><i className="w-1.5 h-1.5 rounded-full bg-[#DDD6FE] block" />Card 10%</span>
                 </div>
               </div>
@@ -359,14 +359,14 @@ const Login = () => {
             {/* SCENE 2 : Instant Filtering */}
             <div className={`scene-item ${currentScene === 1 ? "on" : ""}`}>
               <div className="flex items-start gap-3 mb-3.5">
-                <div className="w-[34px] h-[34px] rounded-[10px] bg-amber-400/20 border border-amber-300/30 grid place-items-center shrink-0">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#FDE68A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[17px] h-[17px]">
+                <div className="w-[34px] h-[34px] rounded-[10px] bg-[#C49850]/20 border border-[#D4A850]/30 grid place-items-center shrink-0">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#D4A850" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[17px] h-[17px]">
                     <polygon points="22 3 2 3 10 12.5 10 19 14 21 14 12.5 22 3" />
                   </svg>
                 </div>
                 <div>
                   <div className="font-semibold text-base text-white tracking-[-0.02em]">Answers in one click</div>
-                  <div className="text-[12.5px] text-emerald-100/70 mt-0.5 leading-relaxed">Low stock, unpaid bills, overdue customers — instantly filtered.</div>
+                  <div className="text-[12.5px] text-[#A8C898]/70 mt-0.5 leading-relaxed">Low stock, unpaid bills, overdue customers — instantly filtered.</div>
                 </div>
               </div>
 
@@ -381,45 +381,45 @@ const Login = () => {
                 <div className="grid grid-cols-3 gap-2 mb-2.5">
                   <div className="fc-anim relative border-[1.5px] border-white/20 bg-white/[0.06] rounded-[10px] p-2 opacity-0" style={{ "--d": ".08s" } as React.CSSProperties}>
                     <div className="font-semibold text-[17px] text-white leading-none">248</div>
-                    <div className="text-[9px] text-emerald-100/60 mt-1 uppercase font-semibold tracking-wider">All products</div>
+                    <div className="text-[9px] text-[#A8C898]/60 mt-1 uppercase font-semibold tracking-wider">All products</div>
                   </div>
                   <div className="fc-pick relative border-[1.5px] border-white/20 bg-white/[0.06] rounded-[10px] p-2 opacity-0" style={{ "--d": ".18s" } as React.CSSProperties}>
                     <span className="ripple-anim absolute inset-0 rounded-[10px] pointer-events-none opacity-0" />
-                    <div className="font-semibold text-[17px] text-amber-300 leading-none">12</div>
-                    <div className="text-[9px] text-emerald-100/60 mt-1 uppercase font-semibold tracking-wider">Low stock</div>
+                    <div className="font-semibold text-[17px] text-[#D4A850] leading-none">12</div>
+                    <div className="text-[9px] text-[#A8C898]/60 mt-1 uppercase font-semibold tracking-wider">Low stock</div>
                   </div>
                   <div className="fc-anim relative border-[1.5px] border-white/20 bg-white/[0.06] rounded-[10px] p-2 opacity-0" style={{ "--d": ".28s" } as React.CSSProperties}>
                     <div className="font-semibold text-[17px] text-white leading-none">3</div>
-                    <div className="text-[9px] text-emerald-100/60 mt-1 uppercase font-semibold tracking-wider">Out of stock</div>
+                    <div className="text-[9px] text-[#A8C898]/60 mt-1 uppercase font-semibold tracking-wider">Out of stock</div>
                   </div>
                 </div>
 
                 <div className="flex flex-col gap-1.5 min-h-[96px]">
                   <div className="fr-drop flex items-center gap-2 text-[11.5px] py-1.5 px-2.5 rounded-lg bg-white/[0.06] opacity-0 overflow-hidden" style={{ "--d": ".38s" } as React.CSSProperties}>
                     <span className="flex-1 text-white/90 truncate">Bluetooth headphone</span>
-                    <span className="text-[8.5px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-500/20 text-[#7EE2A8]">IN STOCK</span>
+                    <span className="text-[8.5px] font-extrabold px-2 py-0.5 rounded-full bg-[#286038]/20 text-[#A8C898]">IN STOCK</span>
                     <span className="font-mono font-semibold text-white text-[12.5px]">36</span>
                   </div>
                   <div className="fr-keep flex items-center gap-2 text-[11.5px] py-1.5 px-2.5 rounded-lg bg-white/[0.06] opacity-0" style={{ "--d": ".46s" } as React.CSSProperties}>
                     <span className="flex-1 text-white/90 truncate">Cotton Kurta — M</span>
-                    <span className="text-[8.5px] font-extrabold px-2 py-0.5 rounded-full bg-amber-500/25 text-amber-300">LOW</span>
+                    <span className="text-[8.5px] font-extrabold px-2 py-0.5 rounded-full bg-[#C49850]/25 text-[#D4A850]">LOW</span>
                     <span className="font-mono font-semibold text-white text-[12.5px]">3</span>
                   </div>
                   <div className="fr-drop flex items-center gap-2 text-[11.5px] py-1.5 px-2.5 rounded-lg bg-white/[0.06] opacity-0 overflow-hidden" style={{ "--d": ".54s" } as React.CSSProperties}>
                     <span className="flex-1 text-white/90 truncate">Basmati Rice 5kg</span>
-                    <span className="text-[8.5px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-500/20 text-[#7EE2A8]">IN STOCK</span>
+                    <span className="text-[8.5px] font-extrabold px-2 py-0.5 rounded-full bg-[#286038]/20 text-[#A8C898]">IN STOCK</span>
                     <span className="font-mono font-semibold text-white text-[12.5px]">48</span>
                   </div>
                   <div className="fr-keep flex items-center gap-2 text-[11.5px] py-1.5 px-2.5 rounded-lg bg-white/[0.06] opacity-0" style={{ "--d": ".62s" } as React.CSSProperties}>
                     <span className="flex-1 text-white/90 truncate">Masala Chai 250g</span>
-                    <span className="text-[8.5px] font-extrabold px-2 py-0.5 rounded-full bg-amber-500/25 text-amber-300">LOW</span>
+                    <span className="text-[8.5px] font-extrabold px-2 py-0.5 rounded-full bg-[#C49850]/25 text-[#D4A850]">LOW</span>
                     <span className="font-mono font-semibold text-white text-[12.5px]">4</span>
                   </div>
                 </div>
 
-                <div className="ffoot-anim flex items-center gap-2 text-[10.5px] text-emerald-100/70 pt-2 border-t border-white/10 opacity-0 mt-1">
-                  <span className="bg-amber-400/25 text-amber-300 px-2 py-0.5 rounded-full font-bold text-[9px] tracking-wider">FILTERED</span>
-                  <span>Showing <b className="text-amber-300">12</b> of 248 products that need restocking</span>
+                <div className="ffoot-anim flex items-center gap-2 text-[10.5px] text-[#A8C898]/70 pt-2 border-t border-white/10 opacity-0 mt-1">
+                  <span className="bg-[#C49850]/25 text-[#D4A850] px-2 py-0.5 rounded-full font-bold text-[9px] tracking-wider">FILTERED</span>
+                  <span>Showing <b className="text-[#D4A850]">12</b> of 248 products that need restocking</span>
                 </div>
               </div>
             </div>
@@ -427,14 +427,14 @@ const Login = () => {
             {/* SCENE 3 : Digital Store Order Loop */}
             <div className={`scene-item ${currentScene === 2 ? "on" : ""}`}>
               <div className="flex items-start gap-3 mb-3.5">
-                <div className="w-[34px] h-[34px] rounded-[10px] bg-amber-400/20 border border-amber-300/30 grid place-items-center shrink-0">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#FDE68A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[17px] h-[17px]">
+                <div className="w-[34px] h-[34px] rounded-[10px] bg-[#C49850]/20 border border-[#D4A850]/30 grid place-items-center shrink-0">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#D4A850" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-[17px] h-[17px]">
                     <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 0 1-8 0" />
                   </svg>
                 </div>
                 <div>
                   <div className="font-semibold text-base text-white tracking-[-0.02em]">Your shop sells while you sleep</div>
-                  <div className="text-[12.5px] text-emerald-100/70 mt-0.5 leading-relaxed">Customers order from your store — you keep every rupee.</div>
+                  <div className="text-[12.5px] text-[#A8C898]/70 mt-0.5 leading-relaxed">Customers order from your store — you keep every rupee.</div>
                 </div>
               </div>
 
@@ -443,9 +443,9 @@ const Login = () => {
                   {/* Mini Digital Store Mock */}
                   <div className="mini-anim w-24 shrink-0 rounded-[11px] bg-white/15 border border-white/20 p-2 opacity-0" style={{ transform: "translateY(14px)" }}>
                     <div className="flex items-center gap-1 mb-1.5">
-                      <span className="w-1 h-1 rounded-full bg-amber-400 shrink-0" />
+                      <span className="w-1 h-1 rounded-full bg-[#C49850] shrink-0" />
                       <span className="text-[8.5px] font-bold text-white flex-1 truncate">Vaathi Mart</span>
-                      <span className="mcart-anim text-[8px] font-black text-slate-950 bg-amber-400 rounded-full px-1.5 opacity-0">2</span>
+                      <span className="mcart-anim text-[8px] font-black text-slate-950 bg-[#C49850] rounded-full px-1.5 opacity-0">2</span>
                     </div>
                     <div className="grid grid-cols-2 gap-1">
                       <span className="mgrid-span h-5 rounded bg-white/20 block opacity-0" style={{ "--d": ".28s" } as React.CSSProperties} />
@@ -458,21 +458,21 @@ const Login = () => {
                   {/* Flow Arrow */}
                   <div className="shrink-0 w-6 flex items-center justify-center relative">
                     <svg viewBox="0 0 26 12" className="w-6 h-3 overflow-visible">
-                      <path d="M1 6 H25" stroke="rgba(251,191,36,.6)" strokeWidth="1.6" strokeDasharray="3 3" fill="none" />
-                      <circle className="flow-pkt" cx="4" cy="6" r="2.6" fill="#FBBF24" opacity="0" />
+                      <path d="M1 6 H25" stroke="rgba(196,152,80,.6)" strokeWidth="1.6" strokeDasharray="3 3" fill="none" />
+                      <circle className="flow-pkt" cx="4" cy="6" r="2.6" fill="#C49850" opacity="0" />
                     </svg>
                   </div>
 
                   {/* Order Received Card */}
                   <div className="flex-1 flex flex-col justify-center gap-2 min-w-0">
-                    <div className="ordcard-anim bg-emerald-500/20 border border-[#7EE2A8]/30 rounded-[10px] p-2 opacity-0">
-                      <div className="flex items-center gap-1.5 text-[10.5px] font-bold text-[#7EE2A8] tracking-wider">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#4ADE80] animate-pulse" /> NEW ORDER RECEIVED
+                    <div className="ordcard-anim bg-[#286038]/20 border border-[#A8C898]/30 rounded-[10px] p-2 opacity-0">
+                      <div className="flex items-center gap-1.5 text-[10.5px] font-bold text-[#A8C898] tracking-wider">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#88B878] animate-pulse" /> NEW ORDER RECEIVED
                       </div>
                       <div className="text-[12px] text-white mt-0.5 font-mono font-semibold">3 items · ₹640</div>
                     </div>
-                    <div className="autochk-anim flex items-center gap-1.5 text-[10.5px] text-emerald-100/70 opacity-0">
-                      <Check size={13} className="text-[#7EE2A8] shrink-0" strokeWidth={2.6} />
+                    <div className="autochk-anim flex items-center gap-1.5 text-[10.5px] text-[#A8C898]/70 opacity-0">
+                      <Check size={13} className="text-[#A8C898] shrink-0" strokeWidth={2.6} />
                       <span>Stock and billing updated automatically</span>
                     </div>
                   </div>
@@ -481,14 +481,14 @@ const Login = () => {
                 {/* Profit Comparison Footer */}
                 <div className="moneyrow-anim flex items-center gap-3 pt-2.5 border-t border-white/10 opacity-0">
                   <div className="flex-1">
-                    <div className="font-semibold text-[19px] text-[#7EE2A8] leading-tight">₹640</div>
-                    <div className="text-[9.5px] text-emerald-100/60 uppercase font-semibold tracking-wider">You receive</div>
+                    <div className="font-semibold text-[19px] text-[#A8C898] leading-tight">₹640</div>
+                    <div className="text-[9.5px] text-[#A8C898]/60 uppercase font-semibold tracking-wider">You receive</div>
                   </div>
                   <div className="flex-1 opacity-60">
                     <div className="font-semibold text-[19px] text-white/60 leading-tight line-through">₹448</div>
-                    <div className="text-[9.5px] text-emerald-100/50 uppercase font-semibold tracking-wider">On marketplaces</div>
+                    <div className="text-[9.5px] text-[#A8C898]/50 uppercase font-semibold tracking-wider">On marketplaces</div>
                   </div>
-                  <span className="text-[10px] font-black tracking-wider text-slate-950 bg-amber-400 px-3 py-1 rounded-full whitespace-nowrap shadow-sm">
+                  <span className="text-[10px] font-black tracking-wider text-slate-950 bg-[#C49850] px-3 py-1 rounded-full whitespace-nowrap shadow-sm">
                     0% COMMISSION
                   </span>
                 </div>
@@ -507,7 +507,7 @@ const Login = () => {
                   }`}
                 aria-label={`Go to scene ${idx + 1}`}
               >
-                <i className="absolute inset-0 w-0 bg-amber-300 rounded-full block" />
+                <i className="absolute inset-0 w-0 bg-[#D4A850] rounded-full block" />
               </button>
             ))}
           </div>
@@ -516,13 +516,13 @@ const Login = () => {
         {/* Bottom Feature Badges */}
         <div className="relative z-10 pt-4 border-t border-white/15 flex flex-wrap gap-2.5 mt-auto">
           <span className="inline-flex items-center gap-1.5 text-[11.5px] font-medium text-white/85 bg-white/10 border border-white/15 rounded-full px-3 py-1.5 backdrop-blur-sm">
-            <span className="text-amber-300 font-bold">₹</span> Zero commission on orders
+            <span className="text-[#D4A850] font-bold">₹</span> Zero commission on orders
           </span>
           <span className="inline-flex items-center gap-1.5 text-[11.5px] font-medium text-white/85 bg-white/10 border border-white/15 rounded-full px-3 py-1.5 backdrop-blur-sm">
-            <Check size={13} className="text-emerald-300" /> GST-ready invoicing
+            <Check size={13} className="text-[#88B878]" /> GST-ready invoicing
           </span>
           <span className="inline-flex items-center gap-1.5 text-[11.5px] font-medium text-white/85 bg-white/10 border border-white/15 rounded-full px-3 py-1.5 backdrop-blur-sm">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5 text-emerald-200">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5 text-[#A8C898]">
               <rect x="5" y="2" width="14" height="20" rx="2.5" />
               <line x1="12" y1="18" x2="12.01" y2="18" />
             </svg>
@@ -549,7 +549,7 @@ const Login = () => {
           {/* Main Action Hook Card */}
           <div className="bg-slate-50/90 border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-5">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center font-bold shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-[#F4F8F4] text-[#286038] border border-[#A8C898] flex items-center justify-center font-bold shrink-0">
                 <Lock size={19} />
               </div>
               <div>
@@ -561,7 +561,7 @@ const Login = () => {
             <button
               onClick={handleSignIn}
               disabled={loading}
-              className="w-full h-12 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 active:from-emerald-800 active:to-emerald-900 text-white font-semibold text-[14.5px] flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/25 active:scale-98 transition-all disabled:opacity-50 disabled:pointer-events-none group"
+              className="w-full h-12 rounded-xl bg-gradient-to-r from-[#286038] to-[#103020] hover:from-[#103020] hover:to-[#083020] active:from-[#083020] active:to-[#083020] text-white font-semibold text-[14.5px] flex items-center justify-center gap-2 shadow-lg shadow-[#286038]/25 active:scale-98 transition-all disabled:opacity-50 disabled:pointer-events-none group"
             >
               {loading ? (
                 <>
@@ -578,11 +578,11 @@ const Login = () => {
 
             <p className="text-[11.5px] text-center text-slate-500 leading-relaxed">
               By signing in, you agree to our{" "}
-              <Link to="/terms" className="text-emerald-600 font-semibold hover:underline">
+              <Link to="/terms" className="text-[#286038] font-semibold hover:underline">
                 Terms of Service
               </Link>{" "}
               and{" "}
-              <Link to="/privacy" className="text-emerald-600 font-semibold hover:underline">
+              <Link to="/privacy" className="text-[#286038] font-semibold hover:underline">
                 Privacy Policy
               </Link>
               .
@@ -597,7 +597,7 @@ const Login = () => {
 
             <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-3.5 flex items-center justify-between gap-3 shadow-sm hover:border-slate-300 transition-all">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                <div className="w-9 h-9 rounded-lg bg-[#286038]/10 text-[#286038] border border-[#286038]/20 flex items-center justify-center shrink-0">
                   <Phone size={17} />
                 </div>
                 <div>
@@ -618,7 +618,7 @@ const Login = () => {
               <span className="text-xs text-slate-500">New to inventQ? </span>
               <button
                 onClick={() => setShowSupportModal(true)}
-                className="text-xs text-emerald-600 font-semibold hover:underline"
+                className="text-xs text-[#286038] font-semibold hover:underline"
               >
                 Request a demo
               </button>
@@ -630,25 +630,25 @@ const Login = () => {
         <div className="w-full max-w-xl pt-6 text-center space-y-2 border-t border-slate-100 mt-6">
           <div className="flex flex-wrap items-center justify-between gap-3 text-[11.5px] text-slate-500">
             <span className="inline-flex items-center gap-1.5 font-medium">
-              <svg viewBox="0 0 100 100" fill="currentColor" className="w-3.5 h-3.5 text-amber-500">
+              <svg viewBox="0 0 100 100" fill="currentColor" className="w-3.5 h-3.5 text-[#C49850]">
                 <path fillRule="evenodd" d="M50 2 Q54 22 60 35 L97 29 Q78 42 66 52 L79 96 Q62 82 50 74 Q38 82 21 96 L34 52 Q22 42 3 29 L40 35 Q46 22 50 2 Z M50 24 L59 67 L41 67 Z" />
               </svg>
               © 2026 Antaris Software Pvt Ltd. All rights reserved.
             </span>
             <div className="flex items-center gap-4 font-medium">
-              <Link to="/terms" className="hover:text-emerald-600 transition-colors">
+              <Link to="/terms" className="hover:text-[#286038] transition-colors">
                 Terms of Service
               </Link>
-              <Link to="/privacy" className="hover:text-emerald-600 transition-colors">
+              <Link to="/privacy" className="hover:text-[#286038] transition-colors">
                 Privacy Policy
               </Link>
-              <Link to="/security" className="hover:text-emerald-600 transition-colors">
+              <Link to="/security" className="hover:text-[#286038] transition-colors">
                 Security
               </Link>
             </div>
           </div>
           <p className="text-[11.5px] text-slate-400 text-center leading-relaxed">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5 text-emerald-500 inline-block mr-1.5 -translate-y-px">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5 text-[#286038] inline-block mr-1.5 -translate-y-px">
               <rect x="4" y="10" width="16" height="11" rx="2" />
               <path d="M8 10V7a4 4 0 0 1 8 0v3" />
             </svg>
@@ -671,7 +671,7 @@ const Login = () => {
             </button>
 
             <div className="space-y-2">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center font-bold mb-3">
+              <div className="w-12 h-12 rounded-2xl bg-[#F4F8F4] text-[#286038] border border-[#A8C898] flex items-center justify-center font-bold mb-3">
                 <PhoneCall size={22} />
               </div>
               <h3 className="text-xl font-bold text-slate-900 tracking-tight">Contact inventQ Support</h3>
@@ -685,13 +685,13 @@ const Login = () => {
                 <div
                   key={item.raw}
                   onClick={() => handleDial(item.raw)}
-                  className="p-4 rounded-xl bg-slate-50 hover:bg-emerald-50/70 border border-slate-200 hover:border-emerald-300 transition-all cursor-pointer flex items-center justify-between gap-3 group"
+                  className="p-4 rounded-xl bg-slate-50 hover:bg-[#F4F8F4]/70 border border-slate-200 hover:border-[#88B878] transition-all cursor-pointer flex items-center justify-between gap-3 group"
                 >
                   <div className="space-y-0.5">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 block">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#286038] block">
                       {item.label}
                     </span>
-                    <div className="text-base font-bold text-slate-900 font-mono tracking-tight group-hover:text-emerald-600 transition-colors">
+                    <div className="text-base font-bold text-slate-900 font-mono tracking-tight group-hover:text-[#286038] transition-colors">
                       {item.number}
                     </div>
                     <p className="text-[11px] text-slate-500">{item.desc}</p>
@@ -703,9 +703,9 @@ const Login = () => {
                       className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-white transition-all"
                       title="Copy number"
                     >
-                      {copiedIndex === idx ? <Check size={16} className="text-emerald-500" /> : <Copy size={16} />}
+                      {copiedIndex === idx ? <Check size={16} className="text-[#286038]" /> : <Copy size={16} />}
                     </button>
-                    <div className="p-2.5 rounded-xl bg-emerald-600 text-white shadow-sm group-hover:scale-105 transition-transform">
+                    <div className="p-2.5 rounded-xl bg-[#286038] text-white shadow-sm group-hover:scale-105 transition-transform">
                       <Phone size={16} />
                     </div>
                   </div>

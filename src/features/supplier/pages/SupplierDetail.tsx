@@ -64,7 +64,7 @@ const TABS = ["General Info", "Purchases", "Payment Ledger"];
 export default function SupplierDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getData, deleteData } = useApi();
+  const { getData } = useApi();
   const { showToast } = useToast();
   const { setBottomActions } = useHeader();
 
@@ -321,11 +321,9 @@ export default function SupplierDetail() {
     if (!id) return;
     setDeleting(true);
     try {
-      const res = await deleteData(`${ENDPOINTS.SUPPLIERS}/${SHOP_ID}/${id}`);
-      if (res) {
-        showToast("Supplier deleted successfully", "success");
-        navigate("/supplier/all");
-      }
+      await supplierApi.deleteSupplier(SHOP_ID, id);
+      showToast("Supplier deleted successfully", "success");
+      navigate("/supplier/all");
     } catch (e: any) {
       showToast(e?.message || "Failed to delete supplier", "error");
     } finally {

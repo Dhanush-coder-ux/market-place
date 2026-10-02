@@ -190,7 +190,7 @@ const CustomerList = () => {
   const handleDeleteCustomer = async (id: string) => {
     if (!window.confirm("Are you sure you want to delete this customer?")) return;
     try {
-      await deleteData(`${ENDPOINTS.CUSTOMERS}/${localStorage.getItem('shop_id') || SHOP_ID}/${id}`);
+      await customer.deleteCustomer(localStorage.getItem('shop_id') || SHOP_ID, id);
       showToast("Customer deleted successfully", "success");
       setSelectedCustomers(prev => {
         const next = new Set(prev);

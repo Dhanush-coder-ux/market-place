@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { Search, X, Building2, Phone, ExternalLink, Filter, ChevronRight, Eye, Pencil, Trash2, MoreVertical, Plus, FileUp, RefreshCw } from "lucide-react";
+import { Search, Building2, Phone, ExternalLink, Filter, ChevronRight, Eye, Pencil, Trash2, MoreVertical, Plus, FileUp, RefreshCw } from "lucide-react";
 import ExcelImportModal from "@/components/common/ExcelImportModal";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import { supplierApi } from "@/services/api/supplier";
 import type { SupplierRecord } from "@/types/api";
 import { useHeader } from "@/context/HeaderContext";
 import { useToast } from "@/context/ToastContext";
@@ -116,7 +117,7 @@ const Supplier = () => {
   const location = useLocation();
   const isCleanMode = new URLSearchParams(location.search).get("mode") === "clean";
 
-  const { getData, deleteData, loading, error, clearError } = useApi();
+  const { getData, loading } = useApi();
   const { setActions, setBottomActions } = useHeader();
   const { showToast } = useToast();
   const { openQuickCreate } = useQuickCreate();
@@ -406,7 +407,7 @@ const Supplier = () => {
   const handleDelete = async () => {
     if (!supplierToDelete) return;
     try {
-      await deleteData(`${ENDPOINTS.SUPPLIERS}/${SHOP_ID}/${supplierToDelete.id}`);
+      await supplierApi.deleteSupplier(SHOP_ID, supplierToDelete.id);
       showToast("Supplier deleted successfully", "success");
       setRefreshKey(prev => prev + 1);
       setSelectedSupplier(null);
@@ -522,16 +523,6 @@ const Supplier = () => {
           </div>
         </div>
       </RightSidebarFilter>
-
-      {/* Error State */}
-      {error && (
-        <div className="p-4 bg-rose-50 border border-rose-100 rounded-lg flex items-center justify-between md:animate-in md:fade-in md:slide-in-from-top-2">
-          <p className="text-sm font-semibold text-rose-600">{error}</p>
-          <button onClick={clearError} className="p-1 hover:bg-rose-100 rounded-lg transition-colors text-rose-400">
-            <X size={18} />
-          </button>
-        </div>
-      )}
 
       {/* Table Section */}
       <div className="bg-white rounded-lg shadow-sm border border-slate-100 min-w-0 overflow-hidden flex flex-col flex-1 min-h-0 mt-2">

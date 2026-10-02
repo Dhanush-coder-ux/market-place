@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import { Truck, X, Copy, Check, Share2, ShieldCheck, AlertTriangle, Loader2 } from "lucide-react";
 import { orderApi } from "@/services/api/order";
-import { SHOP_ID } from "@/services/endpoints";
+import { getShopId, SHOP_ID } from "@/services/endpoints";
 
 interface VerifyDeliveryModalProps {
   isOpen: boolean;
   onClose: () => void;
   orderId: string;
+  shopId?: string;
   billNo: string;
   customerName: string;
   onVerified: () => void;
@@ -16,10 +17,12 @@ export const VerifyDeliveryModal: React.FC<VerifyDeliveryModalProps> = ({
   isOpen,
   onClose,
   orderId,
+  shopId,
   billNo,
   customerName,
   onVerified,
 }) => {
+  const activeShopId = shopId || getShopId() || localStorage.getItem("shop_id") || SHOP_ID || "";
   const [digits, setDigits] = useState<string[]>(["", "", "", "", "", ""]);
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
@@ -72,7 +75,7 @@ export const VerifyDeliveryModal: React.FC<VerifyDeliveryModalProps> = ({
     setStatus("loading");
     setErrorMsg("");
     try {
-      await orderApi.verifyDelivery({ shop_id: SHOP_ID, order_id: orderId, code: codeValue });
+      await orderApi.verifyDelivery({ shop_id: activeShopId, order_id: orderId, code: codeValue });
       setStatus("success");
       setTimeout(() => {
         onVerified();
@@ -84,7 +87,7 @@ export const VerifyDeliveryModal: React.FC<VerifyDeliveryModalProps> = ({
     }
   };
 
-  const shareUrl = `${window.location.origin}/verify-delivery?order_id=${orderId}&shop_id=${SHOP_ID}`;
+  const shareUrl = `${window.location.origin}/verify-delivery?order_id=${orderId}&shop_id=${activeShopId}`;
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(shareUrl).then(() => {

@@ -7,7 +7,6 @@ import {
   Phone,
   MapPin,
   Calendar,
-  Bookmark,
   FileText,
   Tag,
   AlertTriangle,
@@ -113,17 +112,6 @@ const EmployeeForm = () => {
     const isBlocked = !id && limitStatus.isReached;
     setBottomActions(
       <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300">
-        {!id && (
-          <button 
-            type="button"
-            onClick={handleSaveDraft}
-            disabled={isBlocked}
-            className="px-4 h-8 rounded-lg border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2 whitespace-nowrap overflow-hidden disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <Bookmark size={14} className="shrink-0" />
-            <span className="truncate">Save Draft</span>
-          </button>
-        )}
         <GradientButton 
           icon={<Save size={16} />} 
           onClick={handleSubmit} 
@@ -177,32 +165,6 @@ const EmployeeForm = () => {
       setLoadingData(false);
     }
   }, [id, employee, searchParams, showToast]);
-
-  const handleSaveDraft = () => {
-    const drafts = JSON.parse(localStorage.getItem('employee_drafts') || '[]');
-    const draftId = searchParams.get('draftId') || Date.now().toString();
-    
-    const newDraft = { 
-      ...formData, 
-      id: draftId,
-      updatedAt: new Date().toISOString() 
-    };
-
-    const existingIndex = drafts.findIndex((d: any) => d.id === draftId);
-    if (existingIndex > -1) {
-      drafts[existingIndex] = newDraft;
-    } else {
-      drafts.unshift(newDraft);
-    }
-
-    localStorage.setItem('employee_drafts', JSON.stringify(drafts));
-    showToast("Employee details saved as draft", "info");
-    
-    // Update URL if it's a new draft
-    if (!searchParams.get('draftId')) {
-      navigate(`/employee/add?draftId=${draftId}`, { replace: true });
-    }
-  };
 
   const handleSubmit = async (e: any) => {
     if (e) e.preventDefault();

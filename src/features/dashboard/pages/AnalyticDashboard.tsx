@@ -173,7 +173,7 @@ const getRangeDate = (key: RangeKey): { start: Date; end: Date } | null => {
 const AnalyticsDashboard = () => {
   const { analytics } = useBusinessApi();
 
-  const [activeRange, setActiveRange] = useState<RangeKey>("all");
+  const [activeRange, setActiveRange] = useState<RangeKey>("month");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
   const [stats, setStats] = useState<UnifiedDashboardResponse | null>(null);

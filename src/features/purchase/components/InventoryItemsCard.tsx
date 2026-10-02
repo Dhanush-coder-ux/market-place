@@ -411,8 +411,10 @@ export const InventoryItemsCard = ({
       const serialnoId = opt.serialno_id || d.serialno_id || rawSerials?.id || opt.serials?.id || opt.serial_number?.id || d.serial_number?.id || opt.serial_numbers?.id || d.serial_numbers?.id;
 
       if (opt.is_variant) {
+        const parentId = opt.product_id || opt.id;
+        const vId = opt.variant_id || (opt.product_id ? opt.id : undefined);
         if (!hasBatchTracking && !hasSerialTracking) {
-          const isDuplicate = products.some((p, i) => i !== targetIndex && p.inventory_id === opt.id && p.variant_id === opt.variant_id);
+          const isDuplicate = products.some((p, i) => i !== targetIndex && p.inventory_id === parentId && p.variant_id === vId);
           if (isDuplicate) {
             showToast(`${opt.name} is already added to the list.`, "error");
             return;
@@ -420,8 +422,8 @@ export const InventoryItemsCard = ({
         }
 
         updateProductFields(targetIndex, {
-          inventory_id: opt.id,
-          variant_id: opt.variant_id,
+          inventory_id: parentId,
+          variant_id: vId,
           name: (opt.name || "").split(" (")[0],
           variant: opt.variant_name || (opt.attributes ? Object.values(opt.attributes).join(' - ') : (d.attributes ? Object.values(d.attributes).join(' - ') : opt.name?.split(" - ")[1])),
           costPrice: get("buy_price"),

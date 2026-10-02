@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
-  Package, Save, Pencil, Trash2, Cpu, AlertCircle, Layers, Zap, Bookmark,
+  Package, Save, Pencil, Trash2, Cpu, AlertCircle, Layers, Zap,
   Plus, Info, ImagePlus, X, UploadCloud,
   BarChart3, Check, Settings2, FileText,
   IndianRupee, Barcode,
@@ -458,7 +458,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   const [showBarcodeGen, setShowBarcodeGen] = useState(false);
   const [barcodePrefix, setBarcodePrefix] = useState("");
   const [generatingBarcode, setGeneratingBarcode] = useState(false);
-  const [isSavingDraft, setIsSavingDraft] = useState(false);
 
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [units, setUnits] = useState<{ id: string; name: string }[]>([]);
@@ -596,17 +595,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   useEffect(() => {
     setBottomActions(
       <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300">
-        {!id && (
-          <button
-            type="button"
-            onClick={handleSaveDraft}
-            disabled={isSavingDraft}
-            className="px-4 h-9 rounded-lg border border-slate-200 text-slate-600 font-semibold text-xs bg-white hover:bg-slate-50 transition-all flex items-center gap-2"
-          >
-            <Bookmark size={14} className="shrink-0" />
-            Save draft
-          </button>
-        )}
         <GradientButton
           icon={<Save size={15} />}
           onClick={handleSubmit}
@@ -618,7 +606,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       </div>
     );
     return () => setBottomActions(null);
-  }, [setBottomActions, isLoading, id, form, variantTypes, combinations, baseSerials, supplierDetails, isSavingDraft, existingImages, selectedImageFiles]);
+  }, [setBottomActions, isLoading, id, form, variantTypes, combinations, baseSerials, supplierDetails, existingImages, selectedImageFiles]);
 
   // Load custom field definitions
   useEffect(() => {
@@ -842,25 +830,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
 
   const removeExistingImage = (index: number) => setExistingImages(prev => prev.filter((_, i) => i !== index));
   const removeSelectedImage = (index: number) => setSelectedImageFiles(prev => prev.filter((_, i) => i !== index));
-
-  /* ─── Save draft ─── */
-  const handleSaveDraft = () => {
-    setIsSavingDraft(true);
-    const drafts = JSON.parse(localStorage.getItem("product_drafts") || "[]");
-    const draftId = searchParams.get("draftId") || Date.now().toString();
-    const newDraft = {
-      id: draftId,
-      data: { form, variantTypes, combinations },
-      timestamp: new Date().toISOString(),
-      displayName: form.name || "Untitled Product Draft",
-    };
-    const existingIndex = drafts.findIndex((d: any) => d.id === draftId);
-    if (existingIndex > -1) drafts[existingIndex] = newDraft;
-    else drafts.push(newDraft);
-    localStorage.setItem("product_drafts", JSON.stringify(drafts));
-    showToast("Progress saved as draft", "info");
-    setIsSavingDraft(false);
-  };
 
   /* ─── Submit ─── */
   const handleSubmit = async (e?: React.FormEvent) => {

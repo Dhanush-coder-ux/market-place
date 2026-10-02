@@ -10,7 +10,7 @@ import { DateFilter } from "../components/DateFilter";
 import { StatCard } from "@/components/common/StatsCard";
 import SkeletonLoader from "@/components/common/SkeletonLoader";
 import { useApi } from "@/context/ApiContext";
-import { SHOP_ID } from "@/services/endpoints";
+import { getShopId, SHOP_ID } from "@/services/endpoints";
 import { orderApi } from "@/services/api/order";
 import { customerApi } from "@/services/api/customer";
 import type { OrderRecord } from "@/types/api";
@@ -26,8 +26,8 @@ const toCardShape = (o: OrderRecord, customerMap?: Record<string, { name: string
   const dataObj = anyOrder.datas || {};
   const itemObj = anyOrder.item_infos || {};
 
-  const name = onlineObj.name || onlineObj.customer_name || o.customer_name || custObj.customer_name || custObj.name || addObj.customer_name || dataObj.customer_name || c?.name || "Customer";
-  const phone = onlineObj.phone || onlineObj.customer_phone || o.customer_number || custObj.mobile_number || custObj.phone || addObj.customer_phone || dataObj.phone || c?.phone || "—";
+  const name = onlineObj.name || onlineObj.customer_name || anyOrder.customer_name || anyOrder.user_name || o.customer_name || custObj.customer_name || custObj.name || addObj.customer_name || addObj.name || dataObj.customer_name || dataObj.name || c?.name || "Customer";
+  const phone = onlineObj.phone || onlineObj.customer_phone || anyOrder.customer_phone || anyOrder.customer_number || o.customer_number || custObj.mobile_number || custObj.phone || addObj.customer_phone || addObj.phone || dataObj.phone || dataObj.customer_phone || c?.phone || "—";
   
   const rawTotal = calcObj.total ?? calcObj.grand_total ?? calcObj.sub_total ?? o.total_amount ?? o.total ?? anyOrder.total_order_value ?? dataObj.total_amount ?? itemObj.total_order_amount ?? o.pending_amount ?? 0;
   const totalAmount = Number(Number(rawTotal).toFixed(2));
@@ -40,13 +40,14 @@ const toCardShape = (o: OrderRecord, customerMap?: Record<string, { name: string
     totalAmount: isNaN(totalAmount) ? 0 : totalAmount,
     status: (o.status ?? "PENDING").toUpperCase(),
     origin: (o.origin || "ONLINE").toUpperCase(),
-    deliveryCode: anyOrder.delivery_code || onlineObj.delivery_code || null,
-    online_details: onlineObj,
+    deliveryCode: anyOrder.delivery_code || onlineObj.delivery_code || addObj.delivery_code || null,
+    online_details: Object.keys(onlineObj).length > 0 ? onlineObj : (addObj.user_id || addObj.full_address || addObj.address_id ? addObj : {}),
   };
 };
 
 const Order = () => {
   const { loading, error, clearError } = useApi();
+  const currentShopId = getShopId() || localStorage.getItem("shop_id") || SHOP_ID || "";
   const [customerMap, setCustomerMap] = useState<Record<string, { name: string, phone: string }>>({});
 
   const [orders, setOrders] = useState<OrderRecord[]>([]);
@@ -59,10 +60,11 @@ const Order = () => {
   const [refreshKey, setRefreshKey] = useState(0);
 
   // Verify delivery state
-  const [verifyingOrder, setVerifyingOrder] = useState<{ id: string; billNo: string; customerName: string } | null>(null);
+  const [verifyingOrder, setVerifyingOrder] = useState<{ id: string; shopId?: string; billNo: string; customerName: string } | null>(null);
 
   useEffect(() => {
-    customerApi.getCustomersByShopId(SHOP_ID, { limit: "100", offset: "1" })
+    if (!currentShopId) return;
+    customerApi.getCustomersByShopId(currentShopId, { limit: "100", offset: "1" })
       .then((res: any) => {
         if (res?.data) {
           const m: Record<string, { name: string, phone: string }> = {};
@@ -77,9 +79,10 @@ const Order = () => {
         }
       })
       .catch(console.error);
-  }, []);
+  }, [currentShopId]);
 
   useEffect(() => {
+    if (!currentShopId) return;
     const params: any = {
       limit: "50",
       offset: "1",
@@ -95,7 +98,7 @@ const Order = () => {
       params.to_date = dateRange.endDate.toISOString().split("T")[0];
     }
     
-    orderApi.getOrdersByShop(SHOP_ID, params).then((res: any) => {
+    orderApi.getOrdersByShop(currentShopId, params).then((res: any) => {
       if (res?.data) {
         let orderList: OrderRecord[] = [];
         if (Array.isArray(res.data)) {
@@ -112,13 +115,14 @@ const Order = () => {
         setOrders([]);
       }
     }).catch(console.error);
-  }, [refreshKey, status, dateRange]);
+  }, [refreshKey, status, dateRange, currentShopId]);
 
   const handleStatusChange = async (newStatus: string, originalOrder: OrderRecord) => {
     try {
+      const targetShopId = (originalOrder as any).shop_id || currentShopId;
       const payload = {
         id: originalOrder.id,
-        shop_id: SHOP_ID,
+        shop_id: targetShopId,
         session_id: (originalOrder as any).session_id || "",
         customer_id: (originalOrder as any).customer_id || "",
         status: newStatus,
@@ -141,7 +145,8 @@ const Order = () => {
 
   const handleOpenDetails = async (order: OrderRecord) => {
     try {
-      const res = await orderApi.getOrderById(SHOP_ID, order.id);
+      const targetShopId = (order as any).shop_id || currentShopId;
+      const res = await orderApi.getOrderById(targetShopId, order.id);
       if (res?.data) {
         const fullOrder = Array.isArray(res.data) 
           ? res.data[0] 
@@ -190,7 +195,7 @@ const Order = () => {
 
   const onlineOrders = orders.filter((o) => {
     const origin = (o.origin || "").toUpperCase();
-    return origin === "ONLINE" || Boolean((o as any).online_details);
+    return origin === "ONLINE" || Boolean((o as any).online_details) || Boolean((o as any).delivery_code) || Boolean((o as any).user_id) || !o.origin;
   });
   const filteredOrders = onlineOrders;
   const totalOrders = onlineOrders.length;
@@ -276,7 +281,7 @@ const Order = () => {
                   setIsOpen={() => handleOpenDetails(order)}
                   viewMode={viewMode}
                   onStatusChange={(newStatus) => handleStatusChange(newStatus, order)}
-                  onVerifyDelivery={() => setVerifyingOrder({ id: order.id, billNo: cardData.billNo, customerName: cardData.customerName })}
+                  onVerifyDelivery={() => setVerifyingOrder({ id: order.id, shopId: (order as any).shop_id || currentShopId, billNo: cardData.billNo, customerName: cardData.customerName })}
                 />
               );
             })}
@@ -309,6 +314,7 @@ const Order = () => {
         isOpen={!!verifyingOrder}
         onClose={() => setVerifyingOrder(null)}
         orderId={verifyingOrder?.id || ""}
+        shopId={verifyingOrder?.shopId || currentShopId}
         billNo={verifyingOrder?.billNo || ""}
         customerName={verifyingOrder?.customerName || ""}
         onVerified={() => {

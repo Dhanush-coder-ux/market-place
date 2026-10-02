@@ -7,7 +7,6 @@ import {
   Hash,
   BadgeCheck,
   Save,
-  Bookmark,
   Info,
 } from "lucide-react";
 import { useHeader } from "@/context/HeaderContext";
@@ -124,16 +123,6 @@ const ProfileForm: React.FC = () => {
   useEffect(() => {
     setBottomActions(
       <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300">
-        {!id && (
-          <button
-            type="button"
-            onClick={handleSaveDraft}
-            className="px-4 h-8 rounded-lg border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2 whitespace-nowrap overflow-hidden"
-          >
-            <Bookmark size={14} className="shrink-0" />
-            <span className="truncate">Save Draft</span>
-          </button>
-        )}
         <GradientButton
           icon={<Save size={16} />}
           onClick={handleSubmit}
@@ -151,26 +140,6 @@ const ProfileForm: React.FC = () => {
     const { name, value } = e.target;
     const finalValue = name.includes("gst") ? value.toUpperCase() : value;
     setFormData((prev) => ({ ...prev, [name]: finalValue }));
-  };
-
-  const handleSaveDraft = () => {
-    const drafts = JSON.parse(localStorage.getItem("profile_drafts") || "[]");
-    const draftId = searchParams.get("draftId") || crypto.randomUUID();
-
-    const newDraft = {
-      id: draftId,
-      timestamp: new Date().toISOString(),
-      displayName: formData.name || "New Shop",
-      data: formData,
-    };
-
-    const existingIndex = drafts.findIndex((d: any) => d.id === draftId);
-    if (existingIndex > -1) drafts[existingIndex] = newDraft;
-    else drafts.unshift(newDraft);
-
-    localStorage.setItem("profile_drafts", JSON.stringify(drafts));
-    showToast("Progress saved to drafts", "success");
-    if (!searchParams.get("draftId")) navigate(`/profile/add?draftId=${draftId}`, { replace: true });
   };
 
   const handleSubmit = async (e?: React.FormEvent) => {

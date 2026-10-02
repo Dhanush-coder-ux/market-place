@@ -8,7 +8,6 @@ import {
   MapPin,
   CreditCard,
   DollarSign,
-  Bookmark,
 } from "lucide-react";
 
 import { Switch } from "@/components/ui/switch";
@@ -129,16 +128,6 @@ const CustomerFormPage = () => {
   useEffect(() => {
     setBottomActions(
       <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300">
-        {!id && (
-          <button
-            type="button"
-            onClick={handleSaveDraft}
-            className="px-4 h-8 rounded-lg border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2 whitespace-nowrap overflow-hidden"
-          >
-            <Bookmark size={14} className="shrink-0" />
-            <span className="truncate">Save Draft</span>
-          </button>
-        )}
         <GradientButton
           icon={submitting ? <Save className="animate-pulse" size={16} /> : <Save size={16} />}
           onClick={handleSubmit}
@@ -231,28 +220,6 @@ const CustomerFormPage = () => {
 
   const handleSelectChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleSaveDraft = () => {
-    const drafts = JSON.parse(localStorage.getItem("customer_drafts") || "[]");
-    const draftId = searchParams.get("draftId") || Date.now().toString();
-
-    const newDraft = {
-      id: draftId,
-      data: formData,
-      timestamp: new Date().toISOString(),
-      displayName: `${formData.first_name} ${formData.last_name}`.trim() || formData.company || "Untitled Draft"
-    };
-
-    const existingIndex = drafts.findIndex((d: any) => d.id === draftId);
-    if (existingIndex > -1) {
-      drafts[existingIndex] = newDraft;
-    } else {
-      drafts.push(newDraft);
-    }
-
-    localStorage.setItem("customer_drafts", JSON.stringify(drafts));
-    showToast("Progress saved as draft", "info");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

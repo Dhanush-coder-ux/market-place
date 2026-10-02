@@ -11,7 +11,6 @@ import {
   X,
   PackageOpen,
   Check,
-  Bookmark,
   Calendar,
   History,
 } from 'lucide-react';
@@ -266,14 +265,6 @@ export default function StockAdjustmentPage() {
             Session ready
           </span>
         )}
-        <button
-          type="button"
-          onClick={handleSaveDraft}
-          className="px-4 h-8 rounded-lg border border-blue-100 text-blue-600 font-bold text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2 whitespace-nowrap overflow-hidden"
-        >
-          <Bookmark size={14} className="shrink-0" />
-          <span className="truncate">Save Draft</span>
-        </button>
         <GradientButton
           icon={isSubmitting ? <Loader className="h-4 w-4" /> : <Save size={16} />}
           onClick={handleSubmit}
@@ -433,28 +424,6 @@ export default function StockAdjustmentPage() {
     setBatchModal({ isOpen: false, variantName: "", targetRowIndex: -1, batches: [], variantData: null });
     setVariantModal({ isOpen: false, baseProduct: "", targetRowIndex: -1, variants: [], baseData: null });
     setSelectedVariant(null);
-  };
-
-  const handleSaveDraft = () => {
-    const drafts = JSON.parse(localStorage.getItem("stock_adjustment_drafts") || "[]");
-    const draftId = searchParams.get("draftId") || Date.now().toString();
-
-    const newDraft = {
-      id: draftId,
-      data: { items, adjustmentDate, notes },
-      timestamp: new Date().toISOString(),
-      displayName: `Adjustment (${items.length} items) - ${new Date(adjustmentDate).toLocaleDateString()}`
-    };
-
-    const existingIndex = drafts.findIndex((d: any) => d.id === draftId);
-    if (existingIndex > -1) {
-      drafts[existingIndex] = newDraft;
-    } else {
-      drafts.push(newDraft);
-    }
-
-    localStorage.setItem("stock_adjustment_drafts", JSON.stringify(drafts));
-    showToast("Adjustment saved as draft", "info");
   };
 
   // ── Reserve a single item in the cart session ────────────────────────────────

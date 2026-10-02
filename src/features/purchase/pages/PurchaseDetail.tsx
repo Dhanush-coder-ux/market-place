@@ -1093,7 +1093,7 @@ const PurchaseDetail = () => {
                                   {/* Flat Format (PurchaseReadModel) Batches & Serials */}
                                   {product.variant && (
                                     <div className="mt-2 pl-3 border-l-2 border-indigo-100 space-y-2.5">
-                                      <p className="text-[10px] font-extrabold text-[var(--at-variant-tx)] bg-[var(--at-variant-bg)] border border-[var(--at-variant-bd)] px-1.5 py-0.5 rounded-xl w-fit">• {product.variant.variant_name}</p>
+                                      <AntBadge variant="at-variant" type="tag">V: {product.variant.variant_name}</AntBadge>
                                     </div>
                                   )}
 
@@ -1101,7 +1101,7 @@ const PurchaseDetail = () => {
                                     <div className="mt-2 pl-3 border-l-2 border-indigo-150 space-y-1.5">
                                       <div className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md text-[10px] text-slate-650 shadow-sm">
                                         <div className="flex justify-between items-center font-bold">
-                                          <span className="text-slate-800">Batch: {product.batch.batch_name || "Default"}</span>
+                                          <AntBadge variant="at-batch" type="tag">B: {product.batch.batch_name || "Default"}</AntBadge>
                                           <span className="text-indigo-600">Qty: {product.stocks_added ?? product.received_stocks ?? 0}</span>
                                         </div>
                                         {(product.batch.mfg_date || product.batch.exp_date) && (
@@ -1132,7 +1132,7 @@ const PurchaseDetail = () => {
                                     <div className="mt-2 pl-3 border-l-2 border-indigo-100 space-y-2.5">
                                       {product.variants?.map((v, vIdx) => (
                                         <div key={vIdx} className="space-y-1">
-                                          <p className="text-[10px] font-extrabold text-[var(--at-variant-tx)] bg-[var(--at-variant-bg)] border border-[var(--at-variant-bd)] px-1.5 py-0.5 rounded-xl w-fit">• {v.name} {v.buy_price !== undefined ? `(Buy: ${fmt(v.buy_price)})` : ""}</p>
+                                          <AntBadge variant="at-variant" type="tag">V: {v.name} {v.buy_price !== undefined ? `(Buy: ${fmt(v.buy_price)})` : ""}</AntBadge>
 
                                           {/* Variant Batches */}
                                           {v.batches && v.batches.length > 0 && (
@@ -1140,7 +1140,7 @@ const PurchaseDetail = () => {
                                               {v.batches.map((b, bIdx) => (
                                                 <div key={bIdx} className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md text-[10px] text-slate-600 shadow-sm">
                                                   <div className="flex justify-between items-center font-bold">
-                                                    <span className="text-slate-800">Batch: {b.name || "Default"}</span>
+                                                    <AntBadge variant="at-batch" type="tag">B: {b.name || "Default"}</AntBadge>
                                                     <span className="text-indigo-600">Qty: {b.stocks}</span>
                                                   </div>
                                                   {(b.manufacturing_date || b.expiry_date) && (
@@ -1190,7 +1190,7 @@ const PurchaseDetail = () => {
                                       {product.batches.map((b, bIdx) => (
                                         <div key={bIdx} className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md text-[10px] text-slate-650 shadow-sm">
                                           <div className="flex justify-between items-center font-bold">
-                                            <span className="text-slate-800">Batch: {b.name || "Default"}</span>
+                                            <AntBadge variant="at-batch" type="tag">B: {b.name || "Default"}</AntBadge>
                                             <span className="text-indigo-600">Qty: {b.stocks}</span>
                                           </div>
                                           {(b.manufacturing_date || b.expiry_date) && (
@@ -1289,7 +1289,7 @@ const PurchaseDetail = () => {
                                   <span className="text-[9px] text-slate-400 font-bold">/u</span>
                                 </div>
                                 {q > 0 && (
-                                  <span className="text-[9px] text-emerald-700 font-bold mt-0.5 whitespace-nowrap">
+                                  <span className="text-xs text-emerald-700 font-bold mt-0.5 whitespace-nowrap">
                                     Tot: ₹{itemTotalLanded.toFixed(2)}
                                   </span>
                                 )}
@@ -1301,7 +1301,7 @@ const PurchaseDetail = () => {
                                 <div className="flex flex-col items-end">
                                   <span className="text-sm font-black text-slate-800 tabular-nums">{fmt(baseBuyPrice * q)}</span>
                                   {gstVal > 0 && (
-                                    <span className="text-[9px] text-indigo-600 font-semibold mt-0.5 whitespace-nowrap">
+                                    <span className="text-xs text-indigo-600 font-semibold mt-0.5 whitespace-nowrap">
                                       ₹{(baseBuyPrice * q + rowGstTotal).toFixed(2)} incl. GST
                                     </span>
                                   )}

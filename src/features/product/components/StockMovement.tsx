@@ -217,7 +217,7 @@ const StockMovementTab = ({ inventoryId, product }: StockMovementTabProps) => {
             const isDecrement = (matchedProduct || products[0])?.type === 'DECREMENT' || source === 'sales';
             const firstItem = productsList[0];
             rows.push({
-              id: a.id,
+              id: a.stock_movement_id || a.id || a.movement_id || a.adjustment_id || a._id,
               date: dateStr,
               description: finalDesc,
               displayType,

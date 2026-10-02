@@ -97,7 +97,7 @@ const StockMovementDetail = () => {
   useEffect(() => {
     if (!id) return;
     setLoading(true);
-    getData(`${ENDPOINTS.S_ADJUSTMENTS}/by/${SHOP_ID}/${id}`)
+    getData(`${ENDPOINTS.S_ADJUSTMENTS}/by/id/${SHOP_ID}/${id}`)
       .then(res => {
         const raw = res?.data || res?.datas;
         const adj = Array.isArray(raw) ? (raw.find((a: any) => a.id === id) || raw[0]) : raw;

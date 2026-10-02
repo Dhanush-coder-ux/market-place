@@ -553,7 +553,7 @@ const CustomerFormPage = () => {
           <div className="lg:col-span-6 bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
             <div className="px-6 py-4 bg-gradient-to-r from-indigo-50/50 to-transparent border-b border-slate-100 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600">
+                <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center text-[#286038]">
                   <Layers size={18} />
                 </div>
                 <div>
@@ -564,7 +564,7 @@ const CustomerFormPage = () => {
               <button
                 type="button"
                 onClick={handleOpenCreateCustomField}
-                className="h-8 px-3 rounded-lg border border-indigo-100 text-indigo-600 font-bold text-xs bg-indigo-50/50 hover:bg-indigo-100 transition-all flex items-center gap-1.5"
+                className="h-8 px-3 rounded-lg border border-[#88B878]/30 text-[#286038] font-bold text-xs bg-[#286038]/10/50 hover:bg-[#286038]/10 transition-all flex items-center gap-1.5"
               >
                 <Plus size={14} />
                 Create Custom Field
@@ -597,7 +597,7 @@ const CustomerFormPage = () => {
                             type="button"
                             onClick={() => handleOpenEditCustomField(field)}
                             title="Edit field"
-                            className="p-1 text-slate-400 hover:text-indigo-600 rounded hover:bg-indigo-50 transition-colors"
+                            className="p-1 text-slate-400 hover:text-[#286038] rounded hover:bg-[#286038]/10 transition-colors"
                           >
                             <Pencil size={13} />
                           </button>
@@ -620,7 +620,7 @@ const CustomerFormPage = () => {
                             onChange={(e) =>
                               setCustomFieldValues((prev) => ({ ...prev, [field.id]: String(e.target.checked) }))
                             }
-                            className="w-4 h-4 rounded accent-indigo-600 cursor-pointer"
+                            className="w-4 h-4 rounded accent-[#286038] cursor-pointer"
                           />
                           <label htmlFor={`cf_${field.id}`} className="text-xs font-semibold text-slate-600 cursor-pointer">
                             {field.label_name}
@@ -635,7 +635,7 @@ const CustomerFormPage = () => {
                           }
                           required={field.required}
                           placeholder={`Enter ${field.label_name.toLowerCase()}…`}
-                          className="w-full h-10 px-4 rounded-lg border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 transition-all duration-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 outline-none bg-slate-50/30 font-semibold"
+                          className="w-full h-10 px-4 rounded-lg border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 transition-all duration-200 focus:border-[#286038] focus:ring-4 focus:ring-[#88B878]/30 outline-none bg-slate-50/30 font-semibold"
                         />
                       )}
                     </div>

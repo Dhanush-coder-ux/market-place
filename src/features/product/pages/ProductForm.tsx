@@ -1608,7 +1608,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                     <button
                       type="button"
                       onClick={() => setShowBarcodeGen(!showBarcodeGen)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-500 transition-colors"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#286038] transition-colors"
                       title="Generate barcode"
                     >
                       <Barcode size={16} />
@@ -1616,18 +1616,18 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                   </div>
                   {showBarcodeGen && (
                     <div className="absolute bottom-full right-0 mb-2 w-60 p-3 bg-white border border-slate-200 shadow-2xl rounded-xl z-[100]">
-                      <h4 className="text-xs font-bold text-slate-800 mb-2 flex items-center gap-1.5"><Barcode size={12} className="text-indigo-500" />Generate Barcode</h4>
+                      <h4 className="text-xs font-bold text-slate-800 mb-2 flex items-center gap-1.5"><Barcode size={12} className="text-[#286038]" />Generate Barcode</h4>
                       <div className="space-y-2">
                         <input
                           type="text"
                           placeholder="Prefix (Optional)"
-                          className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded-lg outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                          className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded-lg outline-none focus:border-[#286038] focus:ring-2 focus:ring-[#88B878]/30"
                           value={barcodePrefix}
                           onChange={e => setBarcodePrefix(e.target.value)}
                         />
                         <div className="flex gap-2">
                           <button type="button" onClick={() => { setShowBarcodeGen(false); setBarcodePrefix(""); }} className="flex-1 py-1.5 text-[10px] font-bold text-slate-500 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors">Cancel</button>
-                          <button type="button" onClick={handleGenerateBarcode} disabled={generatingBarcode} className="flex-1 py-1.5 text-[10px] font-bold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50">{generatingBarcode ? "…" : "Generate"}</button>
+                          <button type="button" onClick={handleGenerateBarcode} disabled={generatingBarcode} className="flex-1 py-1.5 text-[10px] font-bold text-white bg-[#286038] rounded-lg hover:bg-[#103020] transition-colors disabled:opacity-50">{generatingBarcode ? "…" : "Generate"}</button>
                         </div>
                       </div>
                       {/* Arrow pointing down */}
@@ -1640,15 +1640,15 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
 
             {/* SECTION 5: CUSTOM FIELDS */}
             <SectionCard
-              icon={<Layers size={17} className="text-indigo-600" />}
-              iconBg="bg-indigo-50"
+              icon={<Layers size={17} className="text-[#286038]" />}
+              iconBg="bg-[#286038]/10"
               title="Custom fields"
               subtitle="Define and populate additional product properties"
               extra={
                 <button
                   type="button"
                   onClick={handleOpenCreateCustomField}
-                  className="h-8 px-3 rounded-lg border border-indigo-100 text-indigo-600 font-bold text-xs bg-indigo-50/50 hover:bg-indigo-100 transition-all flex items-center gap-1.5"
+                  className="h-8 px-3 rounded-lg border border-[#88B878]/30 text-[#286038] font-bold text-xs bg-[#286038]/5 hover:bg-[#286038]/10 transition-all flex items-center gap-1.5"
                 >
                   <Plus size={14} />
                   Create Custom Field
@@ -1677,7 +1677,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                             type="button"
                             onClick={() => handleOpenEditCustomField(field)}
                             title="Edit field"
-                            className="p-1 text-slate-400 hover:text-indigo-600 rounded hover:bg-indigo-50 transition-colors"
+                            className="p-1 text-slate-400 hover:text-[#286038] rounded hover:bg-[#286038]/10 transition-colors"
                           >
                             <Pencil size={13} />
                           </button>
@@ -1700,7 +1700,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                             onChange={(e) =>
                               setCustomFieldValues((prev) => ({ ...prev, [field.id]: String(e.target.checked) }))
                             }
-                            className="w-4 h-4 rounded accent-indigo-600 cursor-pointer"
+                            className="w-4 h-4 rounded accent-[#286038] cursor-pointer"
                           />
                           <label htmlFor={`cf_${field.id}`} className="text-xs font-semibold text-slate-600 cursor-pointer">
                             {field.label_name}
@@ -1715,7 +1715,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                           }
                           required={field.required}
                           placeholder={`Enter ${field.label_name.toLowerCase()}…`}
-                          className="w-full h-10 px-4 rounded-lg border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 transition-all duration-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 outline-none bg-slate-50/30 font-semibold rounded-lg"
+                          className="w-full h-10 px-4 rounded-lg border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 transition-all duration-200 focus:border-[#286038] focus:ring-4 focus:ring-[#88B878]/30 outline-none bg-slate-50/30 font-semibold"
                         />
                       )}
                     </div>

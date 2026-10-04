@@ -504,10 +504,14 @@ const SaleDetailPage: React.FC = () => {
 
   const clearedPaymentsForThisOrder = clearingHistories.reduce((sum: number, h: any) => {
     const noteStr = String(h.additional_infos?.notes || h.notes || '').toLowerCase();
-    const isInitialBilled = noteStr.includes('billed (on credit)') || noteStr.includes('billed on credit');
+    const isInitialBilled = noteStr.includes('billed (on credit)') || 
+                            noteStr.includes('billed on credit') || 
+                            noteStr.includes('initial payment') ||
+                            h.additional_infos?.is_initial === true ||
+                            h.additional_infos?.type === 'INCREMENT';
     const isCreditAdd = noteStr.includes('added to credit') || h.type === 'INCREMENT';
     
-    // Credit additions (e.g. initial order on credit, exchange added to credit) are debt additions, NOT payments
+    // Credit additions and initial billing records are NOT subsequent debt clearing payments
     if (isInitialBilled || isCreditAdd) return sum;
 
     const inv = String(h.invoice_no || h.additional_infos?.invoice_no || '').trim().toUpperCase();

@@ -688,14 +688,28 @@ export default function CustomerDetail() {
                 const invKey = String(addInfos.invoice_no || h.invoice_no || h.reference_no || h.ref_no || addInfos.entity_id || h.entity_id || '').trim().toUpperCase();
 
                 const isRefund = h.type === 'SALES_RETURN' || h.type === 'REFUND' || h.entity_name?.toLowerCase().includes('return') || h.notes?.toLowerCase().includes('refund') || h.notes?.toLowerCase().includes('return');
-                const isCreditAddition = h.entity_name === 'order' || String(h.notes || addInfos.notes || '').toLowerCase().includes('billed (on credit)') || String(h.notes || addInfos.notes || '').toLowerCase().includes('added to credit');
+                const isInitialBilled = String(h.notes || addInfos.notes || '').toLowerCase().includes('billed (on credit)') || 
+                                        String(h.notes || addInfos.notes || '').toLowerCase().includes('billed on credit') || 
+                                        String(h.notes || addInfos.notes || '').toLowerCase().includes('initial payment') ||
+                                        addInfos.is_initial === true ||
+                                        addInfos.type === 'INCREMENT';
+                const isCreditAddition = isInitialBilled || String(h.notes || addInfos.notes || '').toLowerCase().includes('added to credit') || h.type === 'INCREMENT';
 
                 const outBefore = addInfos.outstanding_before ?? h.cleared_infos?.outstanding_before ?? 0;
                 const outAfter = addInfos.outstanding_after ?? h.cleared_infos?.outstanding_after ?? 0;
                 const defaultClearedAmount = outBefore > outAfter ? (outBefore - outAfter) : 0;
-                let displayAmount = isCreditAddition 
-                  ? 0 
-                  : Number(addInfos.cleared_amount ?? addInfos.paid_amount ?? h.cleared_amount ?? h.amount ?? defaultClearedAmount);
+                
+                let displayAmount = 0;
+                if (isInitialBilled) {
+                  displayAmount = Number(addInfos.paid_amount ?? addInfos.cleared_amount ?? 0);
+                  if (!displayAmount && Array.isArray(h.payment_infos)) {
+                    displayAmount = h.payment_infos.filter((p: any) => !String(p.method || p.mode).toUpperCase().includes('CREDIT')).reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
+                  }
+                } else if (isCreditAddition) {
+                  displayAmount = 0;
+                } else {
+                  displayAmount = Number(addInfos.cleared_amount ?? addInfos.paid_amount ?? h.cleared_amount ?? h.amount ?? defaultClearedAmount);
+                }
 
                 if (displayAmount === 0 && isRefund && h.notes) {
                   const match = h.notes.match(/Refund amount:\s*([0-9.]+)/i);
@@ -802,14 +816,28 @@ export default function CustomerDetail() {
                               }
 
                               const isRefund = h.type === 'SALES_RETURN' || h.type === 'REFUND' || h.entity_name?.toLowerCase().includes('return') || h.notes?.toLowerCase().includes('refund') || h.notes?.toLowerCase().includes('return');
-                              const isCreditAddition = h.entity_name === 'order' || String(h.notes || addInfos.notes || '').toLowerCase().includes('billed (on credit)') || String(h.notes || addInfos.notes || '').toLowerCase().includes('added to credit');
+                              const isInitialBilled = String(h.notes || addInfos.notes || '').toLowerCase().includes('billed (on credit)') || 
+                                                      String(h.notes || addInfos.notes || '').toLowerCase().includes('billed on credit') || 
+                                                      String(h.notes || addInfos.notes || '').toLowerCase().includes('initial payment') ||
+                                                      addInfos.is_initial === true ||
+                                                      addInfos.type === 'INCREMENT';
+                              const isCreditAddition = isInitialBilled || String(h.notes || addInfos.notes || '').toLowerCase().includes('added to credit') || h.type === 'INCREMENT';
                               
                               const outBefore = addInfos.outstanding_before ?? h.cleared_infos?.outstanding_before ?? 0;
                               const outAfter = addInfos.outstanding_after ?? h.cleared_infos?.outstanding_after ?? 0;
                               const defaultClearedAmount = outBefore > outAfter ? (outBefore - outAfter) : 0;
-                              let displayAmount = isCreditAddition 
-                                ? 0 
-                                : Number(addInfos.cleared_amount ?? addInfos.paid_amount ?? h.cleared_amount ?? h.amount ?? defaultClearedAmount);
+                              
+                              let displayAmount = 0;
+                              if (isInitialBilled) {
+                                displayAmount = Number(addInfos.paid_amount ?? addInfos.cleared_amount ?? 0);
+                                if (!displayAmount && Array.isArray(h.payment_infos)) {
+                                  displayAmount = h.payment_infos.filter((p: any) => !String(p.method || p.mode).toUpperCase().includes('CREDIT')).reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
+                                }
+                              } else if (isCreditAddition) {
+                                displayAmount = 0;
+                              } else {
+                                displayAmount = Number(addInfos.cleared_amount ?? addInfos.paid_amount ?? h.cleared_amount ?? h.amount ?? defaultClearedAmount);
+                              }
                               
                               if (displayAmount === 0 && isRefund && h.notes) {
                                 const match = h.notes.match(/Refund amount:\s*([0-9.]+)/i);

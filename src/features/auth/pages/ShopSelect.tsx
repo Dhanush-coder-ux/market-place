@@ -138,14 +138,9 @@ const ShopSelect = () => {
           ========================================================================= */}
       <header className="w-full bg-white border-b border-slate-200 px-4 sm:px-8 py-3 flex items-center justify-between sticky top-0 z-30 shadow-2xs shrink-0">
         {/* Brand */}
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-black text-xs shadow-xs">
-            ★
-          </div>
-          <div>
-            <span className="text-base font-black tracking-tight text-slate-900 leading-none block">
-              inventQ
-            </span>
+        <div className="flex items-center gap-3">
+          <img src="/logo/colored.png" alt="inventQ colored" className="h-[28px] sm:h-[32px] w-auto object-contain" />
+          <div className="border-l border-slate-200 pl-3 ml-1 hidden sm:block">
             <span className="text-[8.5px] font-extrabold tracking-widest text-slate-400 uppercase leading-none block mt-0.5">
               STORE WORKSPACE HUB
             </span>

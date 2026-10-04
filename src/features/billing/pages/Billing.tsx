@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { GripVertical } from "lucide-react";
 
 import BillingTable from "../components/BillingTable";
@@ -20,7 +20,8 @@ import { NavigationBlocker } from "@/components/common/NavigationBlocker";
 const Billing = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const { loading: isSubmitting } = useApi();
+  const [searchParams] = useSearchParams();
+  const { loading: isSubmitting, getData } = useApi();
 
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
 
@@ -103,6 +104,33 @@ const Billing = () => {
     initCart();
     return () => { cancelled = true; };
   }, []);
+
+  // ─── Auto-Select Customer from URL ────────────────────────────────────────
+  useEffect(() => {
+    const cid = searchParams.get("customer_id");
+    if (!cid) return;
+    
+    // Fetch customer info using the given ID
+    const shopId = localStorage.getItem("shop_id") || SHOP_ID;
+    getData(`${ENDPOINTS.CUSTOMERS}/by/id/${shopId}/${cid}`).then((res: any) => {
+      const c = res?.data || res;
+      if (c) {
+        setCustomerData({
+          id: c.id,
+          name: c.name || "Unnamed Customer",
+          phone: c.contact_infos?.mobile_number || c.mobile_number || c.phone || c.mobilenum || "",
+          outstanding: Number(c.outstanding_infos?.amount ?? c.outstanding ?? 0),
+          creditLimit: Number(c.credit_infos?.limit ?? c.credit_limit ?? 0),
+          totalSpent: Number(c.total_spent || 0),
+        });
+        setCustomerName(c.name || "Unnamed Customer");
+        setPhone(c.contact_infos?.mobile_number || c.mobile_number || c.phone || c.mobilenum || "");
+      }
+    }).catch((err: any) => {
+      console.error("Failed to load customer from URL", err);
+      showToast("Failed to load selected customer", "error");
+    });
+  }, [searchParams, getData, showToast]);
 
   // ─── Cancel session on SPA navigation away (unmount) ──────────────────────
   useEffect(() => {

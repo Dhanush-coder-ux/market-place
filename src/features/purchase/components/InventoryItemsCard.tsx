@@ -172,12 +172,29 @@ export const InventoryItemsCard = ({
     };
   }, [variantModal.isOpen, batchModal.isOpen]);
 
+  const autoExpandedRef = useRef<Set<string>>(new Set());
+
   // Automatically open batch / serial details section when selecting a product with batch or serial tracking
   useEffect(() => {
-    products.forEach((product, index) => {
-      if ((product?.batchTracking || product?.serialTracking) && !expandedSettings.has(index)) {
-        setExpandedSettings(prev => new Set(prev).add(index));
-      }
+    setExpandedSettings(prev => {
+      let hasChanges = false;
+      const nextSettings = new Set(prev);
+
+      products.forEach((product, index) => {
+        const invId = product?.inventory_id;
+        if (invId) {
+          const key = `${index}-${invId}-${product?.variant_id || ''}`;
+          if ((product.batchTracking || product.serialTracking) && !autoExpandedRef.current.has(key)) {
+            if (!nextSettings.has(index)) {
+              nextSettings.add(index);
+              hasChanges = true;
+            }
+            autoExpandedRef.current.add(key);
+          }
+        }
+      });
+
+      return hasChanges ? nextSettings : prev;
     });
   }, [products]);
 

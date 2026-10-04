@@ -125,7 +125,7 @@ const ProductDetail = () => {
     const batches = Array.isArray(product.batch_infos) ? product.batch_infos : (product.batch_infos ? [product.batch_infos] : (product.batches || []));
     const hasBatches = !!product.type_infos?.has_batch || batches.length > 0;
     const isStockTracked = (product as any).have_tracking !== false && (product as any).is_stock_tracked !== false && (product as any).track_stock !== false && (product as any).type !== "service";
-    const dynamicTabs = ["General Info", ...((hasVariants || hasBatches) ? ["Inventory & Variants"] : []), "Images", MOV_TAB_LABEL, ...(isStockTracked ? [PUR_TAB_LABEL] : [])];
+    const dynamicTabs = ["General Info", ...((hasVariants || hasBatches) ? ["Batch & Variants"] : []), "Images", MOV_TAB_LABEL, ...(isStockTracked ? [PUR_TAB_LABEL] : [])];
 
     if (dynamicTabs[activeTab] !== MOV_TAB_LABEL) return;
   }, [activeTab, id, product]);
@@ -140,7 +140,7 @@ const ProductDetail = () => {
     const batches = Array.isArray(product.batch_infos) ? product.batch_infos : (product.batch_infos ? [product.batch_infos] : (product.batches || []));
     const hasBatches = !!product.type_infos?.has_batch || batches.length > 0;
     const isStockTracked = (product as any).have_tracking !== false && (product as any).is_stock_tracked !== false && (product as any).track_stock !== false && (product as any).type !== "service";
-    const dynamicTabs = ["General Info", ...((hasVariants || hasBatches) ? ["Inventory & Variants"] : []), "Images", MOV_TAB_LABEL, ...(isStockTracked ? [PUR_TAB_LABEL] : [])];
+    const dynamicTabs = ["General Info", ...((hasVariants || hasBatches) ? ["Batch & Variants"] : []), "Images", MOV_TAB_LABEL, ...(isStockTracked ? [PUR_TAB_LABEL] : [])];
 
     if (dynamicTabs[activeTab] !== PUR_TAB_LABEL) return;
 
@@ -299,9 +299,9 @@ const ProductDetail = () => {
   const isActive = product.is_active === true;
   const isStockTracked = (product as any).have_tracking !== false && (product as any).is_stock_tracked !== false && (product as any).track_stock !== false && (product as any).type !== "service";
 
-  const TABS = ["General Info", ...((hasVariants || hasBatches) ? ["Inventory & Variants"] : []), "Images", MOV_TAB_LABEL, ...(isStockTracked ? [PUR_TAB_LABEL] : [])];
+  const TABS = ["General Info", ...((hasVariants || hasBatches) ? ["Batch & Variants"] : []), "Images", MOV_TAB_LABEL, ...(isStockTracked ? [PUR_TAB_LABEL] : [])];
   const IMG_TAB_LABEL = "Images";
-  const inventoryTabIdx = TABS.indexOf("Inventory & Variants");
+  const inventoryTabIdx = TABS.indexOf("Batch & Variants");
   const isTableTab = TABS[activeTab] === MOV_TAB_LABEL || TABS[activeTab] === PUR_TAB_LABEL;
 
   // Clickable field definition
@@ -413,7 +413,7 @@ const ProductDetail = () => {
                               onClick={() => setActiveTab(inventoryTabIdx)}
                             >
                               <Layers size={12} className="text-indigo-500" />
-                              <span className="text-[11px] font-bold text-indigo-600">Available in Inventory tab</span>
+                              <span className="text-[11px] font-bold text-indigo-600 truncate max-w-[140px]" title="Available in Batch & Variants tab">Available in Batch & Variants tab</span>
                             </div>
                           ) : (
                             <p className="text-[13px] font-semibold text-slate-400">No variants</p>
@@ -430,7 +430,7 @@ const ProductDetail = () => {
                               onClick={() => setActiveTab(inventoryTabIdx)}
                             >
                               <Layers size={12} className="text-indigo-500" />
-                              <span className="text-[11px] font-bold text-indigo-600">Available in Inventory tab</span>
+                              <span className="text-[11px] font-bold text-indigo-600 truncate max-w-[140px]" title="Available in Batch & Variants tab">Available in Batch & Variants tab</span>
                             </div>
                           ) : (
                             <p className="text-[13px] font-semibold text-slate-400">No batches</p>
@@ -449,7 +449,7 @@ const ProductDetail = () => {
                               onClick={() => setActiveTab(inventoryTabIdx)}
                             >
                               <Layers size={12} className="text-indigo-500" />
-                              <span className="text-[11px] font-bold text-indigo-600">Available in Inventory tab</span>
+                              <span className="text-[11px] font-bold text-indigo-600 truncate max-w-[140px]" title="Available in Batch & Variants tab">Available in Batch & Variants tab</span>
                             </div>
                           ) : (
                             <p className="text-[13px] font-semibold text-slate-400">No serial numbers</p>
@@ -479,7 +479,7 @@ const ProductDetail = () => {
                           onClick={() => setActiveTab(inventoryTabIdx)}
                         >
                           <Layers size={12} className="text-indigo-500" />
-                          <span className="text-[11px] font-bold text-indigo-600">Available in Inventory tab</span>
+                          <span className="text-[11px] font-bold text-indigo-600">Available in Batch & Variants tab</span>
                         </div>
                       ) : buyingPrice !== null ? (
                         <p className="text-[13px] font-semibold text-slate-800 tabular-nums">{`₹${Number(buyingPrice).toFixed(2)}`}</p>
@@ -498,7 +498,7 @@ const ProductDetail = () => {
                           onClick={() => setActiveTab(inventoryTabIdx)}
                         >
                           <Layers size={12} className="text-indigo-500" />
-                          <span className="text-[11px] font-bold text-indigo-600">Available in Inventory tab</span>
+                          <span className="text-[11px] font-bold text-indigo-600">Available in Batch & Variants tab</span>
                         </div>
                       ) : sellingPrice !== null ? (
                         <p className="text-[13px] font-semibold text-slate-800 tabular-nums">{`₹${Number(sellingPrice).toFixed(2)}`}</p>
@@ -519,7 +519,7 @@ const ProductDetail = () => {
                           onClick={() => setActiveTab(inventoryTabIdx)}
                         >
                           <Layers size={12} className="text-indigo-500" />
-                          <span className="text-[11px] font-bold text-indigo-600">Available in Inventory tab</span>
+                          <span className="text-[11px] font-bold text-indigo-600">Available in Batch & Variants tab</span>
                         </div>
                       ) : reorderPoint !== null ? (
                         <p className="text-[13px] font-semibold text-slate-800 tabular-nums">{String(reorderPoint)}</p>
@@ -539,7 +539,7 @@ const ProductDetail = () => {
                           onClick={() => setActiveTab(inventoryTabIdx)}
                         >
                           <Layers size={12} className="text-indigo-500" />
-                          <span className="text-[11px] font-bold text-indigo-600">Available in Inventory tab</span>
+                          <span className="text-[11px] font-bold text-indigo-600">Available in Batch & Variants tab</span>
                         </div>
                       ) : (
                         <p className="text-[13px] font-semibold text-slate-400">—</p>
@@ -744,8 +744,8 @@ const ProductDetail = () => {
             );
           })()}
 
-          {/* TAB — Inventory & Variants */}
-          {TABS[activeTab] === "Inventory & Variants" && (hasVariants || hasBatches) && (
+          {/* TAB — Batch & Variants */}
+          {TABS[activeTab] === "Batch & Variants" && (hasVariants || hasBatches) && (
             <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
               {/* Variants Section */}
               {hasVariants && (

@@ -602,6 +602,7 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                   <th className="px-5 py-3.5 text-center">Stock In/Out</th>
                   <th className="px-5 py-3.5 text-center">Stock After</th>
                   <th className="px-5 py-3.5">Total Cost</th>
+                  <th className="px-5 py-3.5">GST Amount</th>
                   <th className="px-5 py-3.5">Paid</th>
                   <th className="px-5 py-3.5">Outstanding</th>
                   <th className="px-5 py-3.5">Payment</th>
@@ -727,6 +728,9 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap text-xs font-bold text-slate-700">
                           ₹{Number(r.totalCost || 0).toLocaleString("en-IN")}
+                        </td>
+                        <td className="px-5 py-4 whitespace-nowrap text-xs font-medium text-slate-500">
+                          ₹{Number(r.gstAmount || 0).toLocaleString("en-IN")}
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap text-xs font-bold text-emerald-600">
                           ₹{Number(r.amountPaid || 0).toLocaleString("en-IN")}

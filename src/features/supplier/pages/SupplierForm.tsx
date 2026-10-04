@@ -582,7 +582,7 @@ const SupplierForm = () => {
           <div className="bg-white rounded-lg border border-slate-200 p-8 shadow-sm space-y-6">
             <div className="flex items-center justify-between border-b border-slate-50 pb-4">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-500">
+                <div className="w-8 h-8 rounded-lg bg-[#286038]/10 flex items-center justify-center text-[#286038]">
                   <Layers size={16} />
                 </div>
                 <div>
@@ -593,7 +593,7 @@ const SupplierForm = () => {
               <button
                 type="button"
                 onClick={handleOpenCreateCustomField}
-                className="h-8 px-3 rounded-lg border border-indigo-100 text-indigo-600 font-bold text-xs bg-indigo-50/50 hover:bg-indigo-100 transition-all flex items-center gap-1.5"
+                className="h-8 px-3 rounded-lg border border-[#88B878]/30 text-[#286038] font-bold text-xs bg-[#286038]/10/50 hover:bg-[#286038]/10 transition-all flex items-center gap-1.5"
               >
                 <Plus size={14} />
                 Create Custom Field
@@ -624,7 +624,7 @@ const SupplierForm = () => {
                           type="button"
                           onClick={() => handleOpenEditCustomField(field)}
                           title="Edit field"
-                          className="p-1 text-slate-400 hover:text-indigo-600 rounded hover:bg-indigo-50 transition-colors"
+                          className="p-1 text-slate-400 hover:text-[#286038] rounded hover:bg-[#286038]/10 transition-colors"
                         >
                           <Pencil size={13} />
                         </button>
@@ -647,7 +647,7 @@ const SupplierForm = () => {
                           onChange={(e) =>
                             setCustomFieldValues((prev) => ({ ...prev, [field.id]: String(e.target.checked) }))
                           }
-                          className="w-4 h-4 rounded accent-indigo-600"
+                          className="w-4 h-4 rounded accent-[#286038]"
                         />
                         <label htmlFor={`cf_${field.id}`} className="text-xs font-semibold text-slate-600">
                           {field.label_name}
@@ -661,7 +661,7 @@ const SupplierForm = () => {
                           setCustomFieldValues((prev) => ({ ...prev, [field.id]: e.target.value }))
                         }
                         placeholder={`Enter ${field.label_name.toLowerCase()}…`}
-                        className="w-full h-10 px-3 bg-slate-50 border border-slate-100 rounded-lg text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-indigo-100 focus:outline-none transition-all placeholder:text-slate-300"
+                        className="w-full h-10 px-3 bg-slate-50 border border-slate-100 rounded-lg text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-[#88B878]/30 focus:outline-none transition-all placeholder:text-slate-300"
                       />
                     )}
                   </div>

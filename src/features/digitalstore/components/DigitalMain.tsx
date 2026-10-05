@@ -432,6 +432,12 @@ const DigitalMain = () => {
               {/* Row 1: Name + badges */}
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-[18px] font-semibold text-slate-900 leading-tight">{shop.name}</h1>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 text-slate-700 rounded-full text-xs font-semibold hover:bg-blue-50 hover:text-blue-600 hover:shadow-sm hover:scale-105 transition-all cursor-pointer group" title="View followers">
+                  <Users size={13} className="group-hover:scale-110 transition-transform" />
+                  <span>
+                    {followersCount >= 1000 ? `${(followersCount / 1000).toFixed(1)}K` : followersCount} Followers
+                  </span>
+                </div>
                 {shop.sequence_id && (
                   <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
                     <Hash size={9} /> Store #{shop.sequence_id}
@@ -485,15 +491,7 @@ const DigitalMain = () => {
                 <QrCode size={15} className="text-blue-500 group-hover:text-blue-600" />
                 <span className="text-sm font-medium text-slate-700 group-hover:text-blue-600">QR Code</span>
               </button>
-              <div className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-lg shadow-sm">
-                <Users size={15} className="text-blue-500" />
-                <div>
-                  <p className="text-[10px] text-slate-400 leading-none mb-0.5 font-medium">Followers</p>
-                  <p className="text-sm font-bold text-slate-800 leading-none">
-                    {followersCount >= 1000 ? `${(followersCount / 1000).toFixed(1)}K` : followersCount}
-                  </p>
-                </div>
-              </div>
+
             </div>
           </div>
 

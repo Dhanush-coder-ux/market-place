@@ -10,7 +10,7 @@ import {
   AlertTriangle,
   X,
   LayoutTemplate,
-  Palette,
+
 } from "lucide-react";
 
 import { Switch } from "@/components/ui/switch";
@@ -72,13 +72,6 @@ const MENU_ITEMS = [
     icon: Activity,
     description: "System audit trail",
     accent: "rose",
-  },
-  {
-    id: "theme",
-    label: "Theme",
-    icon: Palette,
-    description: "Switch colour scheme",
-    accent: "emerald",
   },
   {
     id: "subscription",

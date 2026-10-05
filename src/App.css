@@ -149,8 +149,8 @@
   /* soft sage tint */
   --t-primary-lighter: #EAF4E6;
   /* lightest sage */
-  /* Secondary */
-  --t-secondary: #88B878;
+  /* Secondary (Match primary to remove gradient) */
+  --t-secondary: #286038;
   /* Gold / Accent */
   --t-accent: #C49850;
   --t-accent-hover: #D4A85C;

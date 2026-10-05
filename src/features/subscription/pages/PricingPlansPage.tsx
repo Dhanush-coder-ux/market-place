@@ -66,7 +66,6 @@ const STYLES = `
   .pb-root .curplan { background:linear-gradient(to bottom right, var(--t-sidebar-from), var(--t-sidebar-via), var(--t-sidebar-to)); border-radius:var(--r); padding:22px 24px; color:#fff; position:relative; overflow:hidden; box-shadow:var(--sh-m); transition: background 0.3s ease; }
   .pb-root .curplan.is-expired-card { background:linear-gradient(to bottom right, #dc2626, #b91c1c, #7f1d1d); }
   .pb-root .curplan .act.expired { background:rgba(254,202,202,.2); border:1px solid rgba(254,202,202,.4); color:#fecaca; }
-  .pb-root .curplan::after { content:""; position:absolute; right:-60px; top:-60px; width:220px; height:220px; opacity:.07; background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath fill='%23fff' fill-rule='evenodd' d='M50 2 Q54 22 60 35 L97 29 Q78 42 66 52 L79 96 Q62 82 50 74 Q38 82 21 96 L34 52 Q22 42 3 29 L40 35 Q46 22 50 2 Z M50 24 L59 67 L41 67 Z'/%3E%3C/svg%3E") no-repeat center/contain; }
   .pb-root .curplan > * { position:relative; z-index:1; }
   .pb-root .curplan .lbl { font-size:10px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:rgba(255,255,255,.55); }
   .pb-root .curplan .nm { font-family:var(--font-d); font-weight:600; font-size:27px; letter-spacing:-.025em; margin-top:6px; display:flex; align-items:center; gap:11px; flex-wrap:wrap; }

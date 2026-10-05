@@ -224,12 +224,6 @@ const Login = () => {
           }}
         />
 
-        {/* Antaris Star Watermark */}
-        <div className="absolute -right-24 -bottom-20 w-[440px] h-[440px] opacity-[0.06] pointer-events-none select-none">
-          <svg viewBox="0 0 100 100" fill="#fff">
-            <path fillRule="evenodd" d="M50 2 Q54 22 60 35 L97 29 Q78 42 66 52 L79 96 Q62 82 50 74 Q38 82 21 96 L34 52 Q22 42 3 29 L40 35 Q46 22 50 2 Z M50 24 L59 67 L41 67 Z" />
-          </svg>
-        </div>
 
         {/* Top Header & Brand */}
         <div className="relative z-10 space-y-6">

@@ -17,7 +17,7 @@ import {
   RefreshCw,
   Plus,
   ShoppingCart,
-  Command,
+
   Settings2,
   Users,
   Printer,
@@ -289,11 +289,7 @@ export const Navbar = () => {
               }}
               onFocus={() => setIsSearchOpen(true)}
             />
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-0.5 pointer-events-none">
-              <kbd className="hidden lg:inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-slate-200 bg-white text-xs font-medium text-slate-400 shadow-sm">
-                <Command size={12} /> K
-              </kbd>
-            </div>
+
           </div>
 
           {isSearchOpen && searchQuery && (

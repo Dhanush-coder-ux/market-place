@@ -43,14 +43,16 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   };
 
   return (
-    <div className="flex flex-col items-center gap-2 w-[160px]">
-      <label className="text-[10px] font-semibold text-gray-400  ">
-        {label}
-      </label>
+    <div className="flex flex-col gap-1.5 w-full">
+      <div className="flex items-center gap-1.5 ml-0.5">
+        <label className="text-xs font-semibold text-slate-600">
+          {label}
+        </label>
+      </div>
 
       <div
         onClick={() => fileInputRef.current?.click()}
-        className="relative w-full aspect-square rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 hover:border-blue-400 hover:bg-blue-50 transition cursor-pointer overflow-hidden group"
+        className="relative w-full aspect-square rounded-lg border border-slate-200 border-dashed bg-slate-50 hover:border-blue-400 hover:bg-blue-50/50 transition-all cursor-pointer overflow-hidden group shadow-sm"
       >
         {preview ? (
           <>

@@ -14,12 +14,14 @@ import { useToast } from "@/context/ToastContext";
 import { useApi } from "@/context/ApiContext";
 import { usePurchaseSettings } from "@/context/PurchaseContext";
 import { ENDPOINTS } from "@/services/endpoints";
+import { getGatewayBaseUrl } from "@/services/api/tokenManager";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import LocationMapPicker from "@/components/ui/LocationMapPicker";
 import Loader from "@/components/common/Loader";
 import Input from "@/components/ui/Input";
 import { NavigationBlocker } from "@/components/common/NavigationBlocker";
+import ImageUpload from "@/components/common/ImageUpload";
 
 export interface ProfileData {
   name: string;
@@ -34,6 +36,8 @@ export interface ProfileData {
   gst_number: string;
   currency: string;
   description: string;
+  logo_url?: string;
+  logo_file?: File | null;
 }
 
 const categoryOptions = [
@@ -73,6 +77,8 @@ const ProfileForm: React.FC = () => {
     gst_number: "",
     currency: "INR",
     description: "",
+    logo_url: "",
+    logo_file: null,
   };
 
   const [formData, setFormData] = useState<ProfileData>(initialFormData);
@@ -104,6 +110,8 @@ const ProfileForm: React.FC = () => {
               gst_registered: b.gst_infos?.registered ?? false,
               gst_number: b.gst_infos?.number || "",
               currency: b.currency || "INR",
+              logo_url: shop.logo_url || shop.logo || "",
+              logo_file: null,
             });
             setGstType(b.gst_infos?.registered ? "registered" : "non-registered");
           }
@@ -172,11 +180,38 @@ const ProfileForm: React.FC = () => {
     };
 
     try {
+      // 1. Create/Update Shop Profile (JSON payload)
       const res = id
         ? await putData(ENDPOINTS.SHOPS, { ...payload, id })
         : await postData(ENDPOINTS.SHOPS, payload);
 
       if (res) {
+        // Shop ID might be res.data.id or res.id, or just 'id' if updating
+        const shopIdToUse = id || res.data?.id || res.id;
+        
+        // 2. Upload Logo if a file was selected
+        if (shopIdToUse && formData.logo_file) {
+          const userId = localStorage.getItem("user_id");
+          const fd = new FormData();
+          fd.append("shop_id", shopIdToUse);
+          fd.append("user_id", userId || "");
+          fd.append("image_type", "logo");
+          fd.append("files", formData.logo_file);
+
+          const token = localStorage.getItem("auth_token");
+          let url = ENDPOINTS.SHOPS.startsWith("http") 
+            ? `${ENDPOINTS.SHOPS}/upload/images`
+            : `${getGatewayBaseUrl()}${ENDPOINTS.SHOPS.replace(/^\/api/, '')}/upload/images`;
+
+          await fetch(url, {
+            method: "POST",
+            headers: {
+              ...(token ? { "Authorization": `Bearer ${token}` } : {})
+            },
+            body: fd
+          });
+        }
+
         showToast(
           id ? "Shop profile updated" : "Shop created! Select it to continue.",
           "success"
@@ -215,20 +250,31 @@ const ProfileForm: React.FC = () => {
               <h2 className="text-xs font-bold text-slate-800">Shop Identity</h2>
             </div>
             <div className="p-8 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Input
-                  label="Shop Name"
-                  required
-                  name="name"
+              <div className="flex flex-col md:flex-row gap-6">
+                <div className="w-full md:w-32 shrink-0">
+                  <ImageUpload
+                    label="Shop Logo"
+                    value={formData.logo_file || null}
+                    onChange={(file) => setFormData((prev) => ({ ...prev, logo_file: file }))}
+                    initialPreview={formData.logo_url}
+                  />
+                </div>
+                <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Input
+                    label="Shop Name"
+                    required
+                    name="name"
                   value={formData.name}
                   onChange={handleChange}
                   placeholder="e.g. Sunrise Mart"
                   leftIcon={<Store size={16} className="text-slate-300" />}
                 />
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-500 ml-1">
-                    Categories <span className="text-red-500 ml-1">*</span>
-                  </label>
+                <div className="flex flex-col gap-1.5 w-full">
+                  <div className="flex items-center gap-1.5 ml-0.5">
+                    <label className="text-xs font-semibold text-slate-600">
+                      Categories <span className="text-red-500 ml-1">*</span>
+                    </label>
+                  </div>
                   <SearchSelect
                     value={formData.category}
                     onChange={(val) => setFormData((prev) => ({ ...prev, category: val as string[] }))}
@@ -236,14 +282,16 @@ const ProfileForm: React.FC = () => {
                     labelKey="label"
                     valueKey="value"
                     multiple
-                    placeholder="Select categories..."
                   />
                 </div>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-500 ml-1">
+            </div>
+            <div className="flex flex-col gap-1.5 w-full mt-2">
+              <div className="flex items-center gap-1.5 ml-0.5">
+                <label className="text-xs font-semibold text-slate-600">
                   Description
                 </label>
+              </div>
                 <textarea
                   name="description"
                   value={formData.description}

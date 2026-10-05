@@ -29,10 +29,8 @@
 .cur-wrap {display:grid;grid-template-columns:1.25fr 1fr;gap:15px;margin-bottom:22px}
 @media(max-width:980px){.cur-wrap{grid-template-columns:1fr}}
 
-.plans-billing-page .curplan {background:linear-gradient(135deg,#2E3480 0%,#232764 100%);border-radius:var(--r);
+.plans-billing-page .curplan {background:linear-gradient(to bottom right, var(--t-sidebar-from), var(--t-sidebar-via), var(--t-sidebar-to));border-radius:var(--r);
 .plans-billing-page padding:22px 24px;color:#fff;position:relative;overflow:hidden;box-shadow:var(--sh-m)}
-.curplan::after {content:"";position:absolute;right:-60px;top:-60px;width:220px;height:220px;opacity:.07;
-.plans-billing-page background:url("data:image/svg+xml, .plans-billing-page %3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath fill='%23fff' fill-rule='evenodd' d='M50 2 Q54 22 60 35 L97 29 Q78 42 66 52 L79 96 Q62 82 50 74 Q38 82 21 96 L34 52 Q22 42 3 29 L40 35 Q46 22 50 2 Z M50 24 L59 67 L41 67 Z'/%3E%3C/svg%3E") no-repeat center/contain}
 .curplan>.plans-billing-page * {position:relative;z-index:1}
 .plans-billing-page .curplan .lbl {font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.55)}
 .plans-billing-page .curplan .nm {font-family:var(--font-d);font-weight:600;font-size:27px;letter-spacing:-.025em;margin-top:6px;

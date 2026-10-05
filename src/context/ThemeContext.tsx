@@ -47,7 +47,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored && (stored === "blue" || stored === "green")) return stored;
     } catch {}
-    return "blue";
+    return "green";
   });
 
   const applyTheme = useCallback((t: ThemeId) => {

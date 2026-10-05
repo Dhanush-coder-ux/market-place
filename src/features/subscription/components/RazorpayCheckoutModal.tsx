@@ -191,7 +191,7 @@ export const RazorpayCheckoutModal: React.FC<RazorpayCheckoutModalProps> = ({
       <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 p-6 text-white relative">
+        <div className="p-6 text-white relative" style={{ backgroundColor: 'var(--t-sidebar-from)' }}>
           <button
             onClick={onClose}
             disabled={loading}
@@ -206,7 +206,7 @@ export const RazorpayCheckoutModal: React.FC<RazorpayCheckoutModalProps> = ({
             <span className="text-white/70 text-xs">• 256-Bit SSL Encrypted</span>
           </div>
           <h2 className="text-2xl font-black tracking-tight">Complete Subscription</h2>
-          <p className="text-blue-100 text-xs mt-1">
+          <p className="text-white/80 text-xs mt-1">
             Upgrading shop to <strong className="text-white">{selectedPlan.name}</strong> ({billingCycle})
           </p>
         </div>

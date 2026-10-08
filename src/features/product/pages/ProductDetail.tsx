@@ -22,6 +22,7 @@ import { ProductPurchasesTable } from "@/components/common/HistoryTables";
 import StockMovementTab from "../components/StockMovement";
 import { inventoryCustomFieldsApi } from "@/services/api/inventory";
 import type { InventoryCustomFieldDefinition, InventoryCustomFieldValue } from "@/features/inventory/types";
+import { PriceCell } from "@/components/common/PriceCell";
 
 // ── Search bar ───────────────────────────────────────────────────────────────
 const ProductSearchSelect = () => {
@@ -524,37 +525,28 @@ const ProductDetail = () => {
                           <span className="text-[11px] font-bold text-indigo-600">Available in Batch & Variants tab</span>
                         </div>
                       ) : sellingPrice !== null ? (
-                        <div className="flex flex-col">
-                          {(() => {
-                             const gstRate = parseFloat(String(gstValue).replace(/[^0-9.]/g, '')) || 0;
-                             let gstAmt = 0;
-                             let displayPrice = Number(sellingPrice);
-                             let isGstApplied = false;
-
-                             if (gstRate > 0 && !isNaN(displayPrice)) {
-                               gstAmt = displayPrice * (gstRate / 100);
-                               displayPrice = displayPrice + gstAmt;
-                               isGstApplied = true;
-                             }
-                             return (
-                               <>
-                                 <p className="text-[13px] font-semibold text-slate-800 tabular-nums">{`₹${displayPrice.toFixed(2)}`}</p>
-                                 {isGstApplied && (
-                                   <span className="text-[10px] text-slate-500 font-medium mt-0.5">
-                                     Base: ₹{Number(sellingPrice).toFixed(2)} (+ ₹{gstAmt.toFixed(2)} GST)
-                                   </span>
-                                 )}
-                               </>
-                             );
-                          })()}
-                        </div>
+                        <PriceCell
+                          sellingPrice={sellingPrice}
+                          mrp={datas.mrp}
+                          gstRate={gstValue}
+                          discountPercent={datas.discount_percent || 0}
+                          offerValidUntil={datas.offer_valid_until}
+                          size="md"
+                        />
                       ) : (
                         <p className="text-[13px] font-semibold text-slate-400">—</p>
                       )}
                     </div>
-                    <DetailItem icon={Tag} label="MRP" value={datas.mrp ? `₹${datas.mrp}` : "—"} onClick={click("MRP", datas.mrp ? `₹${datas.mrp}` : "—")} />
+                    <DetailItem icon={Tag} label="MRP" value={datas.mrp ? `₹${Number(datas.mrp).toFixed(2)}` : "—"} onClick={click("MRP", datas.mrp ? `₹${datas.mrp}` : "—")} />
                     <DetailItem icon={Hash} label="HSN Code" value={String(datas.hsn || "—")} onClick={click("HSN Code", String(datas.hsn || "—"))} />
                     <DetailItem icon={BarChart2} label="GST Rate" value={gstValue} onClick={click("GST Rate", gstValue)} />
+                    {datas.discount_percent && Number(datas.discount_percent) > 0 ? (
+                      <DetailItem
+                        icon={Tag}
+                        label="Product Offer"
+                        value={`${datas.discount_percent}% Discount ${datas.offer_valid_until ? `(Valid until ${new Date(datas.offer_valid_until).toLocaleDateString()})` : ''}`}
+                      />
+                    ) : null}
                     <div>
                       <p className="text-[10px] font-medium text-slate-400  tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
                         <Info size={12} className="text-blue-400" /> Reorder Point

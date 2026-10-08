@@ -28,6 +28,7 @@ import ActionMenu, { ActionMenuItem } from "@/components/common/ActionMenu";
 import { VariantRows, BatchCards, SerialBadgeList } from "../components/StockTree";
 import { Modal } from "@/components/common/SuperUI";
 import { useApi } from "@/context/ApiContext";
+import { PriceCell } from "@/components/common/PriceCell";
 import { useHeader } from "@/context/HeaderContext";
 import { useToast } from "@/context/ToastContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
@@ -241,14 +242,6 @@ const getStockStatus = (stock: number, reorderPoint?: number, haveTracking: bool
     variant: "stk-in-stock",
     icon: Package,
   };
-};
-
-const formatCurrency = (amount?: number | string) => {
-  if (amount === undefined || amount === null) return "—";
-  return `₹${Number(amount).toLocaleString("en-IN", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
 };
 
 // --- Copy SKU Button with Micro-Animation ---
@@ -626,32 +619,21 @@ const ProductRow = React.memo(
                   return <span className="text-[13px] font-semibold text-slate-700 tabular-nums">—</span>;
                 }
 
-                if (numericPrice === undefined || numericPrice === null) {
-                  return <span className="text-[13px] font-semibold text-slate-700 tabular-nums">—</span>;
-                }
-
-                let displayPrice = Number(numericPrice);
-                let gstAmt = 0;
-                let isGstApplied = false;
-
-                const gstRate = parseFloat(String(item.gst || datas.gst || (item as any).gst).replace(/[^0-9.]/g, '')) || 0;
-                if (gstRate > 0 && !isNaN(displayPrice)) {
-                  gstAmt = displayPrice * (gstRate / 100);
-                  displayPrice = displayPrice + gstAmt;
-                  isGstApplied = true;
-                }
+                const mrpValue = (datas as any).mrp || (item as any).mrp || (item as any).additional_infos?.mrp;
+                const gstValue = item.gst || datas.gst || (item as any).gst || "18";
+                const discountValue = (datas as any).discount_percent || (item as any).discount_percent || (item as any).additional_infos?.discount_percent || 0;
+                const offerExpiry = (datas as any).offer_valid_until || (item as any).offer_valid_until || (item as any).additional_infos?.offer_valid_until;
 
                 return (
-                  <>
-                    <span className="text-[13px] font-semibold text-slate-700 tabular-nums">
-                      {formatCurrency(displayPrice)}
-                    </span>
-                    {isGstApplied && (
-                      <span className="text-[10px] text-slate-500 font-medium mt-0.5">
-                        Base: {formatCurrency(numericPrice)} (+ {formatCurrency(gstAmt)} GST)
-                      </span>
-                    )}
-                  </>
+                  <PriceCell
+                    sellingPrice={numericPrice}
+                    mrp={mrpValue}
+                    gstRate={gstValue}
+                    discountPercent={discountValue}
+                    offerValidUntil={offerExpiry}
+                    size="sm"
+                    className="items-end text-right"
+                  />
                 );
               })()}
             </div>

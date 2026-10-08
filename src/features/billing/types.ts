@@ -51,8 +51,21 @@ export interface BillingItem {
   code: string;
   name: string;
   qty: number;
-  price: number;
-  tprice: number;
+  price: number; // Inclusive selling price per unit
+  tprice: number; // Final inclusive line total after all discounts
+  mrp?: number | null;
+  productDiscountPercent?: number;
+  productDiscountAmount?: number;
+  lineDiscountMode?: '%' | '₹';
+  lineDiscountValue?: number;
+  lineDiscountAmount?: number;
+  billDiscountShare?: number;
+  finalInclusive?: number;
+  taxableValue?: number;
+  gstAmount?: number;
+  cgst?: number;
+  sgst?: number;
+  costPrice?: number;
   serialNumbers?: string[]; // Multiple serials support
   variantId?: string | null;
   batchId?: string;

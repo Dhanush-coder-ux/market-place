@@ -4,6 +4,7 @@ import {
 } from "lucide-react";
 import { BillingItem, CustomerData } from "../types";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { BillTotals, formatINR } from "@/utils/pricing";
 
 type PaymentMode = "cash" | "upi" | "credit" | "card";
 
@@ -17,15 +18,15 @@ interface BillingHeaderProps {
   totalAmount: number;
   gstAmount: number;
   finalAmount: number;
+  billDiscount?: { mode: '%' | '₹'; value: number };
+  onBillDiscountChange?: (discount: { mode: '%' | '₹'; value: number }) => void;
+  billTotals?: BillTotals;
   payments: { mode: PaymentMode; amount: number }[];
   onPaymentsChange: (payments: { mode: PaymentMode; amount: number }[]) => void;
   onAddCustomerClick: () => void;
   onDetachCustomer: () => void;
   onGenerateInvoice: () => void;
 }
-
-const formatINR = (amount: number, decimals = 2) =>
-  amount.toLocaleString("en-IN", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 
 const formatPrice = (amount: number) => {
   if (amount === 0) return "0.00";
@@ -39,13 +40,12 @@ const formatPrice = (amount: number) => {
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
-
-
 /* ── Main Component ────────────────────────────────────────────────────────── */
 const BillingHeader: React.FC<BillingHeaderProps> = ({
   items, customerData,
   onConfirmOrder, isSubmitting,
   includeGst, totalAmount, gstAmount, finalAmount,
+  billDiscount, onBillDiscountChange, billTotals,
   payments, onPaymentsChange,
   onAddCustomerClick,
   onDetachCustomer,
@@ -182,7 +182,7 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
           )}
         </div>
 
-        {/* ── Billing Summary ────────────────────────────────────────── */}
+        {/* ── Billing Summary & Discount Breakdown ───────────────────── */}
         <div className="border border-slate-150 rounded-xl p-3.5 space-y-3 shadow-sm bg-slate-50/20">
           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-1.5">BILLING SUMMARY</p>
 
@@ -192,13 +192,103 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
               <span className="font-bold text-slate-800 tabular-nums">{filledItems} items ({totalQty} units)</span>
             </div>
             <div className="flex justify-between">
-              <span>Subtotal</span>
-              <span className="font-bold text-slate-800 tabular-nums">₹{formatPrice(totalAmount)}</span>
+              <span>Base Subtotal</span>
+              <span className="font-bold text-slate-800 tabular-nums">₹{formatPrice(billTotals?.baseSubtotal ?? totalAmount)}</span>
             </div>
-            {includeGst && (
-              <div className="flex justify-between text-indigo-650">
-                <span>Tax / GST</span>
-                <span className="font-bold tabular-nums">+₹{formatPrice(gstAmount)}</span>
+
+            {/* Level 1: Product Offers Discount */}
+            {billTotals && billTotals.productDiscountTotal > 0 && (
+              <div className="flex justify-between text-emerald-700">
+                <span>Product Offers</span>
+                <span className="font-bold tabular-nums">−₹{formatPrice(billTotals.productDiscountTotal)}</span>
+              </div>
+            )}
+
+            {/* Level 2: Item / Line Discounts */}
+            {billTotals && billTotals.lineDiscountTotal > 0 && (
+              <div className="flex justify-between text-emerald-700">
+                <span>Item Discounts</span>
+                <span className="font-bold tabular-nums">−₹{formatPrice(billTotals.lineDiscountTotal)}</span>
+              </div>
+            )}
+
+            {/* Level 3: Bill Level Discount Input */}
+            <div className="pt-1 pb-0.5">
+              <div className="flex items-center justify-between gap-2 p-2 bg-white rounded-lg border border-slate-200 shadow-2xs">
+                <span className="text-[11px] font-bold text-slate-700 shrink-0">Bill Discount</span>
+                <div className="flex items-center gap-1">
+                  <div className="flex bg-slate-100 rounded p-0.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => onBillDiscountChange && onBillDiscountChange({ mode: '%', value: billDiscount?.value ?? 0 })}
+                      className={`px-1.5 py-0.5 rounded text-[9.5px] font-bold transition-all ${billDiscount?.mode === '%' ? 'bg-white text-blue-600 shadow-2xs' : 'text-slate-400 hover:text-slate-600'}`}
+                    >
+                      %
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onBillDiscountChange && onBillDiscountChange({ mode: '₹', value: billDiscount?.value ?? 0 })}
+                      className={`px-1.5 py-0.5 rounded text-[9.5px] font-bold transition-all ${billDiscount?.mode === '₹' ? 'bg-white text-blue-600 shadow-2xs' : 'text-slate-400 hover:text-slate-600'}`}
+                    >
+                      ₹
+                    </button>
+                  </div>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    value={billDiscount?.value || ''}
+                    onChange={(e) => {
+                      const val = Math.max(0, Number(e.target.value) || 0);
+                      if (onBillDiscountChange) {
+                        onBillDiscountChange({
+                          mode: billDiscount?.mode ?? '%',
+                          value: val,
+                        });
+                      }
+                    }}
+                    className="w-16 text-right px-1.5 py-0.5 text-xs font-bold border border-slate-200 rounded outline-none focus:border-blue-500 tabular-nums bg-white"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Bill Discount Applied Total */}
+            {billTotals && billTotals.billDiscountTotal > 0 && (
+              <div className="flex justify-between text-blue-700">
+                <span>Bill Discount Applied</span>
+                <span className="font-bold tabular-nums">−₹{formatPrice(billTotals.billDiscountTotal)}</span>
+              </div>
+            )}
+
+            {/* Taxable Value */}
+            <div className="flex justify-between text-slate-500 pt-1 border-t border-slate-100">
+              <span>Taxable Value</span>
+              <span className="font-semibold tabular-nums">₹{formatPrice(billTotals?.totalTaxable ?? totalAmount)}</span>
+            </div>
+
+            {/* GST Tax Summary Grouped by Rate */}
+            {billTotals && billTotals.taxGroups.length > 0 ? (
+              billTotals.taxGroups.map(g => (
+                <div key={g.gstRate} className="flex justify-between text-[10px] text-slate-500 pl-2">
+                  <span>GST {g.gstRate}% (CGST {formatPrice(g.cgst)} + SGST {formatPrice(g.sgst)})</span>
+                  <span className="font-medium tabular-nums">+₹{formatPrice(g.totalTax)}</span>
+                </div>
+              ))
+            ) : (
+              includeGst && (
+                <div className="flex justify-between text-indigo-650">
+                  <span>Tax / GST</span>
+                  <span className="font-bold tabular-nums">+₹{formatPrice(gstAmount)}</span>
+                </div>
+              )
+            )}
+
+            {/* Round Off */}
+            {billTotals && Math.abs(billTotals.roundOff) > 0.001 && (
+              <div className="flex justify-between text-slate-400 text-[10.5px]">
+                <span>Round Off</span>
+                <span className="font-mono tabular-nums">{billTotals.roundOff >= 0 ? `+₹${billTotals.roundOff.toFixed(2)}` : `−₹${Math.abs(billTotals.roundOff).toFixed(2)}`}</span>
               </div>
             )}
           </div>
@@ -209,6 +299,13 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
             <span className="text-xs font-black text-slate-700 uppercase tracking-wider">Grand Total</span>
             <span className="text-base font-black text-blue-600 tabular-nums">₹{formatPrice(finalAmount)}</span>
           </div>
+
+          {/* Customer Savings Line */}
+          {billTotals && billTotals.totalSavings > 0 && (
+            <div className="p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-center text-xs font-bold text-emerald-800 animate-in fade-in duration-200">
+              🎉 You saved ₹{formatPrice(billTotals.totalSavings)} on this bill!
+            </div>
+          )}
         </div>
 
         {/* ── Split Payments Section ─────────────────────────────────── */}

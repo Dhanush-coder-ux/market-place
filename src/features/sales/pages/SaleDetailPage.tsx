@@ -183,7 +183,17 @@ const getItemDisplayQty = (item: any) => {
 type SaleItem = {
   id: string; name: string; sku: string; quantity: number; returnedQty?: number; reason?: string;
   unitPrice: number; buyPrice: number; basePrice: number;
+  mrp?: number;
+  productDiscountAmount?: number;
+  lineDiscountAmount?: number;
+  billDiscountShare?: number;
+  totalDiscountAmount?: number;
+  effectiveUnitPrice?: number;
+  finalInclusive?: number;
+  taxableValue?: number;
   gstRate: number; gstAmount: number; totalAmount: number;
+  cgst?: number;
+  sgst?: number;
   status?: string; serial_numbers?: string[];
   unit: string;
   variantName?: string;
@@ -202,56 +212,66 @@ type SaleItem = {
 const generateItems = (sale: OrderResponse, productMap: Record<string, string> = {}): SaleItem[] => {
   const calcInfos = (sale as any)?.calculation_infos || (sale as any)?.calculations || {};
   const calcItems = calcInfos.items || [];
-  const includeGst = calcInfos.include_gst === true || calcInfos.gst_type === "INCLUSIVE" || sale.gst_infos?.type === "INCLUSIVE";
 
   return (sale?.items || []).map((i: any) => {
-    // Attempt to find matching calc item for subunit pricing/qty details
-    const calc = calcItems.find((ci: any) => ci.product_id === i.product_id || ci.product_id === i.inventory_id);
-    let basePrice = calc?.price ?? i.sell_price ?? (i.total_amount && i.quantity ? i.total_amount / i.quantity : 0);
-    const qty = calc?.qty ?? i.quantity ?? 1;
+    // Attempt to find matching calc item for subunit pricing/qty/discount details
+    const calc = calcItems.find((ci: any) =>
+      (ci.product_id && (ci.product_id === i.product_id || ci.product_id === i.inventory_id || ci.product_id === i.id)) ||
+      (ci.name && (ci.name === i.name || ci.name === i.product_name))
+    );
 
-    const rawGst = i.gst || i.datas?.gst || calc?.gst || 0;
+    const qty = Number(calc?.qty ?? i.quantity ?? i.entered_qty ?? 1);
+    const mrp = Number(calc?.mrp ?? i.mrp ?? i.datas?.mrp ?? 0);
+
+    // Original unit selling price (inclusive of GST before discounts)
+    let rawPrice = calc?.price ?? i.sell_price ?? i.datas?.sell_price;
+    if (rawPrice === undefined || rawPrice === null) {
+      rawPrice = (i.total_amount && qty > 0) ? (Number(i.total_amount) / qty) : 0;
+    }
+    const unitPrice = Number(rawPrice);
+
+    const rawGst = i.gst || i.datas?.gst || calc?.gst_rate || calc?.gst || 0;
     const gstRate = typeof rawGst === "number" ? rawGst : (parseFloat(String(rawGst).replace("%", "")) || 0);
 
-    const isActuallyExclusive = calcInfos.total && calcInfos.subtotal && calcInfos.gst_amount 
-      ? Math.abs(Number(calcInfos.total) - (Number(calcInfos.subtotal) + Number(calcInfos.gst_amount))) < 1
-      : false;
-    
-    const treatAsInclusive = includeGst && !isActuallyExclusive;
+    // Item-level discounts
+    const productDiscountAmount = Number(calc?.product_discount_amount ?? i.product_discount_amount ?? 0);
+    const lineDiscountAmount = Number(calc?.line_discount_amount ?? i.line_discount_amount ?? i.discount_amount ?? 0);
+    const billDiscountShare = Number(calc?.bill_discount_share ?? i.bill_discount_share ?? 0);
+    const totalDiscountAmount = productDiscountAmount + lineDiscountAmount + billDiscountShare;
 
-    let gstAmount = 0;
-    if (calc?.gst_amount !== undefined && calc?.gst_amount !== null && !isNaN(Number(calc.gst_amount))) {
-      gstAmount = Number(calc.gst_amount);
-    } else if (i.gst_amount !== undefined && i.gst_amount !== null && !isNaN(Number(i.gst_amount))) {
-      gstAmount = Number(i.gst_amount);
-    } else if (gstRate > 0) {
-      if (treatAsInclusive) {
-        const baseWithoutGst = basePrice / (1 + gstRate / 100);
-        gstAmount = (basePrice - baseWithoutGst) * qty;
-      } else {
-        gstAmount = (basePrice * (gstRate / 100)) * qty;
-      }
-    }
-
-    let unitPrice = basePrice;
-    if (gstRate > 0 && !treatAsInclusive) {
-      unitPrice = basePrice + (basePrice * (gstRate / 100));
-    }
-
-    let totalAmount = 0;
-    if (i.total_amount !== undefined && i.total_amount !== null && !isNaN(Number(i.total_amount)) && Number(i.total_amount) > 0) {
-      totalAmount = Number(i.total_amount);
-    } else if (calc?.total !== undefined && calc?.total !== null && !isNaN(Number(calc.total)) && Number(calc.total) > 0) {
-      totalAmount = Number(calc.total);
+    // Final inclusive line total (actual billed amount after all discounts)
+    let finalInclusive = 0;
+    if (calc?.final_inclusive !== undefined && calc?.final_inclusive !== null) {
+      finalInclusive = Number(calc.final_inclusive);
+    } else if (i.total_amount !== undefined && i.total_amount !== null && !isNaN(Number(i.total_amount)) && Number(i.total_amount) > 0) {
+      finalInclusive = Number(i.total_amount);
     } else {
-      totalAmount = (basePrice * qty);
+      finalInclusive = Math.max(0, (unitPrice * qty) - totalDiscountAmount);
     }
 
-    // Safely ensure totalAmount includes GST.
-    // If the provided totalAmount is roughly equal to just basePrice * qty, it implies it doesn't have GST added.
-    if (Math.abs(totalAmount - (basePrice * qty)) < 1) {
-      totalAmount += gstAmount;
+    const effectiveUnitPrice = qty > 0 ? (finalInclusive / qty) : unitPrice;
+
+    // Taxable value and GST amount
+    let taxableValue = 0;
+    let gstAmount = 0;
+    if (calc?.taxable_value !== undefined && calc?.taxable_value !== null) {
+      taxableValue = Number(calc.taxable_value);
+      gstAmount = Number(calc?.gst_amount ?? (finalInclusive - taxableValue));
+    } else if (calc?.gst_amount !== undefined && calc?.gst_amount !== null) {
+      gstAmount = Number(calc.gst_amount);
+      taxableValue = Math.max(0, finalInclusive - gstAmount);
+    } else if (gstRate > 0) {
+      taxableValue = finalInclusive / (1 + gstRate / 100);
+      gstAmount = finalInclusive - taxableValue;
+    } else {
+      taxableValue = finalInclusive;
+      gstAmount = 0;
     }
+
+    const basePrice = taxableValue / (qty || 1);
+    const cgst = calc?.cgst !== undefined ? Number(calc.cgst) : gstAmount / 2;
+    const sgst = calc?.sgst !== undefined ? Number(calc.sgst) : gstAmount / 2;
+    const totalAmount = finalInclusive;
 
     return {
       id: i.id,
@@ -262,8 +282,18 @@ const generateItems = (sale: OrderResponse, productMap: Record<string, string> =
       unitPrice,
       buyPrice: i.buy_price || 0,
       basePrice,
+      mrp,
+      productDiscountAmount,
+      lineDiscountAmount,
+      billDiscountShare,
+      totalDiscountAmount,
+      effectiveUnitPrice,
+      finalInclusive,
+      taxableValue,
       gstRate,
       gstAmount,
+      cgst,
+      sgst,
       totalAmount,
       status: i.status || "COMPLETED",
       reason: i.reason,
@@ -273,7 +303,7 @@ const generateItems = (sale: OrderResponse, productMap: Record<string, string> =
       batchName: i.batch_infos?.batch_name || i.batch_infos?.name || i.batch_info?.batch_name || i.batch?.batch_name,
       mfgDate: i.batch_infos?.mfg_date || i.batch_infos?.manufacturing_date || i.batch_info?.mfg_date || i.batch?.mfg_date,
       expDate: i.batch_infos?.exp_date || i.batch_infos?.expiry_date || i.batch_info?.exp_date || i.batch?.exp_date,
-      gst: i.gst || i.datas?.gst,
+      gst: i.gst || i.datas?.gst || gstRate,
       categoryName: i.category_infos?.name || i.category_info?.name || i.category || i.datas?.category_name,
       stockBefore: i.stock_before,
       stockAfter: i.stock_after,
@@ -397,7 +427,6 @@ const SaleDetailPage: React.FC = () => {
   );
 
   const items = generateItems(sale, productMap);
-  const subtotal = items.reduce((s, i) => s + i.basePrice * i.quantity, 0);
   const canReturn = sale.status === "Completed" && sale.origin !== "Sales Return";
   const customerName = (sale as any).additional_infos?.customer_name || (sale as any).datas?.customer_name || sale.customer?.customer_name || customerMap[sale.customer_id] || "Walk-in Customer";
   const customerMobile = (sale as any).additional_infos?.customer_phone || sale.customer?.customer_mobile_number || "";
@@ -641,28 +670,115 @@ const SaleDetailPage: React.FC = () => {
                   </SectionCard>
 
                   <SectionCard title="Financial Summary">
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                       {(() => {
-                        const calcGst = (sale as any)?.calculation_infos?.gst_amount ?? (sale as any)?.calculation_infos?.total_gst_amount;
-                        const totalItemGst = items.reduce((sum, item) => sum + (item.gstAmount || 0), 0);
-                        const gstAmount = calcGst !== undefined && calcGst !== null && !isNaN(Number(calcGst)) && Number(calcGst) > 0 ? Number(calcGst) : totalItemGst;
-                        const finalGrand = adjustedGrandTotal > 0 ? adjustedGrandTotal : Math.max(sale.total_sellprice || 0, subtotal + gstAmount);
-                        const displaySubtotal = (totalReplacementsValue > 0 || totalExchangedReturnedValue > 0 || totalRefundsValue > 0)
-                          ? Math.max(0, finalGrand - gstAmount)
-                          : subtotal;
+                        const calcInfos = (sale as any)?.calculation_infos || (sale as any)?.calculations || {};
+                        const baseGrossSubtotal = Number(calcInfos.base_subtotal ?? calcInfos.gross ?? items.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0));
+
+                        const productDiscountTotal = Number(calcInfos.product_discount_total ?? items.reduce((sum, item) => sum + (item.productDiscountAmount || 0), 0));
+                        const lineDiscountTotal = Number(calcInfos.line_discount_total ?? items.reduce((sum, item) => sum + (item.lineDiscountAmount || 0), 0));
+                        const billDiscountTotal = Number(calcInfos.bill_discount_total ?? items.reduce((sum, item) => sum + (item.billDiscountShare || 0), 0));
+                        const totalDiscountGiven = Number(calcInfos.total_discount_given ?? (productDiscountTotal + lineDiscountTotal + billDiscountTotal));
+
+                        const billedSubtotal = Number(calcInfos.subtotal ?? (baseGrossSubtotal - totalDiscountGiven));
+                        const taxableAmount = Number(calcInfos.taxable_amount ?? items.reduce((sum, item) => sum + (item.taxableValue || 0), 0));
+                        const gstAmount = Number(calcInfos.gst_amount ?? calcInfos.total_gst_amount ?? items.reduce((sum, item) => sum + (item.gstAmount || 0), 0));
+                        const roundOff = Number(calcInfos.round_off ?? 0);
+
+                        const totalMrp = Number(calcInfos.total_mrp ?? items.reduce((sum, item) => sum + ((item.mrp || item.unitPrice) * item.quantity), 0));
+                        const customerSavings = Number(calcInfos.customer_savings ?? Math.max(0, totalMrp - billedSubtotal));
+
+                        const orderBilledTotal = Number(calcInfos.total ?? sale.total_sellprice ?? billedSubtotal);
+                        const finalGrand = adjustedGrandTotal > 0 ? adjustedGrandTotal : orderBilledTotal;
 
                         return (
                           <>
-                            <InfoRow label="Subtotal" value={fmt(displaySubtotal)} />
-                            {gstAmount > 0 && (
-                              <InfoRow label="GST Amount" value={<span className="text-indigo-600 font-semibold">+{fmt(gstAmount)}</span>} />
+                            <InfoRow label="Subtotal (Gross)" value={fmt(baseGrossSubtotal)} />
+
+                            {productDiscountTotal > 0 && (
+                              <InfoRow
+                                label="Product Offers / Discount"
+                                value={<span className="text-emerald-600 font-bold">−{fmt(productDiscountTotal)}</span>}
+                              />
                             )}
-                            <div className="mt-4 pt-4 border-t-2 border-slate-800 flex justify-between">
-                              <span className="font-black">Grand Total</span>
-                              <span className="text-xl font-black text-slate-900">
+
+                            {lineDiscountTotal > 0 && (
+                              <InfoRow
+                                label="Line Item Discounts"
+                                value={<span className="text-emerald-600 font-bold">−{fmt(lineDiscountTotal)}</span>}
+                              />
+                            )}
+
+                            {billDiscountTotal > 0 && (
+                              <InfoRow
+                                label="Bill / Cart Discount"
+                                value={<span className="text-emerald-600 font-bold">−{fmt(billDiscountTotal)}</span>}
+                              />
+                            )}
+
+                            {totalDiscountGiven > 0 && (productDiscountTotal === 0 && lineDiscountTotal === 0 && billDiscountTotal === 0) && (
+                              <InfoRow
+                                label="Discount Applied"
+                                value={<span className="text-emerald-600 font-bold">−{fmt(totalDiscountGiven)}</span>}
+                              />
+                            )}
+
+                            {totalDiscountGiven > 0 && (
+                              <InfoRow
+                                label="Billed Amount (After Discount)"
+                                value={<span className="font-bold text-slate-800">{fmt(billedSubtotal)}</span>}
+                              />
+                            )}
+
+                            {taxableAmount > 0 && (
+                              <InfoRow
+                                label="Taxable Base"
+                                value={<span className="text-slate-600">{fmt(taxableAmount)}</span>}
+                              />
+                            )}
+
+                            {gstAmount > 0 && (
+                              <InfoRow
+                                label="GST Amount (Inclusive)"
+                                value={<span className="text-indigo-600 font-semibold">{fmt(gstAmount)}</span>}
+                              />
+                            )}
+
+                            {roundOff !== 0 && (
+                              <InfoRow
+                                label="Round Off"
+                                value={<span className="text-slate-600">{roundOff > 0 ? `+${fmt(roundOff)}` : fmt(roundOff)}</span>}
+                              />
+                            )}
+
+                            <div className="mt-4 pt-4 border-t-2 border-slate-800 flex justify-between items-baseline">
+                              <span className="font-black text-slate-900">Grand Total</span>
+                              <span className="text-xl font-black text-slate-900 tabular-nums">
                                 {fmt(finalGrand)}
                               </span>
                             </div>
+
+                            {(customerSavings > 0 || totalDiscountGiven > 0) && (
+                              <div className="mt-3 p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm">🎉</span>
+                                  <div>
+                                    <p className="text-[11px] font-bold text-emerald-800">Customer Total Savings</p>
+                                    <p className="text-[10px] text-emerald-600 font-medium">
+                                      {totalDiscountGiven > 0 && totalMrp > baseGrossSubtotal
+                                        ? `₹${totalDiscountGiven.toFixed(2)} direct discount + ₹${(totalMrp - baseGrossSubtotal).toFixed(2)} MRP savings`
+                                        : totalDiscountGiven > 0
+                                          ? `₹${totalDiscountGiven.toFixed(2)} total discount applied`
+                                          : `Saved ₹${customerSavings.toFixed(2)} against MRP`
+                                      }
+                                    </p>
+                                  </div>
+                                </div>
+                                <span className="text-xs font-black text-emerald-700 bg-emerald-100/80 px-2 py-1 rounded">
+                                  {fmt(customerSavings > 0 ? customerSavings : totalDiscountGiven)}
+                                </span>
+                              </div>
+                            )}
                           </>
                         );
                       })()}
@@ -771,12 +887,13 @@ const SaleDetailPage: React.FC = () => {
                     <thead>
                       <tr className="bg-slate-50/50 border-b border-slate-100">
                         <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Product Details</th>
-                        <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center">Qty</th>
-                        <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center">Unit</th>
-                        <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Unit Price</th>
-                        <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">GST Amount</th>
-                        <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">With GST</th>
-                        <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Total</th>
+                        <th className="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center">Qty</th>
+                        <th className="px-3 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-center">Unit</th>
+                        <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Unit Price</th>
+                        <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Discount</th>
+                        <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Taxable</th>
+                        <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">GST Amount</th>
+                        <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Total (Billed)</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
@@ -800,8 +917,21 @@ const SaleDetailPage: React.FC = () => {
                                       {item.categoryName}
                                     </span>
                                   )}
+                                  {item.mrp && item.mrp > item.unitPrice ? (
+                                    <span className="text-[9px] text-slate-400 font-medium">
+                                      MRP: <span className="line-through">{fmt(item.mrp)}</span>
+                                    </span>
+                                  ) : null}
                                   {item.gst !== undefined && item.gst !== null && (
                                     <AntBadge variant="lb-gst" type="tag">GST {typeof item.gst === "number" ? `${item.gst}%` : item.gst}</AntBadge>
+                                  )}
+                                  {(item.totalDiscountAmount || 0) > 0 && (
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono">
+                                      {item.productDiscountAmount && item.productDiscountAmount > 0
+                                        ? `Offer −${fmt(item.productDiscountAmount)}`
+                                        : `Discount −${fmt(item.totalDiscountAmount)}`
+                                      }
+                                    </span>
                                   )}
                                   {item.status && (
                                     <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide ${item.status === "REFUNDED" ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"}`}>
@@ -850,26 +980,56 @@ const SaleDetailPage: React.FC = () => {
                               </div>
                             </div>
                           </td>
-                          <td className="px-6 py-4 text-center">
+                          <td className="px-3 py-4 text-center">
                             <span className="text-xs font-black text-slate-600">{getItemDisplayQty(item)}</span>
                           </td>
-                          <td className="px-6 py-4 text-center">
+                          <td className="px-3 py-4 text-center">
                             <span className="text-[10px] font-black text-slate-500 uppercase px-2 py-0.5 rounded bg-slate-100">{(item as any).entered_unit || item.unit}</span>
                           </td>
-                          <td className="px-6 py-4 text-right">
-                            <span className="text-xs font-bold text-slate-700 tabular-nums">{fmt(item.basePrice)}</span>
+                          <td className="px-4 py-4 text-right">
+                            {(item.totalDiscountAmount || 0) > 0 ? (
+                              <div>
+                                <span className="text-[10px] text-slate-400 line-through block tabular-nums">{fmt(item.unitPrice)}</span>
+                                <span className="text-xs font-bold text-slate-800 tabular-nums">{fmt(item.effectiveUnitPrice)}</span>
+                              </div>
+                            ) : (
+                              <span className="text-xs font-bold text-slate-700 tabular-nums">{fmt(item.unitPrice)}</span>
+                            )}
                           </td>
-                          <td className="px-6 py-4 text-right">
+                          <td className="px-4 py-4 text-right">
+                            {(item.totalDiscountAmount || 0) > 0 ? (
+                              <div>
+                                <span className="text-xs font-bold text-emerald-600 tabular-nums">−{fmt(item.totalDiscountAmount)}</span>
+                                {item.productDiscountAmount && item.productDiscountAmount > 0 && (
+                                  <span className="text-[9px] text-slate-400 block font-medium">Offer: −{fmt(item.productDiscountAmount)}</span>
+                                )}
+                                {item.lineDiscountAmount && item.lineDiscountAmount > 0 && (
+                                  <span className="text-[9px] text-slate-400 block font-medium">Line: −{fmt(item.lineDiscountAmount)}</span>
+                                )}
+                                {item.billDiscountShare && item.billDiscountShare > 0 && (
+                                  <span className="text-[9px] text-slate-400 block font-medium">Bill: −{fmt(item.billDiscountShare)}</span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-slate-300">—</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-4 text-right">
+                            <span className="text-xs font-semibold text-slate-600 tabular-nums">{fmt(item.taxableValue)}</span>
+                          </td>
+                          <td className="px-4 py-4 text-right">
                             <span className="text-xs font-bold text-slate-500 tabular-nums">{fmt(item.gstAmount)}</span>
                             {item.gstRate > 0 && (
                               <span className="text-[10px] font-medium text-slate-400 block tabular-nums">@{item.gstRate}%</span>
                             )}
                           </td>
                           <td className="px-6 py-4 text-right">
-                            <span className="text-xs font-bold text-slate-700 tabular-nums">{fmt(item.basePrice + (item.gstAmount / (item.quantity || 1)))}</span>
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <span className="text-sm font-black text-slate-900 tabular-nums">{fmt(item.totalAmount)}</span>
+                            <div>
+                              {(item.totalDiscountAmount || 0) > 0 && (
+                                <span className="text-[10px] text-slate-400 line-through block tabular-nums">{fmt(item.unitPrice * item.quantity)}</span>
+                              )}
+                              <span className="text-sm font-black text-slate-900 tabular-nums">{fmt(item.totalAmount)}</span>
+                            </div>
                           </td>
                         </tr>
                       ))}

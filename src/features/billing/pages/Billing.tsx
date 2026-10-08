@@ -15,6 +15,7 @@ import { usePurchaseSettings } from "@/context/PurchaseContext";
 import InvoicePreviewModal from "../components/InvoicePreviewModal";
 import { BillingSuccessModal } from "../components/BillingSuccessModal";
 import { NavigationBlocker } from "@/components/common/NavigationBlocker";
+import { calculateBillTotals, BillTotals } from "@/utils/pricing";
 
 // ─── Billing Page ─────────────────────────────────────────────────────────────
 const Billing = () => {
@@ -55,28 +56,39 @@ const Billing = () => {
     orderId?: string;
   } | null>(null);
 
-  // ── Billing Totals
+  // ── Billing Totals (Discount & GST Calculation Engine)
   const { settings } = usePurchaseSettings();
   const includeGst = settings.gstType === "registered";
-  const round2 = (n: number) => Math.round(n * 100) / 100;
+  const [billDiscount, setBillDiscount] = useState<{ mode: '%' | '₹'; value: number }>({ mode: '%', value: 0 });
   const [payments, setPayments] = useState<{ mode: PaymentMode; amount: number }[]>([
     { mode: "cash", amount: 0 },
   ]);
 
-  const totalAmount = useMemo(() => items.reduce((s, i) => s + (i.tprice || 0), 0), [items]);
-  const gstAmount = useMemo(() => {
-    if (!includeGst) return 0;
-    return round2(
-      items.reduce((sum, item) => {
-        const itemGstPercent = typeof item.gst === "number" ? item.gst : 18;
-        return sum + (item.tprice * itemGstPercent) / 100;
-      }, 0)
+  const filledItems = useMemo(() => items.filter(i => !!i.name && i.qty > 0), [items]);
+
+  const billTotals: BillTotals = useMemo(() => {
+    return calculateBillTotals(
+      filledItems.map(i => ({
+        id: i.id,
+        inventoryId: i.inventoryId,
+        name: i.name,
+        code: i.code,
+        qty: i.qty,
+        sellingPrice: i.price,
+        mrp: i.mrp,
+        gstRate: typeof i.gst === 'number' ? i.gst : (parseFloat(String(i.gst || '18').replace(/[^0-9.]/g, '')) || 0),
+        productDiscountPercent: i.productDiscountPercent || 0,
+        lineDiscountMode: i.lineDiscountMode || '%',
+        lineDiscountValue: i.lineDiscountValue || 0,
+        costPrice: i.costPrice,
+      })),
+      billDiscount
     );
-  }, [items, includeGst]);
-  const finalAmount = useMemo(() => {
-    const rawVal = includeGst ? totalAmount + gstAmount : totalAmount;
-    return rawVal < 0.01 ? Number(rawVal.toFixed(6)) : round2(rawVal);
-  }, [includeGst, totalAmount, gstAmount]);
+  }, [filledItems, billDiscount]);
+
+  const totalAmount = billTotals.baseSubtotal;
+  const gstAmount = billTotals.totalGst;
+  const finalAmount = billTotals.payable;
 
   // Sync single-mode payment amount when total changes
   useEffect(() => {
@@ -300,19 +312,39 @@ const Billing = () => {
         return acc;
       }, {} as Record<string, number>);
 
-      // ── Step 3: Build calculation_infos ────────────────────────────────────
+      // ── Step 3: Build calculation_infos (Snapshot everything per Section 3.2) ──
       const calcInfos = {
-        subtotal: totalAmount,
-        gst_amount: gstAmount,
-        total: finalAmount,
+        base_subtotal: billTotals.baseSubtotal,
+        subtotal: billTotals.subtotal,
+        product_discount_total: billTotals.productDiscountTotal,
+        line_discount_total: billTotals.lineDiscountTotal,
+        bill_discount_total: billTotals.billDiscountTotal,
+        total_discount_given: billTotals.totalDiscountGiven,
+        taxable_amount: billTotals.totalTaxable,
+        gst_amount: billTotals.totalGst,
+        gross: billTotals.gross,
+        round_off: billTotals.roundOff,
+        total: billTotals.payable,
+        total_mrp: billTotals.totalMrp,
+        customer_savings: billTotals.totalSavings,
+        tax_groups: billTotals.taxGroups,
         include_gst: includeGst,
-        items: filledItems.map(i => ({
-          product_id: i.inventoryId,
-          name: i.name,
-          qty: i.qty,
-          price: i.price,
-          total: i.tprice,
-          gst: i.gst ?? 0,
+        items: billTotals.lines.map(l => ({
+          product_id: l.inventoryId,
+          name: l.name,
+          qty: l.qty,
+          price: l.sellingPrice,
+          mrp: l.mrp || null,
+          product_discount_amount: l.productDiscountAmount,
+          line_discount_amount: l.lineDiscountAmount,
+          bill_discount_share: l.billDiscountShare,
+          final_inclusive: l.finalInclusive,
+          taxable_value: l.taxableValue,
+          gst_rate: l.gstRate,
+          gst_amount: l.gstAmount,
+          cgst: l.cgst,
+          sgst: l.sgst,
+          cost_at_sale: l.costPrice || 0,
         })),
       };
 
@@ -422,6 +454,9 @@ const Billing = () => {
               totalAmount={totalAmount}
               gstAmount={gstAmount}
               finalAmount={finalAmount}
+              billDiscount={billDiscount}
+              onBillDiscountChange={setBillDiscount}
+              billTotals={billTotals}
               payments={payments}
               onPaymentsChange={setPayments}
               onAddCustomerClick={() => setIsCustomerModalOpen(true)}
@@ -459,6 +494,9 @@ const Billing = () => {
             totalAmount={totalAmount}
             gstAmount={gstAmount}
             finalAmount={finalAmount}
+            billDiscount={billDiscount}
+            onBillDiscountChange={setBillDiscount}
+            billTotals={billTotals}
             payments={payments}
             onPaymentsChange={setPayments}
             onAddCustomerClick={() => setIsCustomerModalOpen(true)}

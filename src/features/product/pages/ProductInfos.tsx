@@ -23,6 +23,7 @@ import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import type { InventoryRecord } from "@/types/api";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
 import { AntBadge } from "@/components/ui/AntBadge";
+import { PriceCell } from "@/components/common/PriceCell";
 
 // --- Helpers (logic unchanged) ---
 const formatCurrency = (amount?: any) => {
@@ -506,11 +507,31 @@ const ProductRow = React.memo(
                 }
               }
 
+              if (key === "sell_price") {
+                const mrpValue = (datas as any).mrp || (p as any).mrp || (p as any).additional_infos?.mrp;
+                const gstValue = (p as any).gst || datas.gst || "18";
+                const discountValue = (datas as any).discount_percent || (p as any).discount_percent || (p as any).additional_infos?.discount_percent || 0;
+                const offerExpiry = (datas as any).offer_valid_until || (p as any).offer_valid_until || (p as any).additional_infos?.offer_valid_until;
+
+                return (
+                  <td key={key} className="px-3 py-2.5 whitespace-nowrap">
+                    <PriceCell
+                      sellingPrice={actualNumericPrice}
+                      mrp={mrpValue}
+                      gstRate={gstValue}
+                      discountPercent={discountValue}
+                      offerValidUntil={offerExpiry}
+                      size="sm"
+                    />
+                  </td>
+                );
+              }
+
               let isGstApplied = false;
               let gstAmount = 0;
               let totalPrice = actualNumericPrice;
 
-              if ((key === "sell_price" || key === "buy_price") && (p.gst || datas.gst || (p as any).gst) && actualNumericPrice && !isNaN(Number(actualNumericPrice))) {
+              if (key === "buy_price" && (p.gst || datas.gst || (p as any).gst) && actualNumericPrice && !isNaN(Number(actualNumericPrice))) {
                 const gstRate = parseFloat(String(p.gst || datas.gst || (p as any).gst).replace(/[^0-9.]/g, '')) || 0;
                 if (gstRate > 0) {
                   gstAmount = Number(actualNumericPrice) * (gstRate / 100);
@@ -524,7 +545,7 @@ const ProductRow = React.memo(
                 <td key={key} className="px-3 py-2.5 whitespace-nowrap">
                   <div className="flex flex-col">
                     <span
-                      className={`tabular-nums ${(key === "sell_price" || key === "buy_price")
+                      className={`tabular-nums ${key === "buy_price"
                         ? "text-[13px] font-bold text-slate-800"
                         : "text-[13px] font-semibold text-slate-700"
                         }`}

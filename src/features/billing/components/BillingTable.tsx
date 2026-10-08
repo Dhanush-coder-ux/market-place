@@ -395,6 +395,14 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
 
         let updatedItems: BillingItem[];
 
+        const mrpVal = Number(fullProduct.pricing_infos?.mrp ?? fullProduct.mrp ?? 0) || undefined;
+        let prodDiscount = Number(fullProduct.pricing_infos?.discount_percent ?? fullProduct.discount_percent ?? fullProduct.discount ?? 0);
+        const offerUntil = fullProduct.pricing_infos?.offer_valid_until || fullProduct.offer_valid_until;
+        if (offerUntil && new Date(offerUntil).getTime() < new Date().setHours(0, 0, 0, 0)) {
+          prodDiscount = 0;
+        }
+        const costPriceVal = Number(fullProduct.pricing_infos?.buy_price ?? fullProduct.buy_price ?? 0) || undefined;
+
         if (existingIndex !== -1) {
           updatedItems = items.map((item, idx) => {
             if (idx === existingIndex) {
@@ -418,6 +426,11 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
               qty: 1,
               tprice: defaultVariant.price,
               basePrice: defaultVariant.price,
+              mrp: mrpVal,
+              productDiscountPercent: prodDiscount,
+              lineDiscountMode: '%',
+              lineDiscountValue: 0,
+              costPrice: costPriceVal,
               variantId: null,
               batchId: pMapped.batchId,
               serialnoId: pMapped.serialnoId,
@@ -603,6 +616,14 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
 
     let updatedItems: BillingItem[];
 
+    const mrpVal = Number(pendingProduct.pricing_infos?.mrp ?? pendingProduct.mrp ?? 0) || undefined;
+    let prodDiscount = Number(pendingProduct.pricing_infos?.discount_percent ?? pendingProduct.discount_percent ?? pendingProduct.discount ?? 0);
+    const offerUntil = pendingProduct.pricing_infos?.offer_valid_until || pendingProduct.offer_valid_until;
+    if (offerUntil && new Date(offerUntil).getTime() < new Date().setHours(0, 0, 0, 0)) {
+      prodDiscount = 0;
+    }
+    const costPriceVal = Number(pendingProduct.pricing_infos?.buy_price ?? pendingProduct.buy_price ?? 0) || undefined;
+
     if (existingIndex !== -1) {
       updatedItems = items.map((item, idx) => {
         if (idx === existingIndex) {
@@ -632,6 +653,11 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
           qty: quantity,
           tprice: quantity * variant.price,
           basePrice: variant.price,
+          mrp: mrpVal,
+          productDiscountPercent: prodDiscount,
+          lineDiscountMode: '%',
+          lineDiscountValue: 0,
+          costPrice: costPriceVal,
           serialNumbers: serials,
           variantId: variant.id === "default" || (variant as any).isBatchOnly ? null : variant.id,
           batchId: variant.batchId || pendingProduct.batchId,
@@ -656,6 +682,17 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
     setSearchQuery("");
     setDropdownOpen(false);
   };
+
+  const handleLineDiscountChange = useCallback((id: string, mode: '%' | '₹', value: number) => {
+    onItemsChange(items.map(item => {
+      if (item.id !== id) return item;
+      return {
+        ...item,
+        lineDiscountMode: mode,
+        lineDiscountValue: Math.max(0, value),
+      };
+    }));
+  }, [items, onItemsChange]);
 
   const handleQtyChange = useCallback((id: string, qty: number) => {
     onItemsChange(items.map(item => {
@@ -887,6 +924,23 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                             GST {item.gst}%
                           </AntBadge>
                         )}
+                        {item.mrp && item.mrp > item.price && (
+                          <span className="text-[10px] text-slate-400 font-medium line-through">
+                            MRP ₹{item.mrp.toFixed(2)}
+                          </span>
+                        )}
+                        {item.productDiscountPercent !== undefined && item.productDiscountPercent > 0 && (() => {
+                          const prodDiscAmount = (item.price || 0) * (item.productDiscountPercent / 100);
+                          const totalProdSaving = prodDiscAmount * (item.qty || 1);
+                          return (
+                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 rounded-md px-1.5 py-0.5 leading-none inline-flex items-center gap-1 shadow-2xs">
+                              <span className="font-extrabold">{item.productDiscountPercent}% OFF</span>
+                              <span className="text-[9.5px] font-semibold text-emerald-600">
+                                (−₹{formatPrice(prodDiscAmount)}{item.qty > 1 ? ` · Save ₹${formatPrice(totalProdSaving)}` : ''})
+                              </span>
+                            </span>
+                          );
+                        })()}
                       </div>
 
                       <div className="flex items-center gap-2 mt-1.5 flex-wrap">
@@ -1014,21 +1068,96 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                       </div>
                     )}
 
-                    {/* Unit Price Display */}
-                    <div className="text-right w-16">
-                      <span className="text-[8px] font-bold text-slate-400 block uppercase tracking-wider mb-0.5">Price</span>
-                      <span className="text-[12px] font-bold text-slate-655 tabular-nums">
-                        ₹{formatPrice(item.price)}
-                      </span>
+                    {/* Cashier Line Discount Controls */}
+                    <div className="flex flex-col items-end w-28">
+                      <span className="text-[8px] font-bold text-slate-400 block uppercase tracking-wider mb-0.5">Line Disc.</span>
+                      <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden bg-white h-[32px] w-full shadow-xs">
+                        <button
+                          type="button"
+                          onClick={() => handleLineDiscountChange(item.id, (item.lineDiscountMode || '%') === '%' ? '₹' : '%', item.lineDiscountValue || 0)}
+                          className="w-7 h-full flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] border-r border-slate-200 transition-colors"
+                          title="Toggle % or ₹ discount"
+                        >
+                          {item.lineDiscountMode || '%'}
+                        </button>
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          value={item.lineDiscountValue !== undefined && item.lineDiscountValue !== 0 ? item.lineDiscountValue : ""}
+                          placeholder="0"
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value) || 0;
+                            handleLineDiscountChange(item.id, item.lineDiscountMode || '%', val);
+                          }}
+                          className="flex-1 w-full bg-transparent text-right outline-none text-[12px] font-bold text-slate-800 pr-2 tabular-nums"
+                        />
+                      </div>
                     </div>
 
-                    {/* Total Price Display */}
-                    <div className="text-right w-24">
-                      <span className="text-[8px] font-bold text-slate-400 block uppercase tracking-wider mb-0.5">Total</span>
-                      <span className="text-[13px] font-black text-slate-800 tabular-nums">
-                        ₹{formatPrice(item.tprice)}
-                      </span>
-                    </div>
+                    {/* Unit Price Display */}
+                    {(() => {
+                      const gstRate = typeof item.gst === 'number' ? item.gst : (parseFloat(String(item.gst || '18').replace(/[^0-9.]/g, '')) || 0);
+                      const prodDiscPct = item.productDiscountPercent || 0;
+                      const prodDiscPerUnit = item.price * (prodDiscPct / 100);
+                      const priceAfterProdDisc = Math.max(0, item.price - prodDiscPerUnit);
+                      const lineBaseTotal = priceAfterProdDisc * item.qty;
+
+                      const lineDiscMode = item.lineDiscountMode || '%';
+                      const lineDiscVal = item.lineDiscountValue || 0;
+                      const lineDiscAmount = lineDiscMode === '%'
+                        ? lineBaseTotal * (Math.min(100, Math.max(0, lineDiscVal)) / 100)
+                        : Math.min(lineBaseTotal, Math.max(0, lineDiscVal));
+
+                      const finalLineTotal = Math.max(0, lineBaseTotal - lineDiscAmount);
+                      const effectiveUnitPrice = item.qty > 0 ? (finalLineTotal / item.qty) : item.price;
+                      const taxableVal = Math.round((finalLineTotal / (1 + gstRate / 100)) * 100) / 100;
+                      const gstVal = Math.round((finalLineTotal - taxableVal) * 100) / 100;
+                      const hasDiscount = prodDiscPct > 0 || lineDiscVal > 0;
+
+                      return (
+                        <>
+                          <div className="text-right w-20">
+                            <span className="text-[8px] font-bold text-slate-400 block uppercase tracking-wider mb-0.5">Price</span>
+                            {hasDiscount ? (
+                              <div>
+                                <span className="text-[10px] text-slate-400 line-through tabular-nums block">
+                                  ₹{formatPrice(item.price)}
+                                </span>
+                                <span className="text-[12px] font-bold text-emerald-600 tabular-nums block">
+                                  ₹{formatPrice(effectiveUnitPrice)}
+                                </span>
+                                {prodDiscPct > 0 && (
+                                  <span className="text-[9px] font-semibold text-emerald-600/90 block tabular-nums">
+                                    −₹{formatPrice(prodDiscPerUnit)}
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-[12px] font-bold text-slate-655 tabular-nums">
+                                ₹{formatPrice(item.price)}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Total Price Display */}
+                          <div className="text-right w-28">
+                            <span className="text-[8px] font-bold text-slate-400 block uppercase tracking-wider mb-0.5">Total</span>
+                            <span className="text-[13px] font-black text-slate-900 tabular-nums block">
+                              ₹{formatPrice(finalLineTotal)}
+                            </span>
+                            <span className="text-[9px] text-slate-400 font-medium leading-tight block">
+                              Taxable ₹{taxableVal.toFixed(2)} + ₹{gstVal.toFixed(2)} GST
+                            </span>
+                            {hasDiscount && (
+                              <span className="text-[9.5px] font-bold text-emerald-650 block mt-0.5 tabular-nums">
+                                Save ₹{formatPrice((item.price * item.qty) - finalLineTotal)}
+                              </span>
+                            )}
+                          </div>
+                        </>
+                      );
+                    })()}
 
                     {/* Trash / Delete Item Button */}
                     <button

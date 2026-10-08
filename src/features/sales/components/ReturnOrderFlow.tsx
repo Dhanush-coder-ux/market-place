@@ -27,6 +27,9 @@ export type SaleRecord = OrderResponse;
 export interface SaleItem {
   id: string; inventory_id: string; name: string; sku: string; category: string;
   quantity: number; returned_quantity: number; unitPrice: number; buyPrice: number;
+  originalUnitPrice?: number;
+  discountAmount?: number;
+  mrp?: number;
   imageColor: string; status?: string; stocks_before?: number; serial_numbers?: string[]; serialno_id?: string;
   unit: string; entered_unit: string; entered_qty: number; unit_infos?: any;
   gst?: string | number;
@@ -56,30 +59,63 @@ const ITEM_COLORS = ["#dbeafe", "#dcfce7", "#fef3c7", "#fce7f3", "#ede9fe", "#ff
 ═══════════════════════════════════════════════════════════════ */
 const generateItems = (sale: SaleRecord, productMap: Record<string, string> = {}): SaleItem[] => {
   const calcInfos = (sale as any)?.calculation_infos || (sale as any)?.calculations || {};
-  const isExclusive = calcInfos?.include_gst === true;
-  
+  const calcItems = calcInfos?.items || [];
+  const isExclusive = calcInfos?.include_gst === true && calcInfos?.gst_type !== "INCLUSIVE";
+
   return (sale.items || []).map((item, i) => {
     const rawName = (item as any).inventory_name || (item as any).name || (item as any).product_name || (item as any).product?.name || (item as any).inventory_infos?.name || (item as any).datas?.product_name || (item as any).datas?.name || productMap[item.inventory_id || (item as any).product_id] || item.barcode || `Item ${i + 1}`;
     const productName = rawName;
-    const gstRate = isExclusive ? (parseFloat(String(item.gst || "0").replace('%', '')) || 0) : 0;
 
-    let basePrice = Number(item.sell_price || 0);
-    if (!basePrice) {
-      const calcItem = calcInfos?.items?.find((ci: any) => ci.product_id === (item.inventory_id || (item as any).product_id));
-      if (calcItem) {
-        basePrice = Number(calcItem.price || 0);
-        const enteredUnit = (item as any).entered_unit;
-        const subUnits = (item as any).unit_infos?.sub_units || [];
-        const matchedSub = subUnits.find((su: any) => su.name === enteredUnit || su.short_name === enteredUnit);
-        if (matchedSub && Number(matchedSub.factor) > 0) {
-          basePrice = basePrice / Number(matchedSub.factor);
-        }
-      }
+    const calcItem = calcItems.find((ci: any) =>
+      (ci.product_id && (ci.product_id === item.inventory_id || ci.product_id === (item as any).product_id || ci.product_id === item.id)) ||
+      (ci.name && (ci.name === (item as any).name || ci.name === (item as any).product_name || ci.name === productName))
+    );
+
+    const qty = Number(calcItem?.qty ?? item.quantity ?? (item as any).entered_qty ?? 1);
+    const mrp = Number(calcItem?.mrp ?? (item as any).mrp ?? (item as any).datas?.mrp ?? 0);
+
+    // Original unit selling price before discount
+    let originalPrice = calcItem?.price ?? item.sell_price ?? (item as any).datas?.sell_price;
+    if (originalPrice === undefined || originalPrice === null) {
+      originalPrice = ((item as any).total_amount && qty > 0) ? (Number((item as any).total_amount) / qty) : 0;
+    }
+    const originalUnitPrice = Number(originalPrice);
+
+    // Item discounts
+    const productDiscountAmount = Number(calcItem?.product_discount_amount ?? (item as any).product_discount_amount ?? 0);
+    const lineDiscountAmount = Number(calcItem?.line_discount_amount ?? (item as any).line_discount_amount ?? (item as any).discount_amount ?? 0);
+    const billDiscountShare = Number(calcItem?.bill_discount_share ?? (item as any).bill_discount_share ?? 0);
+    const totalDiscountAmount = productDiscountAmount + lineDiscountAmount + billDiscountShare;
+
+    // Actual billed total for this line item (inclusive of GST)
+    let lineBilledTotal = 0;
+    if (calcItem?.final_inclusive !== undefined && calcItem?.final_inclusive !== null) {
+      lineBilledTotal = Number(calcItem.final_inclusive);
+    } else if ((item as any).total_amount !== undefined && (item as any).total_amount !== null && !isNaN(Number((item as any).total_amount)) && Number((item as any).total_amount) > 0) {
+      lineBilledTotal = Number((item as any).total_amount);
+    } else {
+      lineBilledTotal = Math.max(0, (originalUnitPrice * qty) - totalDiscountAmount);
     }
 
-    let finalUnitPrice = basePrice;
-    if (isExclusive && gstRate > 0) {
-      finalUnitPrice = basePrice + (basePrice * gstRate) / 100;
+    // Actual billed price per unit (what customer actually paid per unit)
+    const effectiveUnitPrice = qty > 0 ? (lineBilledTotal / qty) : originalUnitPrice;
+
+    const enteredUnit = (item as any).entered_unit;
+    const subUnits = (item as any).unit_infos?.sub_units || [];
+    const matchedSub = subUnits.find((su: any) => su.name === enteredUnit || su.short_name === enteredUnit);
+    let finalUnitPrice = effectiveUnitPrice;
+    let finalOrigUnitPrice = originalUnitPrice;
+    if (matchedSub && Number(matchedSub.factor) > 0) {
+      finalUnitPrice = finalUnitPrice / Number(matchedSub.factor);
+      finalOrigUnitPrice = finalOrigUnitPrice / Number(matchedSub.factor);
+    }
+
+    if (isExclusive) {
+      const gstRate = parseFloat(String(item.gst || "0").replace('%', '')) || 0;
+      if (gstRate > 0) {
+        finalUnitPrice = finalUnitPrice + (finalUnitPrice * gstRate) / 100;
+        finalOrigUnitPrice = finalOrigUnitPrice + (finalOrigUnitPrice * gstRate) / 100;
+      }
     }
 
     return {
@@ -87,10 +123,13 @@ const generateItems = (sale: SaleRecord, productMap: Record<string, string> = {}
       inventory_id: item.inventory_id || (item as any).product_id || "",
       name: item.status === "REFUNDED" ? `(Refunded) ${productName}` : item.status === "EXCHANGED" ? `(Exchanged) ${productName}` : productName,
       sku: item.barcode?.trim() || (item.inventory_id || (item as any).product_id || "").slice(-6),
-      category: "General",
-      quantity: Number(item.quantity ?? (item as any).entered_qty ?? 1),
+      category: (item as any).category || (item as any).category_name || (item as any).category_infos?.name || "General",
+      quantity: qty,
       returned_quantity: Number((item as any).returned_quantity ?? 0),
       unitPrice: finalUnitPrice,
+      originalUnitPrice: finalOrigUnitPrice,
+      discountAmount: totalDiscountAmount,
+      mrp,
       buyPrice: item.buy_price,
       gst: item.gst || "0%",
       imageColor: ITEM_COLORS[i % ITEM_COLORS.length],
@@ -102,7 +141,7 @@ const generateItems = (sale: SaleRecord, productMap: Record<string, string> = {}
       stocks_before: (item as any).stocks_before,
       unit: (item as any).unit_infos?.name || (item as any).unit_name || (item.unit !== undefined ? item.unit : ((item as any).entered_unit !== undefined ? (item as any).entered_unit : "")),
       entered_unit: (item as any).entered_unit !== undefined ? (item as any).entered_unit : ((item as any).unit_name || item.unit || ""),
-      entered_qty: Number((item as any).entered_qty ?? item.quantity),
+      entered_qty: Number((item as any).entered_qty ?? qty),
       unit_infos: (item as any).unit_infos || null
     } as any;
   });
@@ -339,6 +378,16 @@ const ItemSelector: React.FC<{ items: SaleItem[]; returnItems: Record<string, nu
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <p className="text-xs font-semibold text-slate-800">{item.name}</p>
+                        {item.mrp && item.mrp > (item.originalUnitPrice || item.unitPrice) ? (
+                          <span className="text-[9px] text-slate-400 font-medium">
+                            MRP: <span className="line-through">{fmt(item.mrp)}</span>
+                          </span>
+                        ) : null}
+                        {(item.discountAmount || 0) > 0 && (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono">
+                            Discount −{fmt(item.discountAmount || 0)}
+                          </span>
+                        )}
                         {item.status && <span className={`text-[9px] font-bold px-1 py-0.5 rounded ${item.status === "REFUNDED" ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"}`}>{item.status}</span>}
                         {isFullyReturned && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-rose-50 text-rose-600">Fully Returned</span>}
                         {!isFullyReturned && item.returned_quantity > 0 && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700">{item.returned_quantity} already returned</span>}
@@ -349,10 +398,18 @@ const ItemSelector: React.FC<{ items: SaleItem[]; returnItems: Record<string, nu
                     {(() => {
                       const curUnit = itemUnits[item.id] || item.entered_unit || item.unit;
                       const curFactor = getUnitConversionFactor(item, curUnit);
+                      const isDiscounted = (item.discountAmount || 0) > 0 && item.originalUnitPrice && item.originalUnitPrice > item.unitPrice;
                       return (
-                        <p className="font-mono text-[11px] font-bold text-slate-800 flex-shrink-0">
-                          {fmt(item.unitPrice * curFactor)}{curUnit ? <span className="text-[9px] font-medium text-slate-400"> /{curUnit}</span> : null}
-                        </p>
+                        <div className="text-right flex-shrink-0">
+                          {isDiscounted && (
+                            <span className="font-mono text-[9px] text-slate-400 line-through block">
+                              {fmt((item.originalUnitPrice || 0) * curFactor)}
+                            </span>
+                          )}
+                          <p className="font-mono text-[11px] font-bold text-slate-800">
+                            {fmt(item.unitPrice * curFactor)}{curUnit ? <span className="text-[9px] font-medium text-slate-400"> /{curUnit}</span> : null}
+                          </p>
+                        </div>
                       );
                     })()}
                   </div>
@@ -1611,7 +1668,14 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                           <div key={item.id} className={`flex items-center gap-3.5 p-3.5 px-4.5 bg-white ${idx > 0 ? 'border-t border-slate-50' : ''}`}>
                             <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm" style={{ background: item.imageColor }}><Package size={14} className="text-slate-600/60" /></div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-[13px] font-bold text-slate-800">{item.name}</p>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <p className="text-[13px] font-bold text-slate-800">{item.name}</p>
+                                {(item.discountAmount || 0) > 0 && (
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono">
+                                    Discount −{fmt(item.discountAmount || 0)}
+                                  </span>
+                                )}
+                              </div>
                               <p className="font-mono text-[10px] text-slate-400 uppercase tracking-wider font-bold mt-0.5">{item.sku} · qty {item.returnQty} {selectedUnit}</p>
                               {item.exchangeItems && item.exchangeItems.map((ex: any) => (
                                 <p key={ex.exchangeId} className="text-[11px] text-blue-600 font-black mt-1 flex items-center gap-1.5">
@@ -1619,7 +1683,14 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                                 </p>
                               ))}
                             </div>
-                            <span className="font-mono text-[13px] font-black text-slate-900">{fmt(item.unitPrice * item.returnQty * factor)}</span>
+                            <div className="text-right">
+                              {(item.discountAmount || 0) > 0 && item.originalUnitPrice && item.originalUnitPrice > item.unitPrice && (
+                                <span className="font-mono text-[10px] text-slate-400 line-through block">
+                                  {fmt(item.originalUnitPrice * item.returnQty * factor)}
+                                </span>
+                              )}
+                              <span className="font-mono text-[13px] font-black text-slate-900">{fmt(item.unitPrice * item.returnQty * factor)}</span>
+                            </div>
                           </div>
                         );
                       })}

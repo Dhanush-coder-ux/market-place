@@ -384,10 +384,27 @@ const ReturnPageContent: React.FC<{ sale: SaleRecord; productMap: Record<string,
                         <Package size={13} className="text-slate-500/60" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[12px] font-bold text-slate-800 truncate">{item.name}</p>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <p className="text-[12px] font-bold text-slate-800 truncate">{item.name}</p>
+                          {item.mrp && item.mrp > (item.originalUnitPrice || item.unitPrice) ? (
+                            <span className="text-[9px] text-slate-400 font-medium">MRP: <span className="line-through">{fmt(item.mrp)}</span></span>
+                          ) : null}
+                          {(item.discountAmount || 0) > 0 && (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono">
+                              Discount −{fmt(item.discountAmount || 0)}
+                            </span>
+                          )}
+                        </div>
                         <p className="font-mono text-[10px] text-slate-400">{item.sku} · Qty {item.quantity}</p>
                       </div>
-                      <p className="font-mono text-[11px] font-bold text-slate-800 flex-shrink-0">{fmt(item.unitPrice)}</p>
+                      <div className="text-right flex-shrink-0">
+                        {(item.discountAmount || 0) > 0 && item.originalUnitPrice && item.originalUnitPrice > item.unitPrice && (
+                          <span className="font-mono text-[9px] text-slate-400 line-through block">
+                            {fmt(item.originalUnitPrice)}
+                          </span>
+                        )}
+                        <p className="font-mono text-[11px] font-bold text-slate-800">{fmt(item.unitPrice)}</p>
+                      </div>
                     </div>
                     {checked && (
                       <div className="mt-3 pt-3 border-t border-blue-100 space-y-2" onClick={e => e.stopPropagation()}>
@@ -605,10 +622,27 @@ const ReturnPageContent: React.FC<{ sale: SaleRecord; productMap: Record<string,
                       <Package size={14} className="text-slate-500/60" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-bold text-slate-800">{item.name}</p>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className="text-[13px] font-bold text-slate-800">{item.name}</p>
+                        {item.mrp && item.mrp > (item.originalUnitPrice || item.unitPrice) ? (
+                          <span className="text-[9px] text-slate-400 font-medium">MRP: <span className="line-through">{fmt(item.mrp)}</span></span>
+                        ) : null}
+                        {(item.discountAmount || 0) > 0 && (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono">
+                            Discount −{fmt(item.discountAmount || 0)}
+                          </span>
+                        )}
+                      </div>
                       <p className="font-mono text-[10px] text-slate-400">{item.sku} · Qty {item.quantity}</p>
                     </div>
-                    <p className="font-mono text-[13px] font-bold text-slate-800">{fmt(item.unitPrice)}</p>
+                    <div className="text-right flex-shrink-0">
+                      {(item.discountAmount || 0) > 0 && item.originalUnitPrice && item.originalUnitPrice > item.unitPrice && (
+                        <span className="font-mono text-[9px] text-slate-400 line-through block">
+                          {fmt(item.originalUnitPrice)}
+                        </span>
+                      )}
+                      <p className="font-mono text-[13px] font-bold text-slate-800">{fmt(item.unitPrice)}</p>
+                    </div>
                   </div>
                   {checked && (
                     <div className="mt-3 pt-3 border-t border-slate-100 space-y-2" onClick={e => e.stopPropagation()}>
@@ -695,14 +729,28 @@ const ReturnPageContent: React.FC<{ sale: SaleRecord; productMap: Record<string,
                     <div key={item.id} className={`flex items-center gap-3.5 p-4 ${i > 0 ? 'border-t border-slate-50' : ''}`}>
                       <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: ITEM_COLORS[i % ITEM_COLORS.length] }}><Package size={14} className="text-slate-600/60" /></div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-bold text-slate-800">{item.name}</p>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <p className="text-[13px] font-bold text-slate-800">{item.name}</p>
+                          {(item.discountAmount || 0) > 0 && (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono">
+                              Discount −{fmt(item.discountAmount || 0)}
+                            </span>
+                          )}
+                        </div>
                         {item.exchangeItems && item.exchangeItems.map((ex: any) => (
                           <p key={ex.exchangeId} className="text-[11px] text-blue-600 font-black mt-1 flex items-center gap-1">
                             <ArrowRight size={10} /> {ex.name} (Qty: {ex.quantity || ex.qty || 1})
                           </p>
                         ))}
                       </div>
-                      <span className="font-mono text-[13px] font-black text-slate-900">{fmt(item.unitPrice * item.returnQty)}</span>
+                      <div className="text-right">
+                        {(item.discountAmount || 0) > 0 && item.originalUnitPrice && item.originalUnitPrice > item.unitPrice && (
+                          <span className="font-mono text-[10px] text-slate-400 line-through block">
+                            {fmt(item.originalUnitPrice * item.returnQty)}
+                          </span>
+                        )}
+                        <span className="font-mono text-[13px] font-black text-slate-900">{fmt(item.unitPrice * item.returnQty)}</span>
+                      </div>
                     </div>
                   ))}
                 </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
   Package, Save, Pencil, Trash2, Cpu, AlertCircle, Layers, Zap,
@@ -29,6 +29,7 @@ import {
   VariantMatrixTable,
   generateCombinations,
 } from "../components/VariantManager";
+import { calculateProductEffectivePrice, formatINR } from "@/utils/pricing";
 
 /* ─── TYPES ─────────────────────────────────────────────────────────── */
 
@@ -44,6 +45,8 @@ type FormData = {
   is_active: boolean;
   mrp: string;
   selling_price: string;
+  discount_percent: string;
+  offer_valid_until: string;
   cost_to_make: string;
   gst: string;
   hsn: string;
@@ -424,7 +427,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     description: (propInitialData.description as string) || "",
     is_active: (propInitialData.is_active as boolean) ?? true,
     mrp: (propInitialData.mrp as string) || "",
-    selling_price: "",
+    selling_price: (propInitialData.selling_price as string) || "",
+    discount_percent: (propInitialData.discount_percent as string) || "0",
+    offer_valid_until: (propInitialData.offer_valid_until as string) || "",
     cost_to_make: "",
     gst: String((propInitialData.gst as string) || "18").replace("%", ""),
     hsn: "",
@@ -577,11 +582,57 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   /* ─── Bottom actions (global header bar) ─── */
   const { setBottomActions, setBreadcrumbOverride } = useHeader();
 
-  useEffect(() => {
-    return () => {
-      if (setBreadcrumbOverride) setBreadcrumbOverride(null);
+  // ─── Discount & GST Split Engine calculations ──────────────────────────────
+  const gstRateNum = parseFloat(String(form.gst || "18").replace(/[^0-9.]/g, '')) || 0;
+  const numSellingPrice = form.selling_price ? Number(form.selling_price) : 0;
+  const numMrp = form.mrp ? Number(form.mrp) : 0;
+  const numDiscount = form.discount_percent ? Number(form.discount_percent) : 0;
+
+  const priceCalc = useMemo(() => {
+    if (numSellingPrice > 0) {
+      return calculateProductEffectivePrice({
+        sellingPrice: numSellingPrice,
+        mrp: numMrp > 0 ? numMrp : null,
+        gstRate: gstRateNum,
+        discountPercent: numDiscount,
+        offerValidUntil: form.offer_valid_until || null,
+      });
+    }
+    return null;
+  }, [numSellingPrice, numMrp, gstRateNum, numDiscount, form.offer_valid_until]);
+
+  const pricingHelperState = useMemo(() => {
+    const hasMrp = numMrp > 0;
+    const hasSp = numSellingPrice > 0;
+
+    if (!hasMrp && !hasSp) {
+      return {
+        discountDisabled: true,
+        message: "Nothing priced yet. The selling price will be set when you record your first purchase.",
+        type: "neutral" as const,
+      };
+    }
+    if (hasMrp && !hasSp) {
+      return {
+        discountDisabled: true,
+        message: `Waiting for your first purchase. Once priced, the saving against MRP ₹${formatINR(numMrp)} will show automatically.`,
+        type: "neutral" as const,
+      };
+    }
+    if (!hasMrp && hasSp) {
+      return {
+        discountDisabled: false,
+        message: "No MRP set. Normal for your own products — the bill will simply show your price.",
+        type: "info" as const,
+      };
+    }
+    const offPct = priceCalc?.offMrpPercent || 0;
+    return {
+      discountDisabled: false,
+      message: `${offPct > 0 ? `${offPct}% off MRP` : "Price set against MRP"} will show on the bill automatically.`,
+      type: "success" as const,
     };
-  }, [setBreadcrumbOverride]);
+  }, [numMrp, numSellingPrice, priceCalc]);
 
   // Validation computed values
   const missingFields: string[] = [];
@@ -638,8 +689,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
               unit: prod.unit_id || "",
               description: prod.description || "",
               is_active: prod.is_active ?? true,
-              mrp: String(additional.mrp || ""),
+              mrp: String(prod.mrp ?? prod.pricing_infos?.mrp ?? additional.mrp ?? ""),
               selling_price: String(prod.pricing_infos?.sell_price || ""),
+              discount_percent: String(prod.discount_percent ?? prod.pricing_infos?.discount_percent ?? additional.discount_percent ?? "0"),
+              offer_valid_until: prod.offer_valid_until || prod.pricing_infos?.offer_valid_until || additional.offer_valid_until || "",
               cost_to_make: String(prod.pricing_infos?.buy_price || ""),
               gst: String(prod.gst || "18").replace("%", ""),
               hsn: String(additional.hsn || ""),
@@ -846,6 +899,56 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       return;
     }
 
+    const numMrp = form.mrp ? Number(form.mrp) : 0;
+    const numSp = form.selling_price ? Number(form.selling_price) : 0;
+    const numDisc = form.discount_percent ? Number(form.discount_percent) : 0;
+    const numCost = form.cost_to_make ? Number(form.cost_to_make) : 0;
+
+    // V4: MRP <= 0 when entered (🔴 Block save)
+    if (form.mrp && numMrp <= 0) {
+      showToast("MRP must be greater than zero.", "error");
+      return;
+    }
+
+    // V1: selling_price > mrp (🔴 Block save — Legal Metrology requirement)
+    if (numMrp > 0 && numSp > 0 && numSp > numMrp) {
+      showToast(`Selling price cannot be above MRP. You entered ₹${numSp.toFixed(2)} but the MRP is ₹${numMrp.toFixed(2)}. Maximum you can charge is ₹${numMrp.toFixed(2)}.`, "error");
+      return;
+    }
+
+    // V2: discount_percent >= 100 (🔴 Block save)
+    if (numDisc >= 100) {
+      showToast("Discount cannot be 100% or more.", "error");
+      return;
+    }
+
+    // V3: discount_percent < 0 (🔴 Block save)
+    if (numDisc < 0) {
+      showToast("Discount cannot be negative.", "error");
+      return;
+    }
+
+    // V5: final_price < landed_cost (🟡 Warn, allow)
+    const effectiveFinalPrice = numSp > 0 ? numSp - (numSp * numDisc / 100) : 0;
+    if (numCost > 0 && numSp > 0 && effectiveFinalPrice < numCost) {
+      const loss = numCost - effectiveFinalPrice;
+      showToast(`Warning: This price is below your cost of ₹${numCost.toFixed(2)}. You will lose ₹${loss.toFixed(2)} on each sale.`, "warning");
+    }
+
+    // V6: selling_price == mrp and discount is 0 (🟡 Warn, allow)
+    if (numMrp > 0 && numSp > 0 && numSp === numMrp && numDisc === 0) {
+      // Selling at full MRP
+    }
+
+    // V8: offer_valid_until is in the past (🟡 Warn, allow)
+    if (form.offer_valid_until) {
+      const expDate = new Date(form.offer_valid_until);
+      expDate.setHours(23, 59, 59, 999);
+      if (expDate < new Date()) {
+        showToast(`Warning: This offer expired on ${new Date(form.offer_valid_until).toLocaleDateString()} and is no longer applied.`, "warning");
+      }
+    }
+
     isSubmittingRef.current = true;
     setIsSubmitting(true);
 
@@ -869,6 +972,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       const parsedBuyPrice = combo.buy_price !== "" && !isNaN(Number(combo.buy_price)) ? Number(combo.buy_price) : null;
       const parsedSellPrice = combo.price !== "" && !isNaN(Number(combo.price)) ? Number(combo.price) : null;
 
+      const parsedMrp = combo.mrp !== "" && !isNaN(Number(combo.mrp)) ? Number(combo.mrp) : (form.mrp !== "" && !isNaN(Number(form.mrp)) ? Number(form.mrp) : null);
+
       return {
         ...(id && !isNew ? { id: combo.id } : {}),   // only include id on update for existing variants
         name: variantName,
@@ -877,6 +982,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         buy_price: parsedBuyPrice,
         sell_price: parsedSellPrice,
         online_sell_price: parsedSellPrice || 0,
+        mrp: parsedMrp,
+        discount_percent: Number(form.discount_percent) || 0,
+        offer_valid_until: form.offer_valid_until || null,
         visible_online: form.visible_online,
       };
     });
@@ -885,6 +993,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     const customFieldsBlob: Record<string, any> = {
       brand: form.brand,
       mrp: Number(form.mrp) || 0,
+      discount_percent: Number(form.discount_percent) || 0,
+      offer_valid_until: form.offer_valid_until || null,
       hsn: form.hsn,
       sku: form.sku,
       supplier: form.supplier,
@@ -962,6 +1072,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
           ? (Number(form.selling_price) || null)
           : null,
         online_sell_price: form.selling_price ? (Number(form.selling_price) || 0) : 0,
+        mrp: form.mrp !== "" && !isNaN(Number(form.mrp)) ? Number(form.mrp) : null,
+        discount_percent: form.discount_percent !== "" && !isNaN(Number(form.discount_percent)) ? Number(form.discount_percent) : 0,
+        offer_valid_until: form.offer_valid_until || null,
         custom_fields: customFieldsBlob,
       };
     } else {
@@ -993,6 +1106,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         online_sell_price: form.selling_price !== "" && !isNaN(Number(form.selling_price))
           ? Number(form.selling_price)
           : 0,
+        mrp: form.mrp !== "" && !isNaN(Number(form.mrp)) ? Number(form.mrp) : null,
+        discount_percent: form.discount_percent !== "" && !isNaN(Number(form.discount_percent)) ? Number(form.discount_percent) : 0,
+        offer_valid_until: form.offer_valid_until || null,
         gst: gstFormatted,
         reorder_point: Number(form.reorder_point) || 1,
         visible_online: form.visible_online,
@@ -1439,19 +1555,44 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         onChange={handleChange}
                         placeholder="0.00"
                         leftEl={<IndianRupee size={13} />}
-                        tooltip="Maximum Retail Price."
+                        tooltip="Maximum Retail Price printed on the pack."
                       />
                       <InputField
-                        label="Selling price"
+                        label="Selling price (incl. GST)"
                         name="selling_price"
-                        hint="optional"
+                        hint="optional — set from purchase"
                         type="number"
                         value={form.selling_price}
                         onChange={handleChange}
                         placeholder="0.00"
                         leftEl={<IndianRupee size={13} />}
-                        tooltip="The price you charge the customer."
+                        tooltip="Selling price inclusive of GST."
                       />
+                      <InputField
+                        label="Discount (%)"
+                        name="discount_percent"
+                        hint="default 0"
+                        type="number"
+                        disabled={pricingHelperState.discountDisabled}
+                        value={form.discount_percent}
+                        onChange={handleChange}
+                        placeholder="0"
+                        rightEl="%"
+                        tooltip="Always reduces the selling price (never the MRP)."
+                      />
+                      <InputField
+                        label="Offer valid until"
+                        name="offer_valid_until"
+                        hint="optional"
+                        type="date"
+                        disabled={pricingHelperState.discountDisabled}
+                        value={form.offer_valid_until}
+                        onChange={handleChange}
+                        tooltip="After this date, discount stops applying."
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 lg:grid-cols-2 gap-4">
                       <InputField
                         label="Reorder point"
                         name="reorder_point"
@@ -1475,10 +1616,32 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         tooltip="Physical location where this product is stored."
                       />
                     </div>
-                    <p className="text-[11px] text-indigo-500 flex items-center gap-1.5">
-                      <Info size={11} />
-                      Cost &amp; selling price for this product will be set when you record a purchase. No price needed here.
-                    </p>
+
+                    {/* Live GST Split & Dynamic Field State Helper */}
+                    <div className="space-y-2 pt-1">
+                      {priceCalc && (
+                        <div className="p-3 bg-emerald-50/80 border border-emerald-200/80 rounded-xl flex items-center justify-between text-xs text-emerald-900 font-medium shadow-xs">
+                          <span className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                            <strong>Live GST split:</strong> Splits as ₹{formatINR(priceCalc.tax.taxableValue)} taxable + ₹{formatINR(priceCalc.tax.gstAmount)} GST {gstRateNum}% = ₹{formatINR(numSellingPrice)}
+                          </span>
+                          {priceCalc.customerSaving > 0 && (
+                            <span className="text-emerald-700 font-bold bg-emerald-100/70 px-2 py-0.5 rounded-md text-[11px]">
+                              {priceCalc.offMrpPercent}% off MRP · Saves ₹{formatINR(priceCalc.customerSaving)}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      <div className={`p-2.5 rounded-lg border text-[11px] font-medium flex items-center gap-2 ${
+                        pricingHelperState.type === 'success' ? 'bg-emerald-50/60 border-emerald-150 text-emerald-800' :
+                        pricingHelperState.type === 'info' ? 'bg-blue-50/60 border-blue-150 text-blue-800' :
+                        'bg-slate-50 border-slate-200 text-slate-500'
+                      }`}>
+                        <Info size={13} className="shrink-0 text-slate-400" />
+                        <span>{pricingHelperState.message}</span>
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   /* MADE-TO-ORDER MODE */
@@ -1489,7 +1652,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         <strong>Made-to-order item.</strong> Since this isn't purchased as stock, set its prices here so it can be billed. We'll use these to calculate your profit.
                       </p>
                     </div>
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                       <InputField
                         label="MRP"
                         name="mrp"
@@ -1502,7 +1665,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         tooltip="Maximum Retail Price."
                       />
                       <InputField
-                        label="Sell price"
+                        label="Selling price (incl. GST)"
                         name="selling_price"
                         required
                         type="number"
@@ -1510,10 +1673,21 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         onChange={handleChange}
                         placeholder="0.00"
                         leftEl={<IndianRupee size={13} />}
-                        tooltip="The price you charge the customer."
+                        tooltip="Selling price inclusive of GST."
                       />
                       <InputField
-                        label="Buy price"
+                        label="Discount (%)"
+                        name="discount_percent"
+                        hint="default 0"
+                        type="number"
+                        value={form.discount_percent}
+                        onChange={handleChange}
+                        placeholder="0"
+                        rightEl="%"
+                        tooltip="Always reduces selling price."
+                      />
+                      <InputField
+                        label="Cost to make (Buy price)"
                         name="cost_to_make"
                         hint="optional"
                         type="number"
@@ -1524,6 +1698,21 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         tooltip="The cost to make or purchase this item."
                       />
                     </div>
+
+                    {/* Live GST Split for Made-to-order */}
+                    {priceCalc && (
+                      <div className="p-3 bg-emerald-50/80 border border-emerald-200/80 rounded-xl flex items-center justify-between text-xs text-emerald-900 font-medium">
+                        <span>
+                          <strong>Live GST split:</strong> Splits as ₹{formatINR(priceCalc.tax.taxableValue)} taxable + ₹{formatINR(priceCalc.tax.gstAmount)} GST {gstRateNum}% = ₹{formatINR(numSellingPrice)}
+                        </span>
+                        {priceCalc.profit !== undefined && (
+                          <span className="text-emerald-700 font-bold">
+                            Margin: {priceCalc.marginPercent}% · Profit ₹{formatINR(priceCalc.profit)}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
                     <p className="text-[11px] text-slate-400 flex items-center gap-1.5">
                       <Check size={11} className="text-emerald-400" />
                       This item stays available to bill until you mark it unavailable — no quantity is tracked.

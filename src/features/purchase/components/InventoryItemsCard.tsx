@@ -22,6 +22,7 @@ import { usePurchaseSettings } from "@/context/PurchaseContext";
 import { InlineSerialManager } from "@/components/common/InlineSerialManager";
 import { useQuickCreate } from "@/features/common/QuickCreate/QuickCreateContext";
 import { AntBadge } from "@/components/ui/AntBadge";
+import { calculateTaxSplit } from "@/utils/pricing";
 
 // ─── Inline Unit Selector ──────────────────────────────────────────────────────
 const UnitDropdown = ({
@@ -894,20 +895,27 @@ export const InventoryItemsCard = ({
                 const costForSp = isGstRegistered ? rowBaseCost : (rowBaseCost + rowGstPerUnit);
                 const netCostForSp = costForSp + allocPerUnit;
 
-                let computedSellPrice = Number(product.sellingPrice) || 0;
+                const rawEnteredSp = Number(product.sellingPrice) || 0;
+                const rowMrp = Number(product.mrp || (product as any).datas?.mrp) || 0;
+
+                let sellingPriceInclusive = rawEnteredSp;
                 if (product.marginType === "percent" && Number(product.marginPercent) > 0) {
                   const m = Number(product.marginPercent);
-                  computedSellPrice = m < 100 ? netCostForSp / (1 - m / 100) : netCostForSp * (1 + m / 100);
+                  const computedBase = m < 100 ? netCostForSp / (1 - m / 100) : netCostForSp * (1 + m / 100);
+                  sellingPriceInclusive = Math.round(computedBase * (1 + gstRate / 100) * 100) / 100;
                 } else if (product.marginType === "amount" && Number(product.marginAmount) > 0) {
-                  computedSellPrice = netCostForSp + Number(product.marginAmount);
+                  const computedBase = netCostForSp + Number(product.marginAmount);
+                  sellingPriceInclusive = Math.round(computedBase * (1 + gstRate / 100) * 100) / 100;
                 }
 
-                const effectiveMarginPct = netCostForSp > 0 && computedSellPrice > 0
-                  ? (((computedSellPrice - netCostForSp) / computedSellPrice) * 100).toFixed(1)
-                  : null;
-
-                const spGstAmount = computedSellPrice * (gstRate / 100);
-                const computedSellPriceInclusive = computedSellPrice + spGstAmount;
+                // Extract GST from inclusive selling price (Rule 1)
+                const spTax = calculateTaxSplit(sellingPriceInclusive, gstRate);
+                const spTaxableValue = spTax.taxableValue;
+                const profitAmount = Math.round((spTaxableValue - landedCostPerUnit) * 100) / 100;
+                const marginPercent = spTaxableValue > 0 ? ((profitAmount / spTaxableValue) * 100) : 0;
+                const customerSavings = rowMrp > sellingPriceInclusive ? Math.round((rowMrp - sellingPriceInclusive) * 100) / 100 : 0;
+                const offMrpPercent = rowMrp > 0 && customerSavings > 0 ? Math.round(((customerSavings / rowMrp) * 100) * 10) / 10 : 0;
+                const isExceedingMrp = rowMrp > 0 && sellingPriceInclusive > rowMrp;
 
                 const isExpanded = expandedSettings.has(index) || expandedBreakdown.has(index);
 
@@ -1194,21 +1202,32 @@ export const InventoryItemsCard = ({
                               />
                             </div>
                             <div className="flex flex-col gap-1">
-                              <div className="flex items-center gap-1 px-1.5 py-1 bg-emerald-50/50 border border-emerald-100 rounded-md shrink-0 max-w-[100px]" title={`₹${computedSellPriceInclusive.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}>
-                                <span className="text-[9px] font-medium text-emerald-600 uppercase tracking-tighter shrink-0">SP</span>
-                                <span className="text-[11px] font-medium text-emerald-700 tabular-nums truncate">
-                                  ₹{computedSellPriceInclusive.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              <div className={`flex items-center gap-1 px-1.5 py-1 rounded-md shrink-0 max-w-[120px] ${isExceedingMrp ? 'bg-rose-50 border border-rose-200' : 'bg-emerald-50/50 border border-emerald-100'}`} title={`₹${sellingPriceInclusive.toFixed(2)}`}>
+                                <span className={`text-[9px] font-bold uppercase tracking-tighter shrink-0 ${isExceedingMrp ? 'text-rose-600' : 'text-emerald-600'}`}>SP</span>
+                                <span className={`text-[11px] font-bold tabular-nums truncate ${isExceedingMrp ? 'text-rose-700' : 'text-emerald-700'}`}>
+                                  ₹{sellingPriceInclusive.toFixed(2)}
                                 </span>
                               </div>
-                              {gstRate > 0 && (
-                                <span className="text-[8.5px] font-medium text-slate-400 leading-tight">
-                                  Base: ₹{computedSellPrice.toFixed(2)}<br/>(+ ₹{spGstAmount.toFixed(2)} GST)
+                              {sellingPriceInclusive > 0 && (
+                                <span className="text-[8.5px] font-medium text-slate-500 leading-tight">
+                                  Taxable: ₹{spTaxableValue.toFixed(2)}<br/>
+                                  Margin: <span className={profitAmount >= 0 ? "text-emerald-600 font-semibold" : "text-rose-600 font-semibold"}>{marginPercent.toFixed(1)}% (₹{profitAmount.toFixed(2)})</span>
                                 </span>
                               )}
                             </div>
                           </div>
+                          {isExceedingMrp && (
+                            <div className="text-[8.5px] text-rose-700 font-bold bg-rose-50 p-1.5 rounded border border-rose-200 flex items-center gap-1 mt-1">
+                              🔴 Selling price cannot be above MRP (₹{rowMrp.toFixed(2)})
+                            </div>
+                          )}
+                          {!isExceedingMrp && customerSavings > 0 && (
+                            <div className="text-[8.5px] text-emerald-700 font-medium bg-emerald-50/70 p-1 rounded border border-emerald-200/50 mt-1">
+                              Customer sees: {offMrpPercent}% off · saves ₹{customerSavings.toFixed(2)}
+                            </div>
+                          )}
                           {isUpdate && (
-                            <div className="text-[8.5px] text-amber-600 flex items-start gap-1 font-medium leading-tight bg-amber-50/80 p-1.5 rounded border border-amber-200/50 mt-2">
+                            <div className="text-[8.5px] text-amber-600 flex items-start gap-1 font-medium leading-tight bg-amber-50/80 p-1.5 rounded border border-amber-200/50 mt-1">
                               <Info size={10} className="shrink-0 mt-0.5" />
                               Note: New selling price applies to all existing stock.
                             </div>
@@ -1382,11 +1401,11 @@ export const InventoryItemsCard = ({
                                       )}
                                       <div className="flex justify-between text-[11px] pt-1.5 border-t border-slate-100/60">
                                         <span className="text-emerald-500">Expected Margin</span>
-                                        <span className="font-medium text-emerald-600">{effectiveMarginPct || '0'}%</span>
+                                        <span className="font-medium text-emerald-600">{marginPercent.toFixed(1)}%</span>
                                       </div>
                                       <div className="flex justify-between text-xs pt-1.5 border-t border-slate-100">
                                         <span className="font-medium text-slate-800">Profit / Unit</span>
-                                        <span className="font-medium text-emerald-600">₹{(computedSellPrice - netCostPerUnit).toFixed(2)}</span>
+                                        <span className="font-medium text-emerald-600">₹{profitAmount.toFixed(2)}</span>
                                       </div>
                                     </div>
                                   </div>

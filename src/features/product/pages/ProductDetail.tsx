@@ -482,7 +482,30 @@ const ProductDetail = () => {
                           <span className="text-[11px] font-bold text-indigo-600">Available in Batch & Variants tab</span>
                         </div>
                       ) : buyingPrice !== null ? (
-                        <p className="text-[13px] font-semibold text-slate-800 tabular-nums">{`₹${Number(buyingPrice).toFixed(2)}`}</p>
+                        <div className="flex flex-col">
+                          {(() => {
+                             const gstRate = parseFloat(String(gstValue).replace(/[^0-9.]/g, '')) || 0;
+                             let gstAmt = 0;
+                             let displayPrice = Number(buyingPrice);
+                             let isGstApplied = false;
+
+                             if (gstRate > 0 && !isNaN(displayPrice)) {
+                               gstAmt = displayPrice * (gstRate / 100);
+                               displayPrice = displayPrice + gstAmt;
+                               isGstApplied = true;
+                             }
+                             return (
+                               <>
+                                 <p className="text-[13px] font-semibold text-slate-800 tabular-nums">{`₹${displayPrice.toFixed(2)}`}</p>
+                                 {isGstApplied && (
+                                   <span className="text-[10px] text-slate-500 font-medium mt-0.5">
+                                     Base: ₹{Number(buyingPrice).toFixed(2)} (+ ₹{gstAmt.toFixed(2)} GST)
+                                   </span>
+                                 )}
+                               </>
+                             );
+                          })()}
+                        </div>
                       ) : (
                         <p className="text-[13px] font-semibold text-slate-400">—</p>
                       )}
@@ -501,7 +524,30 @@ const ProductDetail = () => {
                           <span className="text-[11px] font-bold text-indigo-600">Available in Batch & Variants tab</span>
                         </div>
                       ) : sellingPrice !== null ? (
-                        <p className="text-[13px] font-semibold text-slate-800 tabular-nums">{`₹${Number(sellingPrice).toFixed(2)}`}</p>
+                        <div className="flex flex-col">
+                          {(() => {
+                             const gstRate = parseFloat(String(gstValue).replace(/[^0-9.]/g, '')) || 0;
+                             let gstAmt = 0;
+                             let displayPrice = Number(sellingPrice);
+                             let isGstApplied = false;
+
+                             if (gstRate > 0 && !isNaN(displayPrice)) {
+                               gstAmt = displayPrice * (gstRate / 100);
+                               displayPrice = displayPrice + gstAmt;
+                               isGstApplied = true;
+                             }
+                             return (
+                               <>
+                                 <p className="text-[13px] font-semibold text-slate-800 tabular-nums">{`₹${displayPrice.toFixed(2)}`}</p>
+                                 {isGstApplied && (
+                                   <span className="text-[10px] text-slate-500 font-medium mt-0.5">
+                                     Base: ₹{Number(sellingPrice).toFixed(2)} (+ ₹{gstAmt.toFixed(2)} GST)
+                                   </span>
+                                 )}
+                               </>
+                             );
+                          })()}
+                        </div>
                       ) : (
                         <p className="text-[13px] font-semibold text-slate-400">—</p>
                       )}
@@ -780,7 +826,12 @@ const ProductDetail = () => {
                     </div>
 
                     <div className="bg-slate-50/30 rounded-lg p-4 border border-slate-100">
-                      <VariantRows combinations={combinations} baseSellPrice={sellingPrice} />
+                      <VariantRows 
+                        combinations={combinations} 
+                        baseSellPrice={sellingPrice} 
+                        baseBuyPrice={buyingPrice}
+                        parentGst={gstValue}
+                      />
                     </div>
                   </SectionCard>
                 </div>
@@ -795,7 +846,12 @@ const ProductDetail = () => {
                     </div>
                     <h2 className="text-[10px] font-black text-slate-800  tracking-[0.15em]">Batch Tracking</h2>
                   </div>
-                  <BatchCards batches={batches} />
+                  <BatchCards 
+                    batches={batches} 
+                    parentGst={gstValue}
+                    parentBuyPrice={buyingPrice}
+                    parentSellPrice={sellingPrice}
+                  />
                 </SectionCard>
               )}
             </div>

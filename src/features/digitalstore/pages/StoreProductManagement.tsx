@@ -231,7 +231,12 @@ function ProductCard({
           <div className="flex flex-col">
             <div className="flex items-center gap-1.5">
               <span className="text-[14px] font-bold text-emerald-600">
-                ₹{(product.onlineSellPrice ?? product.price ?? 0).toLocaleString("en-IN")}
+                {(() => {
+                  const baseOnline = product.onlineSellPrice ?? product.price ?? 0;
+                  const gstRate = parseFloat(String(product.gst).replace(/[^0-9.]/g, '')) || 0;
+                  const total = baseOnline + (baseOnline * (gstRate / 100));
+                  return `₹${total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                })()}
               </span>
               <span className="text-[9px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 py-0.2 rounded">
                 Online SP
@@ -239,7 +244,11 @@ function ProductCard({
             </div>
             {product.price > 0 && (
               <span className="text-[10px] text-slate-400">
-                Store SP: ₹{product.price.toLocaleString("en-IN")}
+                {(() => {
+                  const gstRate = parseFloat(String(product.gst).replace(/[^0-9.]/g, '')) || 0;
+                  const total = product.price + (product.price * (gstRate / 100));
+                  return `Store SP: ₹${total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                })()}
               </span>
             )}
           </div>
@@ -345,7 +354,11 @@ function ProductRow({
       <td className="px-4 py-4 border-b border-slate-200 text-right">
         <span className="text-[13px] font-bold text-slate-700 font-mono">
           {product.price > 0
-            ? `₹${product.price.toLocaleString("en-IN")}`
+            ? (() => {
+                const gstRate = parseFloat(String(product.gst).replace(/[^0-9.]/g, '')) || 0;
+                const total = product.price + (product.price * (gstRate / 100));
+                return `₹${total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+              })()
             : <span className="text-slate-300">—</span>
           }
         </span>
@@ -354,7 +367,12 @@ function ProductRow({
       {/* Online SP */}
       <td className="px-4 py-4 border-b border-slate-200 text-right">
         <span className="text-[13px] font-bold font-mono text-emerald-600 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-md inline-block">
-          ₹{(product.onlineSellPrice ?? product.price ?? 0).toLocaleString("en-IN")}
+          {(() => {
+            const baseOnline = product.onlineSellPrice ?? product.price ?? 0;
+            const gstRate = parseFloat(String(product.gst).replace(/[^0-9.]/g, '')) || 0;
+            const total = baseOnline + (baseOnline * (gstRate / 100));
+            return `₹${total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+          })()}
         </span>
       </td>
 
@@ -1157,31 +1175,61 @@ const ProductDashboard = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-[11px] font-semibold text-slate-500 mb-1.5 block">Shop price (from catalog)</label>
-                  <div className="flex items-center h-9 rounded-lg border border-slate-200 bg-[#fbfaf8] overflow-hidden">
-                    <div className="h-full px-2.5 flex items-center justify-center border-r border-slate-200 bg-[#f4f2ee] text-slate-500 text-xs font-semibold">
-                      ₹
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center h-9 rounded-lg border border-slate-200 bg-[#fbfaf8] overflow-hidden">
+                      <div className="h-full px-2.5 flex items-center justify-center border-r border-slate-200 bg-[#f4f2ee] text-slate-500 text-xs font-semibold">
+                        ₹
+                      </div>
+                      <input
+                        type="number"
+                        readOnly
+                        value={editingProduct.price || 0}
+                        className="w-full bg-transparent px-3 text-sm font-medium text-blue-600 outline-none"
+                      />
                     </div>
-                    <input
-                      type="number"
-                      readOnly
-                      value={editingProduct.price || 0}
-                      className="w-full bg-transparent px-3 text-sm font-medium text-blue-600 outline-none"
-                    />
+                    {(() => {
+                      const gstRate = parseFloat(editingProduct.gst.replace(/[^0-9.]/g, '')) || 0;
+                      if (gstRate > 0) {
+                        const price = Number(editingProduct.price);
+                        const gstAmt = price * (gstRate / 100);
+                        return (
+                          <span className="text-[10px] text-slate-500 font-medium">
+                            Total: ₹{(price + gstAmt).toFixed(2)} (+ ₹{gstAmt.toFixed(2)} GST)
+                          </span>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                 </div>
                 <div>
                   <label className="text-[11px] font-semibold text-slate-500 mb-1.5 block">Store price (online)</label>
-                  <div className="flex items-center h-9 rounded-lg border border-slate-200 bg-white overflow-hidden focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all">
-                    <div className="h-full px-2.5 flex items-center justify-center border-r border-slate-200 bg-[#f4f2ee] text-slate-500 text-xs font-semibold">
-                      ₹
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center h-9 rounded-lg border border-slate-200 bg-white overflow-hidden focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all">
+                      <div className="h-full px-2.5 flex items-center justify-center border-r border-slate-200 bg-[#f4f2ee] text-slate-500 text-xs font-semibold">
+                        ₹
+                      </div>
+                      <input
+                        type="number"
+                        value={editingProduct.onlineSellPrice ?? editingProduct.price ?? 0}
+                        onChange={(e) => setEditingProduct({ ...editingProduct, onlineSellPrice: e.target.value !== "" ? Number(e.target.value) : 0 })}
+                        className="w-full bg-transparent px-3 text-sm font-semibold text-slate-800 outline-none"
+                        placeholder="e.g. 299"
+                      />
                     </div>
-                    <input
-                      type="number"
-                      value={editingProduct.onlineSellPrice ?? editingProduct.price ?? 0}
-                      onChange={(e) => setEditingProduct({ ...editingProduct, onlineSellPrice: e.target.value !== "" ? Number(e.target.value) : 0 })}
-                      className="w-full bg-transparent px-3 text-sm font-semibold text-slate-800 outline-none"
-                      placeholder="e.g. 299"
-                    />
+                    {(() => {
+                      const gstRate = parseFloat(editingProduct.gst.replace(/[^0-9.]/g, '')) || 0;
+                      if (gstRate > 0) {
+                        const price = editingProduct.onlineSellPrice ?? editingProduct.price ?? 0;
+                        const gstAmt = Number(price) * (gstRate / 100);
+                        return (
+                          <span className="text-[10px] text-slate-500 font-medium">
+                            Total: ₹{(Number(price) + gstAmt).toFixed(2)} (+ ₹{gstAmt.toFixed(2)} GST)
+                          </span>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                 </div>
               </div>

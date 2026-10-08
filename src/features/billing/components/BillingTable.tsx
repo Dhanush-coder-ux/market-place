@@ -785,8 +785,26 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                       </div>
                     </div>
 
-                    <div className="text-right shrink-0">
-                      <p className="text-[13px] font-bold text-slate-800">₹{Number(product.price).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    <div className="text-right shrink-0 flex flex-col items-end">
+                      {(() => {
+                        const basePrice = Number(product.price) || 0;
+                        const gstRate = Number(product.gst) || 0;
+                        const gstAmt = basePrice * (gstRate / 100);
+                        const totalPrice = basePrice + gstAmt;
+
+                        return (
+                          <>
+                            <p className="text-[13px] font-bold text-slate-800">
+                              ₹{totalPrice.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </p>
+                            {gstRate > 0 && (
+                              <p className="text-[9px] text-slate-400 font-medium leading-none mt-0.5">
+                                Base: ₹{basePrice.toFixed(2)} (+ ₹{gstAmt.toFixed(2)} GST)
+                              </p>
+                            )}
+                          </>
+                        );
+                      })()}
                       <p className={`text-[9px] font-extrabold mt-1 leading-none ${isOutOfStock ? "text-red-500" : "text-emerald-500"}`}>
                         {isOutOfStock ? "Out of Stock" : !isStockTracked ? "Stock Not Tracked" : `Stock: ${product.stocks} units`}
                       </p>

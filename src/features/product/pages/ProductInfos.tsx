@@ -484,6 +484,8 @@ const ProductRow = React.memo(
 
             if (key === "buy_price" || key === "sell_price" || key === "price") {
               let displayPrice = formatCurrency(value);
+              let actualNumericPrice = value;
+
               if (hasVariants && combinations.length > 0) {
                 const prices = combinations.map((c: any) => {
                   const pInfo = c.pricing_infos || c;
@@ -491,6 +493,7 @@ const ProductRow = React.memo(
                 }).filter((pr: any) => pr !== undefined && pr !== null && !isNaN(Number(pr)) && Number(pr) > 0);
                 if (prices.length > 0) {
                   displayPrice = formatCurrency(prices[0]);
+                  actualNumericPrice = prices[0];
                 }
               } else if (!hasVariants && hasBatches && batches.length > 0) {
                 const prices = batches.map((b: any) => {
@@ -499,19 +502,41 @@ const ProductRow = React.memo(
                 }).filter((pr: any) => pr !== undefined && pr !== null && !isNaN(Number(pr)) && Number(pr) > 0);
                 if (prices.length > 0) {
                   displayPrice = formatCurrency(prices[0]);
+                  actualNumericPrice = prices[0];
+                }
+              }
+
+              let isGstApplied = false;
+              let gstAmount = 0;
+              let totalPrice = actualNumericPrice;
+
+              if ((key === "sell_price" || key === "buy_price") && (p.gst || datas.gst || (p as any).gst) && actualNumericPrice && !isNaN(Number(actualNumericPrice))) {
+                const gstRate = parseFloat(String(p.gst || datas.gst || (p as any).gst).replace(/[^0-9.]/g, '')) || 0;
+                if (gstRate > 0) {
+                  gstAmount = Number(actualNumericPrice) * (gstRate / 100);
+                  totalPrice = Number(actualNumericPrice) + gstAmount;
+                  isGstApplied = true;
+                  displayPrice = formatCurrency(totalPrice);
                 }
               }
 
               return (
                 <td key={key} className="px-3 py-2.5 whitespace-nowrap">
-                  <span
-                    className={`tabular-nums ${key === "sell_price"
-                      ? "text-[13px] font-bold text-slate-800"
-                      : "text-[13px] font-semibold text-slate-700"
-                      }`}
-                  >
-                    {displayPrice}
-                  </span>
+                  <div className="flex flex-col">
+                    <span
+                      className={`tabular-nums ${(key === "sell_price" || key === "buy_price")
+                        ? "text-[13px] font-bold text-slate-800"
+                        : "text-[13px] font-semibold text-slate-700"
+                        }`}
+                    >
+                      {displayPrice}
+                    </span>
+                    {isGstApplied && (
+                      <span className="text-[10px] text-slate-500 font-medium mt-0.5">
+                        Base: {formatCurrency(actualNumericPrice)} (+ {formatCurrency(gstAmount)} GST)
+                      </span>
+                    )}
+                  </div>
                 </td>
               );
             }
@@ -762,13 +787,20 @@ const ProductRow = React.memo(
                     <VariantRows
                       combinations={combinations}
                       baseSellPrice={p.pricing_infos?.sell_price || datas.sell_price || (p as any).sell_price}
+                      baseBuyPrice={p.pricing_infos?.buy_price || datas.buy_price || (p as any).buy_price}
+                      parentGst={p.gst || datas.gst || (p as any).gst}
                       parentStorageLocation={(p as any).storage_location_infos?.storage_location ?? (p as any).storage_location_infos?.name ?? (p as any).storage_location ?? (p as any).location ?? datas.storage_location ?? null}
                       parentReorderPoint={p.reorder_point_infos?.reorder_point ?? (p as any).reorder_point ?? datas.reorder_point ?? null}
                       hideReorderPoint={true}
                     />
                   )}
                   {!hasVariants && hasBatches && (
-                    <BatchCards batches={batches} />
+                    <BatchCards 
+                      batches={batches} 
+                      parentGst={p.gst || datas.gst || (p as any).gst}
+                      parentBuyPrice={p.pricing_infos?.buy_price || datas.buy_price || (p as any).buy_price}
+                      parentSellPrice={p.pricing_infos?.sell_price || datas.sell_price || (p as any).sell_price}
+                    />
                   )}
                 </div>
               </div>

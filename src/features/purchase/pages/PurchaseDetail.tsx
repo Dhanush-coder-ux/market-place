@@ -317,8 +317,16 @@ const PurchaseReturnDialog = ({
                               Purchased: {item.maxQuantity}
                             </span>
                             <span className="text-[10px] text-slate-300">•</span>
-                            <span className="text-[10px] text-slate-500 font-semibold">
-                              {fmt(item.buy_price)} / unit
+                            <span className="text-[10px] text-slate-500 font-semibold flex items-center gap-1">
+                              {item.gst_rate > 0 ? (
+                                <>
+                                  <span className="text-slate-700 font-bold">{fmt(item.gst_type === "EXCLUSIVE" ? item.buy_price * (1 + item.gst_rate / 100) : item.buy_price)}</span>
+                                  <span className="text-slate-400 font-medium">(Base: {fmt(item.gst_type === "EXCLUSIVE" ? item.buy_price : item.buy_price / (1 + item.gst_rate / 100))})</span>
+                                </>
+                              ) : (
+                                <span className="text-slate-700 font-bold">{fmt(item.buy_price)}</span>
+                              )}
+                              / unit
                             </span>
                             {item.returnQty > 0 && (
                               <>
@@ -1248,7 +1256,14 @@ const PurchaseDetail = () => {
                             {/* Buy Price */}
                             <td className="px-4 py-4 text-right">
                               {product.buy_price !== undefined ? (
-                                <span className="text-xs font-black text-slate-800 tabular-nums">{fmt(baseBuyPrice)}</span>
+                                <div className="flex flex-col items-end">
+                                  <span className="text-xs font-black text-slate-800 tabular-nums">{fmt(baseBuyPrice + rowGstPerUnit)}</span>
+                                  {rowGstPerUnit > 0 && (
+                                    <span className="text-[10px] text-slate-500 font-medium mt-0.5 whitespace-nowrap">
+                                      Base: {fmt(baseBuyPrice)}
+                                    </span>
+                                  )}
+                                </div>
                               ) : (
                                 <span className="text-xs text-slate-400">—</span>
                               )}

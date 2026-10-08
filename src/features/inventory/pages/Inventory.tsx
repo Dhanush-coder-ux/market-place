@@ -611,18 +611,50 @@ const ProductRow = React.memo(
 
           {/* Sell price */}
           <td className="px-4 py-4 text-right">
-            <span className="text-[13px] font-semibold text-slate-700 tabular-nums">
-              {hasVariants ? "—" : (() => {
+            <div className="flex flex-col items-end">
+              {(() => {
+                let numericPrice = sellPrice;
                 if (hasBatches && batches.length > 0) {
                   const prices = batches.map((b: any) => b.pricing_infos?.sell_price ?? b.sell_price)
                     .filter((pr: any) => pr !== undefined && pr !== null && !isNaN(Number(pr)) && Number(pr) > 0);
                   if (prices.length > 0) {
-                    return formatCurrency(prices[0]);
+                    numericPrice = prices[0];
                   }
                 }
-                return formatCurrency(sellPrice);
+
+                if (hasVariants) {
+                  return <span className="text-[13px] font-semibold text-slate-700 tabular-nums">—</span>;
+                }
+
+                if (numericPrice === undefined || numericPrice === null) {
+                  return <span className="text-[13px] font-semibold text-slate-700 tabular-nums">—</span>;
+                }
+
+                let displayPrice = Number(numericPrice);
+                let gstAmt = 0;
+                let isGstApplied = false;
+
+                const gstRate = parseFloat(String(item.gst || datas.gst || (item as any).gst).replace(/[^0-9.]/g, '')) || 0;
+                if (gstRate > 0 && !isNaN(displayPrice)) {
+                  gstAmt = displayPrice * (gstRate / 100);
+                  displayPrice = displayPrice + gstAmt;
+                  isGstApplied = true;
+                }
+
+                return (
+                  <>
+                    <span className="text-[13px] font-semibold text-slate-700 tabular-nums">
+                      {formatCurrency(displayPrice)}
+                    </span>
+                    {isGstApplied && (
+                      <span className="text-[10px] text-slate-500 font-medium mt-0.5">
+                        Base: {formatCurrency(numericPrice)} (+ {formatCurrency(gstAmt)} GST)
+                      </span>
+                    )}
+                  </>
+                );
               })()}
-            </span>
+            </div>
           </td>
 
           {/* Stock */}
@@ -754,12 +786,19 @@ const ProductRow = React.memo(
                     <VariantRows
                       combinations={combinations}
                       baseSellPrice={item.sell_price}
+                      baseBuyPrice={item.buy_price}
+                      parentGst={item.gst ?? (datas as any).gst}
                       parentStorageLocation={(item as any).storage_location_infos?.storage_location ?? (item as any).storage_location_infos?.name ?? (item as any).storage_location ?? (item as any).location ?? (datas as any).storage_location ?? null}
                       parentReorderPoint={(item as any).reorder_point_infos?.reorder_point ?? (item as any).reorder_point ?? datas.reorder_point ?? null}
                     />
                   )}
                   {!hasVariants && hasBatches && (
-                    <BatchCards batches={batches} />
+                    <BatchCards 
+                      batches={batches} 
+                      parentGst={item.gst ?? (datas as any).gst}
+                      parentBuyPrice={item.buy_price}
+                      parentSellPrice={item.sell_price}
+                    />
                   )}
                 </div>
               </div>

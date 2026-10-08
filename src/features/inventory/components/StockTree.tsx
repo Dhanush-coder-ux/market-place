@@ -245,7 +245,7 @@ const extractStorageLocation = (comb: any, parentStorageLocation?: string | null
   return parentStorageLocation || null;
 };
 
-export const BatchCards = ({ batches }: { batches: any | any[] }) => {
+export const BatchCards = ({ batches, parentGst, parentBuyPrice, parentSellPrice }: { batches: any | any[]; parentGst?: any; parentBuyPrice?: any; parentSellPrice?: any }) => {
   const safeBatches = parseBatches(batches);
   const [showAll, setShowAll] = useState(false);
   const visible = showAll ? safeBatches : safeBatches.slice(0, 4);
@@ -287,6 +287,25 @@ export const BatchCards = ({ batches }: { batches: any | any[] }) => {
               ? { label: 'Low Stock', variant: 'stk-low-stock' }
               : { label: 'In Stock', variant: 'stk-in-stock' };
 
+          const batchSellPrice = batch.pricing_infos?.sell_price ?? batch.sell_price ?? batch.price ?? parentSellPrice;
+          const batchBuyPrice = batch.pricing_infos?.buy_price ?? batch.buy_price ?? batch.cost_price ?? parentBuyPrice;
+          const gstValue = batch.gst ?? parentGst ?? 0;
+          const gstRate = parseFloat(String(gstValue).replace(/[^0-9.]/g, '')) || 0;
+
+          let displaySellPrice = Number(batchSellPrice);
+          let sellGstAmt = 0;
+          if (gstRate > 0 && !isNaN(displaySellPrice)) {
+            sellGstAmt = displaySellPrice * (gstRate / 100);
+            displaySellPrice += sellGstAmt;
+          }
+
+          let displayBuyPrice = Number(batchBuyPrice);
+          let buyGstAmt = 0;
+          if (gstRate > 0 && !isNaN(displayBuyPrice)) {
+            buyGstAmt = displayBuyPrice * (gstRate / 100);
+            displayBuyPrice += buyGstAmt;
+          }
+
           return (
             <div key={batch.id || idx} className="flex flex-col border border-slate-200 rounded-xl bg-white shadow-sm hover:shadow-md hover:border-blue-200 transition-all p-3.5 relative gap-3">
               {/* Header: Name and Status */}
@@ -325,15 +344,39 @@ export const BatchCards = ({ batches }: { batches: any | any[] }) => {
               </div>
 
               {/* Grid for Stock and Prices */}
-              <div className="grid grid-cols-2 gap-2 bg-slate-50 rounded-lg p-2.5 border border-slate-100">
-                <div className="flex flex-col">
-                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Avail. Stock</span>
-                  <span className="text-sm font-black text-blue-600 tabular-nums">{availableQty}</span>
+              <div className="flex flex-col gap-2 bg-slate-50 rounded-lg p-2.5 border border-slate-100">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex flex-col">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Avail. Stock</span>
+                    <span className="text-sm font-black text-blue-600 tabular-nums">{availableQty}</span>
+                  </div>
+                  {(physicalQty !== availableQty || reservedQty > 0) && (
+                    <div className="flex flex-col border-l border-slate-200 pl-2">
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Physical / Res.</span>
+                      <span className="text-xs font-bold text-slate-600 tabular-nums">{physicalQty} <span className="text-amber-500">({reservedQty})</span></span>
+                    </div>
+                  )}
                 </div>
-                {(physicalQty !== availableQty || reservedQty > 0) && (
-                  <div className="flex flex-col border-l border-slate-200 pl-2">
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Physical / Res.</span>
-                    <span className="text-xs font-bold text-slate-600 tabular-nums">{physicalQty} <span className="text-amber-500">({reservedQty})</span></span>
+                {(batchBuyPrice !== undefined || batchSellPrice !== undefined) && (
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-200">
+                    <div className="flex flex-col">
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Buy Price</span>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-black text-slate-800 tabular-nums">{formatCurrency(displayBuyPrice)}</span>
+                        {buyGstAmt > 0 && (
+                          <span className="text-[8px] font-bold text-slate-500">Base: {formatCurrency(batchBuyPrice)}</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex flex-col border-l border-slate-200 pl-2">
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Sell Price</span>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-black text-slate-800 tabular-nums">{formatCurrency(displaySellPrice)}</span>
+                        {sellGstAmt > 0 && (
+                          <span className="text-[8px] font-bold text-slate-500">Base: {formatCurrency(batchSellPrice)}</span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -409,12 +452,16 @@ const CopySKUButton = ({ val }: { val: string }) => {
 export const VariantRows = ({
   combinations,
   baseSellPrice,
+  baseBuyPrice,
+  parentGst,
   parentStorageLocation,
   parentReorderPoint,
   hideReorderPoint = false
 }: {
   combinations: any[];
   baseSellPrice: any;
+  baseBuyPrice?: any;
+  parentGst?: any;
   parentStorageLocation?: string | null;
   parentReorderPoint?: number | null;
   hideReorderPoint?: boolean;
@@ -436,6 +483,7 @@ export const VariantRows = ({
               <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-left">Variant</th>
               <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-left">SKU / Barcode</th>
               <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Stock</th>
+              <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Buy Price</th>
               <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Sell Price</th>
               <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-left">Batch Count</th>
 
@@ -483,6 +531,24 @@ export const VariantRows = ({
               const stockStatus = getStockStatus(stockNum, reorderPoint ?? 0);
               const statusLabel = stockNum <= 0 ? "Out of Stock" : (reorderPoint !== null && stockNum <= reorderPoint) ? "Low Stock" : "In Stock";
               const sellPrice = comb.pricing_infos?.sell_price ?? comb.sell_price ?? comb.price ?? combDatas.sell_price ?? combDatas.datas?.sell_price ?? baseSellPrice;
+              const buyPrice = comb.pricing_infos?.buy_price ?? comb.buy_price ?? combDatas.buy_price ?? combDatas.datas?.buy_price ?? baseBuyPrice;
+              
+              const gstValue = comb.gst ?? combDatas.gst ?? parentGst ?? 0;
+              const gstRate = parseFloat(String(gstValue).replace(/[^0-9.]/g, '')) || 0;
+
+              let displaySellPrice = Number(sellPrice);
+              let sellGstAmt = 0;
+              if (gstRate > 0 && !isNaN(displaySellPrice)) {
+                sellGstAmt = displaySellPrice * (gstRate / 100);
+                displaySellPrice += sellGstAmt;
+              }
+
+              let displayBuyPrice = Number(buyPrice);
+              let buyGstAmt = 0;
+              if (gstRate > 0 && !isNaN(displayBuyPrice)) {
+                buyGstAmt = displayBuyPrice * (gstRate / 100);
+                displayBuyPrice += buyGstAmt;
+              }
 
               return (
                 <Fragment key={variantId}>
@@ -549,11 +615,32 @@ export const VariantRows = ({
                       </span>
                     </td>
 
+                    {/* Buy Price */}
+                    <td className="px-4 py-2 align-middle text-right">
+                      <div className="flex flex-col items-end">
+                        <span className="text-[13px] font-bold text-slate-800 tabular-nums">
+                          {formatCurrency(displayBuyPrice)}
+                        </span>
+                        {buyGstAmt > 0 && (
+                          <span className="text-[9px] text-slate-500 font-medium">
+                            Base: {formatCurrency(buyPrice)}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+
                     {/* Sell Price */}
                     <td className="px-4 py-2 align-middle text-right">
-                      <span className="text-[13px] font-bold text-slate-800 tabular-nums">
-                        {formatCurrency(sellPrice)}
-                      </span>
+                      <div className="flex flex-col items-end">
+                        <span className="text-[13px] font-bold text-slate-800 tabular-nums">
+                          {formatCurrency(displaySellPrice)}
+                        </span>
+                        {sellGstAmt > 0 && (
+                          <span className="text-[9px] text-slate-500 font-medium">
+                            Base: {formatCurrency(sellPrice)}
+                          </span>
+                        )}
+                      </div>
                     </td>
 
                     {/* Batch Count */}
@@ -598,7 +685,7 @@ export const VariantRows = ({
                   {/* Serials Area */}
                   {hasSerials && (
                     <tr className="bg-indigo-50/10">
-                      <td colSpan={hideReorderPoint ? 8 : 9} className="p-0 border-t border-slate-50/50">
+                      <td colSpan={hideReorderPoint ? 9 : 10} className="p-0 border-t border-slate-50/50">
                         <div className="px-4 pb-2 pt-1.5 flex flex-col">
                           <p className="text-[10px] font-bold text-slate-500 mb-1 flex items-center gap-1 uppercase">
                             <Hash size={10} className="text-indigo-400" /> Serial Numbers ({serials.length})
@@ -612,9 +699,9 @@ export const VariantRows = ({
                   {/* Nested Batches Area */}
                   {isVarExpanded && hasBatches && (
                     <tr className="bg-slate-50/50">
-                      <td colSpan={hideReorderPoint ? 8 : 9} className="p-0 border-t border-slate-100">
+                      <td colSpan={hideReorderPoint ? 9 : 10} className="p-0 border-t border-slate-100">
                         <div className="p-3 md:pl-10 pl-6 border-l-2 border-slate-200 ml-4 my-2">
-                          <BatchCards batches={batches} />
+                          <BatchCards batches={batches} parentGst={gstValue} parentBuyPrice={buyPrice} parentSellPrice={sellPrice} />
                         </div>
                       </td>
                     </tr>

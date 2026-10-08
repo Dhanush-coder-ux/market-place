@@ -906,6 +906,9 @@ export const InventoryItemsCard = ({
                   ? (((computedSellPrice - netCostForSp) / computedSellPrice) * 100).toFixed(1)
                   : null;
 
+                const spGstAmount = computedSellPrice * (gstRate / 100);
+                const computedSellPriceInclusive = computedSellPrice + spGstAmount;
+
                 const isExpanded = expandedSettings.has(index) || expandedBreakdown.has(index);
 
                 return (
@@ -1190,11 +1193,18 @@ export const InventoryItemsCard = ({
                                 placeholder={product.marginType === "sellingPrice" ? "Price" : "Margin"}
                               />
                             </div>
-                            <div className="flex items-center gap-1 px-1.5 py-1 bg-emerald-50/50 border border-emerald-100 rounded-md shrink-0 max-w-[100px]" title={`₹${computedSellPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}>
-                              <span className="text-[9px] font-medium text-emerald-600 uppercase tracking-tighter shrink-0">SP</span>
-                              <span className="text-[11px] font-medium text-emerald-700 tabular-nums truncate">
-                                ₹{computedSellPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              </span>
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center gap-1 px-1.5 py-1 bg-emerald-50/50 border border-emerald-100 rounded-md shrink-0 max-w-[100px]" title={`₹${computedSellPriceInclusive.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}>
+                                <span className="text-[9px] font-medium text-emerald-600 uppercase tracking-tighter shrink-0">SP</span>
+                                <span className="text-[11px] font-medium text-emerald-700 tabular-nums truncate">
+                                  ₹{computedSellPriceInclusive.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
+                              </div>
+                              {gstRate > 0 && (
+                                <span className="text-[8.5px] font-medium text-slate-400 leading-tight">
+                                  Base: ₹{computedSellPrice.toFixed(2)}<br/>(+ ₹{spGstAmount.toFixed(2)} GST)
+                                </span>
+                              )}
                             </div>
                           </div>
                           {isUpdate && (

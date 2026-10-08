@@ -1429,7 +1429,18 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                 {form.track_stock ? (
                   /* STOCKED MODE */
                   <div className="pf-section-enter space-y-4">
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                      <InputField
+                        label="MRP"
+                        name="mrp"
+                        hint="optional"
+                        type="number"
+                        value={form.mrp}
+                        onChange={handleChange}
+                        placeholder="0.00"
+                        leftEl={<IndianRupee size={13} />}
+                        tooltip="Maximum Retail Price."
+                      />
                       <InputField
                         label="Selling price"
                         name="selling_price"
@@ -1478,7 +1489,18 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         <strong>Made-to-order item.</strong> Since this isn't purchased as stock, set its prices here so it can be billed. We'll use these to calculate your profit.
                       </p>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-4">
+                      <InputField
+                        label="MRP"
+                        name="mrp"
+                        hint="optional"
+                        type="number"
+                        value={form.mrp}
+                        onChange={handleChange}
+                        placeholder="0.00"
+                        leftEl={<IndianRupee size={13} />}
+                        tooltip="Maximum Retail Price."
+                      />
                       <InputField
                         label="Sell price"
                         name="selling_price"

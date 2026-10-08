@@ -612,7 +612,16 @@ const ProductRow = React.memo(
           {/* Sell price */}
           <td className="px-4 py-4 text-right">
             <span className="text-[13px] font-semibold text-slate-700 tabular-nums">
-              {hasVariants ? "—" : formatCurrency(sellPrice)}
+              {hasVariants ? "—" : (() => {
+                if (hasBatches && batches.length > 0) {
+                  const prices = batches.map((b: any) => b.pricing_infos?.sell_price ?? b.sell_price)
+                    .filter((pr: any) => pr !== undefined && pr !== null && !isNaN(Number(pr)) && Number(pr) > 0);
+                  if (prices.length > 0) {
+                    return formatCurrency(prices[0]);
+                  }
+                }
+                return formatCurrency(sellPrice);
+              })()}
             </span>
           </td>
 

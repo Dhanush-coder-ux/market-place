@@ -490,9 +490,15 @@ const ProductRow = React.memo(
                   return key === "buy_price" ? (pInfo.buy_price ?? c.buy_price) : (pInfo.sell_price ?? c.sell_price);
                 }).filter((pr: any) => pr !== undefined && pr !== null && !isNaN(Number(pr)) && Number(pr) > 0);
                 if (prices.length > 0) {
-                  const minP = Math.min(...prices);
-                  const maxP = Math.max(...prices);
-                  displayPrice = minP === maxP ? formatCurrency(minP) : `${formatCurrency(minP)} - ${formatCurrency(maxP)}`;
+                  displayPrice = formatCurrency(prices[0]);
+                }
+              } else if (!hasVariants && hasBatches && batches.length > 0) {
+                const prices = batches.map((b: any) => {
+                  const pInfo = b.pricing_infos || b;
+                  return key === "buy_price" ? (pInfo.buy_price ?? b.buy_price) : (pInfo.sell_price ?? b.sell_price);
+                }).filter((pr: any) => pr !== undefined && pr !== null && !isNaN(Number(pr)) && Number(pr) > 0);
+                if (prices.length > 0) {
+                  displayPrice = formatCurrency(prices[0]);
                 }
               }
 

@@ -278,7 +278,6 @@ export const BatchCards = ({ batches }: { batches: any | any[] }) => {
           const reservedQty = Number(batch.stock_infos?.reserved_stocks ?? 0);
           const serials = extractSerials(batch.serialno_infos ?? batch.serial_numbers ?? batch.datas?.serial_numbers);
           const daysToExpiry = getDaysDiff(batch.expiry_date || batch.expiry);
-          const bSell = batch.pricing_infos?.sell_price ?? batch.sell_price;
           const storageLoc = batch.storage_location_infos?.storage_location ?? batch.storage_location ?? null;
           const reorderPt = batch.reorder_point_infos?.reorder_point ?? batch.reorder_point ?? null;
 
@@ -336,14 +335,6 @@ export const BatchCards = ({ batches }: { batches: any | any[] }) => {
                     <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Physical / Res.</span>
                     <span className="text-xs font-bold text-slate-600 tabular-nums">{physicalQty} <span className="text-amber-500">({reservedQty})</span></span>
                   </div>
-                )}
-                {(bSell !== undefined) && (
-                  <>
-                    <div className="flex flex-col pt-2 border-t border-slate-200/60 mt-1">
-                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Sell Price</span>
-                      <span className="text-xs font-bold text-slate-700">{formatCurrency(bSell)}</span>
-                    </div>
-                  </>
                 )}
               </div>
 

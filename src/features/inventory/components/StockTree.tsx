@@ -364,16 +364,20 @@ export const BatchCards = ({ batches, parentGst, parentBuyPrice, parentSellPrice
                     <div className="flex flex-col">
                       <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Buy Price</span>
                       <div className="flex flex-col">
-                        <span className="text-sm font-black text-slate-800 tabular-nums">{formatCurrency(displayBuyPrice)}</span>
+                        <span className="text-sm font-black text-slate-800 tabular-nums flex items-baseline gap-1">
+                          {formatCurrency(displayBuyPrice)}
+                        </span>
                         {buyGstAmt > 0 && (
-                          <span className="text-[8px] font-bold text-slate-500">Base: {formatCurrency(batchBuyPrice)}</span>
+                          <span className="text-[8px] font-bold text-slate-500">{formatCurrency(batchBuyPrice)} + {formatCurrency(buyGstAmt)} GST</span>
                         )}
                       </div>
                     </div>
                     <div className="flex flex-col border-l border-slate-200 pl-2">
                       <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Sell Price</span>
                       <div className="flex flex-col">
-                        <span className="text-sm font-black text-slate-800 tabular-nums">{formatCurrency(displaySellPrice)}</span>
+                        <span className="text-sm font-black text-slate-800 tabular-nums flex items-baseline gap-1">
+                          {formatCurrency(displaySellPrice)}
+                        </span>
                         {isGstReg && sellGstAmt > 0 && (
                           <span className="text-[8px] font-bold text-slate-500">
                             {formatCurrency(batchSellPrice)} + {formatCurrency(sellGstAmt)} GST {gstRate}%
@@ -623,12 +627,12 @@ export const VariantRows = ({
                     {/* Buy Price */}
                     <td className="px-4 py-2 align-middle text-right">
                       <div className="flex flex-col items-end">
-                        <span className="text-[13px] font-bold text-slate-800 tabular-nums">
+                        <span className="text-[13px] font-bold text-slate-800 tabular-nums flex items-baseline gap-1 justify-end">
                           {formatCurrency(displayBuyPrice)}
                         </span>
                         {buyGstAmt > 0 && (
                           <span className="text-[9px] text-slate-500 font-medium">
-                            Base: {formatCurrency(buyPrice)}
+                            {formatCurrency(buyPrice)} + {formatCurrency(buyGstAmt)} GST
                           </span>
                         )}
                       </div>
@@ -637,7 +641,7 @@ export const VariantRows = ({
                     {/* Sell Price */}
                     <td className="px-4 py-2 align-middle text-right">
                       <div className="flex flex-col items-end">
-                        <span className="text-[13px] font-bold text-slate-800 tabular-nums">
+                        <span className="text-[13px] font-bold text-slate-800 tabular-nums flex items-baseline gap-1 justify-end">
                           {formatCurrency(displaySellPrice)}
                         </span>
                         {isGstReg && sellGstAmt > 0 && (

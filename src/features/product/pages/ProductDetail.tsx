@@ -497,10 +497,12 @@ const ProductDetail = () => {
                              }
                              return (
                                <>
-                                 <p className="text-[13px] font-semibold text-slate-800 tabular-nums">{`₹${displayPrice.toFixed(2)}`}</p>
+                                 <p className="text-[13px] font-semibold text-slate-800 tabular-nums flex items-baseline gap-1">
+                                   {`₹${displayPrice.toFixed(2)}`}
+                                 </p>
                                  {isGstApplied && (
                                    <span className="text-[10px] text-slate-500 font-medium mt-0.5">
-                                     Base: ₹{Number(buyingPrice).toFixed(2)} (+ ₹{gstAmt.toFixed(2)} GST)
+                                     ₹{Number(buyingPrice).toFixed(2)} + ₹{gstAmt.toFixed(2)} GST
                                    </span>
                                  )}
                                </>
@@ -986,6 +988,7 @@ const ProductDetail = () => {
                   referenceNo: p.reference_no ?? (isNewFormat ? "" : (pd.referenceNo || "—")),
                   storageLocation: isNewFormat ? productsList[0].storage_location || '—' : (d.storage_location || p.storage_location || '—'),
                   version: p.version || d?.version || p.datas?.version || "v1",
+                  gst: parseFloat(String(gstValue).replace(/[^0-9.]/g, '')) || 0,
                   productsList: productsList
                 });
               }

@@ -545,7 +545,7 @@ const ProductRow = React.memo(
                 <td key={key} className="px-3 py-2.5 whitespace-nowrap">
                   <div className="flex flex-col">
                     <span
-                      className={`tabular-nums ${key === "buy_price"
+                      className={`tabular-nums flex items-baseline gap-1 ${key === "buy_price"
                         ? "text-[13px] font-bold text-slate-800"
                         : "text-[13px] font-semibold text-slate-700"
                         }`}
@@ -554,7 +554,7 @@ const ProductRow = React.memo(
                     </span>
                     {isGstApplied && (
                       <span className="text-[10px] text-slate-500 font-medium mt-0.5">
-                        Base: {formatCurrency(actualNumericPrice)} (+ {formatCurrency(gstAmount)} GST)
+                        {formatCurrency(actualNumericPrice)} + {formatCurrency(gstAmount)} GST
                       </span>
                     )}
                   </div>

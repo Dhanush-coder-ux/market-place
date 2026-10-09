@@ -98,19 +98,53 @@ export function GroupedItemsDrawer({
                   )}
                   
                   {!isAdjustment && (p.buyPrice !== undefined || p.sellPrice !== undefined) && (
-                    <div className="flex items-center gap-6 mt-3 pt-3 border-t border-slate-100">
-                      {p.buyPrice !== undefined && (
-                        <div className="flex flex-col">
-                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Buy Price</span>
-                          <span className="text-xs font-bold text-slate-700">₹{p.buyPrice}</span>
-                        </div>
-                      )}
-                      {p.sellPrice !== undefined && (
-                        <div className="flex flex-col">
-                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Sell Price</span>
-                          <span className="text-xs font-bold text-emerald-600">₹{p.sellPrice}</span>
-                        </div>
-                      )}
+                    <div className="grid grid-cols-2 gap-4 mt-3 pt-3 border-t border-slate-100">
+                      {p.buyPrice !== undefined && (() => {
+                        const bpNum = Number(p.buyPrice);
+                        const gstRate = record.gst || 0;
+                        const gstAmt = bpNum * (gstRate / 100);
+                        const total = bpNum + gstAmt;
+                        return (
+                          <div className="flex flex-col">
+                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Buy Price</span>
+                            {gstRate > 0 ? (
+                              <>
+                                <span className="text-xs font-bold text-slate-700 flex items-baseline gap-1">
+                                  ₹{total.toFixed(2).replace(/\.00$/, '')}
+                                </span>
+                                <span className="text-[10px] text-slate-400 font-medium mt-0.5 leading-none">
+                                  ₹{bpNum.toFixed(2).replace(/\.00$/, '')} + ₹{gstAmt.toFixed(2).replace(/\.00$/, '')} GST
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-xs font-bold text-slate-700">₹{bpNum.toFixed(2).replace(/\.00$/, '')}</span>
+                            )}
+                          </div>
+                        );
+                      })()}
+                      {p.sellPrice !== undefined && (() => {
+                        const spNum = Number(p.sellPrice);
+                        const gstRate = record.gst || 0;
+                        const gstAmt = spNum * (gstRate / 100);
+                        const total = spNum + gstAmt;
+                        return (
+                          <div className="flex flex-col">
+                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Sell Price</span>
+                            {gstRate > 0 ? (
+                              <>
+                                <span className="text-xs font-bold text-emerald-700 flex items-baseline gap-1">
+                                  ₹{total.toFixed(2).replace(/\.00$/, '')}
+                                </span>
+                                <span className="text-[10px] text-emerald-600/70 font-medium mt-0.5 leading-none">
+                                  ₹{spNum.toFixed(2).replace(/\.00$/, '')} + ₹{gstAmt.toFixed(2).replace(/\.00$/, '')} GST
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-xs font-bold text-emerald-600">₹{spNum.toFixed(2).replace(/\.00$/, '')}</span>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                   )}
                 </div>
@@ -445,6 +479,53 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
                     return total;
                   })();
 
+                  // Buy Price calculations
+                  const rawBuyPrice = firstProd.buyPrice ?? r.buyPrice;
+                  let buyPriceContent = <span className="text-slate-300">—</span>;
+                  if (!hasList && rawBuyPrice !== undefined) {
+                    const bpNum = Number(rawBuyPrice);
+                    const gstRate = r.gst || 0;
+                    if (gstRate > 0) {
+                      const gstAmt = bpNum * (gstRate / 100);
+                      const total = bpNum + gstAmt;
+                      buyPriceContent = (
+                        <div className="flex flex-col">
+                          <span className="flex items-baseline gap-1">
+                            ₹{total.toFixed(2).replace(/\.00$/, '')}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-medium mt-0.5 leading-none">
+                            ₹{bpNum.toFixed(2).replace(/\.00$/, '')} + ₹{gstAmt.toFixed(2).replace(/\.00$/, '')} GST
+                          </span>
+                        </div>
+                      );
+                    } else {
+                      buyPriceContent = <span>₹{bpNum.toFixed(2).replace(/\.00$/, '')}</span>;
+                    }
+                  }
+
+                  // Sell Price calculations
+                  const rawSellPrice = firstProd.sellPrice ?? r.sellPrice;
+                  let sellPriceContent = <span className="text-slate-300">—</span>;
+                  if (!hasList && rawSellPrice !== undefined) {
+                    const spNum = Number(rawSellPrice);
+                    const gstRate = r.gst || 0;
+                    if (gstRate > 0) {
+                      const gstAmt = spNum * (gstRate / 100);
+                      const total = spNum + gstAmt;
+                      sellPriceContent = (
+                        <div className="flex flex-col">
+                          <span className="flex items-baseline gap-1">
+                            ₹{total.toFixed(2).replace(/\.00$/, '')}
+                          </span>
+                          <span className="text-[10px] text-emerald-600/70 font-medium mt-0.5 leading-none">
+                            ₹{spNum.toFixed(2).replace(/\.00$/, '')} + ₹{gstAmt.toFixed(2).replace(/\.00$/, '')} GST
+                          </span>
+                        </div>
+                      );
+                    } else {
+                      sellPriceContent = <span>₹{spNum.toFixed(2).replace(/\.00$/, '')}</span>;
+                    }
+                  }
 
                   return (
                     <Fragment key={rowKey}>
@@ -522,11 +603,11 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
                         <td className="px-5 py-4 whitespace-nowrap text-center font-bold text-blue-600 tabular-nums">
                           {totalStockAfterProd !== null ? formatStockValue(totalStockAfterProd) : '—'}
                         </td>
-                        <td className="px-5 py-4 whitespace-nowrap text-xs font-bold text-slate-700">
-                          {hasList ? '—' : (firstProd.buyPrice ?? r.buyPrice) !== undefined ? `₹${Number(firstProd.buyPrice ?? r.buyPrice).toFixed(2).replace(/\.00$/, '')}` : '—'}
+                        <td className="px-5 py-4 whitespace-nowrap text-xs font-bold text-slate-700 align-top">
+                          {buyPriceContent}
                         </td>
-                        <td className="px-5 py-4 whitespace-nowrap text-xs font-bold text-emerald-700">
-                          {hasList ? '—' : (firstProd.sellPrice ?? r.sellPrice) !== undefined ? `₹${Number(firstProd.sellPrice ?? r.sellPrice).toFixed(2).replace(/\.00$/, '')}` : '—'}
+                        <td className="px-5 py-4 whitespace-nowrap text-xs font-bold text-emerald-700 align-top">
+                          {sellPriceContent}
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap">
                           <div className="flex flex-col gap-0.5">

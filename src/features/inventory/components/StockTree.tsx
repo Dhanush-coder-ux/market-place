@@ -11,6 +11,7 @@ import {
   Check
 } from "lucide-react";
 import { AntBadge } from "@/components/ui/AntBadge";
+import { isShopGstRegistered } from "@/utils/pricing";
 
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
@@ -287,6 +288,7 @@ export const BatchCards = ({ batches, parentGst, parentBuyPrice, parentSellPrice
               ? { label: 'Low Stock', variant: 'stk-low-stock' }
               : { label: 'In Stock', variant: 'stk-in-stock' };
 
+          const isGstReg = isShopGstRegistered();
           const batchSellPrice = batch.pricing_infos?.sell_price ?? batch.sell_price ?? batch.price ?? parentSellPrice;
           const batchBuyPrice = batch.pricing_infos?.buy_price ?? batch.buy_price ?? batch.cost_price ?? parentBuyPrice;
           const gstValue = batch.gst ?? parentGst ?? 0;
@@ -294,16 +296,16 @@ export const BatchCards = ({ batches, parentGst, parentBuyPrice, parentSellPrice
 
           let displaySellPrice = Number(batchSellPrice);
           let sellGstAmt = 0;
-          if (gstRate > 0 && !isNaN(displaySellPrice)) {
-            sellGstAmt = displaySellPrice * (gstRate / 100);
-            displaySellPrice += sellGstAmt;
+          if (isGstReg && gstRate > 0 && !isNaN(displaySellPrice)) {
+            sellGstAmt = Math.round((displaySellPrice * (gstRate / 100)) * 100) / 100;
+            displaySellPrice = Math.round((displaySellPrice + sellGstAmt) * 100) / 100;
           }
 
           let displayBuyPrice = Number(batchBuyPrice);
           let buyGstAmt = 0;
           if (gstRate > 0 && !isNaN(displayBuyPrice)) {
-            buyGstAmt = displayBuyPrice * (gstRate / 100);
-            displayBuyPrice += buyGstAmt;
+            buyGstAmt = Math.round((displayBuyPrice * (gstRate / 100)) * 100) / 100;
+            displayBuyPrice = Math.round((displayBuyPrice + buyGstAmt) * 100) / 100;
           }
 
           return (
@@ -372,8 +374,10 @@ export const BatchCards = ({ batches, parentGst, parentBuyPrice, parentSellPrice
                       <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Sell Price</span>
                       <div className="flex flex-col">
                         <span className="text-sm font-black text-slate-800 tabular-nums">{formatCurrency(displaySellPrice)}</span>
-                        {sellGstAmt > 0 && (
-                          <span className="text-[8px] font-bold text-slate-500">Base: {formatCurrency(batchSellPrice)}</span>
+                        {isGstReg && sellGstAmt > 0 && (
+                          <span className="text-[8px] font-bold text-slate-500">
+                            {formatCurrency(batchSellPrice)} + {formatCurrency(sellGstAmt)} GST {gstRate}%
+                          </span>
                         )}
                       </div>
                     </div>
@@ -467,6 +471,7 @@ export const VariantRows = ({
   hideReorderPoint?: boolean;
 }) => {
   const [expandedVariant, setExpandedVariant] = useState<string | null>(null);
+  const isGstReg = isShopGstRegistered();
 
   return (
     <div className="animate-in fade-in slide-in-from-top-2 duration-300 pt-1 pb-2">
@@ -538,16 +543,16 @@ export const VariantRows = ({
 
               let displaySellPrice = Number(sellPrice);
               let sellGstAmt = 0;
-              if (gstRate > 0 && !isNaN(displaySellPrice)) {
-                sellGstAmt = displaySellPrice * (gstRate / 100);
-                displaySellPrice += sellGstAmt;
+              if (isGstReg && gstRate > 0 && !isNaN(displaySellPrice)) {
+                sellGstAmt = Math.round((displaySellPrice * (gstRate / 100)) * 100) / 100;
+                displaySellPrice = Math.round((displaySellPrice + sellGstAmt) * 100) / 100;
               }
 
               let displayBuyPrice = Number(buyPrice);
               let buyGstAmt = 0;
               if (gstRate > 0 && !isNaN(displayBuyPrice)) {
-                buyGstAmt = displayBuyPrice * (gstRate / 100);
-                displayBuyPrice += buyGstAmt;
+                buyGstAmt = Math.round((displayBuyPrice * (gstRate / 100)) * 100) / 100;
+                displayBuyPrice = Math.round((displayBuyPrice + buyGstAmt) * 100) / 100;
               }
 
               return (
@@ -635,9 +640,9 @@ export const VariantRows = ({
                         <span className="text-[13px] font-bold text-slate-800 tabular-nums">
                           {formatCurrency(displaySellPrice)}
                         </span>
-                        {sellGstAmt > 0 && (
+                        {isGstReg && sellGstAmt > 0 && (
                           <span className="text-[9px] text-slate-500 font-medium">
-                            Base: {formatCurrency(sellPrice)}
+                            {formatCurrency(sellPrice)} + {formatCurrency(sellGstAmt)} GST {gstRate}%
                           </span>
                         )}
                       </div>

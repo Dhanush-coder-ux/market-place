@@ -7,6 +7,7 @@ import ProductSelectionModal from "./ProductSelectionModel";
 import { useToast } from "@/context/ToastContext";
 import { inventoryApi } from "@/services/api/inventory";
 import { SHOP_ID } from "@/services/endpoints";
+import { isShopGstRegistered } from "@/utils/pricing";
 
 interface BillingTableProps {
   items: BillingItem[];
@@ -810,7 +811,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="text-[13px] font-bold text-slate-800 truncate leading-none">{product.product_name}</p>
-                          {product.gst && (
+                          {isShopGstRegistered() && product.gst && (
                             <span className="text-[8px] font-extrabold text-blue-500 bg-blue-50 px-1 py-0.2 rounded border border-blue-100">
                               GST {product.gst}%
                             </span>
@@ -824,9 +825,11 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
 
                     <div className="text-right shrink-0 flex flex-col items-end">
                       {(() => {
+                        const isGstReg = isShopGstRegistered();
                         const basePrice = Number(product.price) || 0;
-                        const gstRate = Number(product.gst) || 0;
-                        const gstAmt = basePrice * (gstRate / 100);
+                        const rawGstRate = Number(product.gst) || 0;
+                        const gstRate = isGstReg ? rawGstRate : 0;
+                        const gstAmt = isGstReg && gstRate > 0 ? (basePrice * (gstRate / 100)) : 0;
                         const totalPrice = basePrice + gstAmt;
 
                         return (
@@ -834,7 +837,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                             <p className="text-[13px] font-bold text-slate-800">
                               ₹{totalPrice.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </p>
-                            {gstRate > 0 && (
+                            {isGstReg && gstRate > 0 && (
                               <p className="text-[9px] text-slate-400 font-medium leading-none mt-0.5">
                                 Base: ₹{basePrice.toFixed(2)} (+ ₹{gstAmt.toFixed(2)} GST)
                               </p>
@@ -1097,7 +1100,9 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
 
                     {/* Unit Price Display */}
                     {(() => {
-                      const gstRate = typeof item.gst === 'number' ? item.gst : (parseFloat(String(item.gst || '18').replace(/[^0-9.]/g, '')) || 0);
+                      const isGstReg = isShopGstRegistered();
+                      const rawGstRate = typeof item.gst === 'number' ? item.gst : (parseFloat(String(item.gst || '18').replace(/[^0-9.]/g, '')) || 0);
+                      const gstRate = isGstReg ? rawGstRate : 0;
                       const prodDiscPct = item.productDiscountPercent || 0;
                       const prodDiscPerUnit = item.price * (prodDiscPct / 100);
                       const priceAfterProdDisc = Math.max(0, item.price - prodDiscPerUnit);
@@ -1109,10 +1114,10 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                         ? lineBaseTotal * (Math.min(100, Math.max(0, lineDiscVal)) / 100)
                         : Math.min(lineBaseTotal, Math.max(0, lineDiscVal));
 
-                      const finalLineTotal = Math.max(0, lineBaseTotal - lineDiscAmount);
+                      const taxableVal = Math.max(0, Math.round((lineBaseTotal - lineDiscAmount) * 100) / 100);
+                      const gstVal = isGstReg && gstRate > 0 ? Math.round((taxableVal * (gstRate / 100)) * 100) / 100 : 0;
+                      const finalLineTotal = Math.round((taxableVal + gstVal) * 100) / 100;
                       const effectiveUnitPrice = item.qty > 0 ? (finalLineTotal / item.qty) : item.price;
-                      const taxableVal = Math.round((finalLineTotal / (1 + gstRate / 100)) * 100) / 100;
-                      const gstVal = Math.round((finalLineTotal - taxableVal) * 100) / 100;
                       const hasDiscount = prodDiscPct > 0 || lineDiscVal > 0;
 
                       return (
@@ -1146,9 +1151,15 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                             <span className="text-[13px] font-black text-slate-900 tabular-nums block">
                               ₹{formatPrice(finalLineTotal)}
                             </span>
-                            <span className="text-[9px] text-slate-400 font-medium leading-tight block">
-                              Taxable ₹{taxableVal.toFixed(2)} + ₹{gstVal.toFixed(2)} GST
-                            </span>
+                            {isGstReg && gstRate > 0 ? (
+                              <span className="text-[9px] text-slate-400 font-medium leading-tight block">
+                                Taxable ₹{taxableVal.toFixed(2)} + ₹{gstVal.toFixed(2)} GST
+                              </span>
+                            ) : (
+                              <span className="text-[9px] text-slate-400 font-medium leading-tight block">
+                                Taxable ₹{taxableVal.toFixed(2)}
+                              </span>
+                            )}
                             {hasDiscount && (
                               <span className="text-[9.5px] font-bold text-emerald-650 block mt-0.5 tabular-nums">
                                 Save ₹{formatPrice((item.price * item.qty) - finalLineTotal)}

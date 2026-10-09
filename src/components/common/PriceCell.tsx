@@ -10,13 +10,14 @@ export interface PriceCellProps {
   className?: string;
   size?: 'sm' | 'md' | 'lg';
   showSavingsBadge?: boolean;
+  isGstRegistered?: boolean;
 }
 
 /**
  * Universal Price Cell Component conforming strictly to Section 6 of Specification:
- * - ₹15.75                ← inclusive, bold, 15px
- * - ₹15.00 + ₹0.75 GST 5% ← split, 10.5px grey
- * - MRP ₹20.00            ← struck through, only when final < mrp
+ * - ₹177.00               ← Total / Final Price (bold)
+ * - ₹150.00 + ₹27.00 GST 18% ← Split (base + GST when GST registered)
+ * - MRP ₹200.00           ← struck through, only when final < mrp
  * - "— / Set on purchase" when no price exists
  */
 export const PriceCell: React.FC<PriceCellProps> = ({
@@ -28,6 +29,7 @@ export const PriceCell: React.FC<PriceCellProps> = ({
   className = '',
   size = 'md',
   showSavingsBadge = true,
+  isGstRegistered,
 }) => {
   const numSellingPrice = sellingPrice !== undefined && sellingPrice !== null && sellingPrice !== ''
     ? Number(sellingPrice)
@@ -51,12 +53,13 @@ export const PriceCell: React.FC<PriceCellProps> = ({
     );
   }
 
-  const { finalPrice, tax, offMrpPercent, customerSaving, isOfferExpired } = calculateProductEffectivePrice({
+  const { finalPrice, tax, offMrpPercent, customerSaving, isOfferExpired, isGstRegistered: isReg } = calculateProductEffectivePrice({
     sellingPrice: numSellingPrice,
     mrp: numMrp,
     gstRate: cleanGstRate,
     discountPercent: cleanDiscount,
     offerValidUntil,
+    isGstRegistered,
   });
 
   const isDiscountApplied = cleanDiscount > 0 && !isOfferExpired;
@@ -70,7 +73,7 @@ export const PriceCell: React.FC<PriceCellProps> = ({
 
   return (
     <div className={`flex flex-col leading-tight ${className}`}>
-      {/* Inclusive Final Price + Strikethrough MRP */}
+      {/* Final Price + Strikethrough MRP */}
       <div className="flex items-baseline gap-1.5 flex-wrap">
         <span className={`${fontSizes.main} font-bold text-slate-900 tabular-nums`}>
           ₹{formatINR(finalPrice)}
@@ -82,12 +85,14 @@ export const PriceCell: React.FC<PriceCellProps> = ({
         )}
       </div>
 
-      {/* Tax Split: Base Taxable + GST */}
-      <div className={`${fontSizes.split} text-slate-500 font-medium mt-0.5 tabular-nums flex items-center gap-1`}>
-        <span>
-          ₹{formatINR(tax.taxableValue)} + ₹{formatINR(tax.gstAmount)} GST {cleanGstRate}%
-        </span>
-      </div>
+      {/* Tax Split: Base + GST (Only shown when shop is GST registered & GST > 0) */}
+      {isReg && cleanGstRate > 0 && (
+        <div className={`${fontSizes.split} text-slate-500 font-medium mt-0.5 tabular-nums flex items-center gap-1`}>
+          <span>
+            ₹{formatINR(tax.taxableValue)} + ₹{formatINR(tax.gstAmount)} GST {cleanGstRate}%
+          </span>
+        </div>
+      )}
 
       {/* Optional Savings / Discount Badge */}
       {showSavingsBadge && (hasMrpSaving || isDiscountApplied) && (

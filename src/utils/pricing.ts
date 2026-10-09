@@ -79,6 +79,31 @@ export interface BillTotals {
   hasMrpSavings: boolean;
 }
 
+export function isShopGstRegistered(): boolean {
+  try {
+    const rawSetting = localStorage.getItem("purchaseSettings");
+    if (rawSetting) {
+      const parsed = JSON.parse(rawSetting);
+      if (parsed.gstType === "registered") return true;
+      if (parsed.gstType === "non-registered") return false;
+    }
+    const shopGstFlag = localStorage.getItem("shop_gst_registered");
+    if (shopGstFlag === "true") return true;
+    if (shopGstFlag === "false") return false;
+
+    const shopData = localStorage.getItem("shop_data");
+    if (shopData) {
+      const parsedShop = JSON.parse(shopData);
+      if (parsedShop?.business_infos?.gst_infos?.registered !== undefined) {
+        return !!parsedShop.business_infos.gst_infos.registered;
+      }
+    }
+  } catch {
+    // fallback
+  }
+  return true;
+}
+
 // ----------------------------------------------------------------------------
 // 2.1 Extracting GST from an inclusive price
 // Rule 1: taxable = inclusive / (1 + gstRate / 100), gst = inclusive - taxable
@@ -119,10 +144,14 @@ export function calculateTaxSplit(inclusivePrice: number, gstRate: number): TaxS
 // ----------------------------------------------------------------------------
 // 2.2 Product Level Effective Price, Discount & Margin
 // Rule 2 & 3: Discount reduces selling price (not MRP).
+// If shop is GST registered, entered sellingPrice is exclusive of GST (base + GST).
+// If shop is non-registered, entered sellingPrice is flat (0% GST).
 // ----------------------------------------------------------------------------
-export function calculateProductEffectivePrice(input: ProductPricingInfo) {
+export function calculateProductEffectivePrice(input: ProductPricingInfo & { isGstRegistered?: boolean }) {
   const sellingPrice = Math.max(0, Number(input.sellingPrice) || 0);
-  const gstRate = Math.max(0, Number(input.gstRate) || 0);
+  const isGstReg = input.isGstRegistered !== undefined ? input.isGstRegistered : isShopGstRegistered();
+  const rawGstRate = Math.max(0, Number(input.gstRate) || 0);
+  const gstRate = isGstReg ? rawGstRate : 0;
   const mrp = input.mrp !== null && input.mrp !== undefined && Number(input.mrp) > 0 ? Number(input.mrp) : null;
 
   // Check offer validity
@@ -137,9 +166,28 @@ export function calculateProductEffectivePrice(input: ProductPricingInfo) {
 
   const discountPercent = !isOfferExpired && input.discountPercent ? Math.max(0, Math.min(99.99, Number(input.discountPercent))) : 0;
   const discountAmount = Math.round((sellingPrice * discountPercent / 100) * 100) / 100;
-  const finalPrice = Math.round((sellingPrice - discountAmount) * 100) / 100;
+  const discountedBase = Math.round((sellingPrice - discountAmount) * 100) / 100;
 
-  const tax = calculateTaxSplit(finalPrice, gstRate);
+  let taxableValue = discountedBase;
+  let gstAmount = 0;
+  let finalPrice = discountedBase;
+
+  if (isGstReg && gstRate > 0) {
+    gstAmount = Math.round((taxableValue * gstRate / 100) * 100) / 100;
+    finalPrice = Math.round((taxableValue + gstAmount) * 100) / 100;
+  }
+
+  const cgst = Math.round((gstAmount / 2) * 100) / 100;
+  const sgst = Math.round((gstAmount - cgst) * 100) / 100;
+
+  const tax: TaxSplit = {
+    inclusivePrice: finalPrice,
+    taxableValue,
+    gstAmount,
+    cgst,
+    sgst,
+    gstRate,
+  };
 
   // MRP Savings
   let customerSaving = 0;
@@ -149,11 +197,11 @@ export function calculateProductEffectivePrice(input: ProductPricingInfo) {
     offMrpPercent = Math.round(((mrp - finalPrice) / mrp * 100) * 10) / 10;
   }
 
-  // Profit = taxable_value_of_final_price - cost_at_sale (GST is excluded from profit)
+  // Profit calculation:
   const costPrice = input.costPrice !== undefined && input.costPrice !== null ? Number(input.costPrice) : undefined;
-  const profit = costPrice !== undefined ? Math.round((tax.taxableValue - costPrice) * 100) / 100 : undefined;
-  const marginPercent = costPrice !== undefined && tax.taxableValue > 0
-    ? Math.round(((tax.taxableValue - costPrice) / tax.taxableValue * 100) * 10) / 10
+  const profit = costPrice !== undefined ? Math.round((finalPrice - costPrice) * 100) / 100 : undefined;
+  const marginPercent = costPrice !== undefined && finalPrice > 0
+    ? Math.round(((finalPrice - costPrice) / finalPrice * 100) * 10) / 10
     : undefined;
 
   return {
@@ -169,6 +217,7 @@ export function calculateProductEffectivePrice(input: ProductPricingInfo) {
     offMrpPercent,
     profit,
     marginPercent,
+    isGstRegistered: isGstReg,
   };
 }
 
@@ -177,8 +226,11 @@ export function calculateProductEffectivePrice(input: ProductPricingInfo) {
 // ----------------------------------------------------------------------------
 export function calculateBillTotals(
   lines: BillLineInput[],
-  billDiscount: { mode: '%' | '₹'; value: number } = { mode: '%', value: 0 }
+  billDiscount: { mode: '%' | '₹'; value: number } = { mode: '%', value: 0 },
+  options?: { isGstRegistered?: boolean }
 ): BillTotals {
+  const isGstReg = options?.isGstRegistered !== undefined ? options.isGstRegistered : isShopGstRegistered();
+
   let totalQty = 0;
   let baseSubtotal = 0;
   let productDiscountTotal = 0;
@@ -253,19 +305,29 @@ export function calculateBillTotals(
       }
     }
 
-    const finalInclusive = Math.max(0, Math.round((line.lineInclusive - billDiscountShare) * 100) / 100);
+    const taxableValue = Math.max(0, Math.round((line.lineInclusive - billDiscountShare) * 100) / 100);
+    const rawGstRate = Math.max(0, Number(line.gstRate) || 0);
+    const gstRate = isGstReg ? rawGstRate : 0;
+    let gstAmount = 0;
+    let finalInclusive = taxableValue;
 
-    // STEP 4 — Tax extraction per line
-    const tax = calculateTaxSplit(finalInclusive, line.gstRate);
+    if (isGstReg && gstRate > 0) {
+      gstAmount = Math.round((taxableValue * (gstRate / 100)) * 100) / 100;
+      finalInclusive = Math.round((taxableValue + gstAmount) * 100) / 100;
+    }
+
+    const cgst = Math.round((gstAmount / 2) * 100) / 100;
+    const sgst = Math.round((gstAmount - cgst) * 100) / 100;
 
     return {
       ...line,
       billDiscountShare,
       finalInclusive,
-      taxableValue: tax.taxableValue,
-      gstAmount: tax.gstAmount,
-      cgst: tax.cgst,
-      sgst: tax.sgst,
+      taxableValue,
+      gstRate,
+      gstAmount,
+      cgst,
+      sgst,
     };
   });
 
@@ -280,19 +342,21 @@ export function calculateBillTotals(
   const taxGroupMap: Record<number, TaxSummaryGroup> = {};
   finalizedLines.forEach(l => {
     const rate = l.gstRate;
-    if (!taxGroupMap[rate]) {
-      taxGroupMap[rate] = {
-        gstRate: rate,
-        taxableValue: 0,
-        cgst: 0,
-        sgst: 0,
-        totalTax: 0,
-      };
+    if (rate > 0) {
+      if (!taxGroupMap[rate]) {
+        taxGroupMap[rate] = {
+          gstRate: rate,
+          taxableValue: 0,
+          cgst: 0,
+          sgst: 0,
+          totalTax: 0,
+        };
+      }
+      taxGroupMap[rate].taxableValue += l.taxableValue;
+      taxGroupMap[rate].cgst += l.cgst;
+      taxGroupMap[rate].sgst += l.sgst;
+      taxGroupMap[rate].totalTax += l.gstAmount;
     }
-    taxGroupMap[rate].taxableValue += l.taxableValue;
-    taxGroupMap[rate].cgst += l.cgst;
-    taxGroupMap[rate].sgst += l.sgst;
-    taxGroupMap[rate].totalTax += l.gstAmount;
   });
 
   const taxGroups = Object.values(taxGroupMap)
@@ -306,7 +370,7 @@ export function calculateBillTotals(
     }));
 
   // Customer Savings Calculation:
-  // saving = sum(mrp * qty for lines with MRP) + sum(base for lines without) - payable
+  // saving = sum(mrp * qty for lines with MRP) + sum(finalInclusive for lines without) - payable
   let totalMrpOrBase = 0;
   let hasAnyMrp = false;
   finalizedLines.forEach(l => {
@@ -314,7 +378,7 @@ export function calculateBillTotals(
       totalMrpOrBase += l.mrp * l.qty;
       hasAnyMrp = true;
     } else {
-      totalMrpOrBase += l.base;
+      totalMrpOrBase += l.finalInclusive;
     }
   });
 

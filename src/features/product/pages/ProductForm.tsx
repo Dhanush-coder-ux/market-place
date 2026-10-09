@@ -29,7 +29,7 @@ import {
   VariantMatrixTable,
   generateCombinations,
 } from "../components/VariantManager";
-import { calculateProductEffectivePrice, formatINR } from "@/utils/pricing";
+import { calculateProductEffectivePrice, formatINR, isShopGstRegistered } from "@/utils/pricing";
 
 /* ─── TYPES ─────────────────────────────────────────────────────────── */
 
@@ -583,6 +583,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   const { setBottomActions, setBreadcrumbOverride } = useHeader();
 
   // ─── Discount & GST Split Engine calculations ──────────────────────────────
+  const isGstReg = isShopGstRegistered();
   const gstRateNum = parseFloat(String(form.gst || "18").replace(/[^0-9.]/g, '')) || 0;
   const numSellingPrice = form.selling_price ? Number(form.selling_price) : 0;
   const numMrp = form.mrp ? Number(form.mrp) : 0;
@@ -596,10 +597,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         gstRate: gstRateNum,
         discountPercent: numDiscount,
         offerValidUntil: form.offer_valid_until || null,
+        isGstRegistered: isGstReg,
       });
     }
     return null;
-  }, [numSellingPrice, numMrp, gstRateNum, numDiscount, form.offer_valid_until]);
+  }, [numSellingPrice, numMrp, gstRateNum, numDiscount, form.offer_valid_until, isGstReg]);
 
   const pricingHelperState = useMemo(() => {
     const hasMrp = numMrp > 0;
@@ -1558,7 +1560,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         tooltip="Maximum Retail Price printed on the pack."
                       />
                       <InputField
-                        label="Selling price (incl. GST)"
+                        label={isGstReg ? "Selling price (excl. GST)" : "Selling price"}
                         name="selling_price"
                         hint="optional — set from purchase"
                         type="number"
@@ -1566,7 +1568,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         onChange={handleChange}
                         placeholder="0.00"
                         leftEl={<IndianRupee size={13} />}
-                        tooltip="Selling price inclusive of GST."
+                        tooltip={isGstReg ? "Selling price exclusive of GST (GST will be added on top)." : "Selling price of the product."}
                       />
                       <InputField
                         label="Discount (%)"
@@ -1619,11 +1621,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
 
                     {/* Live GST Split & Dynamic Field State Helper */}
                     <div className="space-y-2 pt-1">
-                      {priceCalc && (
+                      {priceCalc && isGstReg && gstRateNum > 0 && (
                         <div className="p-3 bg-emerald-50/80 border border-emerald-200/80 rounded-xl flex items-center justify-between text-xs text-emerald-900 font-medium shadow-xs">
                           <span className="flex items-center gap-2">
                             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                            <strong>Live GST split:</strong> Splits as ₹{formatINR(priceCalc.tax.taxableValue)} taxable + ₹{formatINR(priceCalc.tax.gstAmount)} GST {gstRateNum}% = ₹{formatINR(numSellingPrice)}
+                            <strong>Live GST split:</strong> ₹{formatINR(priceCalc.tax.taxableValue)} base + ₹{formatINR(priceCalc.tax.gstAmount)} GST {gstRateNum}% = ₹{formatINR(priceCalc.finalPrice)}
                           </span>
                           {priceCalc.customerSaving > 0 && (
                             <span className="text-emerald-700 font-bold bg-emerald-100/70 px-2 py-0.5 rounded-md text-[11px]">
@@ -1665,7 +1667,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         tooltip="Maximum Retail Price."
                       />
                       <InputField
-                        label="Selling price (incl. GST)"
+                        label={isGstReg ? "Selling price (excl. GST)" : "Selling price"}
                         name="selling_price"
                         required
                         type="number"
@@ -1673,7 +1675,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         onChange={handleChange}
                         placeholder="0.00"
                         leftEl={<IndianRupee size={13} />}
-                        tooltip="Selling price inclusive of GST."
+                        tooltip={isGstReg ? "Selling price exclusive of GST." : "Selling price."}
                       />
                       <InputField
                         label="Discount (%)"
@@ -1703,7 +1705,15 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                     {priceCalc && (
                       <div className="p-3 bg-emerald-50/80 border border-emerald-200/80 rounded-xl flex items-center justify-between text-xs text-emerald-900 font-medium">
                         <span>
-                          <strong>Live GST split:</strong> Splits as ₹{formatINR(priceCalc.tax.taxableValue)} taxable + ₹{formatINR(priceCalc.tax.gstAmount)} GST {gstRateNum}% = ₹{formatINR(numSellingPrice)}
+                          {isGstReg && gstRateNum > 0 ? (
+                            <>
+                              <strong>Live GST split:</strong> ₹{formatINR(priceCalc.tax.taxableValue)} base + ₹{formatINR(priceCalc.tax.gstAmount)} GST {gstRateNum}% = ₹{formatINR(priceCalc.finalPrice)}
+                            </>
+                          ) : (
+                            <>
+                              <strong>Selling price:</strong> ₹{formatINR(priceCalc.finalPrice)}
+                            </>
+                          )}
                         </span>
                         {priceCalc.profit !== undefined && (
                           <span className="text-emerald-700 font-bold">

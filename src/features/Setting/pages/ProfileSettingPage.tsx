@@ -103,7 +103,7 @@ export const ProfileSettingsPage = () => {
       setActiveTab(tabParam);
     }
   }, [searchParams]);
-  const { settings, toggleSetting, setGstType } = usePurchaseSettings();
+  const { settings, setGstType } = usePurchaseSettings();
   const { showToast } = useToast();
   const [gstNumber, setGstNumber] = useState<string>("");
 
@@ -239,23 +239,22 @@ export const ProfileSettingsPage = () => {
                 <Switch checked={false} disabled />
               </div>
 
-              {/* Active row */}
-              <div className="flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-white hover:border-slate-200 hover:shadow-sm transition-all">
+              {/* Production Entry row - Soon */}
+              <div className="flex items-center justify-between p-4 rounded-xl border border-dashed border-slate-200 bg-slate-50/50">
                 <div className="space-y-0.5 pr-4">
-                  <span
-                    className="text-sm font-semibold text-slate-800 cursor-pointer"
-                    onClick={() => toggleSetting("productionEntry")}
-                  >
-                    Production Entry
-                  </span>
-                  <p className="text-xs text-slate-500">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-slate-400">
+                      Production Entry
+                    </span>
+                    <span className="px-2 py-0.5 text-[9px] font-black text-amber-600 bg-amber-50 border border-amber-200 rounded-full uppercase tracking-widest">
+                      Soon
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400">
                     Internal production entry and manufacturing item consumption.
                   </p>
                 </div>
-                <Switch
-                  checked={settings.productionEntry}
-                  onCheckedChange={() => toggleSetting("productionEntry")}
-                />
+                <Switch checked={false} disabled />
               </div>
             </div>
           </div>

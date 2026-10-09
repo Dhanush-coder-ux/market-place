@@ -831,12 +831,12 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
 
                         return (
                           <>
-                            <p className="text-[13px] font-bold text-slate-800">
+                            <p className="text-[13px] font-bold text-slate-800 flex items-baseline gap-1">
                               ₹{totalPrice.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </p>
                             {gstRate > 0 && (
                               <p className="text-[9px] text-slate-400 font-medium leading-none mt-0.5">
-                                Base: ₹{basePrice.toFixed(2)} (+ ₹{gstAmt.toFixed(2)} GST)
+                                ₹{basePrice.toFixed(2)} + ₹{gstAmt.toFixed(2)} GST
                               </p>
                             )}
                           </>

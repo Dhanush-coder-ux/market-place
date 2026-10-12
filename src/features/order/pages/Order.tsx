@@ -5,7 +5,7 @@ import {
 import OrdersHeader from "../components/OrdersHeader";
 import OrdersCard from "../components/OrdersCard";
 import Drawer from "@/components/common/Drawer";
-import OrderDetailView from "../components/OrdersDetailView";
+import OrderDetailView, { type OrderDetailType, type OrderItem } from "../components/OrdersDetailView";
 import { DateFilter } from "../components/DateFilter";
 import SkeletonLoader from "@/components/common/SkeletonLoader";
 import { useApi } from "@/context/ApiContext";
@@ -24,11 +24,22 @@ const toCardShape = (o: OrderRecord, customerMap?: Record<string, { name: string
   const calcObj = anyOrder.calculation_infos || {};
   const dataObj = anyOrder.datas || {};
   const itemObj = anyOrder.item_infos || {};
+  const chargesObj = anyOrder.charges_infos || {};
 
   const name = onlineObj.name || onlineObj.customer_name || anyOrder.customer_name || anyOrder.user_name || o.customer_name || custObj.customer_name || custObj.name || addObj.customer_name || addObj.name || dataObj.customer_name || dataObj.name || c?.name || "Customer";
   const phone = onlineObj.phone || onlineObj.customer_phone || anyOrder.customer_phone || anyOrder.customer_number || o.customer_number || custObj.mobile_number || custObj.phone || addObj.customer_phone || addObj.phone || dataObj.phone || dataObj.customer_phone || c?.phone || "—";
   
-  const rawTotal = calcObj.total ?? calcObj.grand_total ?? calcObj.sub_total ?? o.total_amount ?? o.total ?? anyOrder.total_order_value ?? dataObj.total_amount ?? itemObj.total_order_amount ?? o.pending_amount ?? 0;
+  let rawTotal = calcObj.total ?? calcObj.grand_total ?? o.total_amount ?? o.total ?? anyOrder.total_order_value ?? dataObj.total_amount;
+  if (rawTotal === undefined || rawTotal === null || Number(rawTotal) === 0) {
+    if (itemObj.total_order_amount !== undefined) {
+      const base = Number(itemObj.total_order_amount) || 0;
+      const gst = Number(itemObj.total_order_gst_amount) || 0;
+      const delivery = Number(chargesObj.delivery_charge ?? chargesObj.delivery_charges ?? chargesObj.delivery_fee ?? 0) || 0;
+      rawTotal = base + gst + delivery;
+    } else {
+      rawTotal = calcObj.sub_total ?? itemObj.total_order_amount ?? o.pending_amount ?? 0;
+    }
+  }
   const totalAmount = Number(Number(rawTotal).toFixed(2));
 
   return {
@@ -44,6 +55,201 @@ const toCardShape = (o: OrderRecord, customerMap?: Record<string, { name: string
   };
 };
 
+const parseOrderForDetail = (
+  rawOrder: any,
+  fallbackCardOrder?: OrderRecord,
+  customerMap?: Record<string, { name: string; phone: string }>
+): OrderDetailType => {
+  const o = rawOrder || fallbackCardOrder || {};
+  const cardShape = fallbackCardOrder ? toCardShape(fallbackCardOrder, customerMap) : toCardShape(o, customerMap);
+
+  const calc = o.calculation_infos || o.calculations || {};
+  const itemInfos = o.item_infos || {};
+  const addInfos = o.additional_infos || {};
+  const charges = o.charges_infos || {};
+  const dataObj = o.datas || {};
+
+  // Extract items from fullOrder.items or calculation_infos.items or fallback
+  const rawItems: any[] = Array.isArray(o.items) && o.items.length > 0 
+    ? o.items 
+    : (Array.isArray(calc.items) ? calc.items : []);
+
+  const calcItemsList: any[] = Array.isArray(calc.items) ? calc.items : [];
+
+  const mappedItems: OrderItem[] = rawItems.map((i: any, index: number) => {
+    // Attempt to match with calcItems if needed
+    const calcItem = calcItemsList.find(
+      (ci: any) =>
+        (ci.product_id && (ci.product_id === i.product_id || ci.product_id === i.id)) ||
+        (ci.inventoryId && ci.inventoryId === i.product_id)
+    ) || (calcItemsList.length > index && !calcItemsList[index].product_id ? calcItemsList[index] : null);
+
+    let itemName =
+      i.product_name ||
+      i.name ||
+      calcItem?.name ||
+      i.datas?.product_name ||
+      i.additional_infos?.product_name ||
+      i.additional_infos?.name ||
+      (i.product_id ? `Item ${String(i.product_id).slice(-4)}` : `Item #${index + 1}`);
+
+    const varName =
+      i.variant_infos?.variant_name ||
+      i.variant_info?.variant_name ||
+      i.variant_name ||
+      calcItem?.variant_name;
+    if (varName) {
+      itemName += ` (${varName})`;
+    }
+
+    const qty = Number(i.quantity ?? i.qty ?? calcItem?.qty ?? i.entered_qty ?? 1) || 1;
+    const price = Number(i.sell_price ?? i.unit_price ?? i.price ?? calcItem?.price ?? 0);
+    const lineTotal = Number(
+      i.total_amount ??
+      i.line_total ??
+      calcItem?.final_inclusive ??
+      calcItem?.taxable_value ??
+      (price * qty)
+    );
+
+    // GST rate resolution
+    let gstRate = 0;
+    if (calcItem?.gst_rate !== undefined && !isNaN(Number(calcItem.gst_rate))) {
+      gstRate = Number(calcItem.gst_rate);
+    } else if (i.gstRate !== undefined && !isNaN(Number(i.gstRate))) {
+      gstRate = Number(i.gstRate);
+    } else if (i.gst !== undefined && i.gst !== null) {
+      if (typeof i.gst === "number") {
+        gstRate = i.gst <= 1 && i.gst > 0 ? Number((i.gst * 100).toFixed(2)) : i.gst;
+      } else if (typeof i.gst === "string") {
+        const parsed = parseFloat(i.gst.replace("%", "").trim());
+        gstRate = isNaN(parsed) ? 0 : parsed;
+      }
+    }
+
+    // GST amount resolution
+    let gstAmount = 0;
+    if (calcItem?.gst_amount !== undefined && !isNaN(Number(calcItem.gst_amount))) {
+      gstAmount = Number(calcItem.gst_amount);
+    } else if (i.gst_amount !== undefined && !isNaN(Number(i.gst_amount))) {
+      gstAmount = Number(i.gst_amount);
+    } else if (gstRate > 0) {
+      gstAmount = lineTotal * (gstRate / 100);
+    }
+
+    const gstLabel = gstRate > 0 ? `${gstRate}%` : (i.gst ? String(i.gst) : "0%");
+
+    return {
+      name: itemName,
+      qty,
+      price: Number(price.toFixed(2)),
+      total: Number(lineTotal.toFixed(2)),
+      gst: gstLabel,
+      gstRate,
+      gstAmount: Number(gstAmount.toFixed(2)),
+    };
+  });
+
+  // Calculate or retrieve total GST
+  const sumItemsGst = mappedItems.reduce((acc, it) => acc + (it.gstAmount || 0), 0);
+  const rawGstAmount =
+    calc.gst_amount ??
+    itemInfos.total_order_gst_amount ??
+    calc.total_tax ??
+    calc.tax_amount ??
+    addInfos.gst_amount ??
+    charges.gst_amount ??
+    (sumItemsGst > 0 ? sumItemsGst : 0);
+
+  const gstAmount = Number(Number(rawGstAmount || 0).toFixed(2));
+
+  // Determine GST percentage label
+  const positiveRates = Array.from(new Set(mappedItems.map((it) => it.gstRate).filter((r): r is number => Boolean(r && r > 0))));
+  let gstPercentLabel = "";
+  if (calc.tax_groups && typeof calc.tax_groups === "object" && Object.keys(calc.tax_groups).length > 0) {
+    gstPercentLabel = Object.keys(calc.tax_groups).map((k) => `${k}%`).join(", ");
+  } else if (positiveRates.length > 0) {
+    gstPercentLabel = positiveRates.map((r) => `${r}%`).join(", ");
+  } else if (calc.tax_rate) {
+    gstPercentLabel = `${calc.tax_rate}%`;
+  }
+
+  // CGST / SGST
+  const cgst = calc.cgst !== undefined ? Number(calc.cgst) : Number((gstAmount / 2).toFixed(2));
+  const sgst = calc.sgst !== undefined ? Number(calc.sgst) : Number((gstAmount / 2).toFixed(2));
+
+  // Delivery Charge
+  const deliveryCharge = Number(
+    (charges.delivery_charge ??
+      charges.delivery_charges ??
+      charges.delivery_fee ??
+      charges.shipping_charge ??
+      addInfos.delivery_charge ??
+      0)
+  );
+
+  // Discount
+  const discount = Number(
+    (calc.discount_amount ??
+      calc.total_discount_given ??
+      calc.discount ??
+      charges.discount ??
+      addInfos.discount_amount ??
+      0)
+  );
+
+  // Subtotal (Taxable / Base amount excl. GST)
+  const itemsSum = mappedItems.reduce((acc, it) => acc + it.total, 0);
+  const rawSubtotal =
+    calc.taxable_amount ??
+    calc.base_subtotal ??
+    calc.subtotal ??
+    calc.sub_total ??
+    itemInfos.total_order_amount ??
+    (itemsSum > 0 ? itemsSum : (o.total_amount ?? o.total_sellprice ?? cardShape.totalAmount ?? 0));
+  const subtotal = Number(Number(rawSubtotal).toFixed(2));
+
+  // Grand Total
+  let rawGrandTotal =
+    calc.grand_total ??
+    calc.total ??
+    calc.gross ??
+    o.total_sellprice ??
+    o.total_amount ??
+    dataObj.total_amount;
+
+  if (rawGrandTotal === undefined || rawGrandTotal === null || Number(rawGrandTotal) === 0) {
+    rawGrandTotal = subtotal + gstAmount + deliveryCharge - discount;
+  } else {
+    // If rawGrandTotal equals subtotal and GST was not included in it
+    const numGrand = Number(rawGrandTotal);
+    if (gstAmount > 0 && Math.abs(numGrand - subtotal) < 0.01) {
+      rawGrandTotal = subtotal + gstAmount + deliveryCharge - discount;
+    }
+  }
+
+  const grandTotal = Number(Number(rawGrandTotal).toFixed(2));
+
+  return {
+    ...cardShape,
+    orderType: o.origin || cardShape.origin || "ONLINE",
+    items: mappedItems,
+    subtotal: isNaN(subtotal) ? 0 : subtotal,
+    gstPercent: positiveRates[0] || 0,
+    gstPercentLabel,
+    gstAmount: isNaN(gstAmount) ? 0 : gstAmount,
+    cgst: isNaN(cgst) ? 0 : cgst,
+    sgst: isNaN(sgst) ? 0 : sgst,
+    deliveryCharge: isNaN(deliveryCharge) ? 0 : deliveryCharge,
+    discount: isNaN(discount) ? 0 : discount,
+    grandTotal: isNaN(grandTotal) ? 0 : grandTotal,
+    online_details:
+      (o.online_details && Object.keys(o.online_details).length > 0)
+        ? o.online_details
+        : cardShape.online_details,
+  };
+};
+
 const Order = () => {
   const { loading, error, clearError } = useApi();
   const currentShopId = getShopId() || localStorage.getItem("shop_id") || SHOP_ID || "";
@@ -55,8 +261,23 @@ const Order = () => {
   const [open, setOpen] = useState(false);
   const [dateRange, setDateRange] = useState<{ startDate: Date | null; endDate: Date | null } | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
-  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [selectedOrder, setSelectedOrder] = useState<OrderDetailType | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [statusCounts, setStatusCounts] = useState<{
+    ALL: number;
+    PENDING: number;
+    ACCEPTED: number;
+    OUT_FOR_DELIVERY: number;
+    DELIVERED: number;
+    CANCELED: number;
+  }>({
+    ALL: 0,
+    PENDING: 0,
+    ACCEPTED: 0,
+    OUT_FOR_DELIVERY: 0,
+    DELIVERED: 0,
+    CANCELED: 0,
+  });
 
   // Verify delivery state
   const [verifyingOrder, setVerifyingOrder] = useState<{ id: string; shopId?: string; billNo: string; customerName: string } | null>(null);
@@ -80,6 +301,56 @@ const Order = () => {
       .catch(console.error);
   }, [currentShopId]);
 
+  // Fetch overall counts across all statuses (independent of active status tab filter)
+  useEffect(() => {
+    if (!currentShopId) return;
+    const countParams: any = {
+      limit: "100",
+      offset: "1",
+      origin: "ONLINE",
+      online_only: true,
+      exclude_offline: true,
+    };
+    if (dateRange?.startDate) {
+      countParams.from_date = dateRange.startDate.toISOString().split("T")[0];
+    }
+    if (dateRange?.endDate) {
+      countParams.to_date = dateRange.endDate.toISOString().split("T")[0];
+    }
+
+    orderApi.getOrdersByShop(currentShopId, countParams).then((res: any) => {
+      if (res?.data) {
+        let list: OrderRecord[] = [];
+        if (Array.isArray(res.data)) {
+          list = res.data;
+        } else if (Array.isArray(res.data.datas)) {
+          list = res.data.datas;
+        } else if (Array.isArray(res.data.orders)) {
+          list = res.data.orders;
+        } else if (typeof res.data === "object") {
+          list = [res.data];
+        }
+
+        const online = list.filter((o) => {
+          const origin = (o.origin || "").toUpperCase();
+          return origin === "ONLINE" || Boolean((o as any).online_details) || Boolean((o as any).delivery_code) || Boolean((o as any).user_id) || !o.origin;
+        });
+
+        const isCanceled = (s: string) => s === "CANCELED" || s === "CANCELLED";
+
+        setStatusCounts({
+          ALL: online.length,
+          PENDING: online.filter((o) => (o.status || "").toUpperCase() === "PENDING").length,
+          ACCEPTED: online.filter((o) => (o.status || "").toUpperCase() === "ACCEPTED").length,
+          OUT_FOR_DELIVERY: online.filter((o) => (o.status || "").toUpperCase() === "OUT_FOR_DELIVERY").length,
+          DELIVERED: online.filter((o) => (o.status || "").toUpperCase() === "DELIVERED").length,
+          CANCELED: online.filter((o) => isCanceled((o.status || "").toUpperCase())).length,
+        });
+      }
+    }).catch(console.error);
+  }, [refreshKey, dateRange, currentShopId]);
+
+  // Fetch orders according to the currently active status tab & filters
   useEffect(() => {
     if (!currentShopId) return;
     const params: any = {
@@ -136,6 +407,7 @@ const Order = () => {
       const res = await orderApi.updateOrderStatus(payload);
       if (res) {
         setOrders(prev => prev.map(o => o.id === originalOrder.id ? { ...o, status: newStatus } : o));
+        setRefreshKey(k => k + 1);
       }
     } catch (e) {
       console.error("Failed to update status", e);
@@ -150,28 +422,8 @@ const Order = () => {
         const fullOrder = Array.isArray(res.data) 
           ? res.data[0] 
           : (Array.isArray(res.data.datas) ? res.data.datas[0] : res.data);
-        const mappedItems = (fullOrder.items || []).map((i: any) => {
-          let itemName = i.product_name || i.name || i.datas?.product_name || `Item ${i.product_id?.slice(-4)}`;
-          if (i.variant_infos?.variant_name) {
-            itemName += ` (${i.variant_infos.variant_name})`;
-          }
-          return {
-            name: itemName,
-            qty: i.quantity ?? i.qty ?? 1,
-            price: Number((i.unit_price ?? i.sell_price ?? 0).toFixed(2)),
-            total: Number((i.line_total ?? i.total_amount ?? ((i.unit_price ?? i.sell_price ?? 0) * (i.quantity ?? i.qty ?? 1))).toFixed(2))
-          };
-        });
-        
-        setSelectedOrder({
-          ...toCardShape(order, customerMap),
-          orderType: fullOrder.origin || "ONLINE",
-          items: mappedItems,
-          subtotal: Number(Number(fullOrder.calculation_infos?.sub_total ?? fullOrder.calculation_infos?.total ?? fullOrder.total_amount ?? order.datas?.total_amount ?? fullOrder.item_infos?.total_order_amount ?? fullOrder.pending_amount ?? 0).toFixed(2)),
-          gstPercent: 0,
-          gstAmount: Number(Number(fullOrder.calculation_infos?.total_tax || 0).toFixed(2)),
-          grandTotal: Number(Number(fullOrder.calculation_infos?.grand_total ?? fullOrder.calculation_infos?.total ?? fullOrder.total_amount ?? order.datas?.total_amount ?? fullOrder.item_infos?.total_order_amount ?? fullOrder.pending_amount ?? 0).toFixed(2)),
-        });
+
+        setSelectedOrder(parseOrderForDetail(fullOrder, order, customerMap));
         setIsOpen(true);
         return;
       }
@@ -180,15 +432,7 @@ const Order = () => {
     }
     
     // Fallback if fetch fails
-    setSelectedOrder({
-      ...toCardShape(order, customerMap),
-      orderType: order.origin || "ONLINE",
-      items: [],
-      subtotal: Number(Number(order.calculation_infos?.sub_total ?? order.calculation_infos?.total ?? order.total_amount ?? order.datas?.total_amount ?? order.item_infos?.total_order_amount ?? order.pending_amount ?? 0).toFixed(2)),
-      gstPercent: 0,
-      gstAmount: 0,
-      grandTotal: Number(Number(order.calculation_infos?.grand_total ?? order.calculation_infos?.total ?? order.total_amount ?? order.datas?.total_amount ?? order.item_infos?.total_order_amount ?? order.pending_amount ?? 0).toFixed(2)),
-    });
+    setSelectedOrder(parseOrderForDetail(order, order, customerMap));
     setIsOpen(true);
   };
 
@@ -197,11 +441,6 @@ const Order = () => {
     return origin === "ONLINE" || Boolean((o as any).online_details) || Boolean((o as any).delivery_code) || Boolean((o as any).user_id) || !o.origin;
   });
   const filteredOrders = onlineOrders;
-  const totalOrders = onlineOrders.length;
-  const pending = onlineOrders.filter((o) => (o.status || "").toUpperCase() === "PENDING").length;
-  const accepted = onlineOrders.filter((o) => (o.status || "").toUpperCase() === "ACCEPTED").length;
-  const outForDelivery = onlineOrders.filter((o) => (o.status || "").toUpperCase() === "OUT_FOR_DELIVERY").length;
-  const delivered = onlineOrders.filter((o) => (o.status || "").toUpperCase() === "DELIVERED").length;
 
   return (
     <div className="h-full overflow-y-auto bg-slate-50/60 font-sans pb-10">
@@ -223,14 +462,7 @@ const Order = () => {
           orderType=""
           setOrderType={() => { }}
           orderTypeOptions={[]}
-          counts={{
-            ALL: totalOrders,
-            PENDING: pending,
-            ACCEPTED: accepted,
-            OUT_FOR_DELIVERY: outForDelivery,
-            DELIVERED: delivered,
-            CANCELED: onlineOrders.filter((o) => (o.status || "").toUpperCase() === "CANCELED").length
-          }}
+          counts={statusCounts}
         />
 
         <div className="flex items-center justify-between pt-2">

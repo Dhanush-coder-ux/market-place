@@ -3,8 +3,8 @@ import { createPortal } from "react-dom";
 import {
   Package, Save, Pencil, Trash2, Cpu, AlertCircle, Layers, Zap,
   Plus, Info, ImagePlus, X, UploadCloud,
-  BarChart3, Check, Settings2, FileText,
-  IndianRupee, Barcode,
+  BarChart3, Check, FileText,
+  IndianRupee, Barcode, Boxes, ScanLine, SlidersHorizontal,
 } from "lucide-react";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { useApi } from "@/context/ApiContext";
@@ -1518,31 +1518,128 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
               )}
             </div>
 
-            {/* SECTION 3: INVENTORY & STOCK */}
+            {/* SECTION 3: PRODUCT TRACKING (Only tracking enables) */}
+            <SectionCard
+              icon={<SlidersHorizontal size={17} className="text-indigo-600" />}
+              iconBg="bg-indigo-50"
+              title="Product tracking"
+              subtitle="Configure tracking methods — stock quantity, batch numbers, and serial / IMEI codes"
+              extra={
+                <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full flex items-center gap-1.5">
+                  <span className={`w-1.5 h-1.5 rounded-full ${[form.track_stock, form.batch_tracking, form.serial_tracking].filter(Boolean).length > 0 ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`} />
+                  {[form.track_stock, form.batch_tracking, form.serial_tracking].filter(Boolean).length} of 3 active
+                </span>
+              }
+            >
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* 1. Stock tracking */}
+                <div className={`p-4 rounded-xl border transition-all duration-200 flex flex-col justify-between ${
+                  form.track_stock
+                    ? "bg-blue-50/40 border-blue-200 shadow-xs"
+                    : "bg-slate-50/50 border-slate-200 hover:border-slate-300"
+                }`}>
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors ${
+                        form.track_stock ? "bg-blue-600 text-white shadow-xs" : "bg-slate-100 text-slate-400"
+                      }`}>
+                        <Boxes size={18} />
+                      </div>
+                      <Switch
+                        checked={form.track_stock}
+                        onCheckedChange={(val) => setForm(p => ({ ...p, track_stock: val }))}
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <h3 className="text-xs font-bold text-slate-800">Stock tracking</h3>
+                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md ${
+                        form.track_stock ? "bg-blue-100/80 text-blue-700" : "bg-slate-200/70 text-slate-600"
+                      }`}>
+                        {form.track_stock ? "Stocked" : "Made-to-order"}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 leading-relaxed">
+                      Track inventory quantity automatically from purchases. Turn OFF for made-to-order or prepared items.
+                    </p>
+                  </div>
+                </div>
+
+                {/* 2. Batch tracking */}
+                <div className={`p-4 rounded-xl border transition-all duration-200 flex flex-col justify-between ${
+                  form.batch_tracking
+                    ? "bg-amber-50/40 border-amber-200 shadow-xs"
+                    : "bg-slate-50/50 border-slate-200 hover:border-slate-300"
+                }`}>
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors ${
+                        form.batch_tracking ? "bg-amber-600 text-white shadow-xs" : "bg-slate-100 text-slate-400"
+                      }`}>
+                        <Layers size={18} />
+                      </div>
+                      <Switch
+                        checked={form.batch_tracking}
+                        onCheckedChange={(val) => setForm(p => ({ ...p, batch_tracking: val }))}
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <h3 className="text-xs font-bold text-slate-800">Batch tracking</h3>
+                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md ${
+                        form.batch_tracking ? "bg-amber-100/80 text-amber-700" : "bg-slate-200/70 text-slate-600"
+                      }`}>
+                        {form.batch_tracking ? "Active" : "Off"}
+                      </span>
+                      {!id && <span className="px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-700 text-[9px] font-bold">Purchase</span>}
+                    </div>
+                    <p className="text-[11px] text-slate-500 leading-relaxed">
+                      Track lot/batch numbers, manufacturing dates, and expiration dates per purchase batch.
+                    </p>
+                  </div>
+                </div>
+
+                {/* 3. Serial tracking */}
+                <div className={`p-4 rounded-xl border transition-all duration-200 flex flex-col justify-between ${
+                  form.serial_tracking
+                    ? "bg-violet-50/40 border-violet-200 shadow-xs"
+                    : "bg-slate-50/50 border-slate-200 hover:border-slate-300"
+                }`}>
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors ${
+                        form.serial_tracking ? "bg-violet-600 text-white shadow-xs" : "bg-slate-100 text-slate-400"
+                      }`}>
+                        <ScanLine size={18} />
+                      </div>
+                      <Switch
+                        checked={form.serial_tracking}
+                        onCheckedChange={(val) => setForm(p => ({ ...p, serial_tracking: val }))}
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <h3 className="text-xs font-bold text-slate-800">Serial tracking</h3>
+                      <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md ${
+                        form.serial_tracking ? "bg-violet-100/80 text-violet-700" : "bg-slate-200/70 text-slate-600"
+                      }`}>
+                        {form.serial_tracking ? "Active" : "Off"}
+                      </span>
+                      {!id && <span className="px-1.5 py-0.5 rounded-md bg-violet-100 text-violet-700 text-[9px] font-bold">Unique</span>}
+                    </div>
+                    <p className="text-[11px] text-slate-500 leading-relaxed">
+                      Track unique serial numbers or IMEI codes for each individual unit sold and received.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </SectionCard>
+
+            {/* SECTION 4: PRICING & STOCK */}
             <SectionCard
               icon={<BarChart3 size={17} className="text-blue-600" />}
               iconBg="bg-blue-50"
-              title="Inventory & stock"
-              subtitle="How this product is tracked"
+              title="Pricing & stock"
+              subtitle={form.track_stock ? "Set product pricing, reorder point, and storage location" : "Set prices and recipe cost for made-to-order item"}
             >
               <div className="space-y-5">
-                {/* Track stock toggle card */}
-                <div className="flex items-start gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
-                  <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center shrink-0 mt-0.5">
-                    <Settings2 size={16} className="text-white" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-slate-800">Track stock for this product</p>
-                    <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
-                      Keep this ON for stocked goods — their price comes from your purchases. Turn OFF for made-to-order items like juices, chai, or chaat.
-                    </p>
-                  </div>
-                  <Switch
-                    checked={form.track_stock}
-                    onCheckedChange={(val) => setForm(p => ({ ...p, track_stock: val }))}
-                  />
-                </div>
-
                 {/* Conditional panel */}
                 {form.track_stock ? (
                   /* STOCKED MODE */
@@ -1729,36 +1826,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                     </p>
                   </div>
                 )}
-
-                {/* Batch & Serial tracking & Visibility */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t border-slate-100">
-                  <div className="flex items-start gap-3 p-4 rounded-xl border border-slate-200 bg-white">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <h3 className="text-[12px] font-bold text-slate-700">Batch tracking</h3>
-                        {!id && <span className="px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-700 text-[9px] font-bold">Purchase</span>}
-                      </div>
-                      <p className="text-[10px] text-slate-400 leading-relaxed">Track manufacturing &amp; expiry dates per batch.</p>
-                    </div>
-                    <Switch checked={form.batch_tracking} onCheckedChange={(val) => setForm(p => ({ ...p, batch_tracking: val }))} />
-                  </div>
-                  <div className="flex items-start gap-3 p-4 rounded-xl border border-slate-200 bg-white">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <h3 className="text-[12px] font-bold text-slate-700">Serial tracking</h3>
-                        {!id && <span className="px-1.5 py-0.5 rounded-md bg-violet-100 text-violet-700 text-[9px] font-bold">Unique</span>}
-                      </div>
-                      <p className="text-[10px] text-slate-400 leading-relaxed">Track unique ID for each individual unit.</p>
-                    </div>
-                    <Switch checked={form.serial_tracking} onCheckedChange={(val) => setForm(p => ({ ...p, serial_tracking: val }))} />
-                  </div>
-                </div>
-
-
               </div>
             </SectionCard>
 
-            {/* SECTION 4: TAX & IDENTIFIERS */}
+            {/* SECTION 5: TAX & IDENTIFIERS */}
             <SectionCard
               icon={<FileText size={17} className="text-amber-600" />}
               iconBg="bg-amber-50"
@@ -1830,7 +1901,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
               </div>
             </SectionCard>
 
-            {/* SECTION 5: CUSTOM FIELDS */}
+            {/* SECTION 6: CUSTOM FIELDS */}
             <SectionCard
               icon={<Layers size={17} className="text-[#286038]" />}
               iconBg="bg-[#286038]/10"

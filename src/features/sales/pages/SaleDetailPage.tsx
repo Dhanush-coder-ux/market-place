@@ -7,7 +7,12 @@ import {
   Database,
   Search,
   Layers,
-  CreditCard
+  CreditCard,
+  MapPin,
+  Mail,
+  Fingerprint,
+  Globe,
+  Store
 } from "lucide-react";
 
 import { useApi } from "@/context/ApiContext";
@@ -18,6 +23,7 @@ import { DetailItem, InfoRow, ProfileHeaderCard, SectionCard } from "@/component
 import { AntBadge } from "@/components/ui/AntBadge";
 import { OrderResponse } from "@/features/order/types";
 import SkeletonLoader from "@/components/common/SkeletonLoader";
+import { extractSaleCustomerInfo } from "../type";
 
 /* ── helpers ── */
 const fmt = (n?: number) => {
@@ -327,7 +333,7 @@ const SaleDetailPage: React.FC = () => {
   const { setBottomActions } = useHeader();
 
   const [sale, setSale] = useState<OrderResponse | null>(location.state?.sale || null);
-  const [customerMap, setCustomerMap] = useState<Record<string, string>>(location.state?.customerMap || {});
+  const [customerMap, setCustomerMap] = useState<Record<string, any>>(location.state?.customerMap || {});
   const [productMap, setProductMap] = useState<Record<string, string>>(location.state?.productMap || {});
   const [loading, setLoading] = useState(!sale);
   const [activeTab, setActiveTab] = useState(0);
@@ -375,8 +381,9 @@ const SaleDetailPage: React.FC = () => {
     try {
       const custRes = await api.getData(`${ENDPOINTS.CUSTOMERS}/by/shop/${SHOP_ID}`);
       if (custRes?.data) {
-        const m: Record<string, string> = {};
-        custRes.data.forEach((c: any) => { m[c.id] = c.name; });
+        const m: Record<string, any> = {};
+        const custList = Array.isArray(custRes.data) ? custRes.data : (custRes.data.datas || custRes.data.items || []);
+        custList.forEach((c: any) => { m[c.id] = c; });
         setCustomerMap(m);
       }
     } catch (err) {
@@ -428,8 +435,8 @@ const SaleDetailPage: React.FC = () => {
 
   const items = generateItems(sale, productMap);
   const canReturn = sale.status === "Completed" && sale.origin !== "Sales Return";
-  const customerName = (sale as any).additional_infos?.customer_name || (sale as any).datas?.customer_name || sale.customer?.customer_name || customerMap[sale.customer_id] || "Walk-in Customer";
-  const customerMobile = (sale as any).additional_infos?.customer_phone || sale.customer?.customer_mobile_number || "";
+  const customerInfo = extractSaleCustomerInfo(sale, customerMap);
+  const customerName = customerInfo.name;
   const saleDateVal = sale.created_at || (sale as any).date || (sale as any).order_date;
   const dateStr = saleDateVal ? fmtDate(saleDateVal) : "N/A";
   const timeStr = saleDateVal ? fmtTime(saleDateVal) : "";
@@ -585,12 +592,23 @@ const SaleDetailPage: React.FC = () => {
           initials="ORD"
           subText={`Order ID: ${sale.ui_id || sale.id?.slice(0, 8).toUpperCase()}`}
           badges={[
-            { text: sale.status, variant: sale.status === "Completed" ? "success" : sale.status === "Cancelled" ? "danger" : "warning", showPulse: sale.status === "Pending" },
+            { 
+              text: (sale.origin === "Online" || sale.origin === "ONLINE" || Boolean((sale as any).online_details)) && (String(sale.status).toUpperCase() === "DELIVERED" || String(sale.status).toUpperCase() === "COMPLETED")
+                ? "Completed"
+                : sale.status, 
+              variant: (sale.status === "Completed" || String(sale.status).toUpperCase() === "DELIVERED") ? "success" : sale.status === "Cancelled" ? "danger" : "warning", 
+              showPulse: sale.status === "Pending" 
+            },
             { text: sale.origin, variant: "primary" }
           ]}
           infoItems={[
             { icon: Calendar, text: timeStr ? `${dateStr} at ${timeStr}` : dateStr },
-            { icon: User, text: customerName }
+            { 
+              icon: customerInfo.isOnline ? Globe : User, 
+              text: `${customerName}${customerInfo.isOnline && !customerInfo.isWalkIn ? ' (Online)' : ''}` 
+            },
+            ...(customerInfo.phone ? [{ icon: Smartphone, text: customerInfo.phone }] : []),
+            ...(customerInfo.city ? [{ icon: MapPin, text: `${customerInfo.city}${customerInfo.pincode ? ` (${customerInfo.pincode})` : ''}` }] : [])
           ]}
           actions={
             <div className="flex items-center gap-2">
@@ -660,12 +678,72 @@ const SaleDetailPage: React.FC = () => {
                 {/* Left Column */}
                 <div className="lg:col-span-8 space-y-4">
                   <SectionCard title="Customer Information">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-8">
-                      <DetailItem icon={User} label="Customer Name" value={customerName} />
-                      <DetailItem icon={Database} label="Order ID" value={String(sale.ui_id || "")} />
-                      {customerMobile && <DetailItem icon={Smartphone} label="Customer Mobile" value={customerMobile} />}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-5 gap-x-6">
+                      <div className="flex items-start gap-3 p-1 -m-1 rounded-lg">
+                        <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                          {customerInfo.isOnline ? <Globe size={13} strokeWidth={2.5} /> : <User size={13} strokeWidth={2.5} />}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[10px] font-medium text-slate-400 tracking-[0.05em] mb-0.5">Customer Name</p>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="text-[13px] font-semibold text-slate-800 tracking-tight">{customerName}</p>
+                            {customerInfo.isOnline && !customerInfo.isWalkIn && (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-bold border border-blue-200">
+                                <Globe size={10} /> Online
+                              </span>
+                            )}
+                            {customerInfo.isWalkIn && (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-bold border border-slate-200">
+                                <Store size={10} /> In-Store
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <DetailItem icon={Database} label="Order ID" value={String(sale.ui_id || sale.id || "")} />
+
+                      {customerInfo.phone ? (
+                        <DetailItem icon={Smartphone} label="Contact Number" value={customerInfo.phone} />
+                      ) : null}
+
+                      {customerInfo.email ? (
+                        <DetailItem icon={Mail} label="Email Address" value={customerInfo.email} />
+                      ) : null}
+
+                      {customerInfo.userId ? (
+                        <DetailItem 
+                          icon={Fingerprint} 
+                          label={customerInfo.isOnline ? "Customer User ID" : "Customer ID"} 
+                          value={customerInfo.userId} 
+                        />
+                      ) : null}
+
                       <DetailItem icon={Calendar} label="Date & Time" value={timeStr ? `${dateStr} at ${timeStr}` : dateStr} />
-                      <DetailItem icon={Search} label="Origin" value={sale.origin} />
+
+                      <DetailItem 
+                        icon={customerInfo.isOnline ? Globe : Search} 
+                        label="Order Origin" 
+                        value={customerInfo.isOnline ? "Online Store" : (sale.origin || "In-Store")} 
+                      />
+
+                      {(customerInfo.fullAddress || customerInfo.city || customerInfo.state || customerInfo.pincode) ? (
+                        <div className="sm:col-span-2 lg:col-span-3 flex items-start gap-3 p-3 rounded-lg bg-slate-50 border border-slate-200/70 mt-1">
+                          <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                            <MapPin size={13} strokeWidth={2.5} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">
+                              {customerInfo.isOnline ? "Delivery Address" : "Customer Address"}
+                            </p>
+                            <p className="text-[12px] font-semibold text-slate-700 leading-relaxed">
+                              {customerInfo.fullAddress && <span>{customerInfo.fullAddress}</span>}
+                              {customerInfo.fullAddress && (customerInfo.city || customerInfo.state || customerInfo.pincode) && <span>, </span>}
+                              {[customerInfo.city, customerInfo.state, customerInfo.pincode].filter(Boolean).join(", ")}
+                            </p>
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
                   </SectionCard>
 

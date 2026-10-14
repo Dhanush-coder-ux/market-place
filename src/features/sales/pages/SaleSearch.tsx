@@ -28,7 +28,7 @@ const SaleSearch = () => {
 
   const fetchSearchOptions = async (q: string) => {
     try {
-      const res = await getData(`${ENDPOINTS.ORDERS}/${SHOP_ID}`, { limit: "10", q });
+      const res = await getData(`${ENDPOINTS.ORDERS}/${SHOP_ID}`, { limit: "10", q, online_delivered_only: "true" });
       const rawData = res?.data || [];
       const list = Array.isArray(rawData) ? rawData : (rawData.datas ?? [rawData]);
       return list.map((o: any) => ({

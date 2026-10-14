@@ -1117,32 +1117,15 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                       const taxableVal = Math.max(0, Math.round((lineBaseTotal - lineDiscAmount) * 100) / 100);
                       const gstVal = isGstReg && gstRate > 0 ? Math.round((taxableVal * (gstRate / 100)) * 100) / 100 : 0;
                       const finalLineTotal = Math.round((taxableVal + gstVal) * 100) / 100;
-                      const effectiveUnitPrice = item.qty > 0 ? (finalLineTotal / item.qty) : item.price;
                       const hasDiscount = prodDiscPct > 0 || lineDiscVal > 0;
 
                       return (
                         <>
                           <div className="text-right w-20">
                             <span className="text-[8px] font-bold text-slate-400 block uppercase tracking-wider mb-0.5">Price</span>
-                            {hasDiscount ? (
-                              <div>
-                                <span className="text-[10px] text-slate-400 line-through tabular-nums block">
-                                  ₹{formatPrice(item.price)}
-                                </span>
-                                <span className="text-[12px] font-bold text-emerald-600 tabular-nums block">
-                                  ₹{formatPrice(effectiveUnitPrice)}
-                                </span>
-                                {prodDiscPct > 0 && (
-                                  <span className="text-[9px] font-semibold text-emerald-600/90 block tabular-nums">
-                                    −₹{formatPrice(prodDiscPerUnit)}
-                                  </span>
-                                )}
-                              </div>
-                            ) : (
-                              <span className="text-[12px] font-bold text-slate-655 tabular-nums">
-                                ₹{formatPrice(item.price)}
-                              </span>
-                            )}
+                            <span className="text-[12px] font-bold text-slate-700 tabular-nums block">
+                              ₹{formatPrice(item.price)}
+                            </span>
                           </div>
 
                           {/* Total Price Display */}

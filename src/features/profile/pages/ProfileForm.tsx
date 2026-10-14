@@ -38,6 +38,7 @@ export interface ProfileData {
   description: string;
   logo_url?: string;
   logo_file?: File | null;
+  visible_online?: boolean;
 }
 
 const categoryOptions = [
@@ -79,6 +80,7 @@ const ProfileForm: React.FC = () => {
     description: "",
     logo_url: "",
     logo_file: null,
+    visible_online: false,
   };
 
   const [formData, setFormData] = useState<ProfileData>(initialFormData);
@@ -112,6 +114,7 @@ const ProfileForm: React.FC = () => {
               currency: b.currency || "INR",
               logo_url: shop.logo_url || shop.logo || "",
               logo_file: null,
+              visible_online: shop.visible_online ?? false,
             });
             setGstType(b.gst_infos?.registered ? "registered" : "non-registered");
           }
@@ -176,7 +179,7 @@ const ProfileForm: React.FC = () => {
         latitude: parseFloat(formData.latitude) || 0,
         longitude: parseFloat(formData.longitude) || 0,
       },
-      visible_online: false,
+      visible_online: formData.visible_online ?? false,
     };
 
     try {

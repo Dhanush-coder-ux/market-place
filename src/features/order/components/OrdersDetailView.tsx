@@ -21,6 +21,8 @@ type OrderDetailType = {
   gstAmount: number;
   grandTotal: number;
   online_details?: any;
+  status_updated_by?: string;
+  additional_infos?: any;
 };
 
 const OrderDetailView: React.FC<{ order: OrderDetailType }> = ({ order }) => {
@@ -87,6 +89,11 @@ const OrderDetailView: React.FC<{ order: OrderDetailType }> = ({ order }) => {
           </p>
           <p>Subtotal: <span className="font-semibold">₹{order.subtotal}</span></p>
           <p>GST: <span className="font-semibold">{order.gstPercent}% (₹{order.gstAmount})</span></p>
+          {order.status_updated_by && (
+            <p className="col-span-2 text-xs text-slate-500 pt-1 border-t">
+              <span className="font-semibold text-slate-700">Updated by:</span> {order.status_updated_by}
+            </p>
+          )}
         </div>
       </div>
 

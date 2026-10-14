@@ -41,6 +41,9 @@ const toCardShape = (o: OrderRecord, customerMap?: Record<string, { name: string
     origin: (o.origin || "ONLINE").toUpperCase(),
     deliveryCode: anyOrder.delivery_code || onlineObj.delivery_code || addObj.delivery_code || null,
     online_details: Object.keys(onlineObj).length > 0 ? onlineObj : (addObj.user_id || addObj.full_address || addObj.address_id ? addObj : {}),
+    status_updated_by: o.status_updated_by || addObj.status_updated_by || addObj.accepted_by || addObj.canceled_by || addObj.rejected_by || addObj.last_action_by || null,
+    status_history: addObj.status_history || [],
+    additional_infos: addObj,
   };
 };
 
@@ -166,6 +169,7 @@ const Order = () => {
         setSelectedOrder({
           ...toCardShape(order, customerMap),
           orderType: fullOrder.origin || "ONLINE",
+          status_updated_by: fullOrder.status_updated_by || fullOrder.additional_infos?.status_updated_by || fullOrder.additional_infos?.accepted_by || fullOrder.additional_infos?.canceled_by || fullOrder.additional_infos?.rejected_by || (order as any).status_updated_by || null,
           items: mappedItems,
           subtotal: Number(Number(fullOrder.calculation_infos?.sub_total ?? fullOrder.calculation_infos?.total ?? fullOrder.total_amount ?? order.datas?.total_amount ?? fullOrder.item_infos?.total_order_amount ?? fullOrder.pending_amount ?? 0).toFixed(2)),
           gstPercent: 0,

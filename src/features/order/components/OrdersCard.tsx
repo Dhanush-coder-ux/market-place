@@ -109,6 +109,11 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
             </div>
             <p className="text-xs font-medium text-slate-500 truncate">{order.phone}</p>
           </div>
+          {order.status_updated_by && (
+            <p className="text-[11px] text-slate-500 truncate">
+              <span className="font-semibold text-slate-600">Updated by:</span> {order.status_updated_by}
+            </p>
+          )}
         </div>
 
         {/* Right Section: Actions */}
@@ -181,6 +186,12 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
             <p className="text-sm font-medium text-slate-800 truncate">{order.phone}</p>
           </div>
         </div>
+
+        {order.status_updated_by && (
+          <div className="mb-4 px-2.5 py-1.5 rounded-md bg-slate-50 border border-slate-100 text-[11px] text-slate-600">
+            <span className="font-bold text-slate-700">Updated by:</span> {order.status_updated_by}
+          </div>
+        )}
 
         <div className="flex flex-col gap-3">
           {renderActions(true)}

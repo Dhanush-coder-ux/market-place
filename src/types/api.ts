@@ -254,6 +254,8 @@ export interface OrderRecord {
   };
   pending_amount?: number;
   online_details?: Record<string, any>;
+  status_updated_by?: string;
+  status_history?: any[];
 }
 
 // Purchase types: DIRECT | PO_CREATE | PO_UPDATE | PRODUCTION

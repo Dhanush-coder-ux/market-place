@@ -20,6 +20,7 @@ import { StatCard } from "@/components/common/StatsCard";
 import { AntBadge } from "@/components/ui/AntBadge";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
+import { extractSaleCustomerInfo } from "../type";
 
 /* ═══════════════════════════════════════════════════════════════
    TYPES
@@ -81,8 +82,9 @@ const PAYMENT_CFG: Record<string, BadgeConfig> = {
   "On Credit": { cls: "bg-[var(--ps-draft-bg)] text-[var(--ps-draft-tx)] border border-[var(--ps-draft-bd)]", dot: "bg-[var(--ps-draft-dot)]" },
   Other: { cls: "bg-[var(--pay-pending-bg)] text-[var(--pay-pending-tx)] border border-[var(--pay-pending-bd)]", dot: "bg-[var(--pay-pending-dot)]" },
 };
-const STATUS_CFG: Record<SaleStatus, BadgeConfig> = {
+const STATUS_CFG: Record<string, BadgeConfig> = {
   Completed: { cls: "bg-[var(--pay-paid-bg)] text-[var(--pay-paid-tx)] border border-[var(--pay-paid-bd)]", dot: "bg-[var(--ps-completed-dot)]" },
+  Delivered: { cls: "bg-[var(--pay-paid-bg)] text-[var(--pay-paid-tx)] border border-[var(--pay-paid-bd)]", dot: "bg-[var(--ps-completed-dot)]" },
   Pending: { cls: "bg-[var(--ps-draft-bg)] text-[var(--ps-draft-tx)] border border-[var(--ps-draft-bd)]", dot: "bg-[var(--ps-draft-dot)]" },
   Cancelled: { cls: "bg-[var(--ps-cancel-bg)] text-[var(--ps-cancel-tx)] border border-[var(--ps-cancel-bd)]", dot: "bg-[var(--ps-cancel-dot)]" },
 };
@@ -175,7 +177,7 @@ const SalesListPage: React.FC = () => {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [customerMap, setCustomerMap] = useState<Record<string, string>>({});
+  const [customerMap, setCustomerMap] = useState<Record<string, any>>({});
   const [productMap, setProductMap] = useState<Record<string, string>>({});
   const [isReturnSearchOpen, setIsReturnSearchOpen] = useState(false);
   const [returnSearchQuery, setReturnSearchQuery] = useState("");
@@ -184,13 +186,18 @@ const SalesListPage: React.FC = () => {
   const searchSalesForReturn = useMemo(() => {
     if (!returnSearchQuery) return [];
     const q = returnSearchQuery.toLowerCase();
-    return orders.filter(s =>
-      s.ui_id?.toString().toLowerCase().includes(q) ||
-      (s.customer_id && s.customer_id.toLowerCase().includes(q))
-    ).slice(0, 5);
-  }, [returnSearchQuery, orders]);
+    return orders.filter(s => {
+      const c = extractSaleCustomerInfo(s, customerMap);
+      return (
+        s.ui_id?.toString().toLowerCase().includes(q) ||
+        (s.customer_id && s.customer_id.toLowerCase().includes(q)) ||
+        c.name.toLowerCase().includes(q) ||
+        c.phone.toLowerCase().includes(q)
+      );
+    }).slice(0, 5);
+  }, [returnSearchQuery, orders, customerMap]);
 
-  const openDetail = React.useCallback((sale: SaleRecord) => navigate(`/sales/${sale.id}`), [navigate]);
+  const openDetail = React.useCallback((sale: SaleRecord) => navigate(`/sales/${sale.id}`, { state: { sale, customerMap, productMap } }), [navigate, customerMap, productMap]);
   const openReturn = React.useCallback((sale: SaleRecord) => { setTimeout(() => setReturnSale(sale), 50); }, []);
 
   useEffect(() => {
@@ -204,9 +211,14 @@ const SalesListPage: React.FC = () => {
             </div>
             <div>
               <p className="text-[12px] font-bold text-slate-800 leading-tight">{selectedSale.ui_id}</p>
-              <p className="text-[10px] font-semibold text-slate-400 font-mono">
-                {(selectedSale as any).customer_display_name || (selectedSale as any).online_details?.name || selectedSale.customer?.customer_name || (selectedSale.customer_id ? (customerMap[selectedSale.customer_id] || selectedSale.customer_id) : "Walk in Customer")}
-              </p>
+              {(() => {
+                const c = extractSaleCustomerInfo(selectedSale, customerMap);
+                return (
+                  <p className="text-[10px] font-semibold text-slate-500 font-mono">
+                    {c.name}{c.phone ? ` • ${c.phone}` : ''}{c.city ? ` (${c.city})` : ''}
+                  </p>
+                );
+              })()}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -250,7 +262,7 @@ const SalesListPage: React.FC = () => {
   const closeReturn = () => setReturnSale(null);
 
   const fetchPage = React.useCallback(async (limit: number, offset: number, filters: any) => {
-    const params: any = { limit: limit.toString(), offset: offset.toString() };
+    const params: any = { limit: limit.toString(), offset: offset.toString(), online_delivered_only: true };
     if (filters.search) params.q = filters.search;
 
     if (filters.activeKpi === "Online Sales") params.exclude_offline = true;
@@ -272,7 +284,17 @@ const SalesListPage: React.FC = () => {
     }
 
     const dataList = Array.isArray(res?.data) ? res.data : (res?.data?.datas ?? []);
-    const normalized = dataList.map((s: any) => {
+    // Only show online orders if their status is DELIVERED / COMPLETED on the sales list
+    const validDataList = dataList.filter((s: any) => {
+      const isOnline = s.origin === "ONLINE" || s.origin === "Online Sales" || Boolean(s.online_details);
+      if (isOnline) {
+        const st = String(s.status || "").toUpperCase();
+        return st === "DELIVERED" || st === "COMPLETED";
+      }
+      return true;
+    });
+
+    const normalized = validDataList.map((s: any) => {
       // Support new Order Service format: payment_infos can be a dict (Record<string, number>) or an array
       let pm = "Other";
       if (s.payment_infos && typeof s.payment_infos === 'object' && !Array.isArray(s.payment_infos) && Object.keys(s.payment_infos).length > 0) {
@@ -349,13 +371,20 @@ const SalesListPage: React.FC = () => {
         totalQty = s.calculation_infos.items.reduce((sum: number, item: any) => sum + (item.qty || 0), 0);
       }
 
+      const isOnline = s.origin === "ONLINE" || s.origin === "Online Sales" || Boolean(s.online_details);
+      let rawStatus = s.status ? s.status.charAt(0).toUpperCase() + s.status.slice(1).toLowerCase() : "Unknown";
+      // For online orders, show Delivered as Completed
+      if (isOnline && (rawStatus.toLowerCase() === "delivered" || rawStatus.toLowerCase() === "completed")) {
+        rawStatus = "Completed";
+      }
+
       return {
         ...s,
         total_sellprice: total,
         total_quantity: totalQty,
-        status: s.status ? s.status.charAt(0).toUpperCase() + s.status.slice(1).toLowerCase() : "Unknown",
+        status: rawStatus,
         payment_method: pm,
-        origin: s.origin === "ONLINE" || s.origin === "Online Sales" ? "Online" : (s.origin === "OFFLINE_SALES_RETURN" || s.origin === "Sales Return" ? "Offline Return" : "Offline"),
+        origin: isOnline ? "Online" : (s.origin === "OFFLINE_SALES_RETURN" || s.origin === "Sales Return" ? "Offline Return" : "Offline"),
       };
     });
 
@@ -372,9 +401,9 @@ const SalesListPage: React.FC = () => {
     try {
       const custRes = await api.getData(`${ENDPOINTS.CUSTOMERS}/by/shop/${SHOP_ID}`);
       if (custRes?.data) {
-        const m: Record<string, string> = {};
+        const m: Record<string, any> = {};
         const custList = Array.isArray(custRes.data) ? custRes.data : (custRes.data.datas ?? []);
-        custList.forEach((c: any) => { m[c.id] = c.name; });
+        custList.forEach((c: any) => { m[c.id] = c; });
         setCustomerMap(m);
       }
       const invRes = await api.getData(ENDPOINTS.INVENTORIES);
@@ -411,15 +440,20 @@ const SalesListPage: React.FC = () => {
       })
       .catch(() => { });
 
-    api.getData(`${ENDPOINTS.ORDERS}/${SHOP_ID}`, { limit: "100", offset: "1" }).then((res) => {
+    api.getData(`${ENDPOINTS.ORDERS}/${SHOP_ID}`, { limit: "100", offset: "1", online_delivered_only: "true" }).then((res) => {
       const dataList = Array.isArray(res?.data) ? res.data : (res?.data?.datas ?? []);
       let onlineAmt = 0;
       let onlineCnt = 0;
       let offlineAmt = 0;
       let offlineCnt = 0;
       dataList.forEach((s: any) => {
+        const isOnline = s.origin === "ONLINE" || s.origin === "Online Sales" || Boolean(s.online_details);
+        const st = String(s.status || "").toUpperCase();
+        // Skip non-delivered online orders from sales summary metrics
+        if (isOnline && st !== "DELIVERED" && st !== "COMPLETED") {
+          return;
+        }
         const total = Number(s.total_sellprice ?? s.calculation_infos?.total ?? s.calculation_infos?.grand_total ?? s.item_infos?.total_order_amount ?? s.total_amount ?? (Array.isArray(s.items) ? s.items.reduce((acc: number, item: any) => acc + (Number(item.total_amount) || ((Number(item.sell_price) || 0) * (Number(item.quantity) || 1))), 0) : 0) ?? s.total ?? 0);
-        const isOnline = s.origin === "ONLINE" || s.origin === "Online Sales";
         if (isOnline) {
           onlineAmt += total;
           onlineCnt++;
@@ -429,7 +463,7 @@ const SalesListPage: React.FC = () => {
         }
       });
       setSummaryStats({
-        total: dataList.length,
+        total: onlineCnt + offlineCnt,
         onlineAmount: onlineAmt,
         onlineCount: onlineCnt,
         offlineAmount: offlineAmt,
@@ -672,12 +706,36 @@ const SalesListPage: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-4 py-4 border-b border-slate-50">
-                      <span className="truncate text-xs font-medium text-slate-800 block" title={sale.customer?.customer_name || (sale.customer_id ? (customerMap[sale.customer_id] || sale.customer_id) : "Walk in Customer")}>
-                        {sale.customer?.customer_name || (sale.customer_id ? (customerMap[sale.customer_id] || sale.customer_id) : "Walk in Customer")}
-                      </span>
-                      {sale.customer?.customer_mobile_number && (
-                        <span className="text-[10px] text-slate-500 block mt-0.5 truncate">{sale.customer.customer_mobile_number}</span>
-                      )}
+                      {(() => {
+                        const c = extractSaleCustomerInfo(sale, customerMap);
+                        return (
+                          <div className="max-w-[220px]">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span
+                                className={`truncate text-xs block ${c.isWalkIn ? "text-slate-400 italic" : "text-slate-800 font-semibold"}`}
+                                title={c.name}
+                              >
+                                {c.name}
+                              </span>
+                              {c.isOnline && !c.isWalkIn && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-50 text-blue-600 border border-blue-200">
+                                  Online
+                                </span>
+                              )}
+                            </div>
+                            {c.phone && (
+                              <span className="text-[10px] text-slate-500 font-mono block mt-0.5 truncate">
+                                {c.phone}
+                              </span>
+                            )}
+                            {(c.city || c.pincode) && (
+                              <span className="text-[10px] text-slate-400 block mt-0.5 truncate">
+                                {[c.city, c.pincode].filter(Boolean).join(", ")}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td className="px-4 py-4 border-b border-slate-50"><Badge cls={oCfg.cls} dot={oCfg.dot} label={sale.origin} /></td>
                     <td className="px-4 py-4 border-b border-slate-50">
@@ -779,7 +837,7 @@ interface ReturnSearchPortalProps {
   setSearchQuery: (q: string) => void;
   results: any[];
   onSelect: (sale: any) => void;
-  customerMap: Record<string, string>;
+  customerMap: Record<string, any>;
 }
 
 const ReturnSearchPortal: React.FC<ReturnSearchPortalProps> = ({ isOpen, onClose, searchQuery, setSearchQuery, results, onSelect, customerMap }) => {
@@ -834,7 +892,14 @@ const ReturnSearchPortal: React.FC<ReturnSearchPortalProps> = ({ isOpen, onClose
                       <p className="text-[14px] font-black text-slate-900 group-hover:text-blue-600 transition-colors tracking-tight">Order {sale.ui_id}</p>
                       <span className="font-mono text-[13px] font-black text-slate-900 group-hover:text-blue-700">{fmt(sale.total_sellprice)}</span>
                     </div>
-                    <p className="text-[11px] text-slate-500 truncate font-bold uppercase tracking-tight opacity-70 group-hover:opacity-100">{sale.customer?.customer_name || customerMap[sale.customer_id] || sale.customer_id} {sale.customer?.customer_mobile_number ? `· ${sale.customer.customer_mobile_number}` : ''} · {fmtDate(sale.created_at || (sale as any).date)}</p>
+                    {(() => {
+                      const c = extractSaleCustomerInfo(sale, customerMap);
+                      return (
+                        <p className="text-[11px] text-slate-500 truncate font-bold uppercase tracking-tight opacity-70 group-hover:opacity-100">
+                          {c.name} {c.phone ? `· ${c.phone}` : ''} · {fmtDate(sale.created_at || (sale as any).date)}
+                        </p>
+                      );
+                    })()}
                   </div>
                   <div className="w-6 h-6 rounded-lg bg-slate-50 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all">
                     <ChevronRight size={14} className="text-slate-300 group-hover:text-white" />

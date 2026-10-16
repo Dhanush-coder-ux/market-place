@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { authApi } from "@/services/api/auth";
 import { useToast } from "@/context/ToastContext";
 import {
@@ -36,7 +36,11 @@ const SUPPORT_NUMBERS = [
 const SCENE_DURATION = 7000; // 7 seconds per scene
 
 const Login = () => {
-  const [loading, setLoading] = useState(false);
+  const [searchParams] = useSearchParams();
+  const isAutoLogin = searchParams.get("autologin") === "true";
+  const autoLoginTriggered = useRef(false);
+
+  const [loading, setLoading] = useState(isAutoLogin);
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [currentScene, setCurrentScene] = useState(0);
@@ -123,6 +127,13 @@ const Login = () => {
     }
   };
 
+  useEffect(() => {
+    if (isAutoLogin && !autoLoginTriggered.current) {
+      autoLoginTriggered.current = true;
+      handleSignIn();
+    }
+  }, [isAutoLogin]);
+
   const handleDial = (rawNumber: string) => {
     window.location.href = `tel:${rawNumber}`;
   };
@@ -134,6 +145,22 @@ const Login = () => {
     showToast("Phone number copied to clipboard", "success");
     setTimeout(() => setCopiedIndex(null), 2000);
   };
+
+  if (isAutoLogin && loading) {
+    return (
+      <div className="min-h-screen w-full flex flex-col items-center justify-center bg-slate-50 text-slate-800">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <div className="w-12 h-12 rounded-2xl bg-[#286038]/10 text-[#286038] flex items-center justify-center shadow-sm">
+            <div className="w-6 h-6 border-2 border-[#286038] border-t-transparent rounded-full animate-spin" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-slate-800">Connecting to Login...</h3>
+            <p className="text-xs text-slate-500 mt-1">Redirecting you to secure authentication</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen w-full flex flex-col lg:flex-row font-sans bg-slate-50 text-slate-800 selection:bg-[#286038]/20">

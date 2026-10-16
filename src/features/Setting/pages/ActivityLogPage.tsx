@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import { utilityApi } from "@/services/api/utility";
 import { format } from "date-fns";
 import "./ActivityLog.css";
 
@@ -129,12 +130,157 @@ function pyLiteralParse(raw: unknown): unknown {
   }
 }
 
-/** Legacy log rows only ever record a single `{ field: "id", after: "UPDATED" }`
- *  style entry with no real field-level diff. Treat that as "no changes". */
-function isNoiseChangeSet(changes?: { field: string; before: unknown; after: unknown }[]) {
-  if (!changes || changes.length !== 1) return false;
-  const c = changes[0];
-  return c.field === "id";
+
+function isValEqual(v1: any, v2: any): boolean {
+  const isEmptyVal = (v: any) =>
+    v === null ||
+    v === undefined ||
+    v === "" ||
+    v === "None" ||
+    v === "null" ||
+    v === "none" ||
+    v === "— not set —" ||
+    (typeof v === "object" && v !== null && Object.keys(v).length === 0);
+
+  if (isEmptyVal(v1) && isEmptyVal(v2)) return true;
+  if (v1 === v2) return true;
+  if (v1 == null || v2 == null) return false;
+
+  if (typeof v1 === "boolean" || typeof v2 === "boolean") {
+    return Boolean(v1) === Boolean(v2);
+  }
+
+  const n1 = Number(v1);
+  const n2 = Number(v2);
+  if (!isNaN(n1) && !isNaN(n2) && typeof v1 !== "object" && typeof v2 !== "object" && String(v1).trim() !== "" && String(v2).trim() !== "") {
+    return Math.abs(n1 - n2) < 0.0001;
+  }
+
+  if (typeof v1 === "string" && typeof v2 === "string") {
+    return v1.trim().toLowerCase() === v2.trim().toLowerCase();
+  }
+
+  if (typeof v1 === "object" && typeof v2 === "object") {
+    if (Array.isArray(v1) && Array.isArray(v2)) {
+      if (v1.length !== v2.length) return false;
+      return v1.every((item, idx) => isValEqual(item, v2[idx]));
+    }
+    const k1 = Object.keys(v1).filter(k => !isEmptyVal(v1[k]));
+    const k2 = Object.keys(v2).filter(k => !isEmptyVal(v2[k]));
+    if (k1.length !== k2.length) return false;
+    for (const k of k1) {
+      if (!isValEqual(v1[k], v2[k])) return false;
+    }
+    return true;
+  }
+
+  return String(v1).trim().toLowerCase() === String(v2).trim().toLowerCase();
+}
+
+function getActuallyChangedFields(changes?: { field: string; before: unknown; after: unknown }[]) {
+  if (!changes || !Array.isArray(changes)) return [];
+
+  const results: { field: string; before: unknown; after: unknown }[] = [];
+  const otherFields = new Set(changes.map(c => (c?.field || "").toLowerCase().replace(/_/g, " ")));
+
+  for (const c of changes) {
+    if (!c || !c.field) continue;
+    const fieldLower = c.field.toLowerCase().trim();
+    if (["id", "shop_id", "user_id", "cur_user_id", "updated_at", "created_at"].includes(fieldLower)) {
+      continue;
+    }
+
+    const b = pyLiteralParse(c.before);
+    const a = pyLiteralParse(c.after);
+
+    // If both are objects and field is custom_fields or additional_infos
+    if ((fieldLower === "custom_fields" || fieldLower === "custom fields" || fieldLower === "additional_infos" || fieldLower === "additional infos") &&
+        typeof b === "object" && typeof a === "object" && b !== null && a !== null) {
+      const bObj = b as Record<string, any>;
+      const aObj = a as Record<string, any>;
+      const skipSubKeys = new Set(["mrp", "discount_percent", "offer_valid_until", "buy_price", "sell_price", "online_sell_price", "reorder_point", "online_reorder_point", "storage_location", "return_policy", "variant_types"]);
+      const allSubKeys = Array.from(new Set([...Object.keys(bObj), ...Object.keys(aObj)]));
+      for (const subK of allSubKeys) {
+        const subKClean = subK.toLowerCase().replace(/_/g, " ");
+        if (skipSubKeys.has(subK.toLowerCase()) || otherFields.has(subKClean)) {
+          continue;
+        }
+        if (!isValEqual(bObj[subK], aObj[subK])) {
+          results.push({
+            field: subK,
+            before: bObj[subK],
+            after: aObj[subK]
+          });
+        }
+      }
+      continue;
+    }
+
+    if (isValEqual(b, a)) {
+      continue;
+    }
+
+    results.push(c);
+  }
+
+  return results;
+}
+
+function formatFieldName(rawField: string): string {
+  if (!rawField) return "";
+  let f = rawField.replace(/_/g, " ").trim();
+  const lower = f.toLowerCase();
+  if (lower === "unit id" || lower === "unit_id") return "unit";
+  if (lower === "category id" || lower === "category_id") return "category";
+  if (lower.endsWith(" id")) {
+    f = f.slice(0, -3).trim();
+  }
+  return f;
+}
+
+function resolveDisplayValue(
+  field: string,
+  val: unknown,
+  unitMap: Record<string, string>,
+  categoryMap: Record<string, string>
+): unknown {
+  if (val === null || val === undefined || val === "" || val === "None" || val === "null") return val;
+  const str = String(val).trim();
+  const fLower = formatFieldName(field).toLowerCase();
+
+  if (fLower.includes("unit") && unitMap[str]) {
+    return unitMap[str];
+  }
+  if (fLower.includes("category") && categoryMap[str]) {
+    return categoryMap[str];
+  }
+  if (unitMap[str]) return unitMap[str];
+  if (categoryMap[str]) return categoryMap[str];
+
+  // If value is a 36-char raw UUID
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+  if (isUUID) {
+    if (fLower.includes("unit")) return "Unit";
+    if (fLower.includes("category")) return "Category";
+    return str.substring(0, 8) + "…";
+  }
+
+  return val;
+}
+
+function cleanHumanDescription(rawDesc?: string, actualChanges?: { field: string }[]): string {
+  if (!rawDesc) return "";
+  if (actualChanges && actualChanges.length > 0) {
+    const fields = Array.from(new Set(actualChanges.map(c => formatFieldName(c.field))));
+    return `Updated ${fields.join(", ")}`;
+  }
+  return rawDesc
+    .replace(/\bunit_id\b/gi, "unit")
+    .replace(/\bunit id\b/gi, "unit")
+    .replace(/\bcategory_id\b/gi, "category")
+    .replace(/\bcategory id\b/gi, "category")
+    .replace(/\b(\w+)_id\b/gi, "$1")
+    .replace(/\b(\w+) id\b/gi, "$1");
 }
 
 interface LogEntry {
@@ -257,6 +403,53 @@ export const ActivityLogPage = () => {
   const [filterAction, setFilterAction] = useState<string>("all");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [openSet, setOpenSet] = useState<Set<string>>(new Set());
+  const [unitMap, setUnitMap] = useState<Record<string, string>>({});
+  const [categoryMap, setCategoryMap] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchLookups = async () => {
+      try {
+        const [catRes, unitRes] = await Promise.allSettled([
+          utilityApi.getShopCategories(SHOP_ID, { limit: "100", offset: "1" }),
+          utilityApi.getShopUnits(SHOP_ID, { limit: "100", offset: "1" }),
+        ]);
+        if (!mounted) return;
+        const uMap: Record<string, string> = {};
+        if (unitRes.status === "fulfilled" && unitRes.value?.data) {
+          const raw = unitRes.value.data;
+          const rawUnits = Array.isArray(raw) ? raw : (raw as any)?.datas ?? (raw as any)?.items ?? [];
+          for (const u of rawUnits) {
+            const id = String(u.id ?? u.datas?.id ?? "");
+            const name = String(u.name ?? u.datas?.name ?? u.value ?? "").trim();
+            const short = u.short_name ?? u.datas?.short_name;
+            if (id) {
+              uMap[id] = name && short && name.toLowerCase() !== short.toLowerCase() ? `${name} (${short})` : (name || short || id);
+            }
+          }
+        }
+        setUnitMap(uMap);
+
+        const cMap: Record<string, string> = {};
+        if (catRes.status === "fulfilled" && catRes.value?.data) {
+          const raw = catRes.value.data;
+          const rawCats = Array.isArray(raw) ? raw : (raw as any)?.datas ?? (raw as any)?.items ?? [];
+          for (const c of rawCats) {
+            const id = String(c.id ?? c.datas?.id ?? "");
+            const name = String(c.name ?? c.datas?.name ?? c.value ?? "").trim();
+            if (id) {
+              cMap[id] = name || id;
+            }
+          }
+        }
+        setCategoryMap(cMap);
+      } catch (err) {
+        console.error("Failed to load unit/category lookups", err);
+      }
+    };
+    fetchLookups();
+    return () => { mounted = false; };
+  }, []);
 
   const fetchLogs = async () => {
     setLoading(true);
@@ -364,17 +557,6 @@ export const ActivityLogPage = () => {
     };
   }, [logs]);
 
-  const formatChangeValue = (val: unknown) => {
-    const parsed = pyLiteralParse(val);
-    if (parsed === null || parsed === undefined) return "—";
-    if (typeof parsed === "object") {
-      const count = Array.isArray(parsed) ? parsed.length : Object.keys(parsed).length;
-      const noun = Array.isArray(parsed) ? "item" : "field";
-      return `${count} ${noun}${count !== 1 ? "s" : ""}`;
-    }
-    if (typeof parsed === "boolean") return parsed ? "Yes" : "No";
-    return String(parsed);
-  };
 
   return (
     <div className="activity-log-wrapper bg-[#FBFBFD] h-full overflow-y-auto w-full">
@@ -445,8 +627,8 @@ export const ActivityLogPage = () => {
                 const entity = (e.entity_type || e.action.toUpperCase()).toString().toUpperCase();
 
                 const hasLineItems = Array.isArray(e.lines) && e.lines.length > 0;
-                const noiseChanges = isNoiseChangeSet(e.changes);
-                const hasRealChanges = !!e.changes && e.changes.length > 0 && !noiseChanges;
+                const actualChanges = getActuallyChangedFields(e.changes);
+                const hasRealChanges = actualChanges.length > 0;
 
                 const txnMeta = (e.action === "sales" || e.action === "return") && hasLineItems;
                 const amtClass = e.action === "return" ? "return" : "sales";
@@ -521,19 +703,17 @@ export const ActivityLogPage = () => {
                                 <span className="det-rec">{disp.value}</span>
                               )}
                             </div>
-                            <div className="det-chips">
-                              {hasRealChanges && e.changes!.slice(0, 2).map((c, idx) => (
-                                <span key={idx} className="pchip">
-                                  <span className="f">{c.field.replace(/_/g, " ")}</span>
-                                  <span className="v">{formatChangeValue(c.after)}</span>
-                                </span>
-                              ))}
-                              {hasRealChanges && e.changes!.length > 2 && (
-                                <span className="pchip more">+{e.changes!.length - 2} more</span>
-                              )}
-                              {!hasRealChanges && (
-                                <span className="det-plain">{e.description || "Updated"}</span>
-                              )}
+                            <div className="det-plain">
+                              {(() => {
+                                if (e.action === "update") {
+                                  if (actualChanges.length > 0) {
+                                    const fieldNames = Array.from(new Set(actualChanges.map(c => formatFieldName(c.field))));
+                                    return `Updated ${fieldNames.join(", ")}`;
+                                  }
+                                  return cleanHumanDescription(e.description, actualChanges) || (disp.value ? `Updated ${disp.value}` : "Updated");
+                                }
+                                return cleanHumanDescription(e.description, actualChanges) || (e.action === "create" ? `Created ${disp.value}` : e.action.toUpperCase());
+                              })()}
                             </div>
                           </>
                         )}
@@ -590,32 +770,38 @@ export const ActivityLogPage = () => {
                                       <span className="dnow" style={{ background: "var(--was-bg)", color: "var(--was-tx)" }}>Deleted</span>
                                     </div>
                                   ) : hasRealChanges ? (
-                                    e.changes!.map((c, idx) => {
+                                    actualChanges.map((c, idx) => {
                                       const parsedBefore = pyLiteralParse(c.before);
                                       const parsedAfter = pyLiteralParse(c.after);
-                                      const isObjBefore = typeof parsedBefore === 'object' && parsedBefore !== null;
-                                      const isObjAfter = typeof parsedAfter === 'object' && parsedAfter !== null;
+                                      const displayBefore = resolveDisplayValue(c.field, parsedBefore, unitMap, categoryMap);
+                                      const displayAfter = resolveDisplayValue(c.field, parsedAfter, unitMap, categoryMap);
+                                      const isObjBefore = typeof displayBefore === 'object' && displayBefore !== null;
+                                      const isObjAfter = typeof displayAfter === 'object' && displayAfter !== null;
 
                                       return (
                                         <div key={idx} className="drow">
-                                          <span className="dfield">{c.field.replace(/_/g, " ")}</span>
-                                          {parsedBefore === undefined || parsedBefore === null || parsedBefore === "" ? (
+                                          <span className="dfield">{formatFieldName(c.field)}</span>
+                                          {displayBefore === undefined || displayBefore === null || displayBefore === "" || displayBefore === "None" ? (
                                             <span className="dnew">— not set —</span>
                                           ) : (
                                             <span className={`dwas ${isObjBefore ? 'd-obj' : ''}`}>
-                                              <ChangeValueRenderer val={parsedBefore} isDeleted />
+                                              <ChangeValueRenderer val={displayBefore} isDeleted />
                                             </span>
                                           )}
                                           <span className="darr"><ArrIcon /></span>
                                           <span className={`dnow ${isObjAfter ? 'd-obj' : ''}`}>
-                                            <ChangeValueRenderer val={parsedAfter} />
+                                            {displayAfter === undefined || displayAfter === null || displayAfter === "" || displayAfter === "None" ? (
+                                              <span className="text-slate-400 italic">— not set —</span>
+                                            ) : (
+                                              <ChangeValueRenderer val={displayAfter} />
+                                            )}
                                           </span>
                                         </div>
                                       );
                                     })
                                   ) : (
                                     <div className="empty" style={{ padding: "20px" }}>
-                                      {e.description || "No field-level changes recorded."}
+                                      {cleanHumanDescription(e.description, actualChanges) || "No field-level changes recorded."}
                                     </div>
                                   )}
                                 </div>
@@ -663,7 +849,7 @@ export const ActivityLogPage = () => {
                                 {e.description && (
                                   <div className="mrow">
                                     <span className="mk">Description</span>
-                                    <span className="mv reason">{e.description}</span>
+                                    <span className="mv reason">{cleanHumanDescription(e.description, actualChanges)}</span>
                                   </div>
                                 )}
                               </div>

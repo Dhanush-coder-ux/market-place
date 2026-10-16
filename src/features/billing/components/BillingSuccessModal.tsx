@@ -13,6 +13,8 @@ interface BillingSuccessModalProps {
     totalAmount: number;
     gstAmount: number;
     finalAmount: number;
+    billTotals?: any;
+    billDiscount?: { mode: '%' | '₹'; value: number };
     customerName: string;
     phone: string;
     orderId?: string;
@@ -246,16 +248,20 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
             <div className="space-y-0.5">
               {details.items.map((item, idx) => {
                 const itemGst = typeof item.gst === 'number' ? item.gst : 0;
+                const calcLine = details.billTotals?.lines?.[idx];
+                const itemTotal = calcLine ? calcLine.finalInclusive : (item.tprice ?? (item.qty * item.price));
+                const lineDisc = calcLine ? (calcLine.productDiscountAmount + calcLine.lineDiscountAmount + calcLine.billDiscountShare) : 0;
                 return (
                   <div key={idx} className="flex justify-between gap-3 py-1.5 text-[13px]">
                     <div>
                       <div className="font-semibold text-[#12161F] leading-tight">{item.name}</div>
                       <div className="text-[11px] text-[#7A8497] mt-0.5 font-mono">
                         {item.qty} {item.selectedUnit || 'pc'} × ₹{item.price?.toFixed(2)} · GST {itemGst}%
+                        {lineDisc > 0 && <span className="ml-1 text-emerald-600 font-medium">(-₹{lineDisc.toFixed(2)})</span>}
                       </div>
                     </div>
                     <div className="font-mono font-semibold text-[#12161F] whitespace-nowrap">
-                      ₹{item.tprice?.toFixed(2)}
+                      ₹{itemTotal.toFixed(2)}
                     </div>
                   </div>
                 );
@@ -263,19 +269,51 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
             </div>
 
             <div className="mt-3.5 pt-3 border-t border-[#E6EAF1]">
-              <div className="flex justify-between text-[12.5px] py-1">
-                <span className="text-[#7A8497]">Subtotal (taxable)</span>
-                <span className="font-mono font-medium text-[#3A414F]">₹{details.totalAmount.toFixed(2)}</span>
-              </div>
+              {details.billTotals?.totalDiscountGiven > 0 ? (
+                <>
+                  <div className="flex justify-between text-[12px] py-0.5">
+                    <span className="text-[#7A8497]">Base Subtotal</span>
+                    <span className="font-mono font-medium text-[#3A414F]">₹{details.billTotals.baseSubtotal.toFixed(2)}</span>
+                  </div>
+                  {details.billTotals.productDiscountTotal > 0 && (
+                    <div className="flex justify-between text-[12px] py-0.5 text-blue-600">
+                      <span>Product Offers</span>
+                      <span className="font-mono font-medium">-₹{details.billTotals.productDiscountTotal.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {details.billTotals.lineDiscountTotal > 0 && (
+                    <div className="flex justify-between text-[12px] py-0.5 text-emerald-600">
+                      <span>Item Discounts</span>
+                      <span className="font-mono font-medium">-₹{details.billTotals.lineDiscountTotal.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {details.billTotals.billDiscountTotal > 0 && (
+                    <div className="flex justify-between text-[12px] py-0.5 text-purple-600">
+                      <span>Bill Discount {details.billDiscount?.value ? `(${details.billDiscount.mode === '%' ? `${details.billDiscount.value}%` : `₹${details.billDiscount.value}`})` : ''}</span>
+                      <span className="font-mono font-medium">-₹{details.billTotals.billDiscountTotal.toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-[12.5px] py-1 border-t border-slate-100 mt-1 pt-1 font-medium">
+                    <span className="text-[#7A8497]">Taxable Subtotal</span>
+                    <span className="font-mono text-[#3A414F]">₹{details.billTotals.totalTaxable.toFixed(2)}</span>
+                  </div>
+                </>
+              ) : (
+                <div className="flex justify-between text-[12.5px] py-1">
+                  <span className="text-[#7A8497]">Subtotal (taxable)</span>
+                  <span className="font-mono font-medium text-[#3A414F]">₹{(details.billTotals?.totalTaxable ?? details.totalAmount).toFixed(2)}</span>
+                </div>
+              )}
+
               {details.gstAmount > 0 && (
                 <>
                   <div className="flex justify-between text-[12.5px] py-1">
                     <span className="text-[#7A8497]">CGST</span>
-                    <span className="font-mono font-medium text-[#3A414F]">₹{(details.gstAmount / 2).toFixed(2)}</span>
+                    <span className="font-mono font-medium text-[#3A414F]">₹{((details.billTotals?.totalGst ?? details.gstAmount) / 2).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-[12.5px] py-1">
                     <span className="text-[#7A8497]">SGST</span>
-                    <span className="font-mono font-medium text-[#3A414F]">₹{(details.gstAmount / 2).toFixed(2)}</span>
+                    <span className="font-mono font-medium text-[#3A414F]">₹{((details.billTotals?.totalGst ?? details.gstAmount) / 2).toFixed(2)}</span>
                   </div>
                 </>
               )}
@@ -514,6 +552,8 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
                 {/* ── Items List ─────────────────────────────── */}
                 {details.items.map((item, idx) => {
                   const itemGst = typeof item.gst === "number" ? item.gst : 0;
+                  const calcLine = details.billTotals?.lines?.[idx];
+                  const itemTotal = calcLine ? calcLine.finalInclusive : (item.tprice ?? (item.qty * item.price));
                   return (
                     <div key={idx} className="mb-1.5">
                       <div className="flex justify-between">
@@ -521,7 +561,7 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
                           {item.name}
                         </span>
                         <span className="font-semibold text-[11px] text-[#1A1714]">
-                          {item.tprice?.toFixed(2)}
+                          {itemTotal.toFixed(2)}
                         </span>
                       </div>
                       <div className="text-[9px] text-[#8A857C] pl-0.5">
@@ -543,21 +583,38 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
                 <hr className="receipt-separator" />
 
                 {/* Subtotal */}
-                <div className="flex justify-between text-[10.5px]">
-                  <span className="text-[#5A554E]">Subtotal</span>
-                  <span>{details.totalAmount.toFixed(2)}</span>
-                </div>
+                {details.billTotals?.totalDiscountGiven > 0 ? (
+                  <>
+                    <div className="flex justify-between text-[10.5px]">
+                      <span className="text-[#5A554E]">Base Subtotal</span>
+                      <span>{details.billTotals.baseSubtotal.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-[10.5px] text-emerald-700">
+                      <span>Total Discount</span>
+                      <span>-{details.billTotals.totalDiscountGiven.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-[10.5px]">
+                      <span className="text-[#5A554E]">Taxable Subtotal</span>
+                      <span>{details.billTotals.totalTaxable.toFixed(2)}</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex justify-between text-[10.5px]">
+                    <span className="text-[#5A554E]">Subtotal</span>
+                    <span>{(details.billTotals?.totalTaxable ?? details.totalAmount).toFixed(2)}</span>
+                  </div>
+                )}
 
                 {/* GST breakdown */}
                 {details.gstAmount > 0 && (
                   <>
                     <div className="flex justify-between text-[10.5px]">
                       <span className="text-[#5A554E]">CGST</span>
-                      <span>{(details.gstAmount / 2).toFixed(2)}</span>
+                      <span>{((details.billTotals?.totalGst ?? details.gstAmount) / 2).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-[10.5px]">
                       <span className="text-[#5A554E]">SGST</span>
-                      <span>{(details.gstAmount / 2).toFixed(2)}</span>
+                      <span>{((details.billTotals?.totalGst ?? details.gstAmount) / 2).toFixed(2)}</span>
                     </div>
                   </>
                 )}

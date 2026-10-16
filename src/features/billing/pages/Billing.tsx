@@ -51,6 +51,8 @@ const Billing = () => {
     totalAmount: number;
     gstAmount: number;
     finalAmount: number;
+    billTotals?: BillTotals;
+    billDiscount?: { mode: '%' | '₹'; value: number };
     customerName: string;
     phone: string;
     orderId?: string;
@@ -325,6 +327,8 @@ const Billing = () => {
         gross: billTotals.gross,
         round_off: billTotals.roundOff,
         total: billTotals.payable,
+        grand_total: billTotals.payable,
+        total_sellprice: billTotals.payable,
         total_mrp: billTotals.totalMrp,
         customer_savings: billTotals.totalSavings,
         tax_groups: billTotals.taxGroups,
@@ -388,6 +392,8 @@ const Billing = () => {
           totalAmount,
           gstAmount,
           finalAmount,
+          billTotals,
+          billDiscount,
           customerName: customerName || "Walk-in Customer",
           phone: phone || "",
           orderId: resolvedOrderId,
@@ -400,7 +406,7 @@ const Billing = () => {
       isSubmittingRef.current = false;
       setIsCheckoutLoading(false);
     }
-  }, [items, customerData, sessionId, showToast, totalAmount, gstAmount, finalAmount, customerName, phone, includeGst, isCheckoutLoading, showInvoicePreview, handleNextBill]);
+  }, [items, customerData, sessionId, showToast, totalAmount, gstAmount, finalAmount, billTotals, billDiscount, customerName, phone, includeGst, isCheckoutLoading, showInvoicePreview, handleNextBill]);
 
   // ── Resizable Sidebar Logic
   const [sidebarWidth, setSidebarWidth] = useState(400);
@@ -543,6 +549,8 @@ const Billing = () => {
           totalAmount={successDetails ? successDetails.totalAmount : totalAmount}
           gstAmount={successDetails ? successDetails.gstAmount : gstAmount}
           finalAmount={successDetails ? successDetails.finalAmount : finalAmount}
+          billDiscount={successDetails?.billDiscount ?? billDiscount}
+          billTotals={successDetails?.billTotals ?? billTotals}
           isSubmitting={isSubmitting || isCheckoutLoading}
           onConfirm={(status) => {
             handleConfirmOrder(payments, includeGst, status);

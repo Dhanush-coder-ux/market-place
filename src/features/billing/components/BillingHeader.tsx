@@ -429,7 +429,7 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
             <div className="flex items-center justify-between text-[11px] font-bold">
               <div>
                 <span className="text-[7.5px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Received</span>
-                <span className="text-[12px] text-slate-800 tabular-nums">₹{formatINR(paidAmount, 0)}</span>
+                <span className="text-[12px] text-slate-800 tabular-nums">₹{formatINR(paidAmount)}</span>
               </div>
               {Math.abs(balanceAmount) >= 0.01 && (
                 <div className="text-right">
@@ -437,7 +437,7 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
                     {balanceAmount > 0 ? "Remaining" : "Change"}
                   </span>
                   <span className={`text-[12px] tabular-nums ${balanceAmount > 0 ? "text-amber-600" : "text-blue-600"}`}>
-                    ₹{formatINR(Math.abs(balanceAmount), 0)}
+                    ₹{formatINR(Math.abs(balanceAmount))}
                   </span>
                 </div>
               )}

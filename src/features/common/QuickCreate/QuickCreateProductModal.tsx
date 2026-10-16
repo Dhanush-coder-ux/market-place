@@ -370,6 +370,8 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
         brand: value,
         name: fullName,
       }));
+    } else if (name === "mrp") {
+      setForm((prev) => ({ ...prev, mrp: value, sell_price: value }));
     } else if (name === "gst") {
       const sanitized = value.replace(/[^0-9.]/g, "");
       setForm((prev) => ({ ...prev, gst: sanitized }));

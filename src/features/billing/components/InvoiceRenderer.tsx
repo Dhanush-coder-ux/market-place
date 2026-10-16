@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import { INVOICE_TEMPLATES } from "./invoice-templates";
 import { Banknote, Smartphone, Wallet, Check, Sparkles } from "lucide-react";
 import type { BillingItem } from "../types";
-import { calculateBillTotals, formatINR } from "@/utils/pricing";
+import { calculateBillTotals, formatINR, type BillTotals } from "@/utils/pricing";
 
 const payMeta: Record<string, { label: string; icon: React.ReactNode }> = {
   cash:   { label: "Cash",       icon: <Banknote   size={12} strokeWidth={1.5} /> },
@@ -24,6 +24,8 @@ export interface InvoiceRendererProps {
   totalAmount?: number;
   gstAmount?: number;
   finalAmount: number;
+  billDiscount?: { mode: '%' | '₹'; value: number };
+  billTotals?: BillTotals;
   invoiceRef?: React.RefObject<HTMLDivElement | null>;
   scale?: number;
 }
@@ -42,6 +44,8 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
   totalAmount: _totalAmount,
   gstAmount: _gstAmount,
   finalAmount,
+  billDiscount,
+  billTotals: billTotalsProp,
   invoiceRef,
   scale = 1
 }) => {
@@ -51,6 +55,7 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
   const filledItems = items.filter((i) => !!i.name && i.qty > 0);
 
   const billTotals = useMemo(() => {
+    if (billTotalsProp) return billTotalsProp;
     return calculateBillTotals(
       filledItems.map(i => ({
         id: i.id,
@@ -64,9 +69,9 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
         lineDiscountMode: i.lineDiscountMode || '%',
         lineDiscountValue: i.lineDiscountValue || 0,
       })),
-      { mode: '%', value: 0 }
+      billDiscount || { mode: '%', value: 0 }
     );
-  }, [filledItems]);
+  }, [filledItems, billDiscount, billTotalsProp]);
 
   const logoUrl =
     shopData?.logo_url ||
@@ -259,6 +264,12 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
                 <span>Base Subtotal (Gross SP)</span>
                 <span className={config.summary.value}>₹{formatINR(billTotals.baseSubtotal)}</span>
              </div>
+             {billTotals.billDiscountTotal > 0 && (
+               <div className={`${config.summary.row} text-purple-600 font-medium`}>
+                  <span>Bill Discount {billDiscount?.value ? `(${billDiscount.mode === '%' ? `${billDiscount.value}%` : `₹${billDiscount.value}`})` : ''}</span>
+                  <span className="tabular-nums">-₹{formatINR(billTotals.billDiscountTotal)}</span>
+               </div>
+             )}
              {totalDiscount > 0 && (
                <div className={`${config.summary.row} text-emerald-600 font-semibold`}>
                   <span>Total Discount</span>

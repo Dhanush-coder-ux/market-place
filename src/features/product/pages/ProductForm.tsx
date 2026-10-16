@@ -607,6 +607,14 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     const hasMrp = numMrp > 0;
     const hasSp = numSellingPrice > 0;
 
+    if (hasMrp && hasSp && numSellingPrice > numMrp) {
+      return {
+        discountDisabled: true,
+        message: `Selling price (₹${formatINR(numSellingPrice)}) exceeds MRP (₹${formatINR(numMrp)}). Selling price cannot be higher than MRP.`,
+        type: "error" as const,
+      };
+    }
+
     if (!hasMrp && !hasSp) {
       return {
         discountDisabled: true,
@@ -635,6 +643,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       type: "success" as const,
     };
   }, [numMrp, numSellingPrice, priceCalc]);
+
+  const sellingPriceError = useMemo(() => {
+    if (numMrp > 0 && numSellingPrice > 0 && numSellingPrice > numMrp) {
+      return `Selling price (₹${formatINR(numSellingPrice)}) cannot exceed MRP (₹${formatINR(numMrp)})`;
+    }
+    return undefined;
+  }, [numMrp, numSellingPrice]);
 
   // Validation computed values
   const missingFields: string[] = [];
@@ -856,6 +871,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     const { name, value } = e.target;
     if (name === "gst") {
       setForm(p => ({ ...p, gst: value.replace(/[^0-9.]/g, "") }));
+    } else if (name === "mrp") {
+      // Auto-populate selling_price when MRP is entered
+      setForm(p => ({
+        ...p,
+        mrp: value,
+        selling_price: value,
+      }));
     } else if (name === "name") {
       setForm(p => {
         const stripped = p.brand && value.startsWith(p.brand + " ") ? value.slice(p.brand.length + 1) : value;
@@ -960,6 +982,20 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       isSubmittingRef.current = false;
       setIsSubmitting(false);
       return;
+    }
+
+    if (form.has_variants) {
+      for (const combo of activeCombinations) {
+        const comboMrp = combo.mrp !== "" && !isNaN(Number(combo.mrp)) ? Number(combo.mrp) : numMrp;
+        const comboSp = combo.price !== "" && !isNaN(Number(combo.price)) ? Number(combo.price) : 0;
+        if (comboMrp > 0 && comboSp > 0 && comboSp > comboMrp) {
+          const varLabel = Object.values(combo.attributes).join(" / ") || "variant";
+          showToast(`Selling price (₹${comboSp.toFixed(2)}) cannot exceed MRP (₹${comboMrp.toFixed(2)}) for variant "${varLabel}".`, "error");
+          isSubmittingRef.current = false;
+          setIsSubmitting(false);
+          return;
+        }
+      }
     }
 
     const finalImages = [...existingImages];
@@ -1505,6 +1541,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         variantTypes={variantTypes}
                         onChange={setCombinations}
                         trackStock={form.track_stock}
+                        baseMrp={numMrp}
                       />
                     </div>
                   )}
@@ -1657,7 +1694,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         tooltip="Maximum Retail Price printed on the pack."
                       />
                       <InputField
-                        label={isGstReg ? "Selling price (excl. GST)" : "Selling price"}
+                        label={isGstReg ? "Selling price" : "Selling price"}
                         name="selling_price"
                         hint="optional — set from purchase"
                         type="number"
@@ -1666,6 +1703,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         placeholder="0.00"
                         leftEl={<IndianRupee size={13} />}
                         tooltip={isGstReg ? "Selling price exclusive of GST (GST will be added on top)." : "Selling price of the product."}
+                        error={sellingPriceError}
                       />
                       <InputField
                         label="Discount (%)"
@@ -1733,11 +1771,16 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                       )}
 
                       <div className={`p-2.5 rounded-lg border text-[11px] font-medium flex items-center gap-2 ${
+                        pricingHelperState.type === 'error' ? 'bg-red-50/70 border-red-200 text-red-700' :
                         pricingHelperState.type === 'success' ? 'bg-emerald-50/60 border-emerald-150 text-emerald-800' :
                         pricingHelperState.type === 'info' ? 'bg-blue-50/60 border-blue-150 text-blue-800' :
                         'bg-slate-50 border-slate-200 text-slate-500'
                       }`}>
-                        <Info size={13} className="shrink-0 text-slate-400" />
+                        {pricingHelperState.type === 'error' ? (
+                          <AlertCircle size={13} className="shrink-0 text-red-500" />
+                        ) : (
+                          <Info size={13} className="shrink-0 text-slate-400" />
+                        )}
                         <span>{pricingHelperState.message}</span>
                       </div>
                     </div>
@@ -1773,6 +1816,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         placeholder="0.00"
                         leftEl={<IndianRupee size={13} />}
                         tooltip={isGstReg ? "Selling price exclusive of GST." : "Selling price."}
+                        error={sellingPriceError}
                       />
                       <InputField
                         label="Discount (%)"

@@ -233,10 +233,11 @@ interface VariantMatrixTableProps {
   variantTypes: VariantType[];
   onChange: (combos: VariantCombination[]) => void;
   trackStock?: boolean;
+  baseMrp?: number;
 }
 
 export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
-  combinations, onChange, trackStock: _trackStock
+  combinations, onChange, trackStock: _trackStock, baseMrp
 }) => {
 
   const [barcodeBase, setbarcodeBase] = useState("");
@@ -322,6 +323,9 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
             </thead>
             <tbody className="divide-y divide-slate-50">
               {combinations.map((combo) => {
+                const effectiveMrp = combo.mrp && !isNaN(Number(combo.mrp)) && Number(combo.mrp) > 0 ? Number(combo.mrp) : baseMrp;
+                const isOverMrp = effectiveMrp && effectiveMrp > 0 && combo.price && !isNaN(Number(combo.price)) && Number(combo.price) > effectiveMrp;
+
                 return (
                   <React.Fragment key={combo.id}>
                     <tr className={`hover:bg-slate-50/50 transition-all duration-150 ${!combo.active ? "opacity-40 grayscale-[0.5]" : ""}`}>
@@ -342,9 +346,14 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                       </td>
                       <td className="px-5 py-4">
                         <input
-                          className="h-9 px-3 text-xs border border-slate-200 rounded-lg w-24 text-center font-mono focus:ring-2 focus:ring-blue-100 outline-none"
+                          className={`h-9 px-3 text-xs border rounded-lg w-24 text-center font-mono focus:ring-2 focus:ring-blue-100 outline-none ${
+                            isOverMrp
+                              ? "border-red-300 bg-red-50/50 text-red-700"
+                              : "border-slate-200"
+                          }`}
                           placeholder="0.00"
                           type="number"
+                          title={isOverMrp ? `Selling price cannot exceed MRP (₹${effectiveMrp})` : undefined}
                           value={combo.price}
                           onChange={e => update(combo.id, "price", e.target.value)}
                         />

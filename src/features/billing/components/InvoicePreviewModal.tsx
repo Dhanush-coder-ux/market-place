@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Download, X, Loader2, CheckCircle2, Plus, Printer } from "lucide-react";
 import type { BillingItem } from "../types";
+import type { BillTotals } from "@/utils/pricing";
 import { shopApi } from "../../../services/api/shop";
 import { InvoiceRenderer } from "./InvoiceRenderer";
 
@@ -18,6 +19,8 @@ interface InvoicePreviewModalProps {
   totalAmount: number;
   gstAmount: number;
   finalAmount: number;
+  billDiscount?: { mode: '%' | '₹'; value: number };
+  billTotals?: BillTotals;
   isSubmitting: boolean;
   onConfirm: (status: BillStatus) => void;
   orderId?: string;
@@ -27,6 +30,7 @@ interface InvoicePreviewModalProps {
 const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
   isOpen, onClose, items, customerName, phone,
   payments, includeGst, totalAmount, gstAmount, finalAmount,
+  billDiscount, billTotals,
   isSubmitting, onConfirm, orderId, onNewBill
 }) => {
   const invoiceRef = useRef<HTMLDivElement>(null);
@@ -213,6 +217,8 @@ ${(err as Error)?.message ?? String(err)}`);
               totalAmount={totalAmount}
               gstAmount={gstAmount}
               finalAmount={finalAmount}
+              billDiscount={billDiscount}
+              billTotals={billTotals}
               invoiceRef={invoiceRef}
             />
           </div>

@@ -9,7 +9,7 @@ import {
 import SkeletonLoader from "@/components/common/SkeletonLoader";
 import {
   TrendingUp,
-  ExternalLink, Globe, Store, RotateCw
+  ExternalLink, Globe, Store, RotateCw, Percent
 } from "lucide-react";
 import { useApi } from "@/context/ApiContext";
 import { useHeader } from "@/context/HeaderContext";
@@ -61,6 +61,49 @@ function fmtTime(dateVal?: any) {
   if (!dateVal) return "";
   const d = parseSaleDateTime(dateVal);
   return d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
+}
+
+export function checkSaleDiscount(s: any): { hasDiscount: boolean; discountAmount: number } {
+  if (!s) return { hasDiscount: false, discountAmount: 0 };
+  const calc = s.calculation_infos || s.calculations || s.calc_infos;
+  
+  let discAmt = 0;
+  if (calc) {
+    discAmt = Number(calc.total_discount_given ?? calc.discount_total ?? calc.total_discount ?? 0);
+    if (discAmt <= 0) {
+      const pDisc = Number(calc.product_discount_total || 0);
+      const lDisc = Number(calc.line_discount_total || 0);
+      const bDisc = Number(calc.bill_discount_total || 0);
+      discAmt = pDisc + lDisc + bDisc;
+    }
+  }
+
+  if (discAmt <= 0) {
+    discAmt = Number(s.discount_amount ?? s.total_discount ?? s.discount ?? s.charges_infos?.discount ?? 0);
+  }
+
+  let hasDiscFromItems = false;
+  const items = Array.isArray(calc?.items) ? calc.items : (Array.isArray(s.items) ? s.items : []);
+  if (items.length > 0) {
+    for (const it of items) {
+      const itDiscAmt = Number(it.product_discount_amount || 0) +
+        Number(it.line_discount_amount || 0) +
+        Number(it.bill_discount_share || 0) +
+        Number(it.discount_amount || 0);
+      const itDiscPct = Number(it.discount_percent || 0) +
+        Number(it.line_discount_value || 0) +
+        Number(it.product_discount_percent || 0);
+      if (itDiscAmt > 0 || itDiscPct > 0) {
+        hasDiscFromItems = true;
+        if (discAmt <= 0 && itDiscAmt > 0) {
+          discAmt += itDiscAmt;
+        }
+      }
+    }
+  }
+
+  const hasDiscount = discAmt > 0 || hasDiscFromItems;
+  return { hasDiscount, discountAmount: discAmt };
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -422,12 +465,22 @@ const SalesListPage: React.FC = () => {
 
   /* ── Filters ── */
   const [analyticsStats, setAnalyticsStats] = useState<any>(null);
-  const [summaryStats, setSummaryStats] = useState<{ total: number; onlineAmount: number; onlineCount: number; offlineAmount: number; offlineCount: number }>({
+  const [summaryStats, setSummaryStats] = useState<{
+    total: number;
+    onlineAmount: number;
+    onlineCount: number;
+    offlineAmount: number;
+    offlineCount: number;
+    discountedCount: number;
+    discountedAmount: number;
+  }>({
     total: 0,
     onlineAmount: 0,
     onlineCount: 0,
     offlineAmount: 0,
-    offlineCount: 0
+    offlineCount: 0,
+    discountedCount: 0,
+    discountedAmount: 0,
   });
 
   useEffect(() => {
@@ -446,6 +499,8 @@ const SalesListPage: React.FC = () => {
       let onlineCnt = 0;
       let offlineAmt = 0;
       let offlineCnt = 0;
+      let discAmt = 0;
+      let discCnt = 0;
       dataList.forEach((s: any) => {
         const isOnline = s.origin === "ONLINE" || s.origin === "Online Sales" || Boolean(s.online_details);
         const st = String(s.status || "").toUpperCase();
@@ -461,13 +516,21 @@ const SalesListPage: React.FC = () => {
           offlineAmt += total;
           offlineCnt++;
         }
+
+        const discInfo = checkSaleDiscount(s);
+        if (discInfo.hasDiscount) {
+          discCnt++;
+          discAmt += total;
+        }
       });
       setSummaryStats({
         total: onlineCnt + offlineCnt,
         onlineAmount: onlineAmt,
         onlineCount: onlineCnt,
         offlineAmount: offlineAmt,
-        offlineCount: offlineCnt
+        offlineCount: offlineCnt,
+        discountedCount: discCnt,
+        discountedAmount: discAmt,
       });
     }).catch(() => { });
   }, [api.getData]);
@@ -497,8 +560,11 @@ const SalesListPage: React.FC = () => {
   }, [reload]);
 
   const filtered = useMemo<any[]>(() => {
+    if (activeKpi === "Discounted Sales") {
+      return (items as any[]).filter(s => checkSaleDiscount(s).hasDiscount);
+    }
     return items as any[];
-  }, [items]);
+  }, [items, activeKpi]);
 
   const activeFilters = [fromDate, toDate].filter(Boolean).length;
   const clearAll = () => {
@@ -560,6 +626,16 @@ const SalesListPage: React.FC = () => {
             subValue={`₹${(analyticsStats?.overview?.sales?.total_offline_sales_amount ?? summaryStats.offlineAmount).toLocaleString()}`}
             onClick={() => setActiveKpi(prev => prev === "Offline Sales" ? "Total Orders" : "Offline Sales")}
             className={activeKpi === "Offline Sales" ? "ring-2 ring-indigo-400 border-transparent shadow-sm" : ""}
+          />
+          <StatCard
+            label="Discounted Sales"
+            value={summaryStats.discountedCount}
+            icon={<Percent size={18} />}
+            iconBg="bg-emerald-50"
+            iconColor="text-emerald-600"
+            subValue={`₹${summaryStats.discountedAmount.toLocaleString()}`}
+            onClick={() => setActiveKpi(prev => prev === "Discounted Sales" ? "Total Orders" : "Discounted Sales")}
+            className={activeKpi === "Discounted Sales" ? "ring-2 ring-emerald-400 border-transparent shadow-sm" : ""}
           />
         </div>
       )}
@@ -681,6 +757,7 @@ const SalesListPage: React.FC = () => {
                   (sale as any).type === 'exchange';
 
                 const hasReturns = (sale.returns && sale.returns.length > 0) || (sale.items || []).some((i: any) => (i.returned_quantity && i.returned_quantity > 0) || i.status === "REFUNDED" || i.status === "EXCHANGED") || sale.status === "Returned" || sale.status === "RETURNED";
+                const hasDiscount = checkSaleDiscount(sale).hasDiscount;
 
                 const isSelected = selectedSale?.id === sale.id;
 
@@ -702,6 +779,7 @@ const SalesListPage: React.FC = () => {
                           {refundedCount > 0 && <AntBadge variant="pay-partial" type="tag">{refundedCount} Refunded</AntBadge>}
                           {/* Items on this order that were later exchanged */}
                           {exchangedCount > 0 && <AntBadge variant="tx-sales" type="tag">{exchangedCount} Exchanged</AntBadge>}
+                          {hasDiscount && <AntBadge variant="tx-purchase" type="tag">Discounted</AntBadge>}
                         </div>
                       </div>
                     </td>

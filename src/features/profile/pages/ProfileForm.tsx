@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Store,
@@ -8,7 +8,10 @@ import {
   BadgeCheck,
   Save,
   Info,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
+import { validateGstNumber, sanitizeGstInput } from "@/utils/gst";
 import { useHeader } from "@/context/HeaderContext";
 import { useToast } from "@/context/ToastContext";
 import { useApi } from "@/context/ApiContext";
@@ -64,6 +67,7 @@ const ProfileForm: React.FC = () => {
 
   const [submitting, setSubmitting] = useState(false);
   const [loadingData, setLoadingData] = useState(!!id);
+  const [gstTouched, setGstTouched] = useState(false);
 
   const initialFormData: ProfileData = {
     name: "",
@@ -147,16 +151,37 @@ const ProfileForm: React.FC = () => {
     return () => setBottomActions(null);
   }, [setBottomActions, submitting, id, formData]);
 
+  const gstValidation = useMemo(() => {
+    if (!formData.gst_registered) return null;
+    return validateGstNumber(formData.gst_number);
+  }, [formData.gst_registered, formData.gst_number]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    const finalValue = name.includes("gst") ? value.toUpperCase() : value;
-    setFormData((prev) => ({ ...prev, [name]: finalValue }));
+    if (name === "gst_number") {
+      const sanitized = sanitizeGstInput(value);
+      setFormData((prev) => ({ ...prev, gst_number: sanitized }));
+    } else {
+      const finalValue = name.includes("gst") ? value.toUpperCase() : value;
+      setFormData((prev) => ({ ...prev, [name]: finalValue }));
+    }
   };
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!formData.name) return showToast("Shop name is required", "error");
     if (formData.category.length === 0) return showToast("Category is required", "error");
+
+    if (formData.gst_registered) {
+      const validation = validateGstNumber(formData.gst_number);
+      if (!validation.isValid) {
+        setGstTouched(true);
+        return showToast(
+          validation.error || "Please enter a valid 15-character GST number (e.g. 22AAAAA0000A1Z5)",
+          "error"
+        );
+      }
+    }
 
     setSubmitting(true);
 
@@ -389,7 +414,13 @@ const ProfileForm: React.FC = () => {
                 <input
                   type="checkbox"
                   checked={formData.gst_registered}
-                  onChange={(e) => setFormData((p) => ({ ...p, gst_registered: e.target.checked }))}
+                  onChange={(e) => {
+                    const isChecked = e.target.checked;
+                    setFormData((p) => ({ ...p, gst_registered: isChecked }));
+                    if (!isChecked) {
+                      setGstTouched(false);
+                    }
+                  }}
                   className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                 />
                 <span className="text-sm font-semibold text-slate-700">
@@ -398,15 +429,91 @@ const ProfileForm: React.FC = () => {
               </label>
 
               {formData.gst_registered && (
-                <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                  <Input
-                    label="GST Number"
-                    name="gst_number"
-                    value={formData.gst_number}
-                    onChange={handleChange}
-                    placeholder="22AAAAA0000A1Z5"
-                    leftIcon={<FileText size={16} className="text-slate-300" />}
-                  />
+                <div className="animate-in fade-in slide-in-from-top-2 duration-300 space-y-3">
+                  <div className="space-y-1">
+                    <Input
+                      label="GST Number"
+                      required
+                      name="gst_number"
+                      value={formData.gst_number}
+                      onChange={handleChange}
+                      onBlur={() => setGstTouched(true)}
+                      maxLength={15}
+                      placeholder="22AAAAA0000A1Z5"
+                      leftIcon={<FileText size={16} className="text-slate-300" />}
+                      rightIcon={
+                        formData.gst_number ? (
+                          gstValidation?.isValid ? (
+                            <CheckCircle2 size={16} className="text-emerald-500" />
+                          ) : gstTouched ? (
+                            <AlertCircle size={16} className="text-rose-500" />
+                          ) : null
+                        ) : null
+                      }
+                      className={`font-mono uppercase tracking-wider ${
+                        formData.gst_number
+                          ? gstValidation?.isValid
+                            ? "border-emerald-400 focus:border-emerald-500 focus:ring-emerald-100 bg-emerald-50/20"
+                            : gstTouched
+                            ? "border-rose-400 focus:border-rose-500 focus:ring-rose-100 bg-rose-50/20"
+                            : ""
+                          : gstTouched
+                          ? "border-rose-400 focus:border-rose-500 focus:ring-rose-100 bg-rose-50/20"
+                          : ""
+                      }`}
+                    />
+
+                    {/* Character count & status feedback */}
+                    <div className="flex items-center justify-between text-[11px] px-1 pt-0.5">
+                      {gstTouched && !formData.gst_number ? (
+                        <span className="text-rose-500 font-medium flex items-center gap-1">
+                          <AlertCircle size={11} /> GST number is required
+                        </span>
+                      ) : gstTouched && gstValidation && !gstValidation.isValid ? (
+                        <span className="text-rose-500 font-medium flex items-center gap-1">
+                          <AlertCircle size={11} className="shrink-0" />
+                          <span className="truncate">{gstValidation.error}</span>
+                        </span>
+                      ) : gstValidation?.isValid ? (
+                        <span className="text-emerald-600 font-semibold flex items-center gap-1">
+                          <CheckCircle2 size={11} /> Valid GSTIN
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">Format: 22AAAAA0000A1Z5</span>
+                      )}
+
+                      <span
+                        className={`font-mono font-medium ${
+                          formData.gst_number.length === 15
+                            ? gstValidation?.isValid
+                              ? "text-emerald-600"
+                              : "text-amber-600"
+                            : "text-slate-400"
+                        }`}
+                      >
+                        {formData.gst_number.length}/15
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Metadata display card when GST is valid */}
+                  {gstValidation?.isValid && (
+                    <div className="p-3 bg-emerald-50/80 border border-emerald-200/80 rounded-lg space-y-1.5 animate-in fade-in duration-200">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-emerald-800 font-semibold flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          {gstValidation.stateName}
+                        </span>
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-1.5 py-0.5 rounded">
+                          State Code: {gstValidation.stateCode}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-emerald-700 flex items-center justify-between font-medium">
+                        <span>Associated PAN:</span>
+                        <span className="font-mono font-bold tracking-wider">{gstValidation.pan}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

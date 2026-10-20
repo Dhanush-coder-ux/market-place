@@ -1037,7 +1037,17 @@ const InventoryPage = () => {
     }
   }, [selectedItems, setBottomActions, navigate]);
 
-  const activeFiltersCount = [fromDate, toDate].filter(Boolean).length;
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (fromDate) count++;
+    if (toDate) count++;
+    if (stockStatus) count++;
+    if (filtersState.category !== "All") count++;
+    if (filtersState.brand !== "All") count++;
+    if (filtersState.type !== "All") count++;
+    if (filtersState.visibility !== "All") count++;
+    return count;
+  }, [fromDate, toDate, stockStatus, filtersState]);
 
   const resetFilters = () => {
     setFromDate("");
@@ -1109,6 +1119,24 @@ const InventoryPage = () => {
     filters,
     limit: 50
   });
+
+  const availableCategories = useMemo(() => {
+    const set = new Set<string>();
+    (inventory || []).forEach((item: any) => {
+      const cat = item.category_infos?.name || item.datas?.category || item.category;
+      if (cat && typeof cat === 'string') set.add(cat.trim());
+    });
+    return Array.from(set).sort();
+  }, [inventory]);
+
+  const availableBrands = useMemo(() => {
+    const set = new Set<string>();
+    (inventory || []).forEach((item: any) => {
+      const b = item.brand || item.datas?.brand;
+      if (b && typeof b === 'string') set.add(b.trim());
+    });
+    return Array.from(set).sort();
+  }, [inventory]);
 
   const filteredInventory = useMemo(() => {
     let result = inventory as InventoryItem[];
@@ -1250,9 +1278,9 @@ const InventoryPage = () => {
           className={`h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0 ${activeFiltersCount > 0 ? "border-blue-200 text-blue-600 bg-blue-50/50" : "border-slate-200 text-slate-650 bg-white hover:bg-slate-50"}`}
         >
           <Filter size={13} />
-          {activeFiltersCount > 0 && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />}
+          Filters
+          {activeFiltersCount > 0 && <span className="ml-1 px-1.5 py-0.5 bg-blue-600 text-white rounded-full text-[9px] font-black">{activeFiltersCount}</span>}
         </button>
-
 
         {searchQuery && (
           <span className="text-[11px] text-slate-400 font-medium ml-1 shrink-0">
@@ -1265,29 +1293,118 @@ const InventoryPage = () => {
       <RightSidebarFilter
         isOpen={isFilterOpen}
         onClose={() => setIsFilterOpen(false)}
-        onApply={() => { }}
+        onApply={() => setIsFilterOpen(false)}
         onClear={resetFilters}
         title="Inventory Filters"
       >
         <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <div className="space-y-1.5 flex-1">
-              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">From</label>
-              <input
-                type="date"
-                value={fromDate}
-                onChange={e => setFromDate(e.target.value)}
-                className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
-              />
+          {/* Date Range */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Date Range</label>
+            <div className="flex items-center gap-2">
+              <div className="space-y-1 flex-1">
+                <span className="text-[10px] text-slate-400 font-medium">From</span>
+                <input
+                  type="date"
+                  value={fromDate}
+                  onChange={e => setFromDate(e.target.value)}
+                  className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+                />
+              </div>
+              <div className="space-y-1 flex-1">
+                <span className="text-[10px] text-slate-400 font-medium">To</span>
+                <input
+                  type="date"
+                  value={toDate}
+                  onChange={e => setToDate(e.target.value)}
+                  className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+                />
+              </div>
             </div>
-            <div className="space-y-1.5 flex-1">
-              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">To</label>
-              <input
-                type="date"
-                value={toDate}
-                onChange={e => setToDate(e.target.value)}
-                className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
-              />
+          </div>
+
+          {/* Stock Status */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Stock Status</label>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { label: "All", value: "" },
+                { label: "Low Stock", value: "low" },
+                { label: "Out of Stock", value: "out_of_stock" }
+              ].map(opt => (
+                <button
+                  key={opt.label}
+                  type="button"
+                  onClick={() => setStockStatus(opt.value)}
+                  className={`h-9 px-2 rounded-md text-xs font-semibold border transition-all ${stockStatus === opt.value ? "border-blue-600 bg-blue-50 text-blue-700 font-bold" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Product Type */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Product Type</label>
+            <div className="grid grid-cols-3 gap-1.5">
+              {["All", "Simple", "Variants", "Batches", "Serials"].map(type => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setFiltersState(prev => ({ ...prev, type }))}
+                  className={`h-8 px-2 rounded-md text-xs font-semibold border transition-all ${filtersState.type === type ? "border-blue-600 bg-blue-50 text-blue-700 font-bold" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Category */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Category</label>
+            <select
+              value={filtersState.category}
+              onChange={e => setFiltersState(prev => ({ ...prev, category: e.target.value }))}
+              className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+            >
+              <option value="All">All Categories</option>
+              {availableCategories.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Brand */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Brand</label>
+            <select
+              value={filtersState.brand}
+              onChange={e => setFiltersState(prev => ({ ...prev, brand: e.target.value }))}
+              className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+            >
+              <option value="All">All Brands</option>
+              {availableBrands.map(b => (
+                <option key={b} value={b}>{b}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Store Visibility */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Store Visibility</label>
+            <div className="grid grid-cols-3 gap-2">
+              {["All", "Online", "Offline"].map(v => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setFiltersState(prev => ({ ...prev, visibility: v }))}
+                  className={`h-9 px-2 rounded-md text-xs font-semibold border transition-all ${filtersState.visibility === v ? "border-blue-600 bg-blue-50 text-blue-700 font-bold" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
+                >
+                  {v}
+                </button>
+              ))}
             </div>
           </div>
         </div>

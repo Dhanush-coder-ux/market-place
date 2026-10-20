@@ -566,7 +566,15 @@ const SalesListPage: React.FC = () => {
     return items as any[];
   }, [items, activeKpi]);
 
-  const activeFilters = [fromDate, toDate].filter(Boolean).length;
+  const activeFilters = useMemo(() => {
+    let count = 0;
+    if (fromDate) count++;
+    if (toDate) count++;
+    if (filterOrigin) count++;
+    if (filterPayment) count++;
+    if (filterStatus) count++;
+    return count;
+  }, [fromDate, toDate, filterOrigin, filterPayment, filterStatus]);
   const clearAll = () => {
     setFilterOrigin("");
     setFilterPayment("");
@@ -662,10 +670,10 @@ const SalesListPage: React.FC = () => {
           title="Filters"
         >
           <Filter size={13} />
+          Filters
           {activeFilters > 0 && (
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+            <span className="ml-1 px-1.5 py-0.5 bg-blue-600 text-white rounded-full text-[9px] font-black">{activeFilters}</span>
           )}
-          <p>Filters</p>
         </button>
 
         <div className="flex-1" />
@@ -679,29 +687,93 @@ const SalesListPage: React.FC = () => {
       <RightSidebarFilter
         isOpen={isFilterOpen}
         onClose={() => setIsFilterOpen(false)}
-        onApply={() => { }}
+        onApply={() => setIsFilterOpen(false)}
         onClear={clearAll}
         title="Sales Filters"
       >
         <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <div className="space-y-1.5 flex-1">
-              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">From</label>
-              <input
-                type="date"
-                value={fromDate}
-                onChange={e => setFromDate(e.target.value)}
-                className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
-              />
+          {/* Date Range */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Date Range</label>
+            <div className="flex items-center gap-2">
+              <div className="space-y-1 flex-1">
+                <span className="text-[10px] text-slate-400 font-medium">From</span>
+                <input
+                  type="date"
+                  value={fromDate}
+                  onChange={e => setFromDate(e.target.value)}
+                  className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+                />
+              </div>
+              <div className="space-y-1 flex-1">
+                <span className="text-[10px] text-slate-400 font-medium">To</span>
+                <input
+                  type="date"
+                  value={toDate}
+                  onChange={e => setToDate(e.target.value)}
+                  className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+                />
+              </div>
             </div>
-            <div className="space-y-1.5 flex-1">
-              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">To</label>
-              <input
-                type="date"
-                value={toDate}
-                onChange={e => setToDate(e.target.value)}
-                className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
-              />
+          </div>
+
+          {/* Sales Channel */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Channel / Origin</label>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { label: "All Channels", value: "" },
+                { label: "Offline POS", value: "Offline" },
+                { label: "Online Store", value: "Online" },
+                { label: "Returns", value: "Offline Return" }
+              ].map(opt => (
+                <button
+                  key={opt.label}
+                  type="button"
+                  onClick={() => setFilterOrigin(opt.value)}
+                  className={`h-9 rounded-md text-xs font-semibold border transition-all ${filterOrigin === opt.value ? "border-blue-600 bg-blue-50 text-blue-700 font-bold" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Payment Method */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Payment Method</label>
+            <select
+              value={filterPayment}
+              onChange={e => setFilterPayment(e.target.value)}
+              className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+            >
+              <option value="">All Payment Methods</option>
+              <option value="Cash">Cash</option>
+              <option value="Card">Card</option>
+              <option value="UPI">UPI</option>
+              <option value="On Credit">On Credit</option>
+            </select>
+          </div>
+
+          {/* Order Status */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Order Status</label>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { label: "All Statuses", value: "" },
+                { label: "Completed", value: "Completed" },
+                { label: "Delivered", value: "Delivered" },
+                { label: "Cancelled", value: "Cancelled" }
+              ].map(opt => (
+                <button
+                  key={opt.label}
+                  type="button"
+                  onClick={() => setFilterStatus(opt.value)}
+                  className={`h-9 rounded-md text-xs font-semibold border transition-all ${filterStatus === opt.value ? "border-blue-600 bg-blue-50 text-blue-700 font-bold" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
+                >
+                  {opt.label}
+                </button>
+              ))}
             </div>
           </div>
         </div>

@@ -152,7 +152,13 @@ const CustomerList = () => {
     limit: 50
   });
 
-  const activeFilters = [fromDate, toDate].filter(Boolean).length;
+  const activeFilters = useMemo(() => {
+    let count = 0;
+    if (fromDate) count++;
+    if (toDate) count++;
+    if (filterOutstanding !== "All") count++;
+    return count;
+  }, [fromDate, toDate, filterOutstanding]);
   const clearAll = () => { setFromDate(""); setToDate(""); setSearchTerm(""); setFilterOutstanding("All"); };
 
   /* ── Row Selection ── */
@@ -301,29 +307,55 @@ const CustomerList = () => {
       <RightSidebarFilter
         isOpen={isFilterOpen}
         onClose={() => setIsFilterOpen(false)}
-        onApply={() => { }}
+        onApply={() => setIsFilterOpen(false)}
         onClear={clearAll}
         title="Customer Filters"
       >
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <div className="space-y-1.5 flex-1">
-              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">From</label>
-              <input
-                type="date"
-                value={fromDate}
-                onChange={e => setFromDate(e.target.value)}
-                className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
-              />
+        <div className="space-y-5">
+          {/* Date Range */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Registration Date</label>
+            <div className="flex items-center gap-2">
+              <div className="space-y-1 flex-1">
+                <span className="text-[10px] text-slate-400 font-medium">From</span>
+                <input
+                  type="date"
+                  value={fromDate}
+                  onChange={e => setFromDate(e.target.value)}
+                  className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+                />
+              </div>
+              <div className="space-y-1 flex-1">
+                <span className="text-[10px] text-slate-400 font-medium">To</span>
+                <input
+                  type="date"
+                  value={toDate}
+                  onChange={e => setToDate(e.target.value)}
+                  className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-755 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+                />
+              </div>
             </div>
-            <div className="space-y-1.5 flex-1">
-              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">To</label>
-              <input
-                type="date"
-                value={toDate}
-                onChange={e => setToDate(e.target.value)}
-                className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-755 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
-              />
+          </div>
+
+          {/* Outstanding Status */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Outstanding Balance</label>
+            <div className="grid grid-cols-1 gap-2">
+              {[
+                { label: "All Customers", value: "All", desc: "Show all customer records" },
+                { label: "Has Outstanding", value: "Outstanding", desc: "Customers with pending dues" },
+                { label: "Cleared / No Due", value: "Cleared", desc: "Zero balance or cleared" },
+              ].map(opt => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setFilterOutstanding(opt.value)}
+                  className={`px-3 py-2.5 rounded-lg text-left border transition-all ${filterOutstanding === opt.value ? "border-blue-600 bg-blue-50 text-blue-700 font-bold" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
+                >
+                  <p className="text-xs font-semibold">{opt.label}</p>
+                  <p className="text-[10px] text-slate-400 font-normal">{opt.desc}</p>
+                </button>
+              ))}
             </div>
           </div>
         </div>

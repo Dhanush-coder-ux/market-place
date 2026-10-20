@@ -976,6 +976,10 @@ const ProductInfos = () => {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [filterCategory, setFilterCategory] = useState("All");
+  const [filterBrand, setFilterBrand] = useState("All");
+  const [filterStatus, setFilterStatus] = useState("All");
+  const [filterTracking, setFilterTracking] = useState("All");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -1213,6 +1217,45 @@ const ProductInfos = () => {
     }
   }, [selectedProducts, setBottomActions, navigate]);
 
+  const availableCategories = useMemo(() => {
+    const set = new Set<string>();
+    (products || []).forEach((p: any) => {
+      const cat = p.category_infos?.name || p.additional_infos?.category || p.datas?.category || p.category;
+      if (cat && typeof cat === 'string') set.add(cat.trim());
+    });
+    return Array.from(set).sort();
+  }, [products]);
+
+  const availableBrands = useMemo(() => {
+    const set = new Set<string>();
+    (products || []).forEach((p: any) => {
+      const b = p.brand || p.additional_infos?.brand || p.datas?.brand;
+      if (b && typeof b === 'string') set.add(b.trim());
+    });
+    return Array.from(set).sort();
+  }, [products]);
+
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (fromDate) count++;
+    if (toDate) count++;
+    if (filterCategory !== "All") count++;
+    if (filterBrand !== "All") count++;
+    if (filterStatus !== "All") count++;
+    if (filterTracking !== "All") count++;
+    return count;
+  }, [fromDate, toDate, filterCategory, filterBrand, filterStatus, filterTracking]);
+
+  const resetFilters = () => {
+    setFromDate("");
+    setToDate("");
+    setSearchTerm("");
+    setFilterCategory("All");
+    setFilterBrand("All");
+    setFilterStatus("All");
+    setFilterTracking("All");
+  };
+
   const filteredProducts = useMemo(() => {
     let result = products;
     if (fromDate) {
@@ -1227,6 +1270,37 @@ const ProductInfos = () => {
       result = result.filter((p: any) => {
         const d = new Date(p.created_at || p.date).getTime();
         return !isNaN(d) && d <= to;
+      });
+    }
+
+    if (filterCategory !== "All") {
+      result = result.filter((p: any) => {
+        const cat = p.category_infos?.name || p.additional_infos?.category || p.datas?.category || p.category;
+        return cat === filterCategory;
+      });
+    }
+
+    if (filterBrand !== "All") {
+      result = result.filter((p: any) => {
+        const b = p.brand || p.additional_infos?.brand || p.datas?.brand;
+        return b === filterBrand;
+      });
+    }
+
+    if (filterStatus !== "All") {
+      result = result.filter((p: any) => {
+        if (filterStatus === "Active") return p.is_active !== false;
+        if (filterStatus === "Inactive") return p.is_active === false;
+        return true;
+      });
+    }
+
+    if (filterTracking !== "All") {
+      result = result.filter((p: any) => {
+        const isUntracked = p.have_tracking === false || p.track_stock === false || p.is_stock_tracked === false || p.type === "service";
+        if (filterTracking === "Tracking") return !isUntracked;
+        if (filterTracking === "Non-Tracking") return isUntracked;
+        return true;
       });
     }
 
@@ -1256,7 +1330,7 @@ const ProductInfos = () => {
     }
 
     return result;
-  }, [products, debouncedSearch, fromDate, toDate, activeKpi]);
+  }, [products, debouncedSearch, fromDate, toDate, filterCategory, filterBrand, filterStatus, filterTracking, activeKpi]);
 
   if (loading && products.length === 0 && !searchTerm && !debouncedSearch) {
     return (
@@ -1328,15 +1402,16 @@ const ProductInfos = () => {
         <button
           type="button"
           onClick={() => setIsFilterOpen(true)}
-          className={`h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0 ${Boolean(fromDate || toDate)
+          className={`h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0 ${activeFiltersCount > 0
             ? "border-blue-200 text-blue-600 bg-blue-50/50"
             : "border-slate-200 text-slate-650 bg-white hover:bg-slate-50"
             }`}
           title="Filters"
         >
           <Filter size={13} />
-          {Boolean(fromDate || toDate) && (
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+          Filters
+          {activeFiltersCount > 0 && (
+            <span className="ml-1 px-1.5 py-0.5 bg-blue-600 text-white rounded-full text-[9px] font-black">{activeFiltersCount}</span>
           )}
         </button>
         <ColumnPicker
@@ -1361,29 +1436,105 @@ const ProductInfos = () => {
         isOpen={isFilterOpen}
         onClose={() => setIsFilterOpen(false)}
         onApply={() => setIsFilterOpen(false)}
-        onClear={() => { setFromDate(""); setToDate(""); }}
+        onClear={resetFilters}
         title="Product Filters"
       >
         <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <div className="space-y-1.5 flex-1">
-              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">From</label>
-              <input
-                type="date"
-                value={fromDate}
-                onChange={e => setFromDate(e.target.value)}
-                className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
-              />
+          {/* Date Range */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Date Added</label>
+            <div className="flex items-center gap-2">
+              <div className="space-y-1 flex-1">
+                <span className="text-[10px] text-slate-400 font-medium">From</span>
+                <input
+                  type="date"
+                  value={fromDate}
+                  onChange={e => setFromDate(e.target.value)}
+                  className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+                />
+              </div>
+              <div className="space-y-1 flex-1">
+                <span className="text-[10px] text-slate-400 font-medium">To</span>
+                <input
+                  type="date"
+                  value={toDate}
+                  onChange={e => setToDate(e.target.value)}
+                  className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+                />
+              </div>
             </div>
-            <div className="space-y-1.5 flex-1">
-              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">To</label>
-              <input
-                type="date"
-                value={toDate}
-                onChange={e => setToDate(e.target.value)}
-                className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
-              />
+          </div>
+
+          {/* Product Status */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Product Status</label>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { label: "All", value: "All" },
+                { label: "Active", value: "Active" },
+                { label: "Inactive", value: "Inactive" }
+              ].map(opt => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setFilterStatus(opt.value)}
+                  className={`h-9 px-2 rounded-md text-xs font-semibold border transition-all ${filterStatus === opt.value ? "border-blue-600 bg-blue-50 text-blue-700 font-bold" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
+                >
+                  {opt.label}
+                </button>
+              ))}
             </div>
+          </div>
+
+          {/* Stock Tracking */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Stock Tracking</label>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { label: "All", value: "All" },
+                { label: "Tracked", value: "Tracking" },
+                { label: "Untracked", value: "Non-Tracking" }
+              ].map(opt => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setFilterTracking(opt.value)}
+                  className={`h-9 px-2 rounded-md text-xs font-semibold border transition-all ${filterTracking === opt.value ? "border-blue-600 bg-blue-50 text-blue-700 font-bold" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Category */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Category</label>
+            <select
+              value={filterCategory}
+              onChange={e => setFilterCategory(e.target.value)}
+              className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+            >
+              <option value="All">All Categories</option>
+              {availableCategories.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Brand */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Brand</label>
+            <select
+              value={filterBrand}
+              onChange={e => setFilterBrand(e.target.value)}
+              className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+            >
+              <option value="All">All Brands</option>
+              {availableBrands.map(b => (
+                <option key={b} value={b}>{b}</option>
+              ))}
+            </select>
           </div>
         </div>
       </RightSidebarFilter>

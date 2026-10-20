@@ -926,11 +926,22 @@ const ViewToggle = ({
 
 /* ================= MAIN COMPONENT ================= */
 const PurchaseHistory = () => {
-  const { purchase } = useBusinessApi();
+  const { purchase, supplier } = useBusinessApi();
   const location = useLocation();
   const isCleanMode = new URLSearchParams(location.search).get("mode") === "clean";
   const { setActions, setBottomActions } = useHeader();
   const [refreshKey, setRefreshKey] = useState(0);
+  const [suppliersList, setSuppliersList] = useState<{ id: string; name: string }[]>([]);
+
+  useEffect(() => {
+    supplier.getByShop(localStorage.getItem('shop_id') || SHOP_ID).then((res: any) => {
+      const data = Array.isArray(res?.data) ? res.data : (res?.data?.datas ?? []);
+      setSuppliersList(data.map((s: any) => ({
+        id: s.id,
+        name: s.name || s.datas?.supplier_name || s.datas?.name || 'Unknown Supplier'
+      })));
+    }).catch(() => {});
+  }, [supplier]);
 
   useEffect(() => {
     purchase.getPurchasesByShop(localStorage.getItem('shop_id') || SHOP_ID, {
@@ -1069,7 +1080,15 @@ const PurchaseHistory = () => {
     }
   }, [selectedPurchases, setBottomActions]);
 
-  const activeFiltersCount = [fromDate, toDate, filterStatus].filter(Boolean).length;
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (fromDate) count++;
+    if (toDate) count++;
+    if (filterStatus) count++;
+    if (filterVendor) count++;
+    if (filterPaymentMethod) count++;
+    return count;
+  }, [fromDate, toDate, filterStatus, filterVendor, filterPaymentMethod]);
 
   const resetFilters = () => {
     setFilterVendor("");
@@ -1230,8 +1249,9 @@ const PurchaseHistory = () => {
             title="Filters"
           >
             <Filter size={13} />
+            Filters
             {activeFiltersCount > 0 && (
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+              <span className="ml-1 px-1.5 py-0.5 bg-blue-600 text-white rounded-full text-[9px] font-black">{activeFiltersCount}</span>
             )}
           </button>
 
@@ -1249,32 +1269,37 @@ const PurchaseHistory = () => {
         <RightSidebarFilter
           isOpen={isFilterOpen}
           onClose={() => setIsFilterOpen(false)}
-          onApply={() => {}}
+          onApply={() => setIsFilterOpen(false)}
           onClear={resetFilters}
           title="Purchase Order Filters"
         >
           <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <div className="space-y-1.5 flex-1">
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">From</label>
-                <input
-                  type="date"
-                  value={fromDate}
-                  onChange={e => setFromDate(e.target.value)}
-                  className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
-                />
-              </div>
-              <div className="space-y-1.5 flex-1">
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">To</label>
-                <input
-                  type="date"
-                  value={toDate}
-                  onChange={e => setToDate(e.target.value)}
-                  className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
-                />
+            {/* Date Range */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Date Range</label>
+              <div className="flex items-center gap-2">
+                <div className="space-y-1 flex-1">
+                  <span className="text-[10px] text-slate-400 font-medium">From</span>
+                  <input
+                    type="date"
+                    value={fromDate}
+                    onChange={e => setFromDate(e.target.value)}
+                    className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+                  />
+                </div>
+                <div className="space-y-1 flex-1">
+                  <span className="text-[10px] text-slate-400 font-medium">To</span>
+                  <input
+                    type="date"
+                    value={toDate}
+                    onChange={e => setToDate(e.target.value)}
+                    className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+                  />
+                </div>
               </div>
             </div>
 
+            {/* Purchase Status */}
             <div className="space-y-1.5">
               <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Purchase Status</label>
               <div className="grid grid-cols-2 gap-2">
@@ -1288,7 +1313,7 @@ const PurchaseHistory = () => {
                 <button
                   type="button"
                   onClick={() => setFilterStatus("COMPLETED")}
-                  className={`h-9 rounded-md text-xs font-semibold border transition-all ${filterStatus === "COMPLETED" ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
+                  className={`h-9 rounded-md text-xs font-semibold border transition-all ${filterStatus === "COMPLETED" ? "border-emerald-500 bg-emerald-50 text-emerald-700 font-bold" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
                 >
                   Completed
                 </button>
@@ -1302,11 +1327,43 @@ const PurchaseHistory = () => {
                 <button
                   type="button"
                   onClick={() => setFilterStatus("CANCELED")}
-                  className={`h-9 rounded-md text-xs font-semibold border transition-all ${filterStatus === "CANCELED" ? "border-rose-500 bg-rose-50 text-rose-700" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
+                  className={`h-9 rounded-md text-xs font-semibold border transition-all ${filterStatus === "CANCELED" ? "border-rose-500 bg-rose-50 text-rose-700 font-bold" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
                 >
                   Canceled
                 </button>
               </div>
+            </div>
+
+            {/* Vendor / Supplier */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Vendor / Supplier</label>
+              <select
+                value={filterVendor}
+                onChange={e => setFilterVendor(e.target.value)}
+                className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+              >
+                <option value="">All Vendors</option>
+                {suppliersList.map(s => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Payment Method */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Payment Method</label>
+              <select
+                value={filterPaymentMethod}
+                onChange={e => setFilterPaymentMethod(e.target.value)}
+                className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+              >
+                <option value="">All Payment Methods</option>
+                <option value="CASH">Cash</option>
+                <option value="CARD">Card</option>
+                <option value="UPI">UPI</option>
+                <option value="BANK_TRANSFER">Bank Transfer</option>
+                <option value="CREDIT">Credit</option>
+              </select>
             </div>
           </div>
         </RightSidebarFilter>

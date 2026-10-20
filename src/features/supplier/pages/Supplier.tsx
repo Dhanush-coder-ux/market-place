@@ -151,7 +151,55 @@ const Supplier = () => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   
-  const activeFilters = [fromDate, toDate].filter(Boolean).length;
+  const availableTypes = useMemo(() => {
+    const set = new Set<string>();
+    (suppliers || []).forEach((sup: any) => {
+      const type = sup.additional_infos?.type || sup.type || sup.datas?.type;
+      if (type && typeof type === 'string') set.add(type.trim());
+    });
+    return Array.from(set).sort();
+  }, [suppliers]);
+
+  const availableCities = useMemo(() => {
+    const set = new Set<string>();
+    (suppliers || []).forEach((sup: any) => {
+      const city = sup.additional_infos?.city || sup.datas?.address?.city || sup.location_infos?.city;
+      if (city && typeof city === 'string') set.add(city.trim());
+    });
+    return Array.from(set).sort();
+  }, [suppliers]);
+
+  const availableStates = useMemo(() => {
+    const set = new Set<string>();
+    (suppliers || []).forEach((sup: any) => {
+      const state = sup.location_infos?.state || sup.datas?.address?.state;
+      if (state && typeof state === 'string') set.add(state.trim());
+    });
+    return Array.from(set).sort();
+  }, [suppliers]);
+
+  const activeFilters = useMemo(() => {
+    let count = 0;
+    if (fromDate) count++;
+    if (toDate) count++;
+    if (filters.status !== "All") count++;
+    if (filters.type !== "All") count++;
+    if (filters.city !== "All") count++;
+    if (filters.state !== "All") count++;
+    return count;
+  }, [fromDate, toDate, filters]);
+
+  const resetFilters = () => {
+    setFromDate("");
+    setToDate("");
+    setSearchTerm("");
+    setFilters({
+      status: "All",
+      type: "All",
+      city: "All",
+      state: "All"
+    });
+  };
 
   // Dynamic Column State
   const [availableKeys, setAvailableKeys] = useState<string[]>([]);
@@ -497,29 +545,99 @@ const Supplier = () => {
         isOpen={isFilterOpen}
         onClose={() => setIsFilterOpen(false)}
         onApply={() => setIsFilterOpen(false)}
-        onClear={() => { setFromDate(""); setToDate(""); }}
+        onClear={resetFilters}
         title="Supplier Filters"
       >
         <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <div className="space-y-1.5 flex-1">
-              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">From</label>
-              <input
-                type="date"
-                value={fromDate}
-                onChange={e => setFromDate(e.target.value)}
-                className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
-              />
+          {/* Date Range */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Registration Date</label>
+            <div className="flex items-center gap-2">
+              <div className="space-y-1 flex-1">
+                <span className="text-[10px] text-slate-400 font-medium">From</span>
+                <input
+                  type="date"
+                  value={fromDate}
+                  onChange={e => setFromDate(e.target.value)}
+                  className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+                />
+              </div>
+              <div className="space-y-1 flex-1">
+                <span className="text-[10px] text-slate-400 font-medium">To</span>
+                <input
+                  type="date"
+                  value={toDate}
+                  onChange={e => setToDate(e.target.value)}
+                  className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+                />
+              </div>
             </div>
-            <div className="space-y-1.5 flex-1">
-              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">To</label>
-              <input
-                type="date"
-                value={toDate}
-                onChange={e => setToDate(e.target.value)}
-                className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
-              />
+          </div>
+
+          {/* Supplier Status */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Status</label>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { label: "All", value: "All" },
+                { label: "Active", value: "Active" },
+                { label: "Inactive", value: "Inactive" }
+              ].map(opt => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setFilters(prev => ({ ...prev, status: opt.value }))}
+                  className={`h-9 px-2 rounded-md text-xs font-semibold border transition-all ${filters.status === opt.value ? "border-blue-600 bg-blue-50 text-blue-700 font-bold" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
+                >
+                  {opt.label}
+                </button>
+              ))}
             </div>
+          </div>
+
+          {/* Supplier Type */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Supplier Type</label>
+            <select
+              value={filters.type}
+              onChange={e => setFilters(prev => ({ ...prev, type: e.target.value }))}
+              className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+            >
+              <option value="All">All Types</option>
+              {availableTypes.map(t => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* City */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">City</label>
+            <select
+              value={filters.city}
+              onChange={e => setFilters(prev => ({ ...prev, city: e.target.value }))}
+              className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+            >
+              <option value="All">All Cities</option>
+              {availableCities.map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* State */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">State</label>
+            <select
+              value={filters.state}
+              onChange={e => setFilters(prev => ({ ...prev, state: e.target.value }))}
+              className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
+            >
+              <option value="All">All States</option>
+              {availableStates.map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
           </div>
         </div>
       </RightSidebarFilter>

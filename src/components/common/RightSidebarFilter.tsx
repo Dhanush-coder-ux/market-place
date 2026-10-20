@@ -46,7 +46,9 @@ export const RightSidebarFilter: React.FC<RightSidebarFilterProps> = ({
           z-[9998]
           bg-slate-900/40
           backdrop-blur-sm
-          animate-fade-in
+          animate-in
+          fade-in
+          duration-200
         "
         onClick={onClose}
       />
@@ -57,7 +59,9 @@ export const RightSidebarFilter: React.FC<RightSidebarFilterProps> = ({
           fixed
           top-0
           right-0
+          bottom-0
           z-[9999]
+          h-screen
           h-dvh
           w-full
           max-w-[360px]
@@ -69,7 +73,10 @@ export const RightSidebarFilter: React.FC<RightSidebarFilterProps> = ({
           flex
           flex-col
           overflow-hidden
-          animate-[slideLeft_0.25s_ease-out]
+          animate-in
+          slide-in-from-right
+          duration-200
+          ease-out
         "
       >
         {/* ================= HEADER ================= */}

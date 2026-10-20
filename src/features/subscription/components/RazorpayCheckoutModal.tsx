@@ -16,7 +16,7 @@ interface RazorpayCheckoutModalProps {
   onClose: () => void;
   shopId: string;
   selectedPlan: PlanItem;
-  billingCycle: "monthly" | "annual";
+  billingCycle: "monthly" | "annual" | "biennial" | string;
   selectedAddons: Record<string, number>;
   addonsCatalog: AddonItem[];
   amountDue?: number;
@@ -41,19 +41,32 @@ export const RazorpayCheckoutModal: React.FC<RazorpayCheckoutModalProps> = ({
 
   if (!isOpen) return null;
 
-  const basePrice = billingCycle === "annual" ? selectedPlan.annual_price : selectedPlan.monthly_price;
+  const basePrice = billingCycle === "biennial"
+    ? (selectedPlan.biennial_price || (selectedPlan.id === "basic" ? 7000 : selectedPlan.annual_price * 2))
+    : billingCycle === "annual"
+    ? selectedPlan.annual_price
+    : selectedPlan.monthly_price;
   
   const activeAddonsList = Object.entries(selectedAddons)
     .filter(([_, qty]) => qty > 0)
     .map(([addonId, qty]) => {
       const addon = addonsCatalog.find((a) => a.id === addonId);
       const pricePerUnit = addon?.price || 0;
-      const computedPrice = addon?.billing_cycle === "monthly" && billingCycle === "annual"
-        ? pricePerUnit * 10 * qty
-        : pricePerUnit * qty;
+      const isCompBadge = addonId === "verified_badge" && selectedPlan.id === "basic" && (billingCycle === "annual" || billingCycle === "biennial");
+      
+      let computedPrice = pricePerUnit * qty;
+      if (isCompBadge) {
+        computedPrice = 0;
+      } else if (addon?.billing_cycle === "monthly") {
+        if (billingCycle === "biennial") computedPrice = pricePerUnit * 20 * qty;
+        else if (billingCycle === "annual") computedPrice = pricePerUnit * 10 * qty;
+      } else if (addon?.billing_cycle === "year" && billingCycle === "biennial") {
+        computedPrice = pricePerUnit * 2 * qty;
+      }
+
       return {
         addonId,
-        name: addon?.name || addonId,
+        name: isCompBadge ? `${addon?.name || addonId} (Complimentary)` : (addon?.name || addonId),
         quantity: qty,
         price: computedPrice,
         cycle: addon?.billing_cycle || "monthly",

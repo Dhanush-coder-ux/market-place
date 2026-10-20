@@ -1,7 +1,9 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
-import { User, Clock, Check, Printer, Plus, Power } from "lucide-react";
+import { User, Clock, Check, Printer, Plus, Power, Settings } from "lucide-react";
 import { shopApi } from "../../../services/api/shop";
+import { PrinterConfigModal } from "./PrinterConfigModal";
+import { printReceipt, ReceiptData, cleanShopAddress } from "../utils/printerService";
 
 /* ─── Types ─────────────────────────────────────────────────────────────── */
 
@@ -60,6 +62,7 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
   const [phase, setPhase] = useState<AnimPhase | null>(null);
   const [closing, setClosing] = useState(false);
   const [shopData, setShopData] = useState<any>(null);
+  const [isPrinterConfigOpen, setIsPrinterConfigOpen] = useState(false);
   const timerRefs = useRef<number[]>([]);
 
   /* Clear all pending timers */
@@ -84,6 +87,63 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
     // Fire the external print callback if provided
     if (onPrint) onPrint();
 
+    // Fire real hardware/system thermal print job via printerService
+    if (details) {
+      const now = new Date();
+      const curDateStr = now.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+      const curTimeStr = now.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true }).toLowerCase();
+
+      const subtotalVal = Number(details.totalAmount || 0);
+      const discountVal = Number(details.billTotals?.totalDiscountGiven || 0);
+      const taxableVal = Number(details.billTotals?.taxableAmount || (subtotalVal - discountVal));
+      const totalUnitsVal = details.items.reduce((sum: number, it: any) => sum + Number(it.qty || 1), 0);
+
+      const gstVal = details.gstAmount;
+      const rawGstRate = taxableVal > 0 ? Math.round((gstVal / taxableVal) * 100) : 0;
+      const cgstRateVal = rawGstRate > 0 ? rawGstRate / 2 : 0;
+      const sgstRateVal = rawGstRate > 0 ? rawGstRate / 2 : 0;
+      const cgstAmtVal = details.billTotals?.cgst ?? Math.round((gstVal / 2) * 100) / 100;
+      const sgstAmtVal = details.billTotals?.sgst ?? Math.round((gstVal - cgstAmtVal) * 100) / 100;
+
+      const receiptData: ReceiptData = {
+        shopName: shopData?.shop_name || shopData?.name,
+        shopAddress: cleanShopAddress(shopData?.address || shopData?.address_infos) || undefined,
+        shopPhone: shopData?.phone,
+        shopGst: shopData?.gstin || shopData?.gst_number || shopData?.business_infos?.gst_infos?.number,
+        orderId: details.orderId,
+        customerName: details.customerName,
+        phone: details.phone,
+        dateStr: curDateStr,
+        timeStr: curTimeStr,
+        items: details.items.map((i: any) => ({
+          name: i.name,
+          qty: i.qty,
+          price: i.price,
+          tprice: i.tprice,
+          selectedUnit: i.selectedUnit,
+          discount: i.discount,
+        })),
+        totalAmount: subtotalVal,
+        discountAmount: discountVal,
+        taxableAmount: taxableVal,
+        gstAmount: gstVal,
+        cgstAmount: cgstAmtVal,
+        sgstAmount: sgstAmtVal,
+        cgstRate: cgstRateVal,
+        sgstRate: sgstRateVal,
+        gstRate: rawGstRate,
+        roundOff: Number(details.billTotals?.roundOff || 0),
+        finalAmount: details.finalAmount,
+        totalUnits: totalUnitsVal,
+        isDuplicate: false,
+        invoiceTypeTag: "TAX INVOICE",
+        payments: details.payments,
+      };
+      printReceipt(receiptData).catch((err) => {
+        console.warn("Thermal hardware print trigger error:", err);
+      });
+    }
+
     // Switch to printing view and begin animation
     setView("printing");
     setPhase("feeding");
@@ -92,7 +152,7 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
     addTimer(() => {
       setPhase("done");
     }, 4100);
-  }, [view, isAnimating, phase, onPrint, addTimer]);
+  }, [view, isAnimating, phase, onPrint, addTimer, details, shopData]);
 
   /* Reset state when modal opens/closes */
   useEffect(() => {
@@ -354,12 +414,22 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
 
           {/* Footer Actions */}
           <div className="p-[16px_20px_20px] mt-2 bg-[#F5F7FA] border-t border-[#E6EAF1]">
-            <button 
-              onClick={startPrint}
-              className="w-full h-10 mb-2 rounded-[8px] font-bold text-[12.5px] inline-flex items-center justify-center gap-2 border border-blue-200 bg-white text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all shadow-sm cursor-pointer"
-            >
-              <Printer size={15} /> Print
-            </button>
+            <div className="flex gap-2 mb-2">
+              <button 
+                onClick={startPrint}
+                className="flex-1 h-10 rounded-[8px] font-bold text-[12.5px] inline-flex items-center justify-center gap-2 border border-blue-200 bg-white text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all shadow-sm cursor-pointer"
+              >
+                <Printer size={15} /> Print
+              </button>
+              <button 
+                type="button"
+                onClick={() => setIsPrinterConfigOpen(true)}
+                title="Printers Config (Bluetooth, WiFi/LAN, USB, System)"
+                className="px-3 h-10 rounded-[8px] font-bold text-[12px] inline-flex items-center justify-center gap-1.5 border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm cursor-pointer"
+              >
+                <Settings size={14} className="text-blue-600" /> Printers Config
+              </button>
+            </div>
             <button 
               onClick={onNextBill}
               className="w-full h-11 bg-blue-600 hover:bg-blue-700 border border-blue-600 text-white rounded-[8px] font-bold text-[13.5px] inline-flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer"
@@ -371,6 +441,11 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
             </div>
           </div>
 
+          <PrinterConfigModal
+            isOpen={isPrinterConfigOpen}
+            onClose={() => setIsPrinterConfigOpen(false)}
+            shopData={shopData}
+          />
         </div>
       </div>,
       document.body
@@ -430,14 +505,26 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
               />
               <span
                 className="text-[10px] font-semibold tracking-[0.15em] uppercase"
-                style={{ color: "rgba(255,255,255,0.35)" }}
+                style={{ color: "rgba(255,255,255,0.4)" }}
               >
                 POS Thermal
               </span>
             </div>
 
-            {/* Power icon */}
-            <Power size={13} style={{ color: "rgba(255,255,255,0.2)" }} />
+            {/* Printers Config Option & Power Icon */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsPrinterConfigOpen(true)}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-white/10 hover:bg-white/20 text-white/80 hover:text-white text-[10px] font-semibold tracking-wide transition-all cursor-pointer border border-white/10 shadow-sm"
+                title="Configure Bluetooth, WiFi/LAN, USB or System Printer"
+              >
+                <Settings size={11} className="text-blue-400" />
+                <span>Printers Config</span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              </button>
+              <Power size={13} style={{ color: "rgba(255,255,255,0.2)" }} />
+            </div>
           </div>
 
           {/* Printer slot — the slit where paper comes out */}
@@ -714,17 +801,31 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
               >
                 <Plus size={16} strokeWidth={2.5} /> New Bill
               </button>
-              <button
-                onClick={handleClose}
-                className="w-full h-9 rounded-[8px] font-semibold text-[12px] inline-flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer"
-                style={{
-                  background: "rgba(255,255,255,0.08)",
-                  color: "rgba(255,255,255,0.55)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                }}
-              >
-                Close
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsPrinterConfigOpen(true)}
+                  className="flex-1 h-9 rounded-[8px] font-semibold text-[12px] inline-flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer"
+                  style={{
+                    background: "rgba(255,255,255,0.08)",
+                    color: "rgba(255,255,255,0.8)",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                  }}
+                >
+                  <Settings size={13} className="text-blue-400" /> Printers Config
+                </button>
+                <button
+                  onClick={handleClose}
+                  className="flex-1 h-9 rounded-[8px] font-semibold text-[12px] inline-flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer"
+                  style={{
+                    background: "rgba(255,255,255,0.08)",
+                    color: "rgba(255,255,255,0.55)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                  }}
+                >
+                  Close
+                </button>
+              </div>
             </>
           )}
 
@@ -746,6 +847,12 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
           </div>
         </div>
       </div>
+
+      <PrinterConfigModal
+        isOpen={isPrinterConfigOpen}
+        onClose={() => setIsPrinterConfigOpen(false)}
+        shopData={shopData}
+      />
     </div>,
     document.body
   );

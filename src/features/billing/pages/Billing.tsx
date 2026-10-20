@@ -17,6 +17,54 @@ import { BillingSuccessModal } from "../components/BillingSuccessModal";
 import { NavigationBlocker } from "@/components/common/NavigationBlocker";
 import { calculateBillTotals, BillTotals } from "@/utils/pricing";
 
+// ─── Helper to map serial names to object IDs ─────────────────────────────────
+const mapSerialsToInfos = (item: any) => {
+  const serialNames = item.serialNumbers || [];
+  if (serialNames.length === 0) return null;
+
+  const prod = item._product || {};
+  let serialObjects: any[] = [];
+
+  const getSerialObjects = (infos: any): any[] => {
+    if (Array.isArray(infos)) return infos;
+    return [];
+  };
+
+  serialObjects = [...serialObjects, ...getSerialObjects(prod.serialno_infos)];
+
+  let variantsSource = prod.variants || prod.variant_infos || prod.varients || prod.combinations;
+  if (variantsSource && typeof variantsSource === 'object' && !Array.isArray(variantsSource)) {
+    variantsSource = Object.values(variantsSource);
+  }
+  if (Array.isArray(variantsSource)) {
+    const matchedVariant = variantsSource.find((v: any) => v.id === item.variantId);
+    if (matchedVariant) {
+      serialObjects = [...serialObjects, ...getSerialObjects(matchedVariant.serialno_infos)];
+      if (item.batchId && matchedVariant.batch_infos) {
+        const matchedBatch = matchedVariant.batch_infos.find((b: any) => b.id === item.batchId);
+        if (matchedBatch) {
+          serialObjects = [...serialObjects, ...getSerialObjects(matchedBatch.serialno_infos)];
+        }
+      }
+    }
+  }
+
+  if (item.batchId && prod.batch_infos) {
+    const matchedBatch = prod.batch_infos.find((b: any) => b.id === item.batchId);
+    if (matchedBatch) {
+      serialObjects = [...serialObjects, ...getSerialObjects(matchedBatch.serialno_infos)];
+    }
+  }
+
+  return serialNames.map((sn: any) => {
+    const foundObj = serialObjects.find(obj => obj && (obj.name === sn || obj.serial === sn));
+    return {
+      id: foundObj?.id || item.serialnoId || "",
+      name: sn
+    };
+  });
+};
+
 // ─── Billing Page ─────────────────────────────────────────────────────────────
 const Billing = () => {
   const navigate = useNavigate();
@@ -31,6 +79,7 @@ const Billing = () => {
   const [cartInitialized, setCartInitialized] = useState(false);
   const sessionDoneRef = useRef(false); // true after submit or explicit cancel
   const isSubmittingRef = useRef(false);
+  const itemsInCartRef = useRef<BillingItem[]>([]);
 
   // ── Cart Items State (Initial empty list)
   const [items, setItems] = useState<BillingItem[]>([]);
@@ -167,7 +216,47 @@ const Billing = () => {
   }, [sessionId]);
 
   // ── Handlers
-  const handleItemsChange = useCallback((next: BillingItem[]) => setItems(next), []);
+  const handleItemsChange = useCallback((next: BillingItem[]) => {
+    setItems(next);
+
+    // Sync to cart on every product add / qty change / item remove
+    if (!sessionId) return;
+
+    const prevItems = itemsInCartRef.current;
+    const nextFilled = next.filter(i => !!i.name && i.qty > 0 && !!i.inventoryId);
+
+    // Items removed from bill
+    for (const prev of prevItems) {
+      const stillExists = nextFilled.some(n => n.id === prev.id);
+      if (!stillExists) {
+        apiClient.post(`${ENDPOINTS.ORDER_CART}/remove`, {
+          session_id: sessionId,
+          product_id: prev.inventoryId || "",
+          variant_id: prev.variantId || null,
+          batch_id: prev.batchId || null,
+        }).catch(err => console.warn("Cart remove item error:", err));
+      }
+    }
+
+    // Items added or qty / unit updated
+    for (const curr of nextFilled) {
+      const prev = prevItems.find(p => p.id === curr.id);
+      if (!prev || prev.qty !== curr.qty || prev.selectedUnit !== curr.selectedUnit) {
+        apiClient.post(`${ENDPOINTS.ORDER_CART}/add`, {
+          session_id: sessionId,
+          shop_id: SHOP_ID,
+          product_id: curr.inventoryId || "",
+          variant_id: curr.variantId || null,
+          batch_id: curr.batchId || null,
+          serialno_infos: mapSerialsToInfos(curr),
+          qty: curr.qty,
+          unit: curr.selectedUnit || null,
+        }).catch(err => console.warn("Cart add/update item error:", err));
+      }
+    }
+
+    itemsInCartRef.current = nextFilled;
+  }, [sessionId]);
 
   const resetCustomer = useCallback(() => {
     setCustomerData(null);
@@ -215,6 +304,7 @@ const Billing = () => {
     setSuccessDetails(null);
     setShowInvoicePreview(false);
     sessionDoneRef.current = false;
+    itemsInCartRef.current = [];
 
     // Start a fresh cart session for the next bill
     try {
@@ -243,68 +333,7 @@ const Billing = () => {
     isSubmittingRef.current = true;
     setIsCheckoutLoading(true);
     try {
-      const mapSerialsToInfos = (item: any) => {
-        const serialNames = item.serialNumbers || [];
-        if (serialNames.length === 0) return null;
-
-        const prod = item._product || {};
-        let serialObjects: any[] = [];
-
-        const getSerialObjects = (infos: any): any[] => {
-          if (Array.isArray(infos)) return infos;
-          return [];
-        };
-
-        serialObjects = [...serialObjects, ...getSerialObjects(prod.serialno_infos)];
-
-        let variantsSource = prod.variants || prod.variant_infos || prod.varients || prod.combinations;
-        if (variantsSource && typeof variantsSource === 'object' && !Array.isArray(variantsSource)) {
-          variantsSource = Object.values(variantsSource);
-        }
-        if (Array.isArray(variantsSource)) {
-          const matchedVariant = variantsSource.find((v: any) => v.id === item.variantId);
-          if (matchedVariant) {
-            serialObjects = [...serialObjects, ...getSerialObjects(matchedVariant.serialno_infos)];
-            if (item.batchId && matchedVariant.batch_infos) {
-              const matchedBatch = matchedVariant.batch_infos.find((b: any) => b.id === item.batchId);
-              if (matchedBatch) {
-                serialObjects = [...serialObjects, ...getSerialObjects(matchedBatch.serialno_infos)];
-              }
-            }
-          }
-        }
-
-        if (item.batchId && prod.batch_infos) {
-          const matchedBatch = prod.batch_infos.find((b: any) => b.id === item.batchId);
-          if (matchedBatch) {
-            serialObjects = [...serialObjects, ...getSerialObjects(matchedBatch.serialno_infos)];
-          }
-        }
-
-        return serialNames.map((sn: any) => {
-          const foundObj = serialObjects.find(obj => obj && (obj.name === sn || obj.serial === sn));
-          return {
-            id: foundObj?.id || item.serialnoId || "",
-            name: sn
-          };
-        });
-      };
-
-      // ── Step 1: Reserve all items in the Order Cart ─────────────────────────
-      for (const item of filledItems) {
-        await apiClient.post(`${ENDPOINTS.ORDER_CART}/add`, {
-          session_id: sessionId,
-          shop_id: SHOP_ID,
-          product_id: item.inventoryId || "",
-          variant_id: item.variantId || null,
-          batch_id: item.batchId || null,
-          serialno_infos: mapSerialsToInfos(item),
-          qty: item.qty,
-          unit: item.selectedUnit || null,
-        });
-      }
-
-      // ── Step 2: Build payment_infos for the order ───────────────────────────
+      // ── Step 1: Build payment_infos for the order ───────────────────────────
       const paymentInfos = paymentsArg.reduce((acc, p) => {
         let method = p.mode.toUpperCase();
         if (method === "CREDIT") {
@@ -340,6 +369,8 @@ const Billing = () => {
           price: l.sellingPrice,
           mrp: l.mrp || null,
           product_discount_amount: l.productDiscountAmount,
+          line_discount_mode: l.lineDiscountMode || '%',
+          line_discount_value: l.lineDiscountValue || 0,
           line_discount_amount: l.lineDiscountAmount,
           bill_discount_share: l.billDiscountShare,
           final_inclusive: l.finalInclusive,
@@ -446,7 +477,10 @@ const Billing = () => {
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden p-3.5 gap-4">
           {/* Billing Table */}
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-            <BillingTable items={items} onItemsChange={handleItemsChange} />
+            <BillingTable
+              items={items}
+              onItemsChange={handleItemsChange}
+            />
           </div>
 
           {/* ── Mobile Payment Bar (lg:hidden) ────────────────────── */}
@@ -467,7 +501,13 @@ const Billing = () => {
               onPaymentsChange={setPayments}
               onAddCustomerClick={() => setIsCustomerModalOpen(true)}
               onDetachCustomer={resetCustomer}
-              onGenerateInvoice={() => setShowInvoicePreview(true)}
+              onGenerateInvoice={() => {
+                if (!customerData) {
+                  showToast("Please select a customer to generate an invoice.", "error");
+                  return;
+                }
+                setShowInvoicePreview(true);
+              }}
             />
           </div>
         </div>
@@ -507,7 +547,13 @@ const Billing = () => {
             onPaymentsChange={setPayments}
             onAddCustomerClick={() => setIsCustomerModalOpen(true)}
             onDetachCustomer={resetCustomer}
-            onGenerateInvoice={() => setShowInvoicePreview(true)}
+            onGenerateInvoice={() => {
+              if (!customerData) {
+                showToast("Please select a customer to generate an invoice.", "error");
+                return;
+              }
+              setShowInvoicePreview(true);
+            }}
           />
         </aside>
 
@@ -562,6 +608,8 @@ const Billing = () => {
             setSuccessDetails(null);
           }}
         />
+
+
       </div>
 
       {/* ── Small Fixed Branded Bottombar ── */}

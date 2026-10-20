@@ -1072,17 +1072,35 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                     )}
 
                     {/* Cashier Line Discount Controls */}
-                    <div className="flex flex-col items-end w-28">
+                    <div className="flex flex-col items-end w-32">
                       <span className="text-[8px] font-bold text-slate-400 block uppercase tracking-wider mb-0.5">Line Disc.</span>
-                      <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden bg-white h-[32px] w-full shadow-xs">
-                        <button
-                          type="button"
-                          onClick={() => handleLineDiscountChange(item.id, (item.lineDiscountMode || '%') === '%' ? '₹' : '%', item.lineDiscountValue || 0)}
-                          className="w-7 h-full flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] border-r border-slate-200 transition-colors"
-                          title="Toggle % or ₹ discount"
-                        >
-                          {item.lineDiscountMode || '%'}
-                        </button>
+                      <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden bg-white h-[32px] w-full shadow-xs px-1">
+                        <div className="flex bg-slate-100 rounded p-0.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => handleLineDiscountChange(item.id, '%', item.lineDiscountValue || 0)}
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
+                              (item.lineDiscountMode || '%') === '%'
+                                ? 'bg-white text-blue-600 shadow-2xs'
+                                : 'text-slate-400 hover:text-slate-600'
+                            }`}
+                            title="Percentage discount (%)"
+                          >
+                            %
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleLineDiscountChange(item.id, '₹', item.lineDiscountValue || 0)}
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
+                              item.lineDiscountMode === '₹'
+                                ? 'bg-white text-blue-600 shadow-2xs'
+                                : 'text-slate-400 hover:text-slate-600'
+                            }`}
+                            title="Direct amount discount (₹)"
+                          >
+                            ₹
+                          </button>
+                        </div>
                         <input
                           type="number"
                           min="0"
@@ -1090,10 +1108,10 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                           value={item.lineDiscountValue !== undefined && item.lineDiscountValue !== 0 ? item.lineDiscountValue : ""}
                           placeholder="0"
                           onChange={(e) => {
-                            const val = parseFloat(e.target.value) || 0;
+                            const val = Math.max(0, parseFloat(e.target.value) || 0);
                             handleLineDiscountChange(item.id, item.lineDiscountMode || '%', val);
                           }}
-                          className="flex-1 w-full bg-transparent text-right outline-none text-[12px] font-bold text-slate-800 pr-2 tabular-nums"
+                          className="flex-1 w-full bg-transparent text-right outline-none text-[12px] font-bold text-slate-800 pr-1 tabular-nums"
                         />
                       </div>
                     </div>

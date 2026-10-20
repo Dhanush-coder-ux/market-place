@@ -16,6 +16,7 @@ import {
   Edit2,
   Check,
   ShieldCheck,
+  Printer,
 } from "lucide-react";
 
 import { Switch } from "@/components/ui/switch";
@@ -27,6 +28,7 @@ import PricingPlansPage from "@/features/subscription/pages/PricingPlansPage";
 import { useSearchParams } from "react-router-dom";
 import { InvoiceTemplateSettings } from "@/features/Setting/pages/InvoiceTemplateSettings";
 import { ThemeSwitcher } from "@/features/Setting/components/ThemeSwitcher";
+import { PrinterSettingsTab } from "@/features/Setting/pages/PrinterSettingsTab";
 import { usePurchaseSettings } from "@/context/PurchaseContext";
 import { shopApi } from "@/services/api/shop";
 import { SHOP_ID, getShopId } from "@/services/endpoints";
@@ -72,6 +74,13 @@ const MENU_ITEMS = [
     label: "Invoice Templates",
     icon: LayoutTemplate,
     description: "Choose invoice design",
+    accent: "blue",
+  },
+  {
+    id: "printers",
+    label: "Printers Config",
+    icon: Printer,
+    description: "Bluetooth, WiFi/LAN, USB & System printers",
     accent: "blue",
   },
   {
@@ -474,6 +483,9 @@ export const ProfileSettingsPage = () => {
             </div>
           </div>
         );
+
+      case "printers":
+        return <PrinterSettingsTab />;
 
       default:
         return (

@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import {
   Search, X,
   RotateCcw, Receipt,
-  ChevronRight, Filter, Eye
+  ChevronRight, Filter, Eye, Printer
 } from "lucide-react";
 import SkeletonLoader from "@/components/common/SkeletonLoader";
 import {
@@ -21,6 +21,7 @@ import { AntBadge } from "@/components/ui/AntBadge";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { extractSaleCustomerInfo } from "../type";
+import { ReprintReceiptModal } from "../components/ReprintReceiptModal";
 
 /* ═══════════════════════════════════════════════════════════════
    TYPES
@@ -225,6 +226,7 @@ const SalesListPage: React.FC = () => {
   const [isReturnSearchOpen, setIsReturnSearchOpen] = useState(false);
   const [returnSearchQuery, setReturnSearchQuery] = useState("");
   const [returnSale, setReturnSale] = useState<SaleRecord | null>(null);
+  const [reprintSale, setReprintSale] = useState<SaleRecord | null>(null);
 
   const searchSalesForReturn = useMemo(() => {
     if (!returnSearchQuery) return [];
@@ -270,6 +272,14 @@ const SalesListPage: React.FC = () => {
               className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 font-semibold text-[11px] transition-colors"
             >
               Deselect
+            </button>
+            <button
+              onClick={() => setReprintSale(selectedSale)}
+              className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-sky-50 hover:text-sky-600 hover:border-sky-200 text-slate-700 font-semibold text-[11px] transition-colors flex items-center gap-1.5 cursor-pointer"
+              title="Reprint Bill"
+            >
+              <Printer size={13} className="text-sky-500" />
+              Reprint Bill
             </button>
             <button
               onClick={() => returnable && openReturn(selectedSale)}
@@ -840,11 +850,18 @@ const SalesListPage: React.FC = () => {
                     <td className="px-4 py-4 border-b border-slate-50 text-right"><span className="font-mono text-xs font-bold text-slate-900">{fmt(sale.total_sellprice)}</span></td>
                     <td className="px-4 py-4 border-b border-slate-50">{(() => { const cfg = STATUS_CFG[sale.status as SaleStatus] || STATUS_CFG["Pending"]; return <Badge cls={cfg.cls} dot={cfg.dot} label={sale.status} />; })()}</td>
                     <td className="px-4 py-4 border-b border-slate-50 text-right whitespace-nowrap">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setReprintSale(sale); }}
+                          className="text-sky-500 hover:text-sky-600 hover:bg-sky-50 rounded-md p-1.5 transition-colors cursor-pointer"
+                          title="Reprint Bill"
+                        >
+                          <Printer size={15} />
+                        </button>
                         {sale.status === "Completed" && sale.origin !== "Offline Return" && sale.origin !== "Sales Return" && (
                           <button
                             onClick={(e) => { e.stopPropagation(); openReturn(sale); }}
-                            className="text-rose-500 hover:text-rose-600 transition-colors p-1"
+                            className="text-rose-500 hover:text-rose-600 hover:bg-rose-50 rounded-md p-1.5 transition-colors cursor-pointer"
                             title="Process Return"
                           >
                             <RotateCcw size={15} />
@@ -852,7 +869,7 @@ const SalesListPage: React.FC = () => {
                         )}
                         <button
                           onClick={(e) => { e.stopPropagation(); openDetail(sale); }}
-                          className="text-emerald-500 hover:text-emerald-600 transition-colors p-1"
+                          className="text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-md p-1.5 transition-colors cursor-pointer"
                           title="View Details"
                         >
                           <Eye size={15} />
@@ -890,6 +907,17 @@ const SalesListPage: React.FC = () => {
 
       {/* ── Return Modal ── */}
       {returnSale && <ReturnModal sale={returnSale} onClose={closeReturn} onRefresh={() => { }} productMap={productMap} />}
+
+      {/* ── Reprint Bill Modal ── */}
+      {reprintSale && (
+        <ReprintReceiptModal
+          isOpen={Boolean(reprintSale)}
+          onClose={() => setReprintSale(null)}
+          sale={reprintSale}
+          customerMap={customerMap}
+          productMap={productMap}
+        />
+      )}
 
       {/* ── Return Search Modal ── */}
       <ReturnSearchPortal

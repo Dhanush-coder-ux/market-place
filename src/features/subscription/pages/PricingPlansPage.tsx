@@ -358,6 +358,28 @@ const STYLES = `
   
   .pb-root .prorate { background:var(--brand-tint); border:1px solid var(--brand-tint2); border-radius:var(--r-s); padding:9px 13px; font-size:11.5px; color:var(--brand-700); margin-top:9px; display:flex; gap:8px; align-items:flex-start; line-height:1.5; }
   .pb-root .prorate svg { width:13px; height:13px; flex:none; margin-top:2px; }
+
+  /* ============ FIRST 100 OFFERS ============ */
+  .pb-root .offers-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 16px; }
+  @media(max-width: 860px) { .pb-root .offers-grid { grid-template-columns: 1fr; } }
+  .pb-root .offer-card { background: var(--card); border: 1.5px solid var(--line); border-radius: var(--r); padding: 22px 20px; display: flex; flex-direction: column; justify-content: space-between; transition: .16s; cursor: pointer; }
+  .pb-root .offer-card:hover { border-color: var(--brand); box-shadow: var(--sh); transform: translateY(-2px); }
+  .pb-root .offer-card.active { border-color: var(--brand); background: #FCFCFE; box-shadow: 0 0 0 2px var(--brand-tint2); }
+  .pb-root .offer-tag { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #2563eb; margin-bottom: 8px; }
+  .pb-root .offer-tag.comp { color: #16a34a; }
+  .pb-root .offer-title { font-family: var(--font-d); font-size: 16px; font-weight: 700; color: var(--ink); margin-bottom: 10px; }
+  .pb-root .offer-price { font-family: var(--font-d); font-size: 26px; font-weight: 700; color: var(--ink); display: flex; align-items: baseline; gap: 4px; }
+  .pb-root .offer-price.free { color: #16a34a; font-size: 28px; }
+  .pb-root .offer-period { font-size: 13px; font-weight: 500; color: var(--muted); }
+  .pb-root .offer-subtext { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+  .pb-root .offer-savings { font-size: 11.5px; font-weight: 600; color: #1d4ed8; margin-top: 6px; }
+  .pb-root .offer-divider { height: 1px; background: var(--line); margin: 16px 0 12px; }
+  .pb-root .offer-desc { font-size: 12px; color: var(--muted); }
+  
+  /* notices */
+  .pb-root .amber-notice { background: #FEF3C7; border: 1px solid #FCD34D; border-radius: var(--r-s); padding: 12px 16px; font-size: 12px; color: #78350F; line-height: 1.5; margin-bottom: 24px; font-weight: 500; }
+  .pb-root .market-notice { background: #FFFBEB; border: 1px solid #FDE68A; border-radius: var(--r-s); padding: 14px 18px; font-size: 12px; color: #78350F; line-height: 1.6; margin-top: 18px; margin-bottom: 16px; }
+  .pb-root .tax-disclaimer { text-align: center; font-size: 11px; color: var(--faint); margin-top: 14px; margin-bottom: 30px; }
 `;
 
 export interface PricingPlansPageProps {
@@ -367,7 +389,7 @@ export interface PricingPlansPageProps {
 const PricingPlansPage: React.FC<PricingPlansPageProps> = ({ isEmbedded = false }) => {
   const [activeTab, setActiveTab] = useState<"plans" | "history">("plans");
   const [transactions, setTransactions] = useState<TransactionItem[]>([]);
-  const [billingCycle, setBillingCycle] = useState<"monthly" | "annual">("monthly");
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "annual" | "biennial">("monthly");
   const [catalog, setCatalog] = useState<SubscriptionCatalogResponse | null>(null);
   const [currentSub, setCurrentSub] = useState<SubscriptionData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -951,7 +973,9 @@ const PricingPlansPage: React.FC<PricingPlansPageProps> = ({ isEmbedded = false 
   const plans = catalog?.plans || [];
   const addons = catalog?.addons || [];
   const curPlanObj = plans.find(p => p.id === currentSub?.plan_id) || plans.find(p => p.id === "basic") || plans[0];
-  const curPrice = billingCycle === "monthly" ? curPlanObj?.monthly_price : curPlanObj?.annual_price;
+  const curPrice = billingCycle === "biennial"
+    ? (curPlanObj?.biennial_price || (curPlanObj?.id === "basic" ? 7000 : (curPlanObj?.annual_price || 0) * 2))
+    : (billingCycle === "annual" ? curPlanObj?.annual_price : curPlanObj?.monthly_price);
 
   // Proration calculation: dynamically computed from current renewal / expiry date
   const nowTime = new Date();
@@ -963,7 +987,7 @@ const PricingPlansPage: React.FC<PricingPlansPageProps> = ({ isEmbedded = false 
 
   const diffMs = targetRenewal.getTime() - nowTime.getTime();
   const DAYS_LEFT = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
-  const DAYS_CYCLE = billingCycle === "annual" ? 365 : 30;
+  const DAYS_CYCLE = billingCycle === "biennial" ? 730 : (billingCycle === "annual" ? 365 : 30);
 
   const inr = (n: number) => "₹" + n.toLocaleString("en-IN");
 
@@ -988,7 +1012,9 @@ const PricingPlansPage: React.FC<PricingPlansPageProps> = ({ isEmbedded = false 
     const targetPlan = plans.find(p => p.id === selPlan) || curPlanObj;
     if (targetPlan) {
       const targetTier = PLAN_TIER[targetPlan.id] || 0;
-      const targetPrice = billingCycle === "monthly" ? targetPlan.monthly_price : targetPlan.annual_price;
+      const targetPrice = billingCycle === "biennial"
+        ? (targetPlan.biennial_price || (targetPlan.id === "basic" ? 7000 : targetPlan.annual_price * 2))
+        : (billingCycle === "annual" ? targetPlan.annual_price : targetPlan.monthly_price);
       
       if (isSubActive && targetTier > curTier) {
         // Upgrading to higher tier mid-cycle: deduct the remaining days' paid credit
@@ -1020,10 +1046,11 @@ const PricingPlansPage: React.FC<PricingPlansPageProps> = ({ isEmbedded = false 
     const v = selectedAddons[a.id];
     if (!v) return;
     const isToggle = a.id === "verified_badge";
-    const amt = !isToggle ? a.price * v : a.price;
-    const itemLabel = !isToggle ? `${v} × ${a.name}` : a.name;
+    const isComp = a.id === "verified_badge" && selPlan === "basic" && (billingCycle === "annual" || billingCycle === "biennial");
+    const amt = isComp ? 0 : (!isToggle ? a.price * v : a.price);
+    const itemLabel = isComp ? `${a.name} (Complimentary)` : (!isToggle ? `${v} × ${a.name}` : a.name);
     
-    lines.push(`${itemLabel} — ${inr(amt)}/${a.billing_cycle}`);
+    lines.push(`${itemLabel} — ${isComp ? "FREE" : `${inr(amt)}/${a.billing_cycle}`}`);
     monthlyDelta += amt;
     newMonthly += amt;
     
@@ -1207,7 +1234,7 @@ const PricingPlansPage: React.FC<PricingPlansPageProps> = ({ isEmbedded = false 
               <div className="cyc">
                 <button className={billingCycle === "monthly" ? "on" : ""} onClick={() => setBillingCycle("monthly")}>Monthly</button>
                 <button className={billingCycle === "annual" ? "on" : ""} onClick={() => setBillingCycle("annual")}>
-                  Yearly <span className="save">2 MONTHS FREE</span>
+                  Yearly <span className="save">SAVE UP TO 58%</span>
                 </button>
               </div>
             </div>
@@ -1217,7 +1244,9 @@ const PricingPlansPage: React.FC<PricingPlansPageProps> = ({ isEmbedded = false 
               {plans.map(p => {
                 const isCur = p.id === curPlanObj?.id;
                 const isSel = p.id === selPlan;
-                const price = billingCycle === "monthly" ? p.monthly_price : p.annual_price;
+                const price = billingCycle === "biennial"
+                  ? (p.biennial_price || (p.id === "basic" ? 7000 : p.annual_price * 2))
+                  : (billingCycle === "annual" ? p.annual_price : p.monthly_price);
 
                 // Feature category heading
                 let sectionLabel = "WHAT'S INCLUDED";
@@ -1289,9 +1318,18 @@ const PricingPlansPage: React.FC<PricingPlansPageProps> = ({ isEmbedded = false 
                       
                       <div className="plan-price-wrap">
                         <span className="price-amount">{inr(price)}</span>
-                        <span className="price-cycle">/ month</span>
+                        <span className="price-cycle">
+                          {billingCycle === "annual" ? "/ year" : (billingCycle === "biennial" ? "/ 2-year" : "/ month")}
+                        </span>
                       </div>
-                      <div className="plan-billed-sub">Billed {billingCycle}</div>
+                      <div className="plan-billed-sub">
+                        {p.id === "basic" && billingCycle === "monthly" && "₹3,500/year · Save 58% · First 100"}
+                        {p.id === "digital_store" && billingCycle === "monthly" && "₹2,990 /year"}
+                        {p.id === "pro" && billingCycle === "monthly" && "Save 17% vs ₹1,799/month"}
+                        {p.id === "basic" && billingCycle === "annual" && "Save 58% vs ₹8,388 at monthly billing"}
+                        {p.id === "basic" && billingCycle === "biennial" && "Save 58% vs ₹16,776 monthly billing"}
+                        {p.id !== "basic" && billingCycle !== "monthly" && `Billed ${billingCycle}`}
+                      </div>
 
                       {btn}
 
@@ -1312,8 +1350,81 @@ const PricingPlansPage: React.FC<PricingPlansPageProps> = ({ isEmbedded = false 
               })}
             </div>
 
+            {/* ===== FIRST 100 RETAILERS OFFERS (Image 2) ===== */}
+            <div className="cyc-row" style={{ marginTop: "36px", marginBottom: "14px" }}>
+              <div>
+                <div className="sec-t">First 100 Retailers: Basic Plan Offers</div>
+                <div className="sec-s">Choose annual billing or a 2-year term and get a complimentary verified badge.</div>
+              </div>
+            </div>
+
+            <div className="offers-grid">
+              {/* Offer 1: Basic Annual Plan */}
+              <div 
+                className={`offer-card ${selPlan === "basic" && billingCycle === "annual" ? "active" : ""}`}
+                onClick={() => { setSelPlan("basic"); setBillingCycle("annual"); }}
+              >
+                <div>
+                  <div className="offer-tag">FIRST 100 ONLY</div>
+                  <div className="offer-title">Basic Annual Plan</div>
+                  <div className="offer-price">
+                    <span>₹3,500</span>
+                    <span className="offer-period">/ year</span>
+                  </div>
+                  <div className="offer-savings">Save 58% vs ₹8,388 at monthly billing</div>
+                </div>
+                <div>
+                  <div className="offer-divider" />
+                  <div className="offer-desc">Annual Basic subscription · Click to select</div>
+                </div>
+              </div>
+
+              {/* Offer 2: Basic 2-Year Plan */}
+              <div 
+                className={`offer-card ${selPlan === "basic" && billingCycle === "biennial" ? "active" : ""}`}
+                onClick={() => { setSelPlan("basic"); setBillingCycle("biennial"); }}
+              >
+                <div>
+                  <div className="offer-tag">FIRST 100 ONLY</div>
+                  <div className="offer-title">Basic 2-Year Plan</div>
+                  <div className="offer-price">
+                    <span>₹7,000</span>
+                  </div>
+                  <div className="offer-subtext">total for 24 months</div>
+                  <div className="offer-savings">Save 58% vs ₹16,776 monthly billing</div>
+                </div>
+                <div>
+                  <div className="offer-divider" />
+                  <div className="offer-desc">Basic plan for full 2-year term · Click to select</div>
+                </div>
+              </div>
+
+              {/* Offer 3: Verified Business Badge */}
+              <div className="offer-card" style={{ cursor: "default" }}>
+                <div>
+                  <div className="offer-tag comp">COMPLIMENTARY ADD-ON</div>
+                  <div className="offer-title">Verified Business Badge</div>
+                  <div className="offer-price free" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span>FREE</span>
+                    <span style={{ fontSize: "11px", fontWeight: "700", color: "#047857", background: "#ECFDF5", border: "1px solid #A7F3D0", padding: "2px 8px", borderRadius: "9999px" }}>
+                      Worth ₹699/year
+                    </span>
+                  </div>
+                  <div className="offer-savings">Worth ₹699/year · ₹0 for first 100</div>
+                </div>
+                <div>
+                  <div className="offer-divider" />
+                  <div className="offer-desc">Issued after successful business verification.</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="amber-notice">
+              Annual and 2-year Basic prices are limited to the first 100 retailers. Badge requires successful verification. Taxes extra.
+            </div>
+
             {/* ===== ADD-ONS ===== */}
-            <div className="cyc-row">
+            <div className="cyc-row" style={{ marginTop: "24px" }}>
               <div>
                 <div className="sec-t">Optional add-ons</div>
                 <div className="sec-s">Extend your plan as the business grows. Billed with your subscription.</div>
@@ -1324,7 +1435,8 @@ const PricingPlansPage: React.FC<PricingPlansPageProps> = ({ isEmbedded = false 
               {addons.map(a => {
                 const val = selectedAddons[a.id] || 0;
                 const isToggle = a.id === "verified_badge";
-                const active = val > 0;
+                const isComplimentary = a.id === "verified_badge" && selPlan === "basic" && (billingCycle === "annual" || billingCycle === "biennial");
+                const active = val > 0 || isComplimentary;
 
                 const iconsMap: Record<string, any> = {
                   extra_store: <Store size={16} strokeWidth={2} />,
@@ -1335,7 +1447,13 @@ const PricingPlansPage: React.FC<PricingPlansPageProps> = ({ isEmbedded = false 
                 const Icon = iconsMap[a.id] || <Sparkles size={16} strokeWidth={2} />;
 
                 let ctrl;
-                if (!isToggle) {
+                if (isComplimentary) {
+                  ctrl = (
+                    <button className="tgl on" disabled style={{ background: "#16a34a", borderColor: "#16a34a", cursor: "default" }}>
+                      <Tick /> Free (First 100)
+                    </button>
+                  );
+                } else if (!isToggle) {
                   ctrl = (
                     <div className="qty">
                       <button onClick={() => handleAddonChange(a.id, -1)} disabled={val <= 0}>−</button>
@@ -1355,12 +1473,24 @@ const PricingPlansPage: React.FC<PricingPlansPageProps> = ({ isEmbedded = false 
                   <div key={a.id} className={`ac ${active ? "on" : ""}`}>
                     <span className="ai">{Icon}</span>
                     <div className="an">{a.name}</div>
-                    <div className="ap">{inr(a.price)} / {a.billing_cycle}</div>
+                    <div className="ap">
+                      {isComplimentary ? <span style={{ color: "#16a34a" }}>FREE</span> : `${inr(a.price)} / ${a.billing_cycle}`}
+                    </div>
                     <div className="ad">{a.description}</div>
                     {ctrl}
                   </div>
                 );
               })}
+            </div>
+
+            {/* Marketplace Notice Box */}
+            <div className="market-notice">
+              <strong style={{ color: "#451A03" }}>Marketplace:</strong> No commission on retailer sales. Customers see the retailer's selling price; applicable delivery or payment-processing costs are handled separately according to the platform's payment and delivery terms.
+            </div>
+
+            {/* Tax disclaimer */}
+            <div className="tax-disclaimer">
+              All prices are exclusive of applicable taxes. Pricing and included limits may be updated before general availability.
             </div>
 
 

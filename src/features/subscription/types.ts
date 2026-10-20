@@ -11,6 +11,7 @@ export interface PlanItem {
   name: string;
   monthly_price: number;
   annual_price: number;
+  biennial_price?: number;
   currency: string;
   badge?: string | null;
   description: string;
@@ -43,13 +44,33 @@ export interface PlanUsage {
   current_digital_stores: number;
 }
 
+export interface PromotionalOfferItem {
+  tag: string;
+  title: string;
+  price: number;
+  display_price?: string;
+  period?: string;
+  savings: string;
+  description: string;
+  plan_id?: string;
+  billing_cycle?: "annual" | "biennial";
+  is_complimentary?: boolean;
+}
+
+export interface PromotionalOffers {
+  header: string;
+  subtext: string;
+  items: PromotionalOfferItem[];
+  disclaimer: string;
+}
+
 export interface SubscriptionData {
   has_subscription: boolean;
   id?: string;
   shop_id?: string;
   plan_id: string;
   plan_name: string;
-  billing_cycle: "monthly" | "annual";
+  billing_cycle: "monthly" | "annual" | "biennial" | string;
   status: "trialing" | "active" | "past_due" | "cancelled" | "expired" | "trial_available";
   trial_days_remaining?: number;
   trial_started_at?: string;
@@ -67,6 +88,7 @@ export interface SubscriptionData {
 export interface SubscriptionCatalogResponse {
   plans: PlanItem[];
   addons: AddonItem[];
+  promotional_offers?: PromotionalOffers;
   trial_days: number;
   razorpay_key_id: string;
   currency: string;
@@ -90,14 +112,14 @@ export interface TransactionItem {
 export interface CreateOrderPayload {
   shop_id: string;
   plan_id: string;
-  billing_cycle: "monthly" | "annual";
+  billing_cycle: "monthly" | "annual" | "biennial" | string;
   addons: { addon_id: string; quantity: number }[];
 }
 
 export interface VerifyPaymentPayload {
   shop_id: string;
   plan_id: string;
-  billing_cycle: "monthly" | "annual";
+  billing_cycle: "monthly" | "annual" | "biennial" | string;
   addons: { addon_id: string; quantity: number }[];
   razorpay_order_id: string;
   razorpay_payment_id: string;

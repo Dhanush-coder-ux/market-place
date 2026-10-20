@@ -12,7 +12,8 @@ import {
   Mail,
   Fingerprint,
   Globe,
-  Store
+  Store,
+  Printer
 } from "lucide-react";
 
 import { useApi } from "@/context/ApiContext";
@@ -24,6 +25,7 @@ import { AntBadge } from "@/components/ui/AntBadge";
 import { OrderResponse } from "@/features/order/types";
 import SkeletonLoader from "@/components/common/SkeletonLoader";
 import { extractSaleCustomerInfo } from "../type";
+import { ReprintReceiptModal } from "../components/ReprintReceiptModal";
 
 /* ── helpers ── */
 const fmt = (n?: number) => {
@@ -338,6 +340,7 @@ const SaleDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(!sale);
   const [activeTab, setActiveTab] = useState(0);
   const [isReturnOpen, setIsReturnOpen] = useState(false);
+  const [isReprintOpen, setIsReprintOpen] = useState(false);
   const [clearingHistories, setClearingHistories] = useState<any[]>([]);
 
   const fetchSaleDetail = async () => {
@@ -612,6 +615,14 @@ const SaleDetailPage: React.FC = () => {
           ]}
           actions={
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsReprintOpen(true)}
+                className="h-8 px-3 rounded-lg border border-sky-200 text-sky-600 bg-sky-50 hover:bg-sky-100 hover:text-sky-700 font-bold text-[11px] uppercase tracking-wider transition-all shadow-sm shrink-0 flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                title="Reprint Bill"
+              >
+                <Printer size={13} />
+                <span>Reprint</span>
+              </button>
               {canReturn && (
                 <button
                   onClick={() => setIsReturnOpen(true)}
@@ -1835,6 +1846,16 @@ const SaleDetailPage: React.FC = () => {
           sale={sale}
           onClose={() => setIsReturnOpen(false)}
           onRefresh={fetchSaleDetail}
+          productMap={productMap}
+        />
+      )}
+
+      {sale && (
+        <ReprintReceiptModal
+          isOpen={isReprintOpen}
+          onClose={() => setIsReprintOpen(false)}
+          sale={sale}
+          customerMap={customerMap}
           productMap={productMap}
         />
       )}

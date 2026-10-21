@@ -27,7 +27,7 @@ import { supplierApi } from "@/services/api/supplier";
 import { useHeader } from "@/context/HeaderContext";
 import { useToast } from "@/context/ToastContext";
 import Loader from "@/components/common/Loader";
-import { InventoryItemsCard } from "@/features/purchase/components/InventoryItemsCard";
+import { InventoryItemsCard, resolveInitialSellingPrice } from "@/features/purchase/components/InventoryItemsCard";
 import { usePurchaseSettings } from "@/context/PurchaseContext";
 import { useQuickCreate } from "@/features/common/QuickCreate/QuickCreateContext";
 import PurchaseSuccessModal from "../components/purchaseSuccessModal";
@@ -46,6 +46,7 @@ export interface ProductItem {
   originalQuantity?: number;
   costPrice: number | "";
   sellingPrice: number | "";
+  mrp?: number | "";
   marginPercent: number | "";
   marginAmount: number | "";
   marginType: "percent" | "amount" | "sellingPrice";
@@ -113,7 +114,7 @@ const PurchaseForm = () => {
   });
 
   const defaultProductRow: ProductItem = {
-    id: crypto.randomUUID(), name: "", quantity: "", costPrice: "", sellingPrice: "",
+    id: crypto.randomUUID(), name: "", quantity: "", costPrice: "", sellingPrice: "", mrp: "",
     marginPercent: "", marginAmount: "", marginType: "sellingPrice",
     unit: "pc", unit_infos: undefined, selectedUnit: "pc", taxGst: 18, storageLoc: "", reorderPoint: "", expiryDate: "", manufacturingDate: "", batchTracking: false, serialTracking: false, serialNumbers: "", batchNum: "", batch_id: "", serialno_id: "", sku: "", variant: "", size: ""
   };
@@ -378,6 +379,10 @@ const PurchaseForm = () => {
         const p = location.state.product;
         const hasBatchTracking = !!p.type_infos?.has_batch || !!p.has_batch || !!p.datas?.has_batch;
         const hasSerialTracking = !!p.type_infos?.has_serialno || !!p.has_serialno || !!p.datas?.has_serialno;
+        const pSellPrice = p.chosen_variant?.sell_price ?? p.chosen_variant?.pricing_infos?.sell_price ?? p.pricing_infos?.sell_price ?? p.sell_price;
+        const pMrp = p.chosen_variant?.mrp ?? p.chosen_variant?.pricing_infos?.mrp ?? p.chosen_variant?.pricing_infos?.additional_infos?.mrp ?? p.mrp ?? p.pricing_infos?.mrp ?? p.pricing_infos?.additional_infos?.mrp ?? p.datas?.mrp;
+        const resolvedSp = resolveInitialSellingPrice(pSellPrice, pMrp);
+
         setProducts([{
           ...defaultProductRow,
           id: crypto.randomUUID(),
@@ -385,7 +390,8 @@ const PurchaseForm = () => {
           variant_id: p.variant_id || undefined,
           name: p.variant ? `${p.name} - ${p.variant}` : p.name,
           costPrice: p.chosen_variant?.buy_price ?? p.chosen_variant?.pricing_infos?.buy_price ?? p.pricing_infos?.buy_price ?? p.buy_price ?? "",
-          sellingPrice: p.chosen_variant?.sell_price ?? p.chosen_variant?.pricing_infos?.sell_price ?? p.pricing_infos?.sell_price ?? p.sell_price ?? "",
+          sellingPrice: resolvedSp,
+          mrp: pMrp !== undefined && pMrp !== null && pMrp !== "" ? Number(pMrp) : "",
           sku: p.chosen_variant?.barcode ?? (p.sku || p.barcode || ""),
           unit: p.unit_infos?.name || p.unit || "pc",
           taxGst: (p.gst ?? p.datas?.gst) !== undefined ? parseInt(p.gst ?? p.datas?.gst) : 18,
@@ -759,12 +765,17 @@ const PurchaseForm = () => {
       const hasBatchTracking = !!newProduct.has_batch || !!(newProduct.datas && newProduct.datas.has_batch);
       const hasSerialTracking = !!newProduct.has_serialno || !!(newProduct.datas && newProduct.datas.has_serialno);
 
+      const newSp = newProduct.sell_price;
+      const newMrp = newProduct.mrp ?? newProduct.datas?.mrp;
+      const resolvedSp = resolveInitialSellingPrice(newSp, newMrp);
+
       if (emptyIndex >= 0) {
         updateProductFields(emptyIndex, {
           inventory_id: newProduct.id,
           name: newProduct.name,
           costPrice: newProduct.buy_price,
-          sellingPrice: newProduct.sell_price,
+          sellingPrice: resolvedSp,
+          mrp: newMrp !== undefined && newMrp !== null && newMrp !== "" ? Number(newMrp) : "",
           sku: newProduct.barcode,
           unit: newProduct.unit_name || newProduct.datas?.unit || "pc",
           category: newProduct.category_name || newProduct.category_id || "",
@@ -779,7 +790,8 @@ const PurchaseForm = () => {
           inventory_id: newProduct.id,
           name: newProduct.name,
           costPrice: newProduct.buy_price,
-          sellingPrice: newProduct.sell_price,
+          sellingPrice: resolvedSp,
+          mrp: newMrp !== undefined && newMrp !== null && newMrp !== "" ? Number(newMrp) : "",
           sku: newProduct.barcode,
           unit: newProduct.unit_name || newProduct.datas?.unit || "pc",
           category: newProduct.category_name || newProduct.category_id || "",

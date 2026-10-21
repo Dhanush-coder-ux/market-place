@@ -24,6 +24,25 @@ import { useQuickCreate } from "@/features/common/QuickCreate/QuickCreateContext
 import { AntBadge } from "@/components/ui/AntBadge";
 import { calculateTaxSplit } from "@/utils/pricing";
 
+/**
+ * Resolves initial selling price:
+ * - If product has sell price (> 0), priority goes to sell price.
+ * - If product does not have sell price (null, undefined, 0, or "") but has MRP (> 0), prefill MRP on sell price.
+ * - If neither has a value, defaults to 0.
+ */
+export const resolveInitialSellingPrice = (sellPrice: any, mrp: any): number => {
+  const spNum = sellPrice !== undefined && sellPrice !== null && sellPrice !== "" ? Number(sellPrice) : NaN;
+  const mrpNum = mrp !== undefined && mrp !== null && mrp !== "" ? Number(mrp) : NaN;
+
+  if (!isNaN(spNum) && spNum > 0) {
+    return spNum;
+  }
+  if (!isNaN(mrpNum) && mrpNum > 0) {
+    return mrpNum;
+  }
+  return 0;
+};
+
 // ─── Inline Unit Selector ──────────────────────────────────────────────────────
 const UnitDropdown = ({
   units,
@@ -257,13 +276,19 @@ export const InventoryItemsCard = ({
       // Extract prices and tax from variant or base
       const getVal = (key: string, fallback: any = "") => variantData?.[key] ?? variantData?.datas?.[key] ?? baseOpt[key] ?? baseOpt.datas?.[key] ?? fallback;
 
+      const rawVariantSp = getVal("sell_price", getVal("sellingPrice"));
+      const rawVariantMrp = variantData?.mrp ?? variantData?.pricing_infos?.mrp ?? variantData?.pricing_infos?.additional_infos?.mrp ?? variantData?.datas?.mrp ?? baseOpt.mrp ?? baseOpt.pricing_infos?.mrp ?? baseOpt.pricing_infos?.additional_infos?.mrp ?? baseOpt.datas?.mrp ?? baseOpt.pricing_infos?.[0]?.mrp ?? baseOpt.pricing_infos?.[0]?.additional_infos?.mrp;
+      const initialVariantSp = resolveInitialSellingPrice(rawVariantSp, rawVariantMrp);
+      const variantMrp = rawVariantMrp !== undefined && rawVariantMrp !== null && rawVariantMrp !== "" ? Number(rawVariantMrp) : undefined;
+
       next[targetIdx] = {
         ...next[targetIdx],
         inventory_id: baseOpt.id || baseOpt.inventory_id,
         variant_id: variantItem.id,
         name: variantModal.baseProduct,
         costPrice: getVal("buy_price", getVal("costPrice")),
-        sellingPrice: getVal("sell_price", getVal("sellingPrice")),
+        sellingPrice: initialVariantSp,
+        mrp: variantMrp,
         taxGst: getVal("gst") !== undefined && getVal("gst") !== null && getVal("gst") !== "" ? parseInt(getVal("gst")) : 18,
         unit: baseOpt.unit_infos?.name || getVal("unit", "pc"),
         unit_infos: baseOpt.unit_infos || null,
@@ -326,6 +351,12 @@ export const InventoryItemsCard = ({
 
     const bBuyPrice = batch.pricing_infos?.buy_price ?? batch.buy_price;
     const bSellPrice = batch.pricing_infos?.sell_price ?? batch.sell_price;
+    const bMrp = batch.pricing_infos?.mrp ?? batch.pricing_infos?.additional_infos?.mrp ?? batch.mrp ?? products[rowIndex]?.mrp;
+    const bResolvedSp = (bSellPrice !== undefined && bSellPrice !== null && Number(bSellPrice) > 0)
+      ? Number(bSellPrice)
+      : (bMrp !== undefined && bMrp !== null && Number(bMrp) > 0)
+        ? Number(bMrp)
+        : (products[rowIndex]?.sellingPrice !== undefined && products[rowIndex]?.sellingPrice !== "" ? products[rowIndex]?.sellingPrice : 0);
     const bStorage = batch.storage_location_infos?.storage_location ?? batch.storage_location;
     const bReorderPoint = batch.reorder_point_infos?.reorder_point ?? batch.reorder_point;
 
@@ -337,7 +368,8 @@ export const InventoryItemsCard = ({
       manufacturingDate: (batch.manufacturing_date || batch.mfg_date) ? new Date(batch.manufacturing_date || batch.mfg_date).toISOString().split('T')[0] : "",
       expiryDate: batch.expiry_date ? new Date(batch.expiry_date).toISOString().split('T')[0] : "",
       costPrice: bBuyPrice !== undefined && bBuyPrice !== null ? bBuyPrice : products[rowIndex]?.costPrice,
-      sellingPrice: bSellPrice !== undefined && bSellPrice !== null ? bSellPrice : products[rowIndex]?.sellingPrice,
+      sellingPrice: bResolvedSp,
+      mrp: bMrp !== undefined && bMrp !== null && bMrp !== "" ? Number(bMrp) : products[rowIndex]?.mrp,
       storageLoc: bStorage || products[rowIndex]?.storageLoc,
       reorderPoint: bReorderPoint !== undefined && bReorderPoint !== null ? bReorderPoint : products[rowIndex]?.reorderPoint,
       batchNumReadOnly: true
@@ -439,13 +471,19 @@ export const InventoryItemsCard = ({
           }
         }
 
+        const rawVarSp = opt.sell_price ?? opt.pricing_infos?.sell_price ?? d.sell_price ?? d.pricing_infos?.sell_price ?? opt.pricing_infos?.[0]?.sell_price;
+        const rawVarMrp = opt.mrp ?? opt.pricing_infos?.mrp ?? opt.pricing_infos?.additional_infos?.mrp ?? d.mrp ?? d.pricing_infos?.mrp ?? d.pricing_infos?.additional_infos?.mrp ?? opt.pricing_infos?.[0]?.mrp ?? opt.pricing_infos?.[0]?.additional_infos?.mrp;
+        const initialVarSp = resolveInitialSellingPrice(rawVarSp, rawVarMrp);
+        const resolvedVarMrp = rawVarMrp !== undefined && rawVarMrp !== null && rawVarMrp !== "" ? Number(rawVarMrp) : undefined;
+
         updateProductFields(targetIndex, {
           inventory_id: parentId,
           variant_id: vId,
           name: (opt.name || "").split(" (")[0],
           variant: opt.variant_name || (opt.attributes ? Object.values(opt.attributes).join(' - ') : (d.attributes ? Object.values(d.attributes).join(' - ') : opt.name?.split(" - ")[1])),
           costPrice: get("buy_price"),
-          sellingPrice: get("sell_price"),
+          sellingPrice: initialVarSp,
+          mrp: resolvedVarMrp,
           taxGst: get("gst") !== undefined && get("gst") !== null && get("gst") !== "" ? parseInt(get("gst")) : 18,
           sku: get("ui_id", get("barcode", get("sku"))),
           unit: opt.unit_infos?.name || get("unit", "pc"),
@@ -496,11 +534,17 @@ export const InventoryItemsCard = ({
           setVariantModal({ isOpen: true, baseProduct: opt.name || String(val), targetRowIndex: targetIndex, variants: mappedVariants, baseData: opt });
           setSelectedVariants(null);
         } else {
+          const rawPoSp = get("sell_price", get("sellingPrice"));
+          const rawPoMrp = get("mrp", d.mrp ?? opt.pricing_infos?.mrp ?? opt.pricing_infos?.additional_infos?.mrp ?? opt.pricing_infos?.[0]?.mrp ?? opt.pricing_infos?.[0]?.additional_infos?.mrp);
+          const initialPoSp = resolveInitialSellingPrice(rawPoSp, rawPoMrp);
+          const resolvedPoMrp = rawPoMrp !== undefined && rawPoMrp !== null && rawPoMrp !== "" ? Number(rawPoMrp) : undefined;
+
           updateProductFields(targetIndex, {
             inventory_id: opt.id,
             name: opt.name || d.name || String(val),
             costPrice: get("buy_price", get("costPrice")),
-            sellingPrice: get("sell_price", get("sellingPrice")),
+            sellingPrice: initialPoSp,
+            mrp: resolvedPoMrp,
             taxGst: get("gst") !== undefined && get("gst") !== null && get("gst") !== "" ? parseInt(get("gst")) : 18,
             sku: get("ui_id", get("barcode", get("sku"))),
             unit: opt.unit_infos?.name || get("unit", "pc"),
@@ -536,12 +580,18 @@ export const InventoryItemsCard = ({
         setVariantModal({ isOpen: true, baseProduct: opt.name || String(val), targetRowIndex: targetIndex, variants: mappedVariants, baseData: opt });
         setSelectedVariants(null);
       } else {
+        const rawOptSp = get("sell_price", get("sellingPrice"));
+        const rawOptMrp = get("mrp", d.mrp ?? opt.pricing_infos?.mrp ?? opt.pricing_infos?.additional_infos?.mrp ?? opt.pricing_infos?.[0]?.mrp ?? opt.pricing_infos?.[0]?.additional_infos?.mrp);
+        const initialOptSp = resolveInitialSellingPrice(rawOptSp, rawOptMrp);
+        const resolvedOptMrp = rawOptMrp !== undefined && rawOptMrp !== null && rawOptMrp !== "" ? Number(rawOptMrp) : undefined;
+
         updateProductFields(targetIndex, {
           inventory_id: opt.id,
           variant_id: undefined,
           name: opt.name || d.name || String(val),
           costPrice: get("buy_price", get("costPrice")),
-          sellingPrice: get("sell_price", get("sellingPrice")),
+          sellingPrice: initialOptSp,
+          mrp: resolvedOptMrp,
           taxGst: get("gst") !== undefined && get("gst") !== null && get("gst") !== "" ? parseInt(get("gst")) : 18,
           sku: get("barcode", get("sku")),
           unit: opt.unit_infos?.name || get("unit", "pc"),
@@ -557,7 +607,6 @@ export const InventoryItemsCard = ({
           reorderPoint: get("reorder_point") !== "" ? get("reorder_point") : undefined,
           storageLoc: opt.storage_locations?.[0]?.name ?? opt.storage_locations?.[0]?.storage_location ?? opt.storage_location_infos?.name ?? opt.storage_location_infos?.storage_location ?? d?.storage_location_infos?.name ?? d?.storage_location_infos?.storage_location ?? get("storage_location") ?? get("location") ?? "",
           brand: get("brand"),
-          gstInfo: get("gst") !== undefined && get("gst") !== null && get("gst") !== "" ? get("gst") + "%" : "18%"
         });
 
         if (hasBatchTracking && (type !== "PURCHASE" || purchaseType !== "PO_CREATE")) {

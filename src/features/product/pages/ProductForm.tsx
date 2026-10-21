@@ -368,6 +368,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
   const [newFieldName, setNewFieldName] = useState("");
   const [newFieldLabel, setNewFieldLabel] = useState("");
+  const [newFieldCategory, setNewFieldCategory] = useState<string>("");
   const [newFieldType, setNewFieldType] = useState("text");
   const [newFieldRequired, setNewFieldRequired] = useState(false);
   const [newFieldVisible, setNewFieldVisible] = useState(false);
@@ -377,6 +378,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     setEditingFieldId(null);
     setNewFieldName("");
     setNewFieldLabel("");
+    setNewFieldCategory(form.category || "");
     setNewFieldType("text");
     setNewFieldRequired(false);
     setNewFieldVisible(false);
@@ -388,6 +390,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     setEditingFieldId(field.id);
     setNewFieldName(field.field_name || "");
     setNewFieldLabel(field.label_name || "");
+    setNewFieldCategory(field.category_id || "");
     setNewFieldType(field.type || "text");
     setNewFieldRequired(!!field.required);
     setNewFieldVisible(!!field.visible_online);
@@ -852,6 +855,15 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     suggestedVariantTypes: [], supportsSerials: false, serialLabel: "Serial Number",
   };
 
+  const applicableCustomFields = useMemo(() => {
+    return customFieldDefs.filter((field: any) => {
+      if (!field.category_id || field.category_id === "" || String(field.category_id).toLowerCase() === "all") {
+        return true;
+      }
+      return field.category_id === form.category;
+    });
+  }, [customFieldDefs, form.category]);
+
   /* Regenerate variant combinations when types change.
    * SKIP if combinations were just loaded from the server — we don't want to
    * overwrite real prices/stock data with zeros during edit-mode init. */
@@ -932,6 +944,22 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     if (form.mrp && numMrp <= 0) {
       showToast("MRP must be greater than zero.", "error");
       return;
+    }
+
+    // Validate required custom fields for this product's category
+    for (const field of applicableCustomFields) {
+      if (field.required) {
+        // Boolean fields are checkboxes with a valid binary state (checked: true, unchecked: false).
+        // Defaulting to unchecked (false) is valid and should not block saving as missing.
+        if (field.type === 'boolean') {
+          continue;
+        }
+        const val = customFieldValues[field.id];
+        if (val === undefined || val === null || String(val).trim() === "") {
+          showToast(`Custom field "${field.label_name}" is required for this product category.`, "error");
+          return;
+        }
+      }
     }
 
     // V1: selling_price > mrp (🔴 Block save — Legal Metrology requirement)
@@ -1048,10 +1076,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
           return acc;
         }, {} as Record<string, any>)
         : undefined,
-      // Dynamic custom fields keyed by field_name
-      ...Object.entries(customFieldValues).reduce((acc, [fieldId, val]) => {
-        const fieldDef = customFieldDefs.find(fd => fd.id === fieldId);
-        if (fieldDef) acc[fieldDef.field_name] = val;
+      // Dynamic custom fields keyed by field_name (scoped to this product category)
+      ...applicableCustomFields.reduce((acc: Record<string, any>, fieldDef: any) => {
+        let val = customFieldValues[fieldDef.id];
+        if (fieldDef.type === 'boolean') {
+          val = val === 'true' ? 'true' : 'false';
+        }
+        if (val !== undefined && val !== "") acc[fieldDef.field_name] = val;
         return acc;
       }, {} as Record<string, any>),
     };
@@ -1198,11 +1229,18 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         }
       }
 
-      // ── Upsert custom field values ────────────────────────────────────────
+      // ── Upsert custom field values (only applicable for this category) ──
       if (savedProductId) {
-        const valueInfos = Object.entries(customFieldValues)
-          .filter(([, value]) => value !== undefined && value !== "")
-          .map(([field_id, value]) => ({ field_id, value: String(value) }));
+        const valueInfos = applicableCustomFields
+          .map((fieldDef: any) => {
+            let val = customFieldValues[fieldDef.id];
+            if (fieldDef.type === 'boolean') {
+              val = val === 'true' ? 'true' : 'false';
+            }
+            return { field_id: fieldDef.id, value: val };
+          })
+          .filter(({ value }: { value: any }) => value !== undefined && value !== "")
+          .map(({ field_id, value }: { field_id: string; value: any }) => ({ field_id, value: String(value) }));
 
         if (valueInfos.length > 0) {
           try {
@@ -1251,11 +1289,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       return;
     }
     try {
+      const categoryIdVal = newFieldCategory.trim() || null;
       if (editingFieldId) {
         await inventoryCustomFields.updateField({
           shop_id: SHOP_ID,
           field_id: editingFieldId,
           label_name: newFieldLabel.trim(),
+          category_id: categoryIdVal,
           type: newFieldHasValues ? undefined : newFieldType,
           required: newFieldRequired,
           visible_online: newFieldVisible,
@@ -1268,6 +1308,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
           field_infos: [{
             field_name: internalName,
             label_name: newFieldLabel.trim(),
+            category_id: categoryIdVal,
             type: newFieldType,
             required: newFieldRequired,
             visible_online: newFieldVisible,
@@ -1962,19 +2003,36 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                 </button>
               }
             >
-              {customFieldDefs.length === 0 ? (
-                <div className="text-center py-6 text-slate-400 text-xs font-medium">
-                  No custom fields defined yet. Click "Create Custom Field" to add one.
+              {applicableCustomFields.length === 0 ? (
+                <div className="text-center py-6 text-slate-400 text-xs font-medium space-y-1">
+                  <p>
+                    {form.category
+                      ? `No custom fields defined for category "${categories.find(c => c.id === form.category)?.name || "selected"}".`
+                      : "No global custom fields defined yet."}
+                  </p>
+                  <p className="text-[11px] text-slate-400">
+                    Click &quot;Create Custom Field&quot; to define fields for this product.
+                  </p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {customFieldDefs.map((field) => (
+                  {applicableCustomFields.map((field: any) => (
                     <div key={field.id} className="space-y-1.5 p-3 rounded-xl bg-slate-50/40 border border-slate-100 hover:border-slate-200 transition-colors">
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2">
                           <Label text={field.label_name} required={field.required} />
+                          {field.category_id && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 bg-emerald-50 text-emerald-700 rounded border border-emerald-200 leading-none">
+                              {categories.find(c => c.id === field.category_id)?.name || "Category specific"}
+                            </span>
+                          )}
+                          {!field.category_id && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded border border-slate-200 leading-none">
+                              All Categories
+                            </span>
+                          )}
                           {field.has_values && (
-                            <span className="text-[9px] font-bold px-1.5 py-0.2 bg-blue-50 text-blue-600 rounded border border-blue-100 leading-none">
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded border border-blue-100 leading-none">
                               Has data
                             </span>
                           )}
@@ -2074,6 +2132,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
           if (!editingFieldId) {
             setNewFieldName("");
             setNewFieldLabel("");
+            setNewFieldCategory(form.category || "");
             setNewFieldType("text");
             setNewFieldRequired(false);
             setNewFieldVisible(false);
@@ -2110,6 +2169,21 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
             value={newFieldName}
             placeholder="Auto-generated from Label Name"
           />
+          <div>
+            <ReusableSelect
+              label="Applicable Category"
+              value={newFieldCategory}
+              onValueChange={(val) => setNewFieldCategory(val)}
+              options={[
+                { label: "All Categories (Global)", value: "" },
+                ...categories.map(c => ({ label: c.name, value: c.id }))
+              ]}
+              placeholder="All Categories (Global)"
+            />
+            <p className="text-[10px] text-slate-400 mt-1 ml-1 font-medium">
+              Choose a specific category so this field is only shown and required for products in that category, or keep &quot;All Categories&quot; to apply to all products.
+            </p>
+          </div>
           <div>
             <ReusableSelect
               label="Field Type"

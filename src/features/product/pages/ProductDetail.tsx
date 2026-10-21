@@ -632,21 +632,25 @@ const ProductDetail = () => {
                 </SectionCard>
 
                 {/* Custom Fields — separate card below Classification */}
-                {(cfLoading || customFieldDefs.length > 0) && (
-                  <SectionCard className="rounded-lg border-slate-200 shadow-sm p-4">
-                    <div className="flex items-center gap-2 mb-4">
-                      <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-100">
-                        <Layers size={16} />
+                {(() => {
+                  const productCatId = product?.category_id || (product as any)?.category || (product as any)?.additional_infos?.category_id;
+                  const applicableFields = customFieldDefs.filter(f => !f.category_id || f.category_id === "" || f.category_id === productCatId);
+                  if (!cfLoading && applicableFields.length === 0) return null;
+                  return (
+                    <SectionCard className="rounded-lg border-slate-200 shadow-sm p-4">
+                      <div className="flex items-center gap-2 mb-4">
+                        <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-100">
+                          <Layers size={16} />
+                        </div>
+                        <h2 className="text-[10px] font-black text-slate-800 tracking-[0.15em]">Custom Attributes</h2>
                       </div>
-                      <h2 className="text-[10px] font-black text-slate-800 tracking-[0.15em]">Custom Attributes</h2>
-                    </div>
-                    {cfLoading ? (
-                      <div className="py-4 flex justify-center"><Loader /></div>
-                    ) : (
-                      <div className="space-y-2">
-                        {customFieldDefs.map((field) => {
-                          const currentVal = customFieldValues.find((v) => v.field_id === field.id);
-                          const isEditing = editingFieldId === field.id;
+                      {cfLoading ? (
+                        <div className="py-4 flex justify-center"><Loader /></div>
+                      ) : (
+                        <div className="space-y-2">
+                          {applicableFields.map((field) => {
+                            const currentVal = customFieldValues.find((v) => v.field_id === field.id);
+                            const isEditing = editingFieldId === field.id;
                           return (
                             <div key={field.id} className={`group relative p-3 rounded-lg border transition-all ${isEditing ? 'border-indigo-200 bg-indigo-50/40' : 'border-slate-100 bg-slate-50 hover:border-indigo-100'
                               }`}>
@@ -655,13 +659,27 @@ const ProductDetail = () => {
                               </p>
                               {isEditing ? (
                                 <div className="flex items-center gap-1.5 mt-1">
-                                  <input
-                                    autoFocus
-                                    type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
-                                    value={editingValue}
-                                    onChange={(e) => setEditingValue(e.target.value)}
-                                    className="flex-1 h-7 px-2 text-xs font-semibold bg-white border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200"
-                                  />
+                                  {field.type === 'boolean' ? (
+                                    <label className="flex items-center gap-2 cursor-pointer flex-1 py-1">
+                                      <input
+                                        type="checkbox"
+                                        checked={editingValue === 'true'}
+                                        onChange={(e) => setEditingValue(String(e.target.checked))}
+                                        className="w-4 h-4 rounded accent-indigo-600 cursor-pointer"
+                                      />
+                                      <span className="text-xs font-semibold text-slate-700">
+                                        {editingValue === 'true' ? 'Yes (True)' : 'No (False)'}
+                                      </span>
+                                    </label>
+                                  ) : (
+                                    <input
+                                      autoFocus
+                                      type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+                                      value={editingValue}
+                                      onChange={(e) => setEditingValue(e.target.value)}
+                                      className="flex-1 h-7 px-2 text-xs font-semibold bg-white border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                                    />
+                                  )}
                                   <button onClick={() => handleSaveCustomField(field.id)} disabled={cfSaving}
                                     className="w-6 h-6 flex items-center justify-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all active:scale-90 disabled:opacity-60">
                                     {cfSaving ? <span className="w-2.5 h-2.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Check size={11} />}
@@ -673,9 +691,17 @@ const ProductDetail = () => {
                                 </div>
                               ) : (
                                 <div className="flex items-center justify-between cursor-pointer"
-                                  onClick={() => { setEditingFieldId(field.id); setEditingValue(currentVal?.value ?? ''); }}>
+                                  onClick={() => { setEditingFieldId(field.id); setEditingValue(currentVal?.value ?? (field.type === 'boolean' ? 'false' : '')); }}>
                                   <p className="text-xs font-bold text-slate-700 truncate">
-                                    {currentVal?.value || <span className="text-slate-300 font-medium italic">Click to set</span>}
+                                    {field.type === 'boolean' ? (
+                                      currentVal?.value === 'true' ? (
+                                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">Yes</span>
+                                      ) : (
+                                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-100 text-slate-500 border border-slate-200">No</span>
+                                      )
+                                    ) : (
+                                      currentVal?.value || <span className="text-slate-300 font-medium italic">Click to set</span>
+                                    )}
                                   </p>
                                   <Pencil size={10} className="text-slate-300 group-hover:text-indigo-400 transition-colors ml-2 shrink-0" />
                                 </div>
@@ -686,7 +712,8 @@ const ProductDetail = () => {
                       </div>
                     )}
                   </SectionCard>
-                )}
+                );
+              })()}
 
                 {description && description !== "—" && (
                   <SectionCard className="rounded-lg border-slate-200 shadow-sm p-4">

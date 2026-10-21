@@ -240,11 +240,13 @@ export interface CommitReservationsPayload {
 export interface InventoryCustomFieldDefinition {
   id: string;
   shop_id: string;
+  category_id?: string | null;
   field_name: string;
   label_name: string;
   type: string;     // 'text' | 'number' | 'date' | 'boolean'
   required: boolean;
   visible_online: boolean;
+  has_values?: boolean;
   created_at?: string;
   updated_at?: string;
 }

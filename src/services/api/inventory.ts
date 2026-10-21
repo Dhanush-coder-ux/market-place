@@ -272,15 +272,17 @@ export interface CreateInventoryCustomFieldPayload {
     field_name: string;
     label_name: string;
     type: string;          // 'text' | 'number' | 'date' | 'boolean'
+    category_id?: string | null;
     required?: boolean;
     visible_online?: boolean;
-  has_values?: boolean;
+    has_values?: boolean;
   }>;
 }
 
 export interface UpdateInventoryCustomFieldPayload {
   field_id: string;
   shop_id: string;
+  category_id?: string | null;
   label_name?: string | null;
   type?: string | null;
   required?: boolean | null;
@@ -313,9 +315,10 @@ export const inventoryCustomFieldsApi = {
   },
 
   /** GET /inventory-fields/{shop_id} — All field definitions for a shop */
-  getAllFields: async (shopId: string): Promise<InventoryCustomFieldDefinition[]> => {
+  getAllFields: async (shopId: string, categoryId?: string): Promise<InventoryCustomFieldDefinition[]> => {
     try {
-      const res = await apiClient.get(`${CF}/${shopId}`);
+      const url = categoryId ? `${CF}/${shopId}?category_id=${encodeURIComponent(categoryId)}` : `${CF}/${shopId}`;
+      const res = await apiClient.get(url);
       const raw = res?.data ?? res;
       return Array.isArray(raw) ? raw : [];
     } catch {

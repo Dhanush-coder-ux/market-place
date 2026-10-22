@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { createPortal } from "react-dom";
 import {
   ListTree,
-  ShoppingBag,
   Percent,
   Activity,
   Store,
@@ -18,8 +17,6 @@ import {
   ShieldCheck,
   Printer,
 } from "lucide-react";
-
-import { Switch } from "@/components/ui/switch";
 import { ActivityLogPage } from "@/features/Setting/pages/ActivityLogPage";
 import { CustomListSettings } from "@/features/Setting/pages/CustomListSettings";
 import { ShopProfileForm } from "@/features/Setting/pages/ShopProfileForm";
@@ -54,13 +51,6 @@ const MENU_ITEMS = [
     icon: ListTree,
     description: "Categories & units",
     accent: "violet",
-  },
-  {
-    id: "purchasetypes",
-    label: "Purchase Modules",
-    icon: ShoppingBag,
-    description: "Enable purchase types",
-    accent: "emerald",
   },
   {
     id: "gst",
@@ -287,66 +277,6 @@ export const ProfileSettingsPage = () => {
 
       case "activity":
         return wrapper(<ActivityLogPage />);
-
-      case "purchasetypes":
-        return wrapper(
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-            {/* Header */}
-            <div className="px-6 py-5 border-b border-slate-50 bg-gradient-to-r from-slate-50/80 to-white">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center">
-                  <ShoppingBag size={17} className="text-emerald-600" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-800">
-                    Purchase Type Configurations
-                  </h3>
-                  <p className="text-[11px] text-slate-400 font-medium mt-0.5">
-                    Enable or disable specific purchase flows across your system.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-6 space-y-3 max-w-2xl">
-              {/* Coming Soon row */}
-              <div className="flex items-center justify-between p-4 rounded-xl border border-dashed border-slate-200 bg-slate-50/50 opacity-60">
-                <div className="space-y-0.5 pr-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-slate-500">
-                      PO-GRN (Goods Receipt Note)
-                    </span>
-                    <span className="px-2 py-0.5 text-[9px] font-black text-amber-600 bg-amber-50 border border-amber-200 rounded-full uppercase tracking-widest">
-                      Soon
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-400">
-                    Purchase Order to Goods Receipt Note workflow.
-                  </p>
-                </div>
-                <Switch checked={false} disabled />
-              </div>
-
-              {/* Production Entry row - Soon */}
-              <div className="flex items-center justify-between p-4 rounded-xl border border-dashed border-slate-200 bg-slate-50/50">
-                <div className="space-y-0.5 pr-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-slate-400">
-                      Production Entry
-                    </span>
-                    <span className="px-2 py-0.5 text-[9px] font-black text-amber-600 bg-amber-50 border border-amber-200 rounded-full uppercase tracking-widest">
-                      Soon
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-400">
-                    Internal production entry and manufacturing item consumption.
-                  </p>
-                </div>
-                <Switch checked={false} disabled />
-              </div>
-            </div>
-          </div>
-        );
 
       case "gst":
         return wrapper(

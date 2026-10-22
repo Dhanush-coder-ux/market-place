@@ -266,7 +266,7 @@ const Login = () => {
           {/* Main Headline */}
           <div className="space-y-3 max-w-[490px]">
             <h1 className="text-3xl sm:text-[34px] font-bold leading-[1.22] tracking-[-0.03em] text-white m-0">
-              Everything you need to run your shop —{" "}
+              Everything you need to run your shop {" "}
               <span className="text-[#D4A850]">from anywhere.</span>
             </h1>
             <div className="flex flex-wrap gap-x-5 gap-y-1 pt-1">

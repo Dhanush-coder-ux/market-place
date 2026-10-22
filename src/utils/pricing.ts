@@ -144,8 +144,7 @@ export function calculateTaxSplit(inclusivePrice: number, gstRate: number): TaxS
 // ----------------------------------------------------------------------------
 // 2.2 Product Level Effective Price, Discount & Margin
 // Rule 2 & 3: Discount reduces selling price (not MRP).
-// If shop is GST registered, entered sellingPrice is exclusive of GST (base + GST).
-// If shop is non-registered, entered sellingPrice is flat (0% GST).
+// Selling price is always INCLUSIVE of GST (for both registered and non-registered shops).
 // ----------------------------------------------------------------------------
 export function calculateProductEffectivePrice(input: ProductPricingInfo & { isGstRegistered?: boolean }) {
   const sellingPrice = Math.max(0, Number(input.sellingPrice) || 0);
@@ -166,28 +165,11 @@ export function calculateProductEffectivePrice(input: ProductPricingInfo & { isG
 
   const discountPercent = !isOfferExpired && input.discountPercent ? Math.max(0, Math.min(99.99, Number(input.discountPercent))) : 0;
   const discountAmount = Math.round((sellingPrice * discountPercent / 100) * 100) / 100;
-  const discountedBase = Math.round((sellingPrice - discountAmount) * 100) / 100;
+  const finalPrice = Math.round((sellingPrice - discountAmount) * 100) / 100;
 
-  let taxableValue = discountedBase;
-  let gstAmount = 0;
-  let finalPrice = discountedBase;
-
-  if (isGstReg && gstRate > 0) {
-    gstAmount = Math.round((taxableValue * gstRate / 100) * 100) / 100;
-    finalPrice = Math.round((taxableValue + gstAmount) * 100) / 100;
-  }
-
-  const cgst = Math.round((gstAmount / 2) * 100) / 100;
-  const sgst = Math.round((gstAmount - cgst) * 100) / 100;
-
-  const tax: TaxSplit = {
-    inclusivePrice: finalPrice,
-    taxableValue,
-    gstAmount,
-    cgst,
-    sgst,
-    gstRate,
-  };
+  // Selling price is ALWAYS inclusive of GST.
+  // Tax split is extracted from the inclusive finalPrice (Rule 1).
+  const tax = calculateTaxSplit(finalPrice, gstRate);
 
   // MRP Savings
   let customerSaving = 0;
@@ -198,10 +180,11 @@ export function calculateProductEffectivePrice(input: ProductPricingInfo & { isG
   }
 
   // Profit calculation:
+  // Profit = taxable_value - cost_price (taxable value is base excluding GST)
   const costPrice = input.costPrice !== undefined && input.costPrice !== null ? Number(input.costPrice) : undefined;
-  const profit = costPrice !== undefined ? Math.round((finalPrice - costPrice) * 100) / 100 : undefined;
-  const marginPercent = costPrice !== undefined && finalPrice > 0
-    ? Math.round(((finalPrice - costPrice) / finalPrice * 100) * 10) / 10
+  const profit = costPrice !== undefined ? Math.round((tax.taxableValue - costPrice) * 100) / 100 : undefined;
+  const marginPercent = costPrice !== undefined && tax.taxableValue > 0
+    ? Math.round(((tax.taxableValue - costPrice) / tax.taxableValue * 100) * 10) / 10
     : undefined;
 
   return {
@@ -305,29 +288,22 @@ export function calculateBillTotals(
       }
     }
 
-    const taxableValue = Math.max(0, Math.round((line.lineInclusive - billDiscountShare) * 100) / 100);
+    const finalInclusive = Math.max(0, Math.round((line.lineInclusive - billDiscountShare) * 100) / 100);
     const rawGstRate = Math.max(0, Number(line.gstRate) || 0);
     const gstRate = isGstReg ? rawGstRate : 0;
-    let gstAmount = 0;
-    let finalInclusive = taxableValue;
 
-    if (isGstReg && gstRate > 0) {
-      gstAmount = Math.round((taxableValue * (gstRate / 100)) * 100) / 100;
-      finalInclusive = Math.round((taxableValue + gstAmount) * 100) / 100;
-    }
-
-    const cgst = Math.round((gstAmount / 2) * 100) / 100;
-    const sgst = Math.round((gstAmount - cgst) * 100) / 100;
+    // STEP 4 — Tax extraction per line (Selling price is always inclusive of GST)
+    const tax = calculateTaxSplit(finalInclusive, gstRate);
 
     return {
       ...line,
       billDiscountShare,
       finalInclusive,
-      taxableValue,
+      taxableValue: tax.taxableValue,
       gstRate,
-      gstAmount,
-      cgst,
-      sgst,
+      gstAmount: tax.gstAmount,
+      cgst: tax.cgst,
+      sgst: tax.sgst,
     };
   });
 

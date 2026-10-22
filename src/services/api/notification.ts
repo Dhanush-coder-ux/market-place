@@ -40,7 +40,7 @@ export const notificationApi = {
    * Get stored notifications for a specific user and/or shop (non-destructive)
    * Maps to GET /api/v1/notifications/?user_id=...&shop_id=...
    */
-  getNotifications: async (userId: string, shopId?: string, unreadOnly: boolean = false, limit: number = 100): Promise<NotificationItem[]> => {
+  getNotifications: async (userId: string, shopId?: string, unreadOnly: boolean = false, limit: number = 100, environment?: string): Promise<NotificationItem[]> => {
     const params: Record<string, string> = {
       user_id: userId,
       limit: String(limit),
@@ -50,6 +50,9 @@ export const notificationApi = {
     }
     if (unreadOnly) {
       params.unread_only = "true";
+    }
+    if (environment) {
+      params.environment = environment;
     }
     return await apiClient.get(`${ENDPOINTS.NOTIFICATIONS}/`, params);
   },

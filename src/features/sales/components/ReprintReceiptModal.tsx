@@ -18,6 +18,7 @@ import {
   cleanShopAddress,
 } from "@/features/billing/utils/printerService";
 import { PrinterConfigModal } from "@/features/billing/components/PrinterConfigModal";
+import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { extractSaleCustomerInfo } from "../type";
 import { useToast } from "@/context/ToastContext";
 
@@ -608,19 +609,18 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
           <div className="flex items-center gap-2 text-xs text-slate-500">
             <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
             {printersList.length > 1 ? (
-              <div className="flex items-center gap-1.5">
-                <span className="font-semibold text-slate-600">Send to:</span>
-                <select
+              <div className="flex items-center gap-1.5 min-w-[210px]">
+                <span className="font-semibold text-slate-600 text-xs shrink-0">Send to:</span>
+                <ReusableSelect
                   value={targetPrinterId}
-                  onChange={(e) => setTargetPrinterId(e.target.value)}
-                  className="h-8 px-2.5 bg-slate-100 hover:bg-slate-200/80 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none cursor-pointer"
-                >
-                  {printersList.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} ({p.connectionType.toUpperCase()}{p.isDefault ? " • Default" : ""})
-                    </option>
-                  ))}
-                </select>
+                  onValueChange={setTargetPrinterId}
+                  options={printersList.map((p) => ({
+                    label: `${p.name} (${p.connectionType.toUpperCase()}${p.isDefault ? " • Default" : ""})`,
+                    value: p.id,
+                  }))}
+                  placeholder="Select Printer"
+                  className="h-8 py-1 px-2.5 text-xs bg-slate-100 hover:bg-slate-200/80 border-slate-200 rounded-lg font-bold text-slate-800 shadow-none"
+                />
               </div>
             ) : (
               <span className="font-medium text-slate-600">

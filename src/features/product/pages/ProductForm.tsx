@@ -1723,6 +1723,16 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                   /* STOCKED MODE */
                   <div className="pf-section-enter space-y-4">
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                      {/* GST Rate - first, near to MRP */}
+                      <div>
+                        <Label text="GST rate" required tooltip="Applicable GST tax rate." />
+                        <ReusableSelect
+                          value={form.gst}
+                          onValueChange={(val) => setForm(p => ({ ...p, gst: val }))}
+                          options={GST_RATES.map(r => ({ value: r, label: `${r}%` }))}
+                          placeholder="18%"
+                        />
+                      </div>
                       <InputField
                         label="MRP"
                         name="mrp"
@@ -1737,13 +1747,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                       <InputField
                         label={isGstReg ? "Selling price" : "Selling price"}
                         name="selling_price"
-                        hint="optional — set from purchase"
+                        hint="optional, set from purchase"
                         type="number"
                         value={form.selling_price}
                         onChange={handleChange}
                         placeholder="0.00"
                         leftEl={<IndianRupee size={13} />}
-                        tooltip={isGstReg ? "Selling price exclusive of GST (GST will be added on top)." : "Selling price of the product."}
+                        tooltip={isGstReg ? "Selling price inclusive of GST." : "Selling price of the product."}
                         error={sellingPriceError}
                       />
                       <InputField
@@ -1758,6 +1768,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         rightEl="%"
                         tooltip="Always reduces the selling price (never the MRP)."
                       />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <InputField
                         label="Offer valid until"
                         name="offer_valid_until"
@@ -1768,9 +1781,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         onChange={handleChange}
                         tooltip="After this date, discount stops applying."
                       />
-                    </div>
-
-                    <div className="grid grid-cols-2 lg:grid-cols-2 gap-4">
                       <InputField
                         label="Reorder point"
                         name="reorder_point"
@@ -1836,6 +1846,16 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                       </p>
                     </div>
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                      {/* GST Rate - first, near to MRP */}
+                      <div>
+                        <Label text="GST rate" required tooltip="Applicable GST tax rate." />
+                        <ReusableSelect
+                          value={form.gst}
+                          onValueChange={(val) => setForm(p => ({ ...p, gst: val }))}
+                          options={GST_RATES.map(r => ({ value: r, label: `${r}%` }))}
+                          placeholder="18%"
+                        />
+                      </div>
                       <InputField
                         label="MRP"
                         name="mrp"
@@ -1848,7 +1868,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         tooltip="Maximum Retail Price."
                       />
                       <InputField
-                        label={isGstReg ? "Selling price (excl. GST)" : "Selling price"}
+                        label={isGstReg ? "Selling price (incl. GST)" : "Selling price"}
                         name="selling_price"
                         required
                         type="number"
@@ -1856,7 +1876,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         onChange={handleChange}
                         placeholder="0.00"
                         leftEl={<IndianRupee size={13} />}
-                        tooltip={isGstReg ? "Selling price exclusive of GST." : "Selling price."}
+                        tooltip={isGstReg ? "Selling price inclusive of GST." : "Selling price."}
                         error={sellingPriceError}
                       />
                       <InputField
@@ -1870,6 +1890,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         rightEl="%"
                         tooltip="Always reduces selling price."
                       />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <InputField
                         label="Cost to make (Buy price)"
                         name="cost_to_make"
@@ -1919,19 +1942,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
               icon={<FileText size={17} className="text-amber-600" />}
               iconBg="bg-amber-50"
               title="Tax & identifiers"
-              subtitle="GST and product codes for compliant invoices"
+              subtitle="HSN code and product barcodes for compliant billing"
             >
-              <div className="grid grid-cols-3 gap-4">
-                {/* GST Rate */}
-                <div>
-                  <Label text="GST rate" required tooltip="Applicable GST tax rate." />
-                  <ReusableSelect
-                    value={form.gst}
-                    onValueChange={(val) => setForm(p => ({ ...p, gst: val }))}
-                    options={GST_RATES.map(r => ({ value: r, label: `${r}%` }))}
-                    placeholder="18%"
-                  />
-                </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* HSN code */}
                 <InputField
                   label="HSN / SAC code"

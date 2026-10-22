@@ -81,7 +81,7 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
               <AntBadge variant="lb-brand" type="tag" icon={<Wifi size={10} strokeWidth={2} />}>Online</AntBadge>
               {showDeliveryVerify && <DeliveryBadge onClick={onVerifyDelivery} />}
             </div>
-            <p className="text-xs font-normal text-slate-400 mb-0.5">#{order.billNo}</p>
+            <p className="text-xs font-normal text-slate-400 mb-0.5">{order.billNo}</p>
             <div className="flex items-baseline gap-0.5">
               <IndianRupee size={14} className="text-slate-800" strokeWidth={2} />
               <span className="text-xl font-medium text-slate-800">
@@ -149,7 +149,7 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
         <div className="flex items-start justify-between mb-5">
           <div className="flex items-center gap-2.5 flex-wrap">
             <AntBadge variant="lb-brand" type="tag" icon={<Wifi size={10} strokeWidth={2} />}>Online</AntBadge>
-            <span className="text-xs font-normal text-slate-400">#{order.billNo}</span>
+            <span className="text-xs font-normal text-slate-400">{order.billNo}</span>
             {showDeliveryVerify && <DeliveryBadge onClick={onVerifyDelivery} />}
           </div>
 

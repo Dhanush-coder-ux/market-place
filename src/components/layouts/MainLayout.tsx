@@ -311,7 +311,7 @@ const MainLayout = () => {
         <SubscriptionAlertBanner />
 
         <main className="flex-1 flex flex-col min-w-0 relative overflow-hidden">
-          <div className={`flex-1 flex flex-col min-h-0 overflow-hidden relative ${hideNav ? (isBillingPage ? "p-0" : "p-2.5 md:p-4") : isStorePage ? "p-0 pb-20 md:pb-0" : isBillingPage ? "pl-6 pr-3.5 pt-4 pb-2 md:pl-8 lg:pl-10 lg:pr-6" : "p-1.5 md:p-2 lg:p-2.5"} ${!bottomActions && "pb-20 md:pb-0"}`}>
+          <div className={`flex-1 flex flex-col min-h-0 overflow-hidden relative ${hideNav ? (isBillingPage ? "p-0" : "p-2.5 md:p-4") : isStorePage ? "p-0 pb-20 md:pb-0" : isBillingPage ? "pl-6 pr-3.5 pt-4 pb-2 md:pl-8 lg:pl-10 lg:pr-6" : "p-1.5 md:p-2 lg:p-2.5"} ${(!bottomActions && !isBillingPage) ? "pb-20 md:pb-0" : ""}`}>
 
             {isExpired && !isPricingPage ? (
               <SubscriptionExpiredLockScreen planName={subData?.plan_name} />
@@ -360,7 +360,7 @@ const MainLayout = () => {
         </main>
 
         {/* Mobile Bottom Navigation Bar */}
-        {!hideNav && <MobileBottomBar />}
+        {!isCleanMode && <MobileBottomBar />}
       </div>
     </div>
   );

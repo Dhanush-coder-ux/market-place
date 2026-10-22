@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Download, X, Loader2, CheckCircle2, Plus, Printer } from "lucide-react";
+import { BiLogoWhatsapp } from "react-icons/bi";
 import type { BillingItem } from "../types";
 import type { BillTotals } from "@/utils/pricing";
 import { shopApi } from "../../../services/api/shop";
@@ -54,6 +55,32 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
       }).catch(console.error);
     }
   }, [isOpen]);
+
+  // ── WhatsApp Share ───────────────────────────────────────────────────────────
+  const handleWhatsAppShare = () => {
+    let phoneNum = (phone || "").replace(/[^0-9]/g, "");
+    if (!phoneNum) {
+      const input = window.prompt("Enter customer WhatsApp phone number (10 digits):", "");
+      if (!input) return;
+      phoneNum = input.replace(/[^0-9]/g, "");
+    }
+    if (phoneNum.length === 10) {
+      phoneNum = "91" + phoneNum;
+    }
+
+    const shopName = shopData?.name || localStorage.getItem("shop_name") || "Our Store";
+    const itemsText = items
+      .filter((i) => !!i.name && i.qty > 0)
+      .slice(0, 5)
+      .map((it) => `• ${it.name} x ${it.qty} - ₹${Number(it.price * it.qty).toFixed(2)}`)
+      .join("\n");
+    const moreCount = items.length > 5 ? `\n...and ${items.length - 5} more items` : "";
+
+    const text = `*${shopName}* - Tax Invoice\n--------------------------------\n*Invoice / Order ID:* ${orderId || ""}\n*Date:* ${dateStr} ${timeStr}\n*Customer:* ${customerName || "Valued Customer"}\n*Total Amount:* ₹${finalAmount.toFixed(2)}\n--------------------------------\n*Items:*\n${itemsText}${moreCount}\n--------------------------------\nThank you for your business!`;
+
+    const url = `https://wa.me/${phoneNum}?text=${encodeURIComponent(text)}`;
+    window.open(url, "_blank");
+  };
 
   // ── PDF Download ─────────────────────────────────────────────────────────────
   const handleDownload = async () => {
@@ -199,7 +226,7 @@ ${(err as Error)?.message ?? String(err)}`);
 
         {/* Scrollable Receipt Paper (modal-content ensures no-scroll doesn't block scrolling) */}
         <div 
-          className="modal-content flex-1 min-h-0 overflow-y-auto overflow-x-hidden py-4 px-3 sm:px-6 print:p-0 print:overflow-visible custom-scrollbar" 
+          className="modal-content flex-1 min-h-0 overflow-y-auto overflow-x-auto py-4 px-2 sm:px-6 print:p-0 print:overflow-visible custom-scrollbar" 
           style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
         >
           <div className="print-area">
@@ -225,7 +252,7 @@ ${(err as Error)?.message ?? String(err)}`);
         </div>
 
         {/* Sticky Action Footer */}
-        <div className={`flex items-center ${orderId ? 'justify-between' : 'justify-end'} px-5 py-3.5 bg-white border-t border-slate-200/80 shrink-0 gap-2 no-print`}>
+        <div className={`flex items-center ${orderId ? 'justify-between' : 'justify-end'} px-4 py-3 sm:px-5 sm:py-3.5 bg-white border-t border-slate-200/80 shrink-0 gap-2 no-print overflow-x-auto scrollbar-none`}>
           {orderId && (
             <div className="flex gap-2">
               <button
@@ -249,6 +276,15 @@ ${(err as Error)?.message ?? String(err)}`);
                   <><Download size={13} /> Download</>
                 )}
               </button>
+              {Boolean(phone) && customerName !== "Walk-in Customer" && (
+                <button
+                  onClick={handleWhatsAppShare}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-emerald-200 text-[12px] font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors cursor-pointer"
+                  title="Send Invoice on WhatsApp"
+                >
+                  <BiLogoWhatsapp size={15} className="text-[#25D366]" /> WhatsApp
+                </button>
+              )}
             </div>
           )}
           <div className="flex gap-2">

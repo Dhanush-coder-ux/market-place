@@ -22,6 +22,7 @@ import SkeletonLoader from "@/components/common/SkeletonLoader";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import type { InventoryRecord } from "@/types/api";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
+import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { AntBadge } from "@/components/ui/AntBadge";
 import { PriceCell } from "@/components/common/PriceCell";
 
@@ -1510,31 +1511,31 @@ const ProductInfos = () => {
           {/* Category */}
           <div className="space-y-1.5">
             <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Category</label>
-            <select
+            <ReusableSelect
               value={filterCategory}
-              onChange={e => setFilterCategory(e.target.value)}
-              className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
-            >
-              <option value="All">All Categories</option>
-              {availableCategories.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
+              onValueChange={setFilterCategory}
+              options={[
+                { label: "All Categories", value: "All" },
+                ...availableCategories.map(cat => ({ label: cat, value: cat }))
+              ]}
+              placeholder="All Categories"
+              className="h-9 py-2 px-3 text-xs bg-slate-50 border-slate-200 rounded-lg font-semibold text-slate-750 hover:bg-white focus:bg-white shadow-none transition-colors"
+            />
           </div>
 
           {/* Brand */}
           <div className="space-y-1.5">
             <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Brand</label>
-            <select
+            <ReusableSelect
               value={filterBrand}
-              onChange={e => setFilterBrand(e.target.value)}
-              className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
-            >
-              <option value="All">All Brands</option>
-              {availableBrands.map(b => (
-                <option key={b} value={b}>{b}</option>
-              ))}
-            </select>
+              onValueChange={setFilterBrand}
+              options={[
+                { label: "All Brands", value: "All" },
+                ...availableBrands.map(b => ({ label: b, value: b }))
+              ]}
+              placeholder="All Brands"
+              className="h-9 py-2 px-3 text-xs bg-slate-50 border-slate-200 rounded-lg font-semibold text-slate-750 hover:bg-white focus:bg-white shadow-none transition-colors"
+            />
           </div>
         </div>
       </RightSidebarFilter>

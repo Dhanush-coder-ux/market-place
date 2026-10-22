@@ -1,11 +1,19 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from "react";
 import { notificationApi, NotificationItem, NotificationCreate } from "@/services/api/notification";
+import { 
+  isProductionEnvironment, 
+  isDigitalStoreNotification, 
+  filterNotificationsByEnvironment, 
+  getEnvironmentName 
+} from "@/utils/notificationFilter";
 import { getGatewayBaseUrl } from "@/services/api/tokenManager";
 
 interface NotificationContextType {
   notifications: NotificationItem[];
   unreadCount: number;
   isConnected: boolean;
+  isProduction: boolean;
+  environment: "production" | "development";
   latestNotification: NotificationItem | null;
   isIslandExpanded: boolean;
   closeIsland: () => void;
@@ -89,7 +97,8 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     if (!queryId) return;
 
     try {
-      const res = await notificationApi.getNotifications(queryId, shopId || undefined);
+      const env = getEnvironmentName();
+      const res = await notificationApi.getNotifications(queryId, shopId || undefined, false, 100, env);
       let list: NotificationItem[] = [];
       if (Array.isArray(res)) {
         list = res;
@@ -100,7 +109,9 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
           list = (res as any).datas;
         }
       }
-      setNotifications(list);
+      // Filter by environment: production allows ONLY digital store notifications
+      const allowedList = filterNotificationsByEnvironment(list);
+      setNotifications(allowedList);
     } catch (err) {
       console.warn("Failed to fetch notifications:", err);
     }
@@ -179,6 +190,10 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
           try {
             const data: NotificationItem = JSON.parse(event.data);
+            // Environment check: In production, allow ONLY digital store related notifications
+            if (isProductionEnvironment() && !isDigitalStoreNotification(data)) {
+              return;
+            }
             if (data && (data.title || data.message)) {
               // Add to state if not already present
               setNotifications((prev) => {
@@ -305,6 +320,8 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         notifications,
         unreadCount,
         isConnected,
+        isProduction: isProductionEnvironment(),
+        environment: getEnvironmentName(),
         latestNotification,
         isIslandExpanded,
         closeIsland,

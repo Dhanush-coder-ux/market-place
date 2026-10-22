@@ -7,7 +7,7 @@ import ProductSelectionModal from "./ProductSelectionModel";
 import { useToast } from "@/context/ToastContext";
 import { inventoryApi } from "@/services/api/inventory";
 import { SHOP_ID } from "@/services/endpoints";
-import { isShopGstRegistered } from "@/utils/pricing";
+import { isShopGstRegistered, calculateTaxSplit } from "@/utils/pricing";
 
 interface BillingTableProps {
   items: BillingItem[];
@@ -826,20 +826,19 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                     <div className="text-right shrink-0 flex flex-col items-end">
                       {(() => {
                         const isGstReg = isShopGstRegistered();
-                        const basePrice = Number(product.price) || 0;
+                        const price = Number(product.price) || 0;
                         const rawGstRate = Number(product.gst) || 0;
                         const gstRate = isGstReg ? rawGstRate : 0;
-                        const gstAmt = isGstReg && gstRate > 0 ? (basePrice * (gstRate / 100)) : 0;
-                        const totalPrice = basePrice + gstAmt;
+                        const taxSplit = calculateTaxSplit(price, gstRate);
 
                         return (
                           <>
                             <p className="text-[13px] font-bold text-slate-800 flex items-baseline gap-1">
-                              ₹{totalPrice.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              ₹{price.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </p>
                             {isGstReg && gstRate > 0 && (
                               <p className="text-[9px] text-slate-400 font-medium leading-none mt-0.5">
-                                ₹{basePrice.toFixed(2)} + ₹{gstAmt.toFixed(2)} GST
+                                ₹{taxSplit.taxableValue.toFixed(2)} + ₹{taxSplit.gstAmount.toFixed(2)} GST
                               </p>
                             )}
                           </>
@@ -1132,9 +1131,10 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                         ? lineBaseTotal * (Math.min(100, Math.max(0, lineDiscVal)) / 100)
                         : Math.min(lineBaseTotal, Math.max(0, lineDiscVal));
 
-                      const taxableVal = Math.max(0, Math.round((lineBaseTotal - lineDiscAmount) * 100) / 100);
-                      const gstVal = isGstReg && gstRate > 0 ? Math.round((taxableVal * (gstRate / 100)) * 100) / 100 : 0;
-                      const finalLineTotal = Math.round((taxableVal + gstVal) * 100) / 100;
+                      const finalLineTotal = Math.max(0, Math.round((lineBaseTotal - lineDiscAmount) * 100) / 100);
+                      const taxSplit = calculateTaxSplit(finalLineTotal, gstRate);
+                      const taxableVal = taxSplit.taxableValue;
+                      const gstVal = taxSplit.gstAmount;
                       const hasDiscount = prodDiscPct > 0 || lineDiscVal > 0;
 
                       return (

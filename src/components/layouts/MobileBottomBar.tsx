@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -14,13 +14,13 @@ import {
   ChevronRight,
   Search,
   Plus,
-  Bookmark,
   ClipboardList,
   History,
   FileText,
   UserPlus,
   RefreshCw,
 } from "lucide-react";
+import { usePurchaseSettings } from "@/context/PurchaseContext";
 
 // Top-level nav items (max 5 for bottom bar + "More")
 const TOP_NAV = [
@@ -31,83 +31,7 @@ const TOP_NAV = [
   { name: "More", icon: null, path: null }, // triggers dialog
 ];
 
-// All navigation groups for the dialog
-const ALL_NAV_GROUPS = [
-  {
-    label: "Main",
-    items: [
-      { name: "Dashboard", icon: LayoutDashboard, path: "/" },
-      { name: "Sales Management", icon: IndianRupee, path: "/sales" },
-      { name: "Orders History", icon: ShoppingCart, path: "/orders" },
-      { name: "Billing & Invoices", icon: Printer, path: "/billing" },
-    ],
-  },
-  {
-    label: "Products",
-    items: [
-      { name: "Products List", icon: ClipboardList, path: "/product/all" },
-      { name: "Add New Product", icon: Plus, path: "/product/add" },
-      { name: "Product Detail", icon: FileText, path: "/product" },
-      { name: "Product Drafts", icon: Bookmark, path: "/product/drafts" },
-    ],
-  },
-  {
-    label: "Inventory",
-    items: [
-      { name: "Current Stock", icon: Database, path: "/inventory" },
-      { name: "Stock Movements", icon: History, path: "/stock-movement" },
-      { name: "Stock Adjustments", icon: RefreshCw, path: "/stock-adjustment" },
-      { name: "Adjustment Drafts", icon: Bookmark, path: "/stock-adjustment/drafts" },
-    ],
-  },
-  {
-    label: "Purchase & Production",
-    items: [
-      { name: "Add Purchase", icon: Plus, path: "/purchase/add" },
-      { name: "Purchase Drafts", icon: Bookmark, path: "/purchase/drafts" },
-      { label: "History & Tracking", type: "sub-header" },
-      { name: "Purchase History", icon: History, path: "/purchase-history" },
-      { label: "Purchase Orders (PO)", type: "sub-header" },
-      { name: "Purchase Order List", icon: ClipboardList, path: "/po-grn" },
-      { name: "Add Purchase Order", icon: Plus, path: "/po-grn/add" },
-      { name: "Update Purchase Order", icon: RefreshCw, path: "/po-grn/update" },
-      { label: "Manufacturing", type: "sub-header" },
-      { name: "Production Entry", icon: Package, path: "/production-entry/add" },
-    ],
-  },
-  {
-    label: "People Management",
-    items: [
-      { label: "Customers", type: "sub-header" },
-      { name: "Customers Summary", icon: ClipboardList, path: "/customers-Summary" },
-      { name: "Add New Customer", icon: UserPlus, path: "/customers/add" },
-      { name: "Customer Details", icon: FileText, path: "/customers" },
-      { name: "Customer Drafts", icon: Bookmark, path: "/customers/drafts" },
-      
-      { label: "Suppliers", type: "sub-header" },
-      { name: "Suppliers Infos", icon: ClipboardList, path: "/supplier/all" },
-      { name: "Add New Supplier", icon: UserPlus, path: "/supplier/add" },
-      { name: "Supplier Details", icon: FileText, path: "/supplier" },
-      { name: "Supplier Drafts", icon: Bookmark, path: "/supplier/drafts" },
-
-      { label: "Employees", type: "sub-header" },
-      { name: "Employee Infos", icon: ClipboardList, path: "/employee/all" },
-      { name: "Add New Employee", icon: UserPlus, path: "/employee/add" },
-      { name: "Employee Details", icon: FileText, path: "/employee" },
-      { name: "Employee Drafts", icon: Bookmark, path: "/employee/drafts" },
-    ],
-  },
-  {
-    label: "Store & Settings",
-    items: [
-      { name: "Store Profile", icon: Store, path: "/profile" },
-      { name: "Create Shop", icon: Plus, path: "/create-shop" },
-      { name: "Account Settings", icon: UserCircle, path: "/settings" },
-    ],
-  },
-];
-
-// ─── More Icon (grid dots) ────────────────────────────────────────────────────
+// --- More Icon (grid dots) ---
 const MoreIcon = () => (
   <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
     <circle cx="5" cy="5" r="1.5" fill="currentColor" />
@@ -122,7 +46,7 @@ const MoreIcon = () => (
   </svg>
 );
 
-// ─── Navigation Dialog ────────────────────────────────────────────────────────
+// --- Navigation Dialog ---
 const NavigationDialog = ({
   open,
   onClose,
@@ -133,6 +57,7 @@ const NavigationDialog = ({
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [query, setQuery] = useState("");
+  const { settings } = usePurchaseSettings();
 
   const handleNav = (path: string) => {
     navigate(path);
@@ -140,16 +65,112 @@ const NavigationDialog = ({
     setQuery("");
   };
 
+  // Dynamically constructed groups matching current desktop navigation
+  const navGroups = useMemo(() => {
+    const purchaseItems: any[] = [
+      { name: "Purchase List", icon: History, path: "/purchase-history" },
+      { name: "Add Purchase", icon: Plus, path: "/purchase/add" },
+      { name: "Purchase Detail", icon: FileText, path: "/purchase/detail" },
+    ];
+
+    if (settings?.poGrn) {
+      purchaseItems.push(
+        { label: "Purchase Orders (PO)", type: "sub-header" },
+        { name: "Purchase Order List", icon: ClipboardList, path: "/po-grn" },
+        { name: "Add Purchase Order", icon: Plus, path: "/po-grn/add" },
+        { name: "Update Purchase Order", icon: RefreshCw, path: "/po-grn/update" }
+      );
+    }
+
+    if (settings?.productionEntry) {
+      purchaseItems.push(
+        { label: "Manufacturing", type: "sub-header" },
+        { name: "Production Entry", icon: Package, path: "/production-entry/add" }
+      );
+    }
+
+    return [
+      {
+        label: "Quick Access",
+        items: [
+          { name: "Dashboard", icon: LayoutDashboard, path: "/" },
+          { name: "Billing", icon: Printer, path: "/billing" },
+          { name: "Sales List", icon: IndianRupee, path: "/sales" },
+          { name: "Sale Detail", icon: FileText, path: "/sales/detail" },
+          { name: "Online Orders", icon: ShoppingCart, path: "/orders" },
+        ],
+      },
+      {
+        label: "Products",
+        items: [
+          { name: "Products List", icon: ClipboardList, path: "/product/all" },
+          { name: "Add Product", icon: UserPlus, path: "/product/add" },
+          { name: "Product Detail", icon: FileText, path: "/product" },
+        ],
+      },
+      {
+        label: "Suppliers",
+        items: [
+          { name: "Suppliers List", icon: ClipboardList, path: "/supplier/all" },
+          { name: "Add Suppliers", icon: UserPlus, path: "/supplier/add" },
+          { name: "Supplier Details", icon: FileText, path: "/supplier" },
+        ],
+      },
+      {
+        label: "Purchases",
+        items: purchaseItems,
+      },
+      {
+        label: "Inventory",
+        items: [
+          { name: "Stocks List", icon: Database, path: "/inventory" },
+          { name: "Stock Movements", icon: History, path: "/stock-movement" },
+          { name: "Stock Adjustments", icon: RefreshCw, path: "/stock-adjustment" },
+        ],
+      },
+      {
+        label: "Customers",
+        items: [
+          { name: "Customers List", icon: ClipboardList, path: "/customers/all" },
+          { name: "Add Customer", icon: UserPlus, path: "/customers/add" },
+          { name: "Customer Details", icon: FileText, path: "/customers" },
+        ],
+      },
+      {
+        label: "Employees",
+        items: [
+          { name: "Employee List", icon: ClipboardList, path: "/employee/all" },
+          { name: "Add Employee", icon: UserPlus, path: "/employee/add" },
+          { name: "Employee Details", icon: FileText, path: "/employee" },
+        ],
+      },
+      {
+        label: "Digital Store",
+        items: [
+          { name: "Digital Store", icon: Store, path: "/profile" },
+          { name: "Online Orders", icon: ShoppingCart, path: "/orders" },
+        ],
+      },
+      {
+        label: "Store & Settings",
+        items: [
+          { name: "Account Settings", icon: UserCircle, path: "/settings" },
+          { name: "Create Shop", icon: Plus, path: "/create-shop" },
+        ],
+      },
+    ];
+  }, [settings]);
+
   // Filter items based on search query
   const filteredGroups = query
-    ? ALL_NAV_GROUPS.map((g) => ({
+    ? navGroups.map((g) => ({
         ...g,
         items: g.items.filter((i) => {
           const searchContent = (i.name || i.label || "").toLowerCase();
           return searchContent.includes(query.toLowerCase());
         }),
       })).filter((g) => g.items.length > 0)
-    : ALL_NAV_GROUPS;
+    : navGroups;
 
   return (
     <AnimatePresence initial={false}>
@@ -220,15 +241,15 @@ const NavigationDialog = ({
             <div className="flex-1 overflow-y-auto px-4 pb-10 space-y-6 bg-slate-50/30">
               {filteredGroups.map((group) => (
                 <div key={group.label} className="space-y-2">
-                  <p className="text-[10px] font-bold text-slate-400  tracking-[0.15em] mb-2 px-1">
+                  <p className="text-[10px] font-bold text-slate-400 tracking-[0.15em] mb-2 px-1 uppercase">
                     {group.label}
                   </p>
                   <div className="bg-white rounded-lg border border-slate-200/60 shadow-sm overflow-hidden divide-y divide-slate-100">
-                    {group.items.map((item, idx) => {
+                    {group.items.map((item: any, idx: number) => {
                       if (item.type === "sub-header") {
                         return (
                           <div key={idx} className="bg-slate-50/80 px-4 py-2 border-y border-slate-100/50">
-                            <span className="text-[9px] font-bold text-slate-400  tracking-[0.1em]">
+                            <span className="text-[9px] font-bold text-slate-400 tracking-[0.1em] uppercase">
                               {item.label}
                             </span>
                           </div>
@@ -304,7 +325,7 @@ const NavigationDialog = ({
   );
 };
 
-// ─── Mobile Bottom Bar ────────────────────────────────────────────────────────
+// --- Mobile Bottom Bar ---
 const MobileBottomBar = () => {
   const { pathname } = useLocation();
   const navigate = useNavigate();
@@ -400,4 +421,3 @@ const MobileBottomBar = () => {
 };
 
 export default MobileBottomBar;
-

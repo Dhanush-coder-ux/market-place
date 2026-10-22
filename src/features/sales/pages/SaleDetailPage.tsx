@@ -13,7 +13,8 @@ import {
   Fingerprint,
   Globe,
   Store,
-  Printer
+  Printer,
+  FileText
 } from "lucide-react";
 
 import { useApi } from "@/context/ApiContext";
@@ -26,6 +27,8 @@ import { OrderResponse } from "@/features/order/types";
 import SkeletonLoader from "@/components/common/SkeletonLoader";
 import { extractSaleCustomerInfo } from "../type";
 import { ReprintReceiptModal } from "../components/ReprintReceiptModal";
+import { SaleInvoiceModal } from "../components/SaleInvoiceModal";
+import { BiLogoWhatsapp } from "react-icons/bi";
 
 /* ── helpers ── */
 const fmt = (n?: number) => {
@@ -341,6 +344,45 @@ const SaleDetailPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [isReturnOpen, setIsReturnOpen] = useState(false);
   const [isReprintOpen, setIsReprintOpen] = useState(false);
+  const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
+
+  const handleWhatsAppShare = () => {
+    const sAny = sale as any;
+    let phoneNum = (customerInfo.phone || "").replace(/[^0-9]/g, "");
+    if (!phoneNum) {
+      const input = window.prompt("Enter customer WhatsApp phone number (10 digits):", "");
+      if (!input) return;
+      phoneNum = input.replace(/[^0-9]/g, "");
+    }
+    if (phoneNum.length === 10) {
+      phoneNum = "91" + phoneNum;
+    }
+
+    const rawItems = Array.isArray(sAny?.items) ? sAny.items : (Array.isArray(sAny?.calculation_infos?.items) ? sAny.calculation_infos.items : []);
+    const itemsText = rawItems
+      .slice(0, 5)
+      .map((it: any) => `• ${(it.name || it.product_name || "Item")} x ${(it.quantity || it.qty || 1)} - ₹${Number(it.final_inclusive || it.sell_price || it.total_amount || 0).toFixed(2)}`)
+      .join("\n");
+    const moreCount = rawItems.length > 5 ? `\n...and ${rawItems.length - 5} more items` : "";
+
+    const orderId = sAny?.ui_id || sAny?.order_id || sAny?.id || "";
+    const total = Number(sAny?.total_sellprice ?? sAny?.calculation_infos?.total ?? sAny?.total_amount ?? 0).toFixed(2);
+    const shopName = localStorage.getItem("shop_name") || "Our Store";
+
+    const isInvoice = Boolean(
+      sAny?.billing_type === "INVOICE" ||
+      sAny?.additional_infos?.billing_type === "INVOICE" ||
+      sAny?.calculation_infos?.billing_type === "INVOICE" ||
+      sAny?.additional_infos?.is_invoice === true ||
+      sAny?.calculation_infos?.is_invoice === true
+    );
+
+    const title = isInvoice ? "Tax Invoice" : "Bill Receipt";
+    const text = `*${shopName}* - ${title}\n--------------------------------\n*Order ID:* ${orderId}\n*Customer:* ${customerName || "Customer"}\n*Total Amount:* ₹${total}\n*Status:* ${sAny?.status || "Completed"}\n--------------------------------\n*Items:*\n${itemsText}${moreCount}\n--------------------------------\nThank you for shopping with us!`;
+
+    const url = `https://wa.me/${phoneNum}?text=${encodeURIComponent(text)}`;
+    window.open(url, "_blank");
+  };
   const [clearingHistories, setClearingHistories] = useState<any[]>([]);
 
   const fetchSaleDetail = async () => {
@@ -588,7 +630,7 @@ const SaleDetailPage: React.FC = () => {
         <ProfileHeaderCard
           name={
             <div className="flex items-center gap-2">
-              <span>Order #{sale.ui_id}</span>
+              <span>Order ${sale.ui_id}</span>
               {hasReturns && <AntBadge variant="tx-sales-return" type="tag">Returned</AntBadge>}
             </div>
           }
@@ -623,6 +665,26 @@ const SaleDetailPage: React.FC = () => {
                 <Printer size={13} />
                 <span>Reprint</span>
               </button>
+              {((sale as any)?.billing_type === "INVOICE" || (sale as any)?.additional_infos?.billing_type === "INVOICE" || (sale as any)?.calculation_infos?.billing_type === "INVOICE" || (sale as any)?.additional_infos?.is_invoice || (sale as any)?.calculation_infos?.is_invoice) && !customerInfo.isWalkIn && (
+                <button
+                  onClick={() => setIsInvoiceOpen(true)}
+                  className="h-8 px-3 rounded-lg border border-indigo-200 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 hover:text-indigo-700 font-bold text-[11px] uppercase tracking-wider transition-all shadow-sm shrink-0 flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                  title="Download / View Tax Invoice"
+                >
+                  <FileText size={13} />
+                  <span>Invoice</span>
+                </button>
+              )}
+              {((sale as any)?.billing_type === "INVOICE" || (sale as any)?.additional_infos?.billing_type === "INVOICE" || (sale as any)?.calculation_infos?.billing_type === "INVOICE" || (sale as any)?.additional_infos?.is_invoice || (sale as any)?.calculation_infos?.is_invoice) && !customerInfo.isWalkIn && Boolean(customerInfo.phone) && (
+                <button
+                  onClick={handleWhatsAppShare}
+                  className="h-8 px-3 rounded-lg border border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 hover:text-emerald-800 font-bold text-[11px] uppercase tracking-wider transition-all shadow-sm shrink-0 flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                  title="Share Invoice on WhatsApp"
+                >
+                  <BiLogoWhatsapp size={15} className="text-[#25D366]" />
+                  <span>WhatsApp</span>
+                </button>
+              )}
               {canReturn && (
                 <button
                   onClick={() => setIsReturnOpen(true)}
@@ -1131,7 +1193,7 @@ const SaleDetailPage: React.FC = () => {
                 const repItems = exch.replaced_items || [];
                 if (repItems.length === 0) return null;
                 return (
-                  <SectionCard key={exch.id || idx} title={`Exchange Replacement #${exch.ui_id || exch.id?.slice(0, 8).toUpperCase()}`} className="p-0 overflow-hidden border-blue-100">
+                  <SectionCard key={exch.id || idx} title={`Exchange Replacement ${exch.ui_id || exch.id?.slice(0, 8).toUpperCase()}`} className="p-0 overflow-hidden border-blue-100">
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse">
                         <thead>
@@ -1230,7 +1292,7 @@ const SaleDetailPage: React.FC = () => {
               {sale.exchanged_items?.map((exch, idx) => {
                 const replacementItems = generateItems(exch.replacement_order, productMap);
                 return (
-                  <SectionCard key={idx} title={`Replacement Order #${exch.replacement_order.ui_id}`} className="p-0 overflow-hidden border-blue-100">
+                  <SectionCard key={idx} title={`Replacement Order ${exch.replacement_order.ui_id}`} className="p-0 overflow-hidden border-blue-100">
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse">
                         <thead>
@@ -1854,6 +1916,16 @@ const SaleDetailPage: React.FC = () => {
         <ReprintReceiptModal
           isOpen={isReprintOpen}
           onClose={() => setIsReprintOpen(false)}
+          sale={sale}
+          customerMap={customerMap}
+          productMap={productMap}
+        />
+      )}
+
+      {sale && (
+        <SaleInvoiceModal
+          isOpen={isInvoiceOpen}
+          onClose={() => setIsInvoiceOpen(false)}
           sale={sale}
           customerMap={customerMap}
           productMap={productMap}

@@ -11,7 +11,7 @@ import {
   Check
 } from "lucide-react";
 import { AntBadge } from "@/components/ui/AntBadge";
-import { isShopGstRegistered } from "@/utils/pricing";
+import { isShopGstRegistered, calculateTaxSplit } from "@/utils/pricing";
 
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
@@ -295,10 +295,12 @@ export const BatchCards = ({ batches, parentGst, parentBuyPrice, parentSellPrice
           const gstRate = parseFloat(String(gstValue).replace(/[^0-9.]/g, '')) || 0;
 
           let displaySellPrice = Number(batchSellPrice);
+          let sellTaxable = displaySellPrice;
           let sellGstAmt = 0;
           if (isGstReg && gstRate > 0 && !isNaN(displaySellPrice)) {
-            sellGstAmt = Math.round((displaySellPrice * (gstRate / 100)) * 100) / 100;
-            displaySellPrice = Math.round((displaySellPrice + sellGstAmt) * 100) / 100;
+            const taxSplit = calculateTaxSplit(displaySellPrice, gstRate);
+            sellTaxable = taxSplit.taxableValue;
+            sellGstAmt = taxSplit.gstAmount;
           }
 
           let displayBuyPrice = Number(batchBuyPrice);
@@ -321,7 +323,7 @@ export const BatchCards = ({ batches, parentGst, parentBuyPrice, parentSellPrice
                       {batch.name || batch.batch || `BAT-${String(idx + 1).padStart(3, '0')}`}
                     </p>
                     {batch.id && (
-                      <p className="text-[9px] font-mono text-slate-400 font-medium">#{batch.id.slice(0, 8)}</p>
+                      <p className="text-[9px] font-mono text-slate-400 font-medium">{batch.id.slice(0, 8)}</p>
                     )}
                   </div>
                 </div>
@@ -380,7 +382,7 @@ export const BatchCards = ({ batches, parentGst, parentBuyPrice, parentSellPrice
                         </span>
                         {isGstReg && sellGstAmt > 0 && (
                           <span className="text-[8px] font-bold text-slate-500">
-                            {formatCurrency(batchSellPrice)} + {formatCurrency(sellGstAmt)} GST {gstRate}%
+                            {formatCurrency(sellTaxable)} + {formatCurrency(sellGstAmt)} GST {gstRate}%
                           </span>
                         )}
                       </div>
@@ -546,10 +548,12 @@ export const VariantRows = ({
               const gstRate = parseFloat(String(gstValue).replace(/[^0-9.]/g, '')) || 0;
 
               let displaySellPrice = Number(sellPrice);
+              let sellTaxable = displaySellPrice;
               let sellGstAmt = 0;
               if (isGstReg && gstRate > 0 && !isNaN(displaySellPrice)) {
-                sellGstAmt = Math.round((displaySellPrice * (gstRate / 100)) * 100) / 100;
-                displaySellPrice = Math.round((displaySellPrice + sellGstAmt) * 100) / 100;
+                const taxSplit = calculateTaxSplit(displaySellPrice, gstRate);
+                sellTaxable = taxSplit.taxableValue;
+                sellGstAmt = taxSplit.gstAmount;
               }
 
               let displayBuyPrice = Number(buyPrice);
@@ -646,7 +650,7 @@ export const VariantRows = ({
                         </span>
                         {isGstReg && sellGstAmt > 0 && (
                           <span className="text-[9px] text-slate-500 font-medium">
-                            {formatCurrency(sellPrice)} + {formatCurrency(sellGstAmt)} GST {gstRate}%
+                            {formatCurrency(sellTaxable)} + {formatCurrency(sellGstAmt)} GST {gstRate}%
                           </span>
                         )}
                       </div>

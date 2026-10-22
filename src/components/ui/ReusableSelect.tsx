@@ -54,7 +54,7 @@ export function ReusableSelect({
         <SelectPortal>
           <SelectContent
             position="popper"
-            className="z-[9999] rounded-lg shadow-2xl border-gray-100 overflow-hidden max-h-[300px] animate-in fade-in zoom-in-95 duration-200"
+            className="z-[999999] rounded-lg shadow-2xl border-gray-100 overflow-hidden max-h-[300px] animate-in fade-in zoom-in-95 duration-200"
             onViewportScroll={(e) => {
               if (!onScrollEnd) return;
               const target = e.currentTarget;

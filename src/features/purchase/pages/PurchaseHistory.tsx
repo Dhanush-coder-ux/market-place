@@ -24,6 +24,7 @@ import { useHeader } from "@/context/HeaderContext";
 import { useBusinessApi } from "@/context/BusinessApiContext";
 import { useToast } from "@/context/ToastContext";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
+import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { GroupedItemsDrawer } from "@/components/common/HistoryTables";
 import { StatCard } from "@/components/common/StatsCard";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
@@ -1337,33 +1338,35 @@ const PurchaseHistory = () => {
             {/* Vendor / Supplier */}
             <div className="space-y-1.5">
               <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Vendor / Supplier</label>
-              <select
+              <ReusableSelect
                 value={filterVendor}
-                onChange={e => setFilterVendor(e.target.value)}
-                className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
-              >
-                <option value="">All Vendors</option>
-                {suppliersList.map(s => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
+                onValueChange={setFilterVendor}
+                options={[
+                  { label: "All Vendors", value: "" },
+                  ...suppliersList.map(s => ({ label: s.name, value: s.id }))
+                ]}
+                placeholder="All Vendors"
+                className="h-9 py-2 px-3 text-xs bg-slate-50 border-slate-200 rounded-lg font-semibold text-slate-750 hover:bg-white focus:bg-white shadow-none transition-colors"
+              />
             </div>
 
             {/* Payment Method */}
             <div className="space-y-1.5">
               <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Payment Method</label>
-              <select
+              <ReusableSelect
                 value={filterPaymentMethod}
-                onChange={e => setFilterPaymentMethod(e.target.value)}
-                className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
-              >
-                <option value="">All Payment Methods</option>
-                <option value="CASH">Cash</option>
-                <option value="CARD">Card</option>
-                <option value="UPI">UPI</option>
-                <option value="BANK_TRANSFER">Bank Transfer</option>
-                <option value="CREDIT">Credit</option>
-              </select>
+                onValueChange={setFilterPaymentMethod}
+                options={[
+                  { label: "All Payment Methods", value: "" },
+                  { label: "Cash", value: "CASH" },
+                  { label: "Card", value: "CARD" },
+                  { label: "UPI", value: "UPI" },
+                  { label: "Bank Transfer", value: "BANK_TRANSFER" },
+                  { label: "Credit", value: "CREDIT" }
+                ]}
+                placeholder="All Payment Methods"
+                className="h-9 py-2 px-3 text-xs bg-slate-50 border-slate-200 rounded-lg font-semibold text-slate-750 hover:bg-white focus:bg-white shadow-none transition-colors"
+              />
             </div>
           </div>
         </RightSidebarFilter>

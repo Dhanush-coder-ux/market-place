@@ -94,7 +94,7 @@ const parseOrderForDetail = (
       i.datas?.product_name ||
       i.additional_infos?.product_name ||
       i.additional_infos?.name ||
-      (i.product_id ? `Item ${String(i.product_id).slice(-4)}` : `Item #${index + 1}`);
+      (i.product_id ? `Item ${String(i.product_id).slice(-4)}` : `Item ${index + 1}`);
 
     const varName =
       i.variant_infos?.variant_name ||
@@ -137,7 +137,8 @@ const parseOrderForDetail = (
     } else if (i.gst_amount !== undefined && !isNaN(Number(i.gst_amount))) {
       gstAmount = Number(i.gst_amount);
     } else if (gstRate > 0) {
-      gstAmount = lineTotal * (gstRate / 100);
+      const taxable = lineTotal / (1 + gstRate / 100);
+      gstAmount = lineTotal - taxable;
     }
 
     const gstLabel = gstRate > 0 ? `${gstRate}%` : (i.gst ? String(i.gst) : "0%");

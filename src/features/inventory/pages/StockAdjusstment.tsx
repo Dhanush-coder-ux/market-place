@@ -809,7 +809,7 @@ export default function StockAdjustmentPage() {
                               </div>
                               <div>
                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Item Specification</span>
-                                {item.sku && <span className="ml-2 text-[10px] font-mono font-bold text-slate-505 bg-slate-50 border border-slate-100 px-1.5 py-0.5 rounded">#{item.sku}</span>}
+                                {item.sku && <span className="ml-2 text-[10px] font-mono font-bold text-slate-505 bg-slate-50 border border-slate-100 px-1.5 py-0.5 rounded">{item.sku}</span>}
                               </div>
                             </div>
                             <button

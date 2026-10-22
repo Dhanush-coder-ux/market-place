@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { INVOICE_TEMPLATES } from "./invoice-templates";
-import { Banknote, Smartphone, Wallet, Check, Sparkles } from "lucide-react";
+import { Banknote, Smartphone, Wallet, Check, BadgePercent } from "lucide-react";
 import type { BillingItem } from "../types";
 import { calculateBillTotals, formatINR, type BillTotals } from "@/utils/pricing";
 
@@ -122,7 +122,7 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
           </div>
           <div className={config.header.metaWrapper}>
             <p className={config.header.metaTitle}>Tax Invoice</p>
-            {orderId && <p className={config.header.metaId}>#{orderId}</p>}
+            {orderId && <p className={config.header.metaId}>{orderId}</p>}
             <p className={config.header.metaDate}>{dateStr} · {timeStr}</p>
             <div className={config.header.badge}>
               {modeInfo.icon} {payments.length > 1 ? "Split Payment" : modeInfo.label}
@@ -141,7 +141,7 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
         {hasSavings && (
           <div className="mx-6 my-3 p-2.5 bg-emerald-50 border border-emerald-200/80 rounded-xl flex items-center justify-between text-emerald-800">
             <div className="flex items-center gap-2">
-              <Sparkles size={14} className="text-emerald-600 shrink-0" />
+              <BadgePercent size={14} className="text-emerald-600 shrink-0" />
               <span className="text-[11px] font-bold">You saved ₹{formatINR(billTotals.totalSavings)} on this bill!</span>
             </div>
             {billTotals.productDiscountTotal + billTotals.lineDiscountTotal > 0 && (
@@ -157,7 +157,7 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
           <table className="w-full">
              <thead>
                <tr className={config.table.head}>
-                 <th className="text-left py-2.5 pl-6 pr-2 w-8">#</th>
+                 <th className="text-left py-2.5 pl-6 pr-2 w-8">S.No</th>
                  <th className="text-left py-2.5 px-2">Item Description</th>
                  <th className="text-right py-2.5 px-2 w-16">Rate</th>
                  <th className="text-center py-2.5 px-1 w-10">Qty</th>

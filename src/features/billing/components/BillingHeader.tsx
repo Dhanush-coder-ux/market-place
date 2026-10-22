@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import {
-  Banknote, Clock, CreditCard, User, X, Search
+  Banknote, Clock, CreditCard, User, X, Search, ArrowLeft
 } from "lucide-react";
 import { BillingItem, CustomerData } from "../types";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
@@ -26,6 +26,7 @@ interface BillingHeaderProps {
   onAddCustomerClick: () => void;
   onDetachCustomer: () => void;
   onGenerateInvoice: () => void;
+  onBackToItems?: () => void;
 }
 
 const formatPrice = (amount: number) => {
@@ -49,7 +50,8 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
   payments, onPaymentsChange,
   onAddCustomerClick,
   onDetachCustomer,
-  onGenerateInvoice
+  onGenerateInvoice,
+  onBackToItems
 }) => {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
@@ -119,7 +121,24 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
 
   return (
     <>
-      <div className="w-full h-full flex flex-col font-sans bg-white p-3 space-y-4 overflow-y-auto custom-scrollbar">
+      <div className="w-full h-full flex flex-col font-sans bg-white min-h-0 overflow-hidden">
+        {/* Scrollable Billing & Payment Content */}
+        <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-4 custom-scrollbar">
+          {onBackToItems && (
+            <div className="lg:hidden shrink-0 flex items-center justify-between pb-1 border-b border-slate-100">
+              <button
+                type="button"
+                onClick={onBackToItems}
+                className="flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-700 active:scale-95 transition-all py-1"
+              >
+                <ArrowLeft size={14} />
+                <span>Back to Items ({filledItems})</span>
+              </button>
+              <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">
+                Step 2: Pay & Settle
+              </span>
+            </div>
+          )}
 
         {/* ── Customer Selection Panel (Top of Right Panel) ────────────────── */}
         <div className="shrink-0">
@@ -459,14 +478,16 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
           </div>
         </div>
 
-        {/* ── Bottom Confirm Buttons (Generate Bill & Generate Invoice) ────── */}
-        <div className="shrink-0 flex gap-2.5 pt-1">
+        </div>
+
+        {/* ── Fixed Bottom Confirm Buttons (Generate Bill & Generate Invoice) ────── */}
+        <div className="shrink-0 p-3 pt-2.5 pb-[calc(54px+env(safe-area-inset-bottom))] lg:pb-3 bg-white border-t border-slate-200/80 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] flex gap-2.5 z-10">
           <button
             onClick={handleQuickCheckout}
             disabled={totalQty === 0 || balanceAmount > 0.01 || isSubmitting}
             className={`flex-1 h-11 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-200 ${totalQty === 0 || balanceAmount > 0.01 || isSubmitting
                 ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed shadow-none"
-                : "text-blue-500 border-blue-400 border-2 hover:bg-blue-500 hover:text-white shadow-md shadow-slate-900/10 active:scale-97"
+                : "text-blue-500 border-blue-400 border-2 hover:bg-blue-500 hover:text-white shadow-md shadow-slate-900/10 active:scale-97 cursor-pointer"
               }`}
           >
             {isSubmitting ? "..." : "Complete Bill"}

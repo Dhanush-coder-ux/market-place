@@ -34,7 +34,7 @@ export function GroupedItemsDrawer({
           <div>
             <h3 className="text-sm font-bold text-slate-800 tracking-tight">Grouped Items Details</h3>
             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">
-              {isAdjustment ? 'Stock Movement' : (record.uiId ? `Purchase #${record.uiId}` : 'Purchase Details')}
+              {isAdjustment ? 'Stock Movement' : (record.uiId ? `Purchase ${record.uiId}` : 'Purchase Details')}
             </p>
           </div>
           <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-all border border-transparent hover:border-slate-200">
@@ -510,15 +510,15 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
                     const spNum = Number(rawSellPrice);
                     const gstRate = r.gst || 0;
                     if (gstRate > 0) {
-                      const gstAmt = spNum * (gstRate / 100);
-                      const total = spNum + gstAmt;
+                      const taxable = spNum / (1 + gstRate / 100);
+                      const gstAmt = spNum - taxable;
                       sellPriceContent = (
                         <div className="flex flex-col">
                           <span className="flex items-baseline gap-1">
-                            ₹{total.toFixed(2).replace(/\.00$/, '')}
+                            ₹{spNum.toFixed(2).replace(/\.00$/, '')}
                           </span>
                           <span className="text-[10px] text-emerald-600/70 font-medium mt-0.5 leading-none">
-                            ₹{spNum.toFixed(2).replace(/\.00$/, '')} + ₹{gstAmt.toFixed(2).replace(/\.00$/, '')} GST
+                            ₹{taxable.toFixed(2).replace(/\.00$/, '')} + ₹{gstAmt.toFixed(2).replace(/\.00$/, '')} GST
                           </span>
                         </div>
                       );
@@ -958,7 +958,7 @@ export function CustomerPurchasesTable({ rows, loading, onNavigateToSale }: Cust
                   const products = order.items || order.products || order.datas?.items || order.datas?.products || [];
                   const itemCount = order.item_infos?.total_order_qty ?? order.total_quantity ?? order.datas?.total_quantity ?? products.length;
                   const unit = products[0]?.product?.unit || products[0]?.unit || products[0]?.datas?.unit || (itemCount === 1 ? "Item" : "Units");
-                  const invoiceId = order.ui_id ? `Order #${order.ui_id}` : `#${order.id.slice(0, 8).toUpperCase()}`;
+                  const invoiceId = order.ui_id ? `Order ${order.ui_id}` : `${order.id.slice(0, 8).toUpperCase()}`;
 
                   let firstProductName = "";
                   if (products.length > 0) {
@@ -1124,7 +1124,7 @@ export function CustomerCollectionsTable({ rows, loading }: CustomerCollectionsT
                   const rawCleared = h.cleared_amount ?? h.additional_infos?.paid_amount ?? (calculatedCleared > 0 ? calculatedCleared : (h.cleared_infos ? (Number(h.cleared_infos.outstanding_before || 0) - Number(h.cleared_infos.outstanding_after || 0)) : 0));
                   const clearedAmount = Math.max(0, Number(rawCleared || 0));
                   const refIdRaw = h.invoice_no || h.ref_no || h.entity_id || h.id;
-                  const refId = refIdRaw ? (String(refIdRaw).startsWith('#') ? refIdRaw : `#${String(refIdRaw).padStart(3, '0')}`) : `#${String(h.id).padStart(3, '0')}`;
+                  const refId = refIdRaw ? String(refIdRaw).replace(/^#+/, '') : String(h.id).padStart(3, '0');
                   const outstandingBefore = Number(h.cleared_infos?.outstanding_before ?? h.outstanding_before ?? 0);
                   const outstandingAfter = Number(h.cleared_infos?.outstanding_after ?? h.outstanding_after ?? 0);
 

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
+import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import {
   Printer,
+  FileText,
   Bluetooth,
   Usb,
   Wifi,
@@ -477,6 +479,15 @@ export const PrinterSettingsTab: React.FC = () => {
                         Sound Buzzer
                       </span>
                     )}
+                    {printer.footerText && (
+                      <span
+                        className="px-2 py-0.5 rounded-md bg-slate-50 border border-slate-200/60 flex items-center gap-1 text-[10.5px] truncate max-w-[220px]"
+                        title={printer.footerText}
+                      >
+                        <FileText size={10} className="text-slate-400 shrink-0" />
+                        <span className="truncate">"{printer.footerText}"</span>
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -546,7 +557,7 @@ export const PrinterSettingsTab: React.FC = () => {
       {editingPrinter && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div
-            className="bg-white rounded-2xl shadow-2xl border border-slate-200/80 flex flex-col w-full max-w-xl max-h-[92vh] overflow-hidden"
+            className="bg-white rounded-2xl shadow-2xl border border-slate-200/80 flex flex-col min-h-0 w-full max-w-xl max-h-[90vh] overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
@@ -575,7 +586,7 @@ export const PrinterSettingsTab: React.FC = () => {
             </div>
 
             {/* Modal Body */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-5 custom-scrollbar">
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-6 space-y-5 custom-scrollbar modal-content">
               {/* Status Alert if any */}
               {statusMessage && (
                 <div
@@ -613,20 +624,22 @@ export const PrinterSettingsTab: React.FC = () => {
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-700">Printer Role / Location</label>
-                  <select
+                  <ReusableSelect
                     value={editingPrinter.role || "receipt"}
-                    onChange={(e) =>
+                    onValueChange={(val) =>
                       setEditingPrinter((prev) =>
-                        prev ? { ...prev, role: e.target.value as PrinterRole } : null
+                        prev ? { ...prev, role: val as PrinterRole } : null
                       )
                     }
-                    className="w-full h-10 px-3 bg-slate-50/80 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:border-blue-400 focus:bg-white transition-all shadow-sm cursor-pointer"
-                  >
-                    <option value="receipt">Receipt Billing (Main POS)</option>
-                    <option value="kitchen">Kitchen / KOT Order Slip</option>
-                    <option value="label">Barcode / Price Label</option>
-                    <option value="backup">Backup Printer</option>
-                  </select>
+                    options={[
+                      { label: "Receipt Billing (Main POS)", value: "receipt" },
+                      { label: "Kitchen / KOT Order Slip", value: "kitchen" },
+                      { label: "Barcode / Price Label", value: "label" },
+                      { label: "Backup Printer", value: "backup" },
+                    ]}
+                    placeholder="Select printer role"
+                    className="h-10 py-2 px-3 text-xs bg-slate-50/80 border-slate-200 rounded-xl font-semibold text-slate-800 shadow-sm"
+                  />
                 </div>
               </div>
 
@@ -793,20 +806,22 @@ export const PrinterSettingsTab: React.FC = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="space-y-1">
                         <label className="text-[11px] font-semibold text-slate-600">Baud Rate</label>
-                        <select
-                          value={editingPrinter.baudRate || 9600}
-                          onChange={(e) =>
+                        <ReusableSelect
+                          value={String(editingPrinter.baudRate || 9600)}
+                          onValueChange={(val) =>
                             setEditingPrinter((prev) =>
-                              prev ? { ...prev, baudRate: Number(e.target.value) } : null
+                              prev ? { ...prev, baudRate: Number(val) } : null
                             )
                           }
-                          className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-xs font-mono font-medium text-slate-800"
-                        >
-                          <option value={9600}>9600 (Standard)</option>
-                          <option value={19200}>19200</option>
-                          <option value={38400}>38400</option>
-                          <option value={115200}>115200 (High Speed)</option>
-                        </select>
+                          options={[
+                            { label: "9600 (Standard)", value: "9600" },
+                            { label: "19200", value: "19200" },
+                            { label: "38400", value: "38400" },
+                            { label: "115200 (High Speed)", value: "115200" },
+                          ]}
+                          placeholder="Select baud rate"
+                          className="h-9 py-2 px-3 text-xs bg-white border-slate-200 rounded-lg font-mono font-medium text-slate-800 shadow-none"
+                        />
                       </div>
 
                       <div className="space-y-1">
@@ -995,6 +1010,33 @@ export const PrinterSettingsTab: React.FC = () => {
                     className="w-4 h-4 rounded text-emerald-600 cursor-pointer"
                   />
                 </div>
+              </div>
+
+              {/* Custom Receipt Footer Note */}
+              <div className="p-4 rounded-xl border border-slate-200/80 bg-slate-50/50 space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <FileText size={13} className="text-blue-600" />
+                    Custom Receipt Footer Note
+                  </p>
+                  <span className="text-[10px] text-slate-400 font-normal">
+                    Printed at bottom of bills
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Thank you for shopping with us! Please visit again."
+                  value={editingPrinter.footerText || ""}
+                  onChange={(e) =>
+                    setEditingPrinter((prev) =>
+                      prev ? { ...prev, footerText: e.target.value } : null
+                    )
+                  }
+                  className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-500/10 transition-all shadow-2xs"
+                />
+                <p className="text-[11px] text-slate-400 leading-tight">
+                  Custom thank-you message, exchange/return policy, or store notice printed above the paper cut line.
+                </p>
               </div>
             </div>
 

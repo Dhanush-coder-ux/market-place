@@ -232,10 +232,8 @@ function ProductCard({
             <div className="flex items-center gap-1.5">
               <span className="text-[14px] font-bold text-emerald-600">
                 {(() => {
-                  const baseOnline = product.onlineSellPrice ?? product.price ?? 0;
-                  const gstRate = parseFloat(String(product.gst).replace(/[^0-9.]/g, '')) || 0;
-                  const total = baseOnline + (baseOnline * (gstRate / 100));
-                  return `₹${total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                  const total = product.onlineSellPrice ?? product.price ?? 0;
+                  return `₹${Number(total).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
                 })()}
               </span>
               <span className="text-[9px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 py-0.2 rounded">
@@ -245,9 +243,7 @@ function ProductCard({
             {product.price > 0 && (
               <span className="text-[10px] text-slate-400">
                 {(() => {
-                  const gstRate = parseFloat(String(product.gst).replace(/[^0-9.]/g, '')) || 0;
-                  const total = product.price + (product.price * (gstRate / 100));
-                  return `Store SP: ₹${total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                  return `Store SP: ₹${Number(product.price).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
                 })()}
               </span>
             )}
@@ -339,7 +335,7 @@ function ProductRow({
       {/* SKU */}
       <td className="px-4 py-4 border-b border-slate-200 hidden md:table-cell">
         <span className="text-[11px] font-mono text-slate-400 font-semibold">
-          {product.sku || product.uiId || `#${product.id.slice(-6)}`}
+          {product.sku || product.uiId || `${product.id.slice(-6)}`}
         </span>
       </td>
 
@@ -355,9 +351,7 @@ function ProductRow({
         <span className="text-[13px] font-bold text-slate-700 font-mono">
           {product.price > 0
             ? (() => {
-                const gstRate = parseFloat(String(product.gst).replace(/[^0-9.]/g, '')) || 0;
-                const total = product.price + (product.price * (gstRate / 100));
-                return `₹${total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                return `₹${Number(product.price).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
               })()
             : <span className="text-slate-300">—</span>
           }
@@ -368,10 +362,8 @@ function ProductRow({
       <td className="px-4 py-4 border-b border-slate-200 text-right">
         <span className="text-[13px] font-bold font-mono text-emerald-600 bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 rounded-md inline-block">
           {(() => {
-            const baseOnline = product.onlineSellPrice ?? product.price ?? 0;
-            const gstRate = parseFloat(String(product.gst).replace(/[^0-9.]/g, '')) || 0;
-            const total = baseOnline + (baseOnline * (gstRate / 100));
-            return `₹${total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            const total = product.onlineSellPrice ?? product.price ?? 0;
+            return `₹${Number(total).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
           })()}
         </span>
       </td>
@@ -1191,10 +1183,11 @@ const ProductDashboard = () => {
                       const gstRate = parseFloat(editingProduct.gst.replace(/[^0-9.]/g, '')) || 0;
                       if (gstRate > 0) {
                         const price = Number(editingProduct.price);
-                        const gstAmt = price * (gstRate / 100);
+                        const taxable = price / (1 + gstRate / 100);
+                        const gstAmt = price - taxable;
                         return (
                           <span className="text-[10px] text-slate-500 font-medium">
-                            Total: ₹{(price + gstAmt).toFixed(2)} (+ ₹{gstAmt.toFixed(2)} GST)
+                            ₹{taxable.toFixed(2)} + ₹{gstAmt.toFixed(2)} GST (Incl.)
                           </span>
                         );
                       }
@@ -1220,11 +1213,12 @@ const ProductDashboard = () => {
                     {(() => {
                       const gstRate = parseFloat(editingProduct.gst.replace(/[^0-9.]/g, '')) || 0;
                       if (gstRate > 0) {
-                        const price = editingProduct.onlineSellPrice ?? editingProduct.price ?? 0;
-                        const gstAmt = Number(price) * (gstRate / 100);
+                        const price = Number(editingProduct.onlineSellPrice ?? editingProduct.price ?? 0);
+                        const taxable = price / (1 + gstRate / 100);
+                        const gstAmt = price - taxable;
                         return (
                           <span className="text-[10px] text-slate-500 font-medium">
-                            Total: ₹{(Number(price) + gstAmt).toFixed(2)} (+ ₹{gstAmt.toFixed(2)} GST)
+                            ₹{taxable.toFixed(2)} + ₹{gstAmt.toFixed(2)} GST (Incl.)
                           </span>
                         );
                       }

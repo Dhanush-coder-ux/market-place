@@ -46,7 +46,7 @@ const OrderDetailView: React.FC<{ order: OrderDetailType }> = ({ order }) => {
       <div className="border-b border-slate-100 pb-3.5">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold text-slate-800">
-            Order #{order.billNo}
+            Order {order.billNo}
           </h2>
           <AntBadge variant="lb-brand" type="tag" className="uppercase font-mono font-bold text-xs">
             {order.orderType}

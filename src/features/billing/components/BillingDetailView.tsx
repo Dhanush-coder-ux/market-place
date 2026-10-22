@@ -157,7 +157,7 @@ const BillingDetailView = ({ invoice, isSubmitting, onConfirm }: BillingDetailVi
         <table className="w-full">
           <thead className="bg-slate-50 border-b border-slate-100">
             <tr>
-              {["#", "Product", "Qty", "Unit Price", "Total"].map((h, i) => (
+              {["S.No", "Product", "Qty", "Unit Price", "Total"].map((h, i) => (
                 <th
                   key={h}
                   className={`px-5 py-3.5 text-xs font-bold text-slate-500  

@@ -1,10 +1,10 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Search, X,
   RotateCcw, Receipt,
-  ChevronRight, Filter, Eye, Printer
+  ChevronRight, Filter, Eye, Printer, FileText
 } from "lucide-react";
 import SkeletonLoader from "@/components/common/SkeletonLoader";
 import {
@@ -19,9 +19,12 @@ import { ReturnModal } from "../components/ReturnOrderFlow";
 import { StatCard } from "@/components/common/StatsCard";
 import { AntBadge } from "@/components/ui/AntBadge";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
+import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { extractSaleCustomerInfo } from "../type";
 import { ReprintReceiptModal } from "../components/ReprintReceiptModal";
+import { SaleInvoiceModal } from "../components/SaleInvoiceModal";
+import { BiLogoWhatsapp } from "react-icons/bi";
 
 /* ═══════════════════════════════════════════════════════════════
    TYPES
@@ -227,6 +230,48 @@ const SalesListPage: React.FC = () => {
   const [returnSearchQuery, setReturnSearchQuery] = useState("");
   const [returnSale, setReturnSale] = useState<SaleRecord | null>(null);
   const [reprintSale, setReprintSale] = useState<SaleRecord | null>(null);
+  const [invoiceModalSale, setInvoiceModalSale] = useState<SaleRecord | null>(null);
+
+  const handleSendWhatsApp = useCallback((sale: any) => {
+    const c = extractSaleCustomerInfo(sale, customerMap);
+    if (c.isWalkIn) {
+      alert("WhatsApp invoice is not available for walk-in customers.");
+      return;
+    }
+    let phoneNum = (c.phone || "").replace(/[^0-9]/g, "");
+    if (!phoneNum) {
+      alert("No phone number found for this customer.");
+      return;
+    }
+    if (phoneNum.length === 10) {
+      phoneNum = "91" + phoneNum;
+    }
+
+    const rawItems = Array.isArray(sale.items) ? sale.items : (Array.isArray(sale.calculation_infos?.items) ? sale.calculation_infos.items : []);
+    const itemsText = rawItems
+      .slice(0, 5)
+      .map((it: any) => `• ${(it.name || it.product_name || "Item")} x ${(it.quantity || it.qty || 1)} - ₹${Number(it.final_inclusive || it.sell_price || it.total_amount || 0).toFixed(2)}`)
+      .join("\n");
+    const moreCount = rawItems.length > 5 ? `\n...and ${rawItems.length - 5} more items` : "";
+
+    const orderId = sale.ui_id || sale.order_id || sale.id;
+    const total = Number(sale.total_sellprice || sale.total_amount || 0).toFixed(2);
+    const shopName = localStorage.getItem("shop_name") || "Our Store";
+
+    const isInvoice = Boolean(
+      (sale as any).billing_type === "INVOICE" ||
+      sale.additional_infos?.billing_type === "INVOICE" ||
+      sale.calculation_infos?.billing_type === "INVOICE" ||
+      sale.additional_infos?.is_invoice === true ||
+      sale.calculation_infos?.is_invoice === true
+    );
+
+    const title = isInvoice ? "Tax Invoice" : "Bill Receipt";
+    const text = `*${shopName}* - ${title}\n--------------------------------\n*Order ID:* ${orderId}\n*Customer:* ${c.name || "Customer"}\n*Total Amount:* ₹${total}\n*Status:* ${sale.status || "Completed"}\n--------------------------------\n*Items:*\n${itemsText}${moreCount}\n--------------------------------\nThank you for shopping with us!`;
+
+    const url = `https://wa.me/${phoneNum}?text=${encodeURIComponent(text)}`;
+    window.open(url, "_blank");
+  }, [customerMap]);
 
   const searchSalesForReturn = useMemo(() => {
     if (!returnSearchQuery) return [];
@@ -248,9 +293,19 @@ const SalesListPage: React.FC = () => {
   useEffect(() => {
     if (selectedSale) {
       const returnable = (selectedSale.status === "Completed" || selectedSale.status === "Delivered") && selectedSale.origin !== "Sales Return" && selectedSale.origin !== "Offline Return";
+      const selCust = extractSaleCustomerInfo(selectedSale, customerMap);
+      const isSelectedInvoice = Boolean(
+        (selectedSale as any).billing_type === "INVOICE" ||
+        (selectedSale as any).additional_infos?.billing_type === "INVOICE" ||
+        (selectedSale as any).calculation_infos?.billing_type === "INVOICE" ||
+        (selectedSale as any).additional_infos?.is_invoice === true ||
+        (selectedSale as any).calculation_infos?.is_invoice === true
+      );
+      const canDownloadInvoice = isSelectedInvoice && !selCust.isWalkIn;
+      const canSendWhatsApp = isSelectedInvoice && !selCust.isWalkIn && Boolean(selCust.phone);
       setBottomActions(
-        <div className="flex items-center justify-between w-full animate-in fade-in slide-in-from-right-4 duration-300">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full gap-2 sm:gap-3 py-1 animate-in fade-in slide-in-from-right-4 duration-300">
+          <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-7 h-7 rounded-md bg-blue-500 text-white flex items-center justify-center text-[10px] font-black shrink-0">
               <Receipt size={14} />
             </div>
@@ -266,7 +321,7 @@ const SalesListPage: React.FC = () => {
               })()}
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto scrollbar-none pb-0.5 sm:pb-0">
             <button
               onClick={() => setSelectedSale(null)}
               className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 font-semibold text-[11px] transition-colors"
@@ -281,6 +336,26 @@ const SalesListPage: React.FC = () => {
               <Printer size={13} className="text-sky-500" />
               Reprint Bill
             </button>
+            {canDownloadInvoice && (
+              <button
+                onClick={() => setInvoiceModalSale(selectedSale)}
+                className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 text-slate-700 font-semibold text-[11px] transition-colors flex items-center gap-1.5 cursor-pointer"
+                title="Download Tax Invoice"
+              >
+                <FileText size={13} className="text-indigo-600" />
+                Invoice
+              </button>
+            )}
+            {canSendWhatsApp && (
+              <button
+                onClick={() => handleSendWhatsApp(selectedSale)}
+                className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 text-slate-700 font-semibold text-[11px] transition-colors flex items-center gap-1.5 cursor-pointer"
+                title="Send on WhatsApp"
+              >
+                <BiLogoWhatsapp size={15} className="text-[#25D366]" />
+                WhatsApp
+              </button>
+            )}
             <button
               onClick={() => returnable && openReturn(selectedSale)}
               disabled={!returnable}
@@ -303,7 +378,7 @@ const SalesListPage: React.FC = () => {
     } else {
       setBottomActions(null);
     }
-  }, [selectedSale, setBottomActions, openDetail, openReturn, customerMap]);
+  }, [selectedSale, setBottomActions, openDetail, openReturn, customerMap, handleSendWhatsApp]);
 
   /* Handle return trigger coming back from SaleDetailPage */
   useEffect(() => {
@@ -659,8 +734,8 @@ const SalesListPage: React.FC = () => {
       )}
 
       {/* ── Toolbar ── */}
-      <div className="bg-white border border-slate-100 rounded-lg p-1.5 px-2.5 flex flex-nowrap items-center gap-1.5 shadow-sm overflow-x-auto scrollbar-none mt-2">
-        <div className="relative w-80 shrink-0">
+      <div className="bg-white border border-slate-100 rounded-lg p-1.5 px-2.5 flex flex-wrap sm:flex-nowrap items-center gap-2 shadow-sm mt-2">
+        <div className="relative flex-1 min-w-[180px] sm:w-80 sm:flex-none">
           <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
           <input
             className="w-full h-8 pl-8 pr-3 text-[12px] font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-md placeholder:text-slate-400 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
@@ -670,28 +745,29 @@ const SalesListPage: React.FC = () => {
           />
         </div>
 
-        <button
-          type="button"
-          onClick={() => setIsFilterOpen(true)}
-          className={`h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0 ${activeFilters > 0
-            ? "border-blue-200 text-blue-600 bg-blue-50/50"
-            : "border-slate-200 text-slate-650 bg-white hover:bg-slate-50"
-            }`}
-          title="Filters"
-        >
-          <Filter size={13} />
-          Filters
-          {activeFilters > 0 && (
-            <span className="ml-1 px-1.5 py-0.5 bg-blue-600 text-white rounded-full text-[9px] font-black">{activeFilters}</span>
-          )}
-        </button>
+        <div className="flex items-center gap-1.5 shrink-0 ml-auto sm:ml-0">
+          <button
+            type="button"
+            onClick={() => setIsFilterOpen(true)}
+            className={`h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm ${activeFilters > 0
+              ? "border-blue-200 text-blue-600 bg-blue-50/50"
+              : "border-slate-200 text-slate-650 bg-white hover:bg-slate-50"
+              }`}
+            title="Filters"
+          >
+            <Filter size={13} />
+            Filters
+            {activeFilters > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 bg-blue-600 text-white rounded-full text-[9px] font-black">{activeFilters}</span>
+            )}
+          </button>
 
-        <div className="flex-1" />
-
-        <button className="inline-flex items-center gap-1.5 h-8 px-3.5 text-xs font-bold bg-blue-600 text-white border-none rounded-md cursor-pointer transition-all hover:bg-blue-700 hover:shadow-lg shadow-blue-500/20 active:scale-95 whitespace-nowrap shrink-0" onClick={() => setIsReturnSearchOpen(true)}>
-          <RotateCcw size={13} />Process Return
-        </button>
-
+          <button className="inline-flex items-center gap-1.5 h-8 px-3 sm:px-3.5 text-xs font-bold bg-blue-600 text-white border-none rounded-md cursor-pointer transition-all hover:bg-blue-700 hover:shadow-lg shadow-blue-500/20 active:scale-95 whitespace-nowrap" onClick={() => setIsReturnSearchOpen(true)}>
+            <RotateCcw size={13} />
+            <span className="hidden sm:inline">Process Return</span>
+            <span className="sm:hidden">Return</span>
+          </button>
+        </div>
       </div>
 
       <RightSidebarFilter
@@ -752,17 +828,19 @@ const SalesListPage: React.FC = () => {
           {/* Payment Method */}
           <div className="space-y-1.5">
             <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Payment Method</label>
-            <select
+            <ReusableSelect
               value={filterPayment}
-              onChange={e => setFilterPayment(e.target.value)}
-              className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
-            >
-              <option value="">All Payment Methods</option>
-              <option value="Cash">Cash</option>
-              <option value="Card">Card</option>
-              <option value="UPI">UPI</option>
-              <option value="On Credit">On Credit</option>
-            </select>
+              onValueChange={setFilterPayment}
+              options={[
+                { label: "All Payment Methods", value: "" },
+                { label: "Cash", value: "Cash" },
+                { label: "Card", value: "Card" },
+                { label: "UPI", value: "UPI" },
+                { label: "On Credit", value: "On Credit" }
+              ]}
+              placeholder="All Payment Methods"
+              className="h-9 py-2 px-3 text-xs bg-slate-50 border-slate-200 rounded-lg font-semibold text-slate-750 hover:bg-white focus:bg-white shadow-none transition-colors"
+            />
           </div>
 
           {/* Order Status */}
@@ -791,8 +869,133 @@ const SalesListPage: React.FC = () => {
 
       {/* ── Table Card ── */}
       <div className="bg-white rounded-lg shadow-sm border border-slate-100 min-w-0 overflow-hidden flex flex-col flex-1 min-h-0 mt-2">
-        <div className="overflow-auto flex-1 scrollbar-thin scrollbar-thumb-slate-100 ">
-          <table className="w-full border-collapse table-fixed relative">
+        <div className="overflow-auto flex-1 scrollbar-thin scrollbar-thumb-slate-100">
+
+          {/* ── Mobile Order Cards (< md) ── */}
+          <div className="block md:hidden divide-y divide-slate-100">
+            {filtered.length === 0 ? (
+              <div className="p-8 text-center">
+                <Receipt size={32} className="text-slate-200 mx-auto mb-2" />
+                <p className="text-sm font-bold text-slate-600 mb-1">No sales found</p>
+                <p className="text-xs text-slate-400">Try adjusting your filters</p>
+              </div>
+            ) : (
+              filtered.map((sale, index) => {
+                const dateStr = fmtDate(sale.created_at || (sale as any).date);
+                const timeStr = fmtTime(sale.created_at || (sale as any).date);
+                const rowCustomer = extractSaleCustomerInfo(sale, customerMap);
+                const isInvoiceOrder = Boolean(
+                  (sale as any).billing_type === "INVOICE" ||
+                  (sale as any).additional_infos?.billing_type === "INVOICE" ||
+                  (sale as any).calculation_infos?.billing_type === "INVOICE" ||
+                  (sale as any).additional_infos?.is_invoice === true ||
+                  (sale as any).calculation_infos?.is_invoice === true
+                );
+                const canDownloadInvoice = isInvoiceOrder && !rowCustomer.isWalkIn;
+                const canSendWhatsApp = isInvoiceOrder && !rowCustomer.isWalkIn && Boolean(rowCustomer.phone);
+                const isSelected = selectedSale?.id === sale.id;
+                const returnable = (sale.status === "Completed" || sale.status === "Delivered") && sale.origin !== "Offline Return" && sale.origin !== "Sales Return";
+
+                return (
+                  <div
+                    key={sale.id}
+                    ref={index === filtered.length - 1 ? lastElementRef : null}
+                    onClick={() => setSelectedSale(prev => prev?.id === sale.id ? null : sale)}
+                    className={`p-3.5 transition-colors cursor-pointer ${isSelected ? "bg-blue-50/80 border-l-3 border-l-blue-600" : "hover:bg-slate-50/80"}`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-mono text-xs font-bold text-slate-800">{sale.ui_id}</span>
+                          {isInvoiceOrder && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                              Invoice
+                            </span>
+                          )}
+                          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9.5px] font-bold ${
+                            sale.origin === "Online" ? "bg-blue-50 text-blue-600 border border-blue-200" : "bg-slate-100 text-slate-600 border border-slate-200"
+                          }`}>
+                            {sale.origin}
+                          </span>
+                        </div>
+                        <p className={`text-xs mt-1 truncate ${rowCustomer.isWalkIn ? "text-slate-400 italic" : "text-slate-800 font-semibold"}`}>
+                          {rowCustomer.name}
+                          {rowCustomer.phone && (
+                            <span className="font-mono text-slate-500 font-normal ml-1.5">({rowCustomer.phone})</span>
+                          )}
+                        </p>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <span className="font-mono text-sm font-bold text-slate-900 block">{fmt(sale.total_sellprice)}</span>
+                        <div className="mt-0.5">
+                          {(() => {
+                            const cfg = STATUS_CFG[sale.status as SaleStatus] || STATUS_CFG["Pending"];
+                            return <Badge cls={cfg.cls} dot={cfg.dot} label={sale.status} />;
+                          })()}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11px] text-slate-500 mt-2.5 pt-2 border-t border-slate-100/90 gap-2">
+                      <div className="flex items-center gap-1.5 text-[10.5px] truncate">
+                        <span className="font-mono">{dateStr}{timeStr ? ` ${timeStr}` : ''}</span>
+                        <span>•</span>
+                        <span className="font-semibold text-slate-700">{Number((sale.total_quantity || 0).toFixed(2))} items</span>
+                        <span>•</span>
+                        <span className="font-medium text-slate-600 truncate">{sale.payment_method || "Other"}</span>
+                      </div>
+
+                      <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
+                        <button
+                          onClick={() => setReprintSale(sale)}
+                          className="p-1.5 text-sky-600 hover:bg-sky-50 rounded-md transition-colors cursor-pointer"
+                          title="Reprint Bill"
+                        >
+                          <Printer size={15} />
+                        </button>
+                        {canDownloadInvoice && (
+                          <button
+                            onClick={() => setInvoiceModalSale(sale)}
+                            className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors cursor-pointer"
+                            title="Download Tax Invoice"
+                          >
+                            <FileText size={15} />
+                          </button>
+                        )}
+                        {canSendWhatsApp && (
+                          <button
+                            onClick={() => handleSendWhatsApp(sale)}
+                            className="p-1.5 text-[#25D366] hover:bg-emerald-50 rounded-md transition-colors cursor-pointer"
+                            title="Direct WhatsApp Invoice"
+                          >
+                            <BiLogoWhatsapp size={16} />
+                          </button>
+                        )}
+                        {returnable && (
+                          <button
+                            onClick={() => openReturn(sale)}
+                            className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-md transition-colors cursor-pointer"
+                            title="Process Return"
+                          >
+                            <RotateCcw size={15} />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => openDetail(sale)}
+                          className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors cursor-pointer"
+                          title="View Details"
+                        >
+                          <Eye size={15} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+          <table className="w-full border-collapse table-fixed relative min-w-[880px] hidden md:table">
             <thead className="sticky top-0 z-10 bg-white shadow-[0_1px_0_0_#e2e8f0]">
               <tr>
                 <th className="w-[110px] px-4 py-3 text-[10px] font-semibold tracking-wider text-slate-500 uppercase text-left">Order ID</th>
@@ -803,7 +1006,7 @@ const SalesListPage: React.FC = () => {
                 <th className="w-[50px] px-4 py-3 text-[10px] font-semibold tracking-wider text-slate-500 uppercase text-center">Qty</th>
                 <th className="w-[90px] px-4 py-3 text-[10px] font-semibold tracking-wider text-slate-500 uppercase text-right">Amount</th>
                 <th className="w-[90px] px-4 py-3 text-[10px] font-semibold tracking-wider text-slate-500 uppercase text-left">Status</th>
-                <th className="w-[90px] px-4 py-3 text-[10px] font-semibold tracking-wider text-slate-500 uppercase text-right">Actions</th>
+                <th className="w-[130px] px-4 py-3 text-[10px] font-semibold tracking-wider text-slate-500 uppercase text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 bg-white">
@@ -841,6 +1044,17 @@ const SalesListPage: React.FC = () => {
                 const hasReturns = (sale.returns && sale.returns.length > 0) || (sale.items || []).some((i: any) => (i.returned_quantity && i.returned_quantity > 0) || i.status === "REFUNDED" || i.status === "EXCHANGED") || sale.status === "Returned" || sale.status === "RETURNED";
                 const hasDiscount = checkSaleDiscount(sale).hasDiscount;
 
+                const rowCustomer = extractSaleCustomerInfo(sale, customerMap);
+                const isInvoiceOrder = Boolean(
+                  (sale as any).billing_type === "INVOICE" ||
+                  (sale as any).additional_infos?.billing_type === "INVOICE" ||
+                  (sale as any).calculation_infos?.billing_type === "INVOICE" ||
+                  (sale as any).additional_infos?.is_invoice === true ||
+                  (sale as any).calculation_infos?.is_invoice === true
+                );
+                const canDownloadInvoice = isInvoiceOrder && !rowCustomer.isWalkIn;
+                const canSendWhatsApp = isInvoiceOrder && !rowCustomer.isWalkIn && Boolean(rowCustomer.phone);
+
                 const isSelected = selectedSale?.id === sale.id;
 
                 return (
@@ -852,7 +1066,14 @@ const SalesListPage: React.FC = () => {
                   >
                     <td className="px-4 py-4 border-b border-slate-50">
                       <div>
-                        <span className="font-mono text-[11px] font-semibold text-slate-800 block">{sale.ui_id}</span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-mono text-[11px] font-semibold text-slate-800">{sale.ui_id}</span>
+                          {isInvoiceOrder && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-purple-50 text-purple-700 border border-purple-200 shadow-2xs">
+                              Invoice
+                            </span>
+                          )}
+                        </div>
                         <div className="flex gap-1 mt-1 flex-wrap">
                           {sale.origin === "Offline Return" && <AntBadge variant="tx-sales-return" type="tag">Return</AntBadge>}
                           {/* Exchange-replacement sale — this order itself is an exchange */}
@@ -930,6 +1151,24 @@ const SalesListPage: React.FC = () => {
                         >
                           <Printer size={15} />
                         </button>
+                        {canDownloadInvoice && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setInvoiceModalSale(sale); }}
+                            className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-md p-1.5 transition-colors cursor-pointer"
+                            title="Download Tax Invoice"
+                          >
+                            <FileText size={15} />
+                          </button>
+                        )}
+                        {canSendWhatsApp && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleSendWhatsApp(sale); }}
+                            className="text-[#25D366] hover:text-[#1ebd5a] hover:bg-emerald-50 rounded-md p-1.5 transition-colors cursor-pointer"
+                            title="Direct WhatsApp Invoice"
+                          >
+                            <BiLogoWhatsapp size={16} />
+                          </button>
+                        )}
                         {sale.status === "Completed" && sale.origin !== "Offline Return" && sale.origin !== "Sales Return" && (
                           <button
                             onClick={(e) => { e.stopPropagation(); openReturn(sale); }}
@@ -986,6 +1225,17 @@ const SalesListPage: React.FC = () => {
           isOpen={Boolean(reprintSale)}
           onClose={() => setReprintSale(null)}
           sale={reprintSale}
+          customerMap={customerMap}
+          productMap={productMap}
+        />
+      )}
+
+      {/* ── Tax Invoice Modal ── */}
+      {invoiceModalSale && (
+        <SaleInvoiceModal
+          isOpen={Boolean(invoiceModalSale)}
+          onClose={() => setInvoiceModalSale(null)}
+          sale={invoiceModalSale}
           customerMap={customerMap}
           productMap={productMap}
         />

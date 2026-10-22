@@ -55,6 +55,7 @@ export default function NotificationsPage() {
     notifications, 
     unreadCount, 
     isConnected, 
+    isProduction,
     markAsRead, 
     markAllAsRead, 
     deleteNotification, 
@@ -123,11 +124,22 @@ export default function NotificationsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-black text-slate-800 flex items-center gap-2">
               <Bell className="w-6 h-6 text-blue-600" />
               Notifications
             </h1>
+            {isProduction ? (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-sm" title="Only Digital Store notifications are allowed in production">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                Digital Store Mode (Production)
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-sm" title="All notifications are allowed in development">
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                All Alerts Mode (Development)
+              </span>
+            )}
             {isConnected ? (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200 shadow-sm" title="Real-time WebSocket connection active">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -218,6 +230,8 @@ export default function NotificationsPage() {
             <p className="text-slate-500 text-sm max-w-sm">
               {activeTab === "unread" 
                 ? "You have read all notifications. Switch to 'All' tab to view past history."
+                : isProduction
+                ? "No digital store notifications right now. Only online orders and digital store alerts are displayed in production."
                 : "You don't have any notifications right now. Alerts will appear here in real-time."}
             </p>
           </div>

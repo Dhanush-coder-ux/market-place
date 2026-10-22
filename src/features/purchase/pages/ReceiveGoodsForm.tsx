@@ -898,7 +898,7 @@ const ReceiveGoodForm = () => {
           >
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
-                <FieldLabel required>PO Reference #</FieldLabel>
+                <FieldLabel required>PO Reference No</FieldLabel>
                 <SearchSelect
                   labelKey="label"
                   valueKey="id"
@@ -923,7 +923,7 @@ const ReceiveGoodForm = () => {
               </div>
 
               <div>
-                <FieldLabel>Supplier Invoice #</FieldLabel>
+                <FieldLabel>Supplier Invoice No</FieldLabel>
                 <Input
                   placeholder="INV-2026-…"
                   value={invoiceNo}

@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { GripVertical } from "lucide-react";
+import { GripVertical, ArrowLeft, ArrowRight, ShoppingCart, CreditCard, User } from "lucide-react";
 
 import BillingTable from "../components/BillingTable";
 import BillingHeader from "../components/BillingHeader";
@@ -15,7 +15,7 @@ import { usePurchaseSettings } from "@/context/PurchaseContext";
 import InvoicePreviewModal from "../components/InvoicePreviewModal";
 import { BillingSuccessModal } from "../components/BillingSuccessModal";
 import { NavigationBlocker } from "@/components/common/NavigationBlocker";
-import { calculateBillTotals, BillTotals } from "@/utils/pricing";
+import { calculateBillTotals, BillTotals, formatINR } from "@/utils/pricing";
 
 // ─── Helper to map serial names to object IDs ─────────────────────────────────
 const mapSerialsToInfos = (item: any) => {
@@ -92,6 +92,7 @@ const Billing = () => {
   // ── Attach/Create Customer Modal State
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [showInvoicePreview, setShowInvoicePreview] = useState(false);
+  const [mobileTab, setMobileTab] = useState<"items" | "payment">("items");
 
   // ── Checkout Success Details State
   const [successDetails, setSuccessDetails] = useState<{
@@ -116,6 +117,7 @@ const Billing = () => {
   ]);
 
   const filledItems = useMemo(() => items.filter(i => !!i.name && i.qty > 0), [items]);
+  const totalUnits = useMemo(() => items.reduce((s, i) => s + (i.qty || 0), 0), [items]);
 
   const billTotals: BillTotals = useMemo(() => {
     return calculateBillTotals(
@@ -320,7 +322,7 @@ const Billing = () => {
   }, []);
 
   // ── Confirm Order → Order Service Cart flow
-  const handleConfirmOrder = useCallback(async (paymentsArg: { mode: string, amount: number }[], _includeGst: boolean, _status: string) => {
+  const handleConfirmOrder = useCallback(async (paymentsArg: { mode: string, amount: number }[], _includeGst: boolean, _status: string, billingType: "BILL" | "INVOICE" = "BILL") => {
     if (isSubmittingRef.current || isCheckoutLoading) return;
     const filledItems = items.filter(i => !!i.name);
     if (filledItems.length === 0) return;
@@ -343,6 +345,8 @@ const Billing = () => {
         return acc;
       }, {} as Record<string, number>);
 
+      const isInvoice = billingType === "INVOICE";
+
       // ── Step 3: Build calculation_infos (Snapshot everything per Section 3.2) ──
       const calcInfos = {
         base_subtotal: billTotals.baseSubtotal,
@@ -362,6 +366,8 @@ const Billing = () => {
         customer_savings: billTotals.totalSavings,
         tax_groups: billTotals.taxGroups,
         include_gst: includeGst,
+        billing_type: isInvoice ? "INVOICE" : "BILL",
+        is_invoice: isInvoice,
         items: billTotals.lines.map(l => ({
           product_id: l.inventoryId,
           name: l.name,
@@ -391,12 +397,15 @@ const Billing = () => {
         status: "COMPLETED",
         origin: "OFFLINE",
         type: "IN-STORE",
+        billing_type: isInvoice ? "INVOICE" : "BILL",
         calculation_infos: calcInfos,
         charges_infos: {},
         payment_infos: paymentInfos,
         additional_infos: {
           customer_name: customerName || "Walk-in Customer",
           customer_phone: phone || "",
+          billing_type: isInvoice ? "INVOICE" : "BILL",
+          is_invoice: isInvoice,
         },
       };
 
@@ -469,50 +478,138 @@ const Billing = () => {
   const hasItemsForBlocker = items.some(i => i.name && i.qty > 0);
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-slate-50/80 overflow-hidden h-screen">
+    <div className="flex-1 flex flex-col min-h-0 bg-slate-50/80 overflow-hidden h-full">
+      {/* --- Mobile POS Top Header Bar (lg:hidden) --- */}
+      <div className="lg:hidden shrink-0 bg-white border-b border-slate-200/90 px-3.5 py-2.5 shadow-xs">
+        <div className="flex items-center justify-between mb-2">
+          <button
+            onClick={() => navigate("/")}
+            className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors active:scale-95"
+          >
+            <ArrowLeft size={15} />
+            <span>Exit POS</span>
+          </button>
+
+          {/* Quick Customer Pill */}
+          <button
+            onClick={() => setIsCustomerModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200/80 text-xs font-bold active:scale-95 transition-all max-w-[210px] truncate shadow-2xs"
+          >
+            <User size={13} className="shrink-0 text-blue-500" />
+            <span className="truncate">{customerData ? customerData.name : "Walk-in Customer"}</span>
+            <span className="text-[10px] text-blue-500/80 font-normal">Edit</span>
+          </button>
+        </div>
+
+        {/* Segmented Mode Tabs */}
+        <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-xl gap-1">
+          <button
+            onClick={() => setMobileTab("items")}
+            className={`flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-black transition-all ${
+              mobileTab === "items"
+                ? "bg-white text-blue-600 shadow-xs"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <ShoppingCart size={14} />
+            <span>Bill Items ({filledItems.length})</span>
+          </button>
+          <button
+            onClick={() => setMobileTab("payment")}
+            className={`flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-black transition-all ${
+              mobileTab === "payment"
+                ? "bg-white text-blue-600 shadow-xs"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <CreditCard size={14} />
+            <span>Payment (₹{formatINR(finalAmount)})</span>
+          </button>
+        </div>
+      </div>
+
       <div className="flex-1 flex min-h-0 bg-slate-50/80 overflow-hidden relative">
         <NavigationBlocker shouldBlock={hasItemsForBlocker} />
 
-        {/* ── Left Panel (Global Search + Table list card) ──────────────── */}
-        <div className="flex-1 flex flex-col min-h-0 overflow-hidden p-3.5 gap-4">
-          {/* Billing Table */}
+        {/* --- DESKTOP VIEW (lg:flex side-by-side) --- */}
+        <div className="hidden lg:flex flex-1 min-h-0 overflow-hidden p-3.5 gap-4">
           <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
             <BillingTable
               items={items}
               onItemsChange={handleItemsChange}
             />
           </div>
-
-          {/* ── Mobile Payment Bar (lg:hidden) ────────────────────── */}
-          <div className="lg:hidden shrink-0 flex flex-col border-t border-slate-200 bg-white max-h-[50vh] rounded-2xl overflow-hidden shadow-lg p-2">
-            <BillingHeader
-              items={items}
-              customerData={customerData}
-              onConfirmOrder={handleConfirmOrder}
-              isSubmitting={isSubmitting || isCheckoutLoading || !cartInitialized}
-              includeGst={includeGst}
-              totalAmount={totalAmount}
-              gstAmount={gstAmount}
-              finalAmount={finalAmount}
-              billDiscount={billDiscount}
-              onBillDiscountChange={setBillDiscount}
-              billTotals={billTotals}
-              payments={payments}
-              onPaymentsChange={setPayments}
-              onAddCustomerClick={() => setIsCustomerModalOpen(true)}
-              onDetachCustomer={resetCustomer}
-              onGenerateInvoice={() => {
-                if (!customerData) {
-                  showToast("Please select a customer to generate an invoice.", "error");
-                  return;
-                }
-                setShowInvoicePreview(true);
-              }}
-            />
-          </div>
         </div>
 
-        {/* ── Drag Handle ── */}
+        {/* --- MOBILE VIEW (lg:hidden dedicated full-screen tabs) --- */}
+        <div className="lg:hidden flex-1 flex flex-col min-h-0 overflow-hidden">
+          {mobileTab === "items" ? (
+            <div className="flex-1 flex flex-col min-h-0 p-2.5 overflow-hidden">
+              <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                <BillingTable
+                  items={items}
+                  onItemsChange={handleItemsChange}
+                />
+              </div>
+
+              {/* Floating Bottom Checkout Bar for Mobile Items Tab */}
+              <div className="shrink-0 mt-2 mb-[calc(50px+env(safe-area-inset-bottom))] lg:mb-0 bg-white rounded-2xl border border-slate-200/90 p-3 shadow-lg flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Grand Total</span>
+                  <span className="text-lg font-black text-slate-900 tabular-nums leading-none">
+                    ₹{formatINR(finalAmount)}
+                  </span>
+                  <span className="text-[10px] text-slate-500 font-semibold block mt-0.5">
+                    {filledItems.length} items • {totalUnits} units
+                  </span>
+                </div>
+
+                <button
+                  onClick={() => setMobileTab("payment")}
+                  disabled={filledItems.length === 0}
+                  className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-2 transition-all ${
+                    filledItems.length === 0
+                      ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                      : "bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20 active:scale-95 cursor-pointer"
+                  }`}
+                >
+                  <span>Proceed to Pay</span>
+                  <ArrowRight size={14} />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-white">
+              <BillingHeader
+                items={items}
+                customerData={customerData}
+                onConfirmOrder={handleConfirmOrder}
+                isSubmitting={isSubmitting || isCheckoutLoading || !cartInitialized}
+                includeGst={includeGst}
+                totalAmount={totalAmount}
+                gstAmount={gstAmount}
+                finalAmount={finalAmount}
+                billDiscount={billDiscount}
+                onBillDiscountChange={setBillDiscount}
+                billTotals={billTotals}
+                payments={payments}
+                onPaymentsChange={setPayments}
+                onAddCustomerClick={() => setIsCustomerModalOpen(true)}
+                onDetachCustomer={resetCustomer}
+                onBackToItems={() => setMobileTab("items")}
+                onGenerateInvoice={() => {
+                  if (!customerData) {
+                    showToast("Please select a customer to generate an invoice.", "error");
+                    return;
+                  }
+                  setShowInvoicePreview(true);
+                }}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* --- DESKTOP Drag Handle (lg:flex) --- */}
         <div
           className="hidden lg:flex items-center justify-center w-2 -ml-[1px] bg-transparent cursor-col-resize shrink-0 relative z-20 group"
           onMouseDown={(e) => {
@@ -526,7 +623,7 @@ const Billing = () => {
           </div>
         </div>
 
-        {/* ── Right Sidebar (full height) ────────────────────────── */}
+        {/* --- DESKTOP Right Sidebar (lg:flex) --- */}
         <aside
           className="hidden lg:flex shrink-0 flex-col border-l border-slate-200 bg-white"
           style={{ width: `${sidebarWidth}px` }}
@@ -599,7 +696,7 @@ const Billing = () => {
           billTotals={successDetails?.billTotals ?? billTotals}
           isSubmitting={isSubmitting || isCheckoutLoading}
           onConfirm={(status) => {
-            handleConfirmOrder(payments, includeGst, status);
+            handleConfirmOrder(payments, includeGst, status, "INVOICE");
           }}
           orderId={successDetails?.orderId}
           onNewBill={() => {
@@ -613,7 +710,7 @@ const Billing = () => {
       </div>
 
       {/* ── Small Fixed Branded Bottombar ── */}
-      <div className="shrink-0 h-7 bg-white border-t border-slate-200/80 flex items-center justify-center text-[10px] text-slate-400 select-none">
+      <div className="hidden lg:flex shrink-0 h-7 bg-white border-t border-slate-200/80 items-center justify-center text-[10px] text-slate-400 select-none">
         <span>Powered by </span>
         <button
           onClick={() => navigate("/")}

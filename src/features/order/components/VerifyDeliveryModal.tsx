@@ -112,7 +112,7 @@ export const VerifyDeliveryModal: React.FC<VerifyDeliveryModalProps> = ({
               </div>
               <div>
                 <p className="text-white/70 text-[10px] font-bold uppercase tracking-widest mb-0.5">Verify Delivery</p>
-                <h2 className="text-white text-base font-black">#{billNo}</h2>
+                <h2 className="text-white text-base font-black">{billNo}</h2>
                 <p className="text-white/80 text-xs font-medium mt-0.5">{customerName}</p>
               </div>
             </div>

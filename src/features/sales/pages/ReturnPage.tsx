@@ -320,7 +320,7 @@ const ReturnPageContent: React.FC<{ sale: SaleRecord; productMap: Record<string,
             </button>
             <div>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Return / Exchange</p>
-              <h1 className="text-[17px] font-black text-slate-900">Order #{sale.ui_id}</h1>
+              <h1 className="text-[17px] font-black text-slate-900">Order {sale.ui_id}</h1>
             </div>
           </div>
           {/* Step pills */}

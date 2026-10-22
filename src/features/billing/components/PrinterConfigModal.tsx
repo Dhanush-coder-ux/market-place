@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { createPortal } from "react-dom";
 import {
   X,
@@ -204,7 +205,7 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
   ];
 
   return createPortal(
-    <div className="fixed inset-0 z-[10005] flex items-center justify-center p-3 sm:p-4 font-sans select-none">
+    <div className="fixed inset-0 z-[10005] flex items-center justify-center p-3 sm:p-4 font-sans">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
@@ -212,7 +213,7 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
       />
 
       {/* Modal Dialog */}
-      <div className="relative bg-white rounded-2xl shadow-2xl border border-slate-200/80 w-full max-w-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-150">
+      <div className="relative bg-white rounded-2xl shadow-2xl border border-slate-200/80 w-full max-w-2xl overflow-hidden flex flex-col min-h-0 max-h-[90vh] animate-in fade-in zoom-in-95 duration-150">
         
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-150 bg-gradient-to-r from-slate-50 via-white to-blue-50/30 shrink-0">
@@ -241,7 +242,7 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
         </div>
 
         {/* Content Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-6 space-y-6 custom-scrollbar modal-content">
           
           {/* Connection Type Tabs */}
           <div>
@@ -436,22 +437,24 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
                     <label className="text-[11px] font-bold text-slate-600 block mb-1">
                       Baud Rate (Speed)
                     </label>
-                    <select
-                      value={config.baudRate || 9600}
-                      onChange={(e) =>
+                    <ReusableSelect
+                      value={String(config.baudRate || 9600)}
+                      onValueChange={(val) =>
                         setConfig((prev) => ({
                           ...prev,
-                          baudRate: parseInt(e.target.value) || 9600,
+                          baudRate: parseInt(val) || 9600,
                         }))
                       }
-                      className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-500 cursor-pointer"
-                    >
-                      <option value={9600}>9600 bps (Standard Thermal)</option>
-                      <option value={19200}>19200 bps</option>
-                      <option value={38400}>38400 bps</option>
-                      <option value={57600}>57600 bps</option>
-                      <option value={115200}>115200 bps (High Speed USB)</option>
-                    </select>
+                      options={[
+                        { label: "9600 bps (Standard Thermal)", value: "9600" },
+                        { label: "19200 bps", value: "19200" },
+                        { label: "38400 bps", value: "38400" },
+                        { label: "57600 bps", value: "57600" },
+                        { label: "115200 bps (High Speed USB)", value: "115200" },
+                      ]}
+                      placeholder="Select baud rate"
+                      className="h-9 py-2 px-3 text-xs bg-white border-slate-200 rounded-lg font-medium text-slate-800 shadow-none"
+                    />
                   </div>
 
                   <div>
@@ -605,9 +608,12 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
             </div>
 
             {/* Receipt Footer Message */}
-            <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1">
-                Custom Receipt Footer Note
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
+                <span>Custom Receipt Footer Note</span>
+                <span className="text-[10px] text-slate-400 font-normal">
+                  Printed above tear-off
+                </span>
               </label>
               <input
                 type="text"
@@ -616,8 +622,11 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
                 onChange={(e) =>
                   setConfig((prev) => ({ ...prev, footerText: e.target.value }))
                 }
-                className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10"
+                className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 shadow-2xs"
               />
+              <p className="text-[11px] text-slate-400 leading-tight">
+                Printed at the bottom of thermal receipts before paper cut.
+              </p>
             </div>
 
           </div>

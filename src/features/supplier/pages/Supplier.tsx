@@ -14,6 +14,7 @@ import { ColumnPicker } from "@/components/common/ColumnPicker";
 import { StatCard } from "@/components/common/StatsCard";
 import { useQuickCreate } from "@/features/common/QuickCreate/QuickCreateContext";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
+import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import SkeletonLoader from "@/components/common/SkeletonLoader";
 import ActionMenu, { ActionMenuItem } from "@/components/common/ActionMenu";
 import { getSupplierOutstanding } from "../type";
@@ -598,46 +599,46 @@ const Supplier = () => {
           {/* Supplier Type */}
           <div className="space-y-1.5">
             <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Supplier Type</label>
-            <select
+            <ReusableSelect
               value={filters.type}
-              onChange={e => setFilters(prev => ({ ...prev, type: e.target.value }))}
-              className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
-            >
-              <option value="All">All Types</option>
-              {availableTypes.map(t => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
+              onValueChange={val => setFilters(prev => ({ ...prev, type: val }))}
+              options={[
+                { label: "All Types", value: "All" },
+                ...availableTypes.map(t => ({ label: t, value: t }))
+              ]}
+              placeholder="All Types"
+              className="h-9 py-2 px-3 text-xs bg-slate-50 border-slate-200 rounded-lg font-semibold text-slate-750 hover:bg-white focus:bg-white shadow-none transition-colors"
+            />
           </div>
 
           {/* City */}
           <div className="space-y-1.5">
             <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">City</label>
-            <select
+            <ReusableSelect
               value={filters.city}
-              onChange={e => setFilters(prev => ({ ...prev, city: e.target.value }))}
-              className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
-            >
-              <option value="All">All Cities</option>
-              {availableCities.map(c => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
+              onValueChange={val => setFilters(prev => ({ ...prev, city: val }))}
+              options={[
+                { label: "All Cities", value: "All" },
+                ...availableCities.map(c => ({ label: c, value: c }))
+              ]}
+              placeholder="All Cities"
+              className="h-9 py-2 px-3 text-xs bg-slate-50 border-slate-200 rounded-lg font-semibold text-slate-750 hover:bg-white focus:bg-white shadow-none transition-colors"
+            />
           </div>
 
           {/* State */}
           <div className="space-y-1.5">
             <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">State</label>
-            <select
+            <ReusableSelect
               value={filters.state}
-              onChange={e => setFilters(prev => ({ ...prev, state: e.target.value }))}
-              className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-750 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
-            >
-              <option value="All">All States</option>
-              {availableStates.map(s => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
+              onValueChange={val => setFilters(prev => ({ ...prev, state: val }))}
+              options={[
+                { label: "All States", value: "All" },
+                ...availableStates.map(s => ({ label: s, value: s }))
+              ]}
+              placeholder="All States"
+              className="h-9 py-2 px-3 text-xs bg-slate-50 border-slate-200 rounded-lg font-semibold text-slate-750 hover:bg-white focus:bg-white shadow-none transition-colors"
+            />
           </div>
         </div>
       </RightSidebarFilter>

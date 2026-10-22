@@ -503,7 +503,7 @@ const PurchaseForm = () => {
     }
 
     if (!purchaseDetails.invoiceNo || purchaseDetails.invoiceNo.trim() === '') {
-      showToast("Supplier Invoice # is mandatory.", "error");
+      showToast("Supplier Invoice number is mandatory.", "error");
       return;
     }
 

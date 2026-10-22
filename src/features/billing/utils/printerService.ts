@@ -746,16 +746,17 @@ export function buildEscPosBuffer(data: ReceiptData, config: PrinterConfig): Uin
   addDivider();
 
   // 8. Footer: Centered
-  addCenter("Thank you for your business!");
+  if (config.footerText && config.footerText.trim()) {
+    addCenter(config.footerText.trim());
+  } else {
+    addCenter("Thank you for your business!");
+  }
   addCenter("Goods once sold will not be returned without bill.");
+  if (data.footerNote && data.footerNote.trim() && data.footerNote.trim() !== config.footerText?.trim()) {
+    addCenter(data.footerNote.trim());
+  }
   if (data.reprintTimestamp || data.isDuplicate) {
     addCenter(`Reprinted on ${data.reprintTimestamp || new Date().toLocaleString("en-IN")}`);
-  }
-  if (
-    config.footerText &&
-    config.footerText !== "Thank you for shopping with us! Please visit again."
-  ) {
-    addCenter(config.footerText);
   }
 
   // 9. Paper Feed & Auto Cut
@@ -1011,8 +1012,9 @@ export function printViaSystemDriver(
         <div class="divider"></div>
 
         <div class="center" style="font-size: 9px; color: #64748b; margin-top: 8px;">
-          <div style="font-weight: 700; color: #334155;">Thank you for your business!</div>
+          <div style="font-weight: 700; color: #334155;">${(config.footerText && config.footerText.trim()) ? config.footerText.trim() : "Thank you for your business!"}</div>
           <div>Goods once sold will not be returned without bill.</div>
+          ${data.footerNote && data.footerNote.trim() && data.footerNote.trim() !== config.footerText?.trim() ? `<div style="margin-top: 2px; font-weight: 600; color: #475569;">${data.footerNote.trim()}</div>` : ""}
           ${data.reprintTimestamp || data.isDuplicate ? `<div style="margin-top: 3px; font-size: 8px; color: #94a3b8;">Reprinted on ${data.reprintTimestamp || new Date().toLocaleString("en-IN")}</div>` : ""}
         </div>
 

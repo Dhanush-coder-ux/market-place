@@ -1,9 +1,17 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
-import { User, Clock, Check, Printer, Plus, Power, Settings } from "lucide-react";
+import { User, Clock, Check, Printer, Plus, Power, Settings, ChevronDown } from "lucide-react";
 import { shopApi } from "../../../services/api/shop";
 import { PrinterConfigModal } from "./PrinterConfigModal";
-import { printReceipt, ReceiptData, cleanShopAddress } from "../utils/printerService";
+import {
+  printReceipt,
+  ReceiptData,
+  cleanShopAddress,
+  getPrintersList,
+  SavedPrinter,
+  getPrinterConfig,
+} from "../utils/printerService";
+import { useToast } from "@/context/ToastContext";
 
 /* ─── Types ─────────────────────────────────────────────────────────────── */
 
@@ -58,12 +66,36 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
   onPrint,
   autoPrint = true,
 }) => {
+  const { showToast } = useToast();
   const [view, setView] = useState<ModalView>("summary");
   const [phase, setPhase] = useState<AnimPhase | null>(null);
   const [closing, setClosing] = useState(false);
   const [shopData, setShopData] = useState<any>(null);
   const [isPrinterConfigOpen, setIsPrinterConfigOpen] = useState(false);
+  const [printersList, setPrintersList] = useState<SavedPrinter[]>(() => getPrintersList());
+  const [selectedPrinterId, setSelectedPrinterId] = useState<string>(() => {
+    const list = getPrintersList();
+    const def = list.find((p) => p.isDefault) || list[0];
+    return def?.id || "";
+  });
+  const prevIsOpenRef = useRef(false);
   const timerRefs = useRef<number[]>([]);
+
+  /* Load & sync configured printers list — Primary printer is chosen by default */
+  useEffect(() => {
+    if (isOpen) {
+      const list = getPrintersList();
+      setPrintersList(list);
+      const def = list.find((p) => p.isDefault) || list[0];
+      // On fresh modal open, always choose the primary/default printer
+      if (!prevIsOpenRef.current && def) {
+        setSelectedPrinterId(def.id);
+      } else if (def && (!selectedPrinterId || !list.some((p) => p.id === selectedPrinterId))) {
+        setSelectedPrinterId(def.id);
+      }
+    }
+    prevIsOpenRef.current = isOpen;
+  }, [isOpen, isPrinterConfigOpen, selectedPrinterId]);
 
   /* Clear all pending timers */
   const clearTimers = useCallback(() => {
@@ -80,9 +112,14 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
   /* ── Animation helpers ─────────────────────────────────────────────── */
   const isAnimating = phase === "feeding" || phase === "revealing" || phase === "cutting" || phase === "tearaway";
 
+  const selectedPrinter =
+    printersList.find((p) => p.id === selectedPrinterId) ||
+    printersList.find((p) => p.isDefault) ||
+    printersList[0] ||
+    null;
+
   const startPrint = useCallback(() => {
     if (view === "printing" && isAnimating) return;
-    if (view === "printing" && phase === "done") return;
 
     // Fire the external print callback if provided
     if (onPrint) onPrint();
@@ -139,9 +176,25 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
         invoiceTypeTag: "TAX INVOICE",
         payments: details.payments,
       };
-      printReceipt(receiptData).catch((err) => {
-        console.warn("Thermal hardware print trigger error:", err);
-      });
+
+      const targetPrinter =
+        printersList.find((p) => p.id === selectedPrinterId) ||
+        printersList.find((p) => p.isDefault) ||
+        printersList[0] ||
+        getPrinterConfig();
+
+      printReceipt(receiptData, targetPrinter)
+        .then((res) => {
+          if (res.success) {
+            showToast(res.message || "Receipt sent to printer.", "success");
+          } else {
+            showToast(res.message || "Failed to print receipt", "error");
+          }
+        })
+        .catch((err) => {
+          console.warn("Thermal hardware print trigger error:", err);
+          showToast(err.message || "Thermal printer error", "error");
+        });
     }
 
     // Switch to printing view and begin animation
@@ -152,7 +205,7 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
     addTimer(() => {
       setPhase("done");
     }, 4100);
-  }, [view, isAnimating, phase, onPrint, addTimer, details, shopData]);
+  }, [view, isAnimating, onPrint, addTimer, details, shopData, printersList, selectedPrinterId, showToast]);
 
   /* Reset state when modal opens/closes */
   useEffect(() => {
@@ -414,10 +467,59 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
 
           {/* Footer Actions */}
           <div className="p-[16px_20px_20px] mt-2 bg-[#F5F7FA] border-t border-[#E6EAF1]">
+            {/* Destination Printer Selector */}
+            <div className="mb-2.5 bg-white p-2.5 rounded-[10px] border border-[#E2E8F0] shadow-2xs">
+              <div className="flex items-center justify-between mb-1.5 px-0.5">
+                <span className="text-[11px] font-bold text-[#475569] flex items-center gap-1.5 uppercase tracking-wider">
+                  <Printer size={12} className="text-[#285737]" />
+                  <span>Printer</span>
+                </span>
+                {selectedPrinter?.isDefault ? (
+                  <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    Primary Default
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-semibold text-slate-600 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full">
+                    Selected
+                  </span>
+                )}
+              </div>
+
+              <div className="relative">
+                <select
+                  value={selectedPrinterId}
+                  onChange={(e) => setSelectedPrinterId(e.target.value)}
+                  className="w-full h-9 pl-3 pr-8 rounded-[8px] bg-[#F8FAFC] hover:bg-slate-50 border border-[#D5DBE5] hover:border-[#94A3B8] text-[12px] font-bold text-[#1E293B] outline-none focus:border-[#285737] focus:ring-2 focus:ring-[#285737]/15 transition-all cursor-pointer appearance-none truncate"
+                >
+                  {printersList.map((p) => {
+                    const connBadge =
+                      p.connectionType === "system"
+                        ? "System Driver"
+                        : p.connectionType === "bluetooth"
+                        ? "Bluetooth"
+                        : p.connectionType === "usb"
+                        ? "USB / Serial"
+                        : `WiFi/LAN (${p.networkIp || "IP"})`;
+                    const isDef = p.isDefault;
+                    return (
+                      <option key={p.id} value={p.id}>
+                        {p.name || p.deviceName || "Thermal Printer"} ({connBadge}){isDef ? " ★ Primary" : ""}
+                      </option>
+                    );
+                  })}
+                </select>
+                <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                  <ChevronDown size={14} />
+                </div>
+              </div>
+            </div>
+
             <div className="flex gap-2 mb-2">
               <button 
+                type="button"
                 onClick={startPrint}
-                className="flex-1 h-10 rounded-[8px] font-bold text-[12.5px] inline-flex items-center justify-center gap-2 border border-blue-200 bg-white text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all shadow-sm cursor-pointer"
+                className="flex-1 h-10 rounded-[8px] font-bold text-[12.5px] inline-flex items-center justify-center gap-2 border border-[#285737]/30 bg-white text-[#285737] hover:bg-[#285737]/5 hover:border-[#285737] transition-all shadow-2xs cursor-pointer active:scale-[0.98]"
               >
                 <Printer size={15} /> Print
               </button>
@@ -425,14 +527,15 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
                 type="button"
                 onClick={() => setIsPrinterConfigOpen(true)}
                 title="Printers Config (Bluetooth, WiFi/LAN, USB, System)"
-                className="px-3 h-10 rounded-[8px] font-bold text-[12px] inline-flex items-center justify-center gap-1.5 border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm cursor-pointer"
+                className="px-3 h-10 rounded-[8px] font-bold text-[12px] inline-flex items-center justify-center gap-1.5 border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all shadow-2xs cursor-pointer active:scale-[0.98]"
               >
-                <Settings size={14} className="text-blue-600" /> Printers Config
+                <Settings size={14} className="text-[#285737]" /> Printers Config
               </button>
             </div>
             <button 
+              type="button"
               onClick={onNextBill}
-              className="w-full h-11 bg-blue-600 hover:bg-blue-700 border border-blue-600 text-white rounded-[8px] font-bold text-[13.5px] inline-flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer"
+              className="w-full h-11 bg-[#285737] hover:bg-[#1e462a] border border-[#285737] text-white rounded-[8px] font-bold text-[13.5px] inline-flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer active:scale-[0.99]"
             >
               <Plus size={16} strokeWidth={2.5} /> New bill
             </button>
@@ -504,10 +607,11 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
                 }}
               />
               <span
-                className="text-[10px] font-semibold tracking-[0.15em] uppercase"
-                style={{ color: "rgba(255,255,255,0.4)" }}
+                className="text-[10px] font-semibold tracking-[0.15em] uppercase truncate max-w-[140px]"
+                style={{ color: "rgba(255,255,255,0.7)" }}
+                title={selectedPrinter?.name || selectedPrinter?.deviceName}
               >
-                POS Thermal
+                {selectedPrinter?.name || selectedPrinter?.deviceName || "POS Thermal"}
               </span>
             </div>
 
@@ -794,14 +898,26 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
                 onClick={handleNextBill}
                 className="w-full h-11 rounded-[10px] font-bold text-[13px] inline-flex items-center justify-center gap-2 transition-all duration-200 shadow-lg cursor-pointer"
                 style={{
-                  background: "linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)",
+                  background: "linear-gradient(135deg, #285737 0%, #1e462a 100%)",
                   color: "#fff",
-                  boxShadow: "0 4px 14px rgba(37,99,235,0.35)",
+                  boxShadow: "0 4px 14px rgba(40,87,55,0.35)",
                 }}
               >
                 <Plus size={16} strokeWidth={2.5} /> New Bill
               </button>
               <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={startPrint}
+                  className="flex-1 h-9 rounded-[8px] font-semibold text-[12px] inline-flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer"
+                  style={{
+                    background: "rgba(255,255,255,0.12)",
+                    color: "#fff",
+                    border: "1px solid rgba(255,255,255,0.2)",
+                  }}
+                >
+                  <Printer size={13} className="text-emerald-400" /> Reprint
+                </button>
                 <button
                   type="button"
                   onClick={() => setIsPrinterConfigOpen(true)}
@@ -812,7 +928,7 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
                     border: "1px solid rgba(255,255,255,0.12)",
                   }}
                 >
-                  <Settings size={13} className="text-blue-400" /> Printers Config
+                  <Settings size={13} className="text-blue-400" /> Config
                 </button>
                 <button
                   onClick={handleClose}

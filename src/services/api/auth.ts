@@ -6,10 +6,67 @@ const KEY_VERSION = '1';
 
 export const authApi = {
   /** Step 1: Get the OAuth login URL from the backend. Redirects user to Debugger Auth. */
-  getLoginUrl: async (version: string = KEY_VERSION) => {
+  getLoginUrl: async (versionOrOptions?: string | { version?: string; redirect_url?: string; verify_url?: string }) => {
+    const opts = typeof versionOrOptions === "object" ? versionOrOptions : { version: versionOrOptions || KEY_VERSION };
     return await apiClient.get(`${AUTH_BASE}/login-url`, {
       service: SERVICE_NAME,
-      version: version,
+      version: opts.version || KEY_VERSION,
+      flow_type: 'signin',
+      ...(opts.redirect_url ? { redirect_url: opts.redirect_url } : {}),
+      ...(opts.verify_url ? { verify_url: opts.verify_url } : {}),
+    });
+  },
+
+  /** Get dedicated OAuth signup URL from backend. */
+  getSignupUrl: async (versionOrOptions?: string | { version?: string; redirect_url?: string; verify_url?: string }) => {
+    const opts = typeof versionOrOptions === "object" ? versionOrOptions : { version: versionOrOptions || KEY_VERSION };
+    return await apiClient.get(`${AUTH_BASE}/signup-url`, {
+      service: SERVICE_NAME,
+      version: opts.version || KEY_VERSION,
+      ...(opts.redirect_url ? { redirect_url: opts.redirect_url } : {}),
+      ...(opts.verify_url ? { verify_url: opts.verify_url } : {}),
+    });
+  },
+
+  /** Direct signup: registers new user, auto-generates random password and emails it */
+  signup: async (data: {
+    email: string;
+    name?: string;
+    mobilenumber?: string;
+    custom_fields?: Record<string, any>;
+    additional_infos?: Record<string, any>;
+    password?: string;
+  }) => {
+    return await apiClient.post(`${AUTH_BASE}/signup`, data);
+  },
+
+  /** Dedicated verification for Sign In (account MUST exist, password checked if provided) */
+  verifySignin: async (data: { email?: string; mobilenumber?: string; password?: string }) => {
+    return await apiClient.post(`${AUTH_BASE}/signin/verify`, data);
+  },
+
+  /** Dedicated verification for Sign Up (account MUST NOT exist) */
+  verifySignup: async (data: { email?: string; mobilenumber?: string }) => {
+    return await apiClient.post(`${AUTH_BASE}/signup/verify`, data);
+  },
+
+  /** Verify whether an account exists */
+  verifyAccount: async (data: { email?: string; mobilenumber?: string }) => {
+    return await apiClient.post(`${AUTH_BASE}/verify`, data);
+  },
+
+  /** Direct login with email/phone and password */
+  loginWithPassword: async (data: {
+    email?: string;
+    mobilenumber?: string;
+    password: string;
+    service?: string;
+    version?: string;
+  }) => {
+    return await apiClient.post(`${AUTH_BASE}/login`, {
+      service: SERVICE_NAME,
+      version: KEY_VERSION,
+      ...data,
     });
   },
 

@@ -16,6 +16,7 @@ import InvoicePreviewModal from "../components/InvoicePreviewModal";
 import { BillingSuccessModal } from "../components/BillingSuccessModal";
 import { NavigationBlocker } from "@/components/common/NavigationBlocker";
 import { calculateBillTotals, BillTotals, formatINR } from "@/utils/pricing";
+import { getPrinterConfig, attemptSilentBluetoothReconnect } from "../utils/printerService";
 
 // ─── Helper to map serial names to object IDs ─────────────────────────────────
 const mapSerialsToInfos = (item: any) => {
@@ -76,6 +77,8 @@ const Billing = () => {
 
   // ── Cart Session (Order Service)
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const sessionIdRef = useRef<string | null>(null);
+  sessionIdRef.current = sessionId;
   const [cartInitialized, setCartInitialized] = useState(false);
   const sessionDoneRef = useRef(false); // true after submit or explicit cancel
   const isSubmittingRef = useRef(false);
@@ -111,7 +114,7 @@ const Billing = () => {
   // ── Billing Totals (Discount & GST Calculation Engine)
   const { settings } = usePurchaseSettings();
   const includeGst = settings.gstType === "registered";
-  const [billDiscount, setBillDiscount] = useState<{ mode: '%' | '₹'; value: number }>({ mode: '%', value: 0 });
+  const [billDiscount, setBillDiscount] = useState<{ mode: '%' | '₹'; value: number }>({ mode: '₹', value: 0 });
   const [payments, setPayments] = useState<{ mode: PaymentMode; amount: number }[]>([
     { mode: "cash", amount: 0 },
   ]);
@@ -131,7 +134,7 @@ const Billing = () => {
         mrp: i.mrp,
         gstRate: typeof i.gst === 'number' ? i.gst : (parseFloat(String(i.gst || '18').replace(/[^0-9.]/g, '')) || 0),
         productDiscountPercent: i.productDiscountPercent || 0,
-        lineDiscountMode: i.lineDiscountMode || '%',
+        lineDiscountMode: i.lineDiscountMode || '₹',
         lineDiscountValue: i.lineDiscountValue || 0,
         costPrice: i.costPrice,
       })),
@@ -148,27 +151,36 @@ const Billing = () => {
     setPayments(prev => prev.length === 1 ? [{ ...prev[0], amount: finalAmount }] : prev);
   }, [finalAmount]);
 
-  // ─── Initialize Order Cart Session on mount ────────────────────────────────
+  // ─── Proactive silent reconnection to Bluetooth printer on page mount ─────
   useEffect(() => {
-    let cancelled = false;
-    const initCart = async () => {
-      try {
-        const res = await apiClient.post(`${ENDPOINTS.ORDER_CART}/init`, {});
-        if (!cancelled) {
-          const sid = res?.data?.session_id;
-          if (sid) {
-            setSessionId(sid);
-            setCartInitialized(true);
-          }
-        }
-      } catch (e) {
-        console.error("Failed to init order cart session", e);
-        if (!cancelled) showToast("Failed to initialize cart session", "error");
+    try {
+      const cfg = getPrinterConfig();
+      if (cfg.connectionType === "bluetooth") {
+        attemptSilentBluetoothReconnect().catch(() => {});
       }
-    };
-    initCart();
-    return () => { cancelled = true; };
+    } catch {}
   }, []);
+
+  // ─── Initialize Order Cart Session on mount ────────────────────────────────
+  const initCartSession = useCallback(async (): Promise<string | null> => {
+    try {
+      const res = await apiClient.post(`${ENDPOINTS.ORDER_CART}/init`, {});
+      const sid = res?.data?.session_id;
+      if (sid) {
+        sessionIdRef.current = sid;
+        setSessionId(sid);
+        setCartInitialized(true);
+        return sid;
+      }
+    } catch (e) {
+      console.error("Failed to init order cart session", e);
+    }
+    return null;
+  }, []);
+
+  useEffect(() => {
+    initCartSession();
+  }, [initCartSession]);
 
   // ─── Auto-Select Customer from URL ────────────────────────────────────────
   useEffect(() => {
@@ -200,39 +212,48 @@ const Billing = () => {
   // ─── Cancel session on SPA navigation away (unmount) ──────────────────────
   useEffect(() => {
     return () => {
-      if (sessionId && !sessionDoneRef.current) {
-        apiClient.post(`${ENDPOINTS.ORDER_CART}/cancel`, { session_id: sessionId }).catch(() => { });
+      if (sessionIdRef.current && !sessionDoneRef.current) {
+        apiClient.post(`${ENDPOINTS.ORDER_CART}/cancel`, { session_id: sessionIdRef.current }).catch(() => { });
       }
     };
-  }, [sessionId]);
+  }, []); // Run on unmount ONLY
 
   // ─── Cancel session on browser tab close ──────────────────────────────────
   useEffect(() => {
     const handleUnload = () => {
-      if (sessionId && !sessionDoneRef.current) {
-        apiClient.post(`${ENDPOINTS.ORDER_CART}/cancel`, { session_id: sessionId }).catch(() => { });
+      if (sessionIdRef.current && !sessionDoneRef.current) {
+        apiClient.post(`${ENDPOINTS.ORDER_CART}/cancel`, { session_id: sessionIdRef.current }).catch(() => { });
       }
     };
     window.addEventListener("beforeunload", handleUnload);
     return () => window.removeEventListener("beforeunload", handleUnload);
-  }, [sessionId]);
+  }, []);
 
   // ── Handlers
-  const handleItemsChange = useCallback((next: BillingItem[]) => {
+  const handleItemsChange = useCallback(async (next: BillingItem[]) => {
     setItems(next);
 
-    // Sync to cart on every product add / qty change / item remove
-    if (!sessionId) return;
+    const nextFilled = next.filter(i => !!i.name && i.qty > 0 && !!i.inventoryId);
+    if (nextFilled.length === 0) {
+      itemsInCartRef.current = [];
+      return;
+    }
+
+    // Auto-initiate cart session if missing
+    let sid = sessionIdRef.current;
+    if (!sid) {
+      sid = await initCartSession();
+    }
+    if (!sid) return;
 
     const prevItems = itemsInCartRef.current;
-    const nextFilled = next.filter(i => !!i.name && i.qty > 0 && !!i.inventoryId);
 
     // Items removed from bill
     for (const prev of prevItems) {
       const stillExists = nextFilled.some(n => n.id === prev.id);
       if (!stillExists) {
         apiClient.post(`${ENDPOINTS.ORDER_CART}/remove`, {
-          session_id: sessionId,
+          session_id: sid,
           product_id: prev.inventoryId || "",
           variant_id: prev.variantId || null,
           batch_id: prev.batchId || null,
@@ -245,7 +266,7 @@ const Billing = () => {
       const prev = prevItems.find(p => p.id === curr.id);
       if (!prev || prev.qty !== curr.qty || prev.selectedUnit !== curr.selectedUnit) {
         apiClient.post(`${ENDPOINTS.ORDER_CART}/add`, {
-          session_id: sessionId,
+          session_id: sid,
           shop_id: SHOP_ID,
           product_id: curr.inventoryId || "",
           variant_id: curr.variantId || null,
@@ -258,7 +279,28 @@ const Billing = () => {
     }
 
     itemsInCartRef.current = nextFilled;
-  }, [sessionId]);
+  }, [initCartSession]);
+
+  // Sync any items added before cart session was ready
+  useEffect(() => {
+    if (!sessionId) return;
+    const filled = items.filter(i => !!i.name && i.qty > 0 && !!i.inventoryId);
+    if (filled.length > 0 && itemsInCartRef.current.length === 0) {
+      for (const curr of filled) {
+        apiClient.post(`${ENDPOINTS.ORDER_CART}/add`, {
+          session_id: sessionId,
+          shop_id: SHOP_ID,
+          product_id: curr.inventoryId || "",
+          variant_id: curr.variantId || null,
+          batch_id: curr.batchId || null,
+          serialno_infos: mapSerialsToInfos(curr),
+          qty: curr.qty,
+          unit: curr.selectedUnit || null,
+        }).catch(err => console.warn("Cart initial sync error:", err));
+      }
+      itemsInCartRef.current = filled;
+    }
+  }, [sessionId, items]);
 
   const resetCustomer = useCallback(() => {
     setCustomerData(null);
@@ -327,14 +369,35 @@ const Billing = () => {
     const filledItems = items.filter(i => !!i.name);
     if (filledItems.length === 0) return;
 
-    if (!sessionId) {
-      showToast("Cart session not ready. Please wait a moment.", "error");
+    // Ensure cart session is active; initiate if missing
+    let activeSid = sessionIdRef.current;
+    if (!activeSid) {
+      activeSid = await initCartSession();
+    }
+    if (!activeSid) {
+      showToast("Cart session not ready. Please try again.", "error");
       return;
     }
 
     isSubmittingRef.current = true;
     setIsCheckoutLoading(true);
     try {
+      // Guarantee all current bill items are synced to this cart session in Redis
+      await Promise.all(
+        filledItems.map((item) =>
+          apiClient.post(`${ENDPOINTS.ORDER_CART}/add`, {
+            session_id: activeSid,
+            shop_id: SHOP_ID,
+            product_id: item.inventoryId || "",
+            variant_id: item.variantId || null,
+            batch_id: item.batchId || null,
+            serialno_infos: mapSerialsToInfos(item),
+            qty: item.qty,
+            unit: item.selectedUnit || null,
+          }).catch((err) => console.warn("Checkout cart sync error:", err))
+        )
+      );
+
       // ── Step 1: Build payment_infos for the order ───────────────────────────
       const paymentInfos = paymentsArg.reduce((acc, p) => {
         let method = p.mode.toUpperCase();
@@ -375,7 +438,7 @@ const Billing = () => {
           price: l.sellingPrice,
           mrp: l.mrp || null,
           product_discount_amount: l.productDiscountAmount,
-          line_discount_mode: l.lineDiscountMode || '%',
+          line_discount_mode: l.lineDiscountMode || '₹',
           line_discount_value: l.lineDiscountValue || 0,
           line_discount_amount: l.lineDiscountAmount,
           bill_discount_share: l.billDiscountShare,
@@ -392,7 +455,7 @@ const Billing = () => {
       // ── Step 4: POST /orders to confirm the order ───────────────────────────
       const orderPayload = {
         shop_id: SHOP_ID,
-        session_id: sessionId,
+        session_id: activeSid,
         customer_id: customerData?.id || "",
         status: "COMPLETED",
         origin: "OFFLINE",
@@ -409,7 +472,51 @@ const Billing = () => {
         },
       };
 
-      const res = await apiClient.post(ENDPOINTS.ORDERS, orderPayload);
+      let res: any = null;
+      try {
+        res = await apiClient.post(ENDPOINTS.ORDERS, orderPayload);
+      } catch (postErr: any) {
+        const desc =
+          postErr?.response?.data?.detail?.description ||
+          postErr?.response?.data?.detail?.msg ||
+          postErr?.response?.data?.detail ||
+          postErr?.message ||
+          "";
+
+        // Auto-recover if cart session is invalid, expired, or empty:
+        if (
+          typeof desc === "string" &&
+          (desc.toLowerCase().includes("cart session is invalid") ||
+            desc.toLowerCase().includes("cart is empty") ||
+            desc.toLowerCase().includes("session expired"))
+        ) {
+          console.warn("Cart session invalid/expired. Auto-initiating fresh session and retrying...", desc);
+          const freshSid = await initCartSession();
+          if (freshSid) {
+            // Re-reserve items with new session
+            await Promise.all(
+              filledItems.map((item) =>
+                apiClient.post(`${ENDPOINTS.ORDER_CART}/add`, {
+                  session_id: freshSid,
+                  shop_id: SHOP_ID,
+                  product_id: item.inventoryId || "",
+                  variant_id: item.variantId || null,
+                  batch_id: item.batchId || null,
+                  serialno_infos: mapSerialsToInfos(item),
+                  qty: item.qty,
+                  unit: item.selectedUnit || null,
+                })
+              )
+            );
+            res = await apiClient.post(ENDPOINTS.ORDERS, { ...orderPayload, session_id: freshSid });
+          } else {
+            throw postErr;
+          }
+        } else {
+          throw postErr;
+        }
+      }
+
       if (res) {
         // Mark session as done so unmount cleanup doesn't cancel it
         sessionDoneRef.current = true;
@@ -441,12 +548,18 @@ const Billing = () => {
       }
     } catch (err: any) {
       console.error("Order confirmation failed:", err);
-      showToast(err?.message || "Failed to confirm order", "error");
+      const desc =
+        err?.response?.data?.detail?.description ||
+        err?.response?.data?.detail?.msg ||
+        err?.response?.data?.detail ||
+        err?.message ||
+        "Failed to confirm order";
+      showToast(typeof desc === "string" ? desc : "Failed to confirm order", "error");
     } finally {
       isSubmittingRef.current = false;
       setIsCheckoutLoading(false);
     }
-  }, [items, customerData, sessionId, showToast, totalAmount, gstAmount, finalAmount, billTotals, billDiscount, customerName, phone, includeGst, isCheckoutLoading, showInvoicePreview, handleNextBill]);
+  }, [items, customerData, initCartSession, showToast, totalAmount, gstAmount, finalAmount, billTotals, billDiscount, customerName, phone, includeGst, isCheckoutLoading, showInvoicePreview, handleNextBill]);
 
   // ── Resizable Sidebar Logic
   const [sidebarWidth, setSidebarWidth] = useState(400);

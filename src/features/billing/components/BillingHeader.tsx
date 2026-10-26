@@ -251,7 +251,7 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
                     <button
                       type="button"
                       onClick={() => onBillDiscountChange && onBillDiscountChange({ mode: '₹', value: billDiscount?.value ?? 0 })}
-                      className={`px-1.5 py-0.5 rounded text-[9.5px] font-bold transition-all ${billDiscount?.mode === '₹' ? 'bg-white text-blue-600 shadow-2xs' : 'text-slate-400 hover:text-slate-600'}`}
+                      className={`px-1.5 py-0.5 rounded text-[9.5px] font-bold transition-all ${(billDiscount?.mode || '₹') === '₹' ? 'bg-white text-blue-600 shadow-2xs' : 'text-slate-400 hover:text-slate-600'}`}
                     >
                       ₹
                     </button>
@@ -265,7 +265,7 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
                       const val = Math.max(0, Number(e.target.value) || 0);
                       if (onBillDiscountChange) {
                         onBillDiscountChange({
-                          mode: billDiscount?.mode ?? '%',
+                          mode: billDiscount?.mode ?? '₹',
                           value: val,
                         });
                       }

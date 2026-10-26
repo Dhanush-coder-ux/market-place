@@ -16,6 +16,21 @@ const AuthCallback = () => {
     let isMounted = true;
 
     const handleAuth = async () => {
+      const urlError = searchParams.get("error");
+      const flow = searchParams.get("flow");
+      if (urlError) {
+        if (isMounted) {
+          setStatus("error");
+          showToast(urlError, "error");
+          if (flow === "signup" || urlError.toLowerCase().includes("sign up") || urlError.toLowerCase().includes("not found")) {
+            setTimeout(() => navigate(`/signup?error=${encodeURIComponent(urlError)}`), 1200);
+          } else {
+            setTimeout(() => navigate(`/login?error=${encodeURIComponent(urlError)}`), 1200);
+          }
+        }
+        return;
+      }
+
       let accessToken = searchParams.get("access_token");
       let refreshToken = searchParams.get("refresh_token");
       const tokenId = searchParams.get("token_id");

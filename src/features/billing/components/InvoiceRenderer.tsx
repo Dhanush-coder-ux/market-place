@@ -66,10 +66,10 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
         mrp: i.mrp,
         gstRate: typeof i.gst === 'number' ? i.gst : (parseFloat(String(i.gst || '18').replace(/[^0-9.]/g, '')) || 0),
         productDiscountPercent: i.productDiscountPercent || 0,
-        lineDiscountMode: i.lineDiscountMode || '%',
+        lineDiscountMode: i.lineDiscountMode || '₹',
         lineDiscountValue: i.lineDiscountValue || 0,
       })),
-      billDiscount || { mode: '%', value: 0 }
+      billDiscount || { mode: '₹', value: 0 }
     );
   }, [filledItems, billDiscount, billTotalsProp]);
 

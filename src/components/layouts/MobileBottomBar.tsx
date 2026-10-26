@@ -232,7 +232,7 @@ const NavigationDialog = ({
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   autoFocus
-                  className="w-full pl-9 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 text-slate-700 placeholder:text-slate-400"
+                  className="w-full pl-9 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#286038]/20 focus:border-[#286038] text-slate-700 placeholder:text-slate-400"
                 />
               </div>
             </div>
@@ -264,7 +264,7 @@ const NavigationDialog = ({
                           onClick={() => item.path && handleNav(item.path)}
                           className={`w-full flex items-center justify-between px-4 py-3.5 text-sm transition-all active:scale-[0.98] ${
                             isActive
-                              ? "bg-blue-50/50 text-blue-700"
+                              ? "bg-[#286038]/10 text-[#286038]"
                               : "text-slate-600 hover:bg-slate-50"
                           }`}
                         >
@@ -272,7 +272,7 @@ const NavigationDialog = ({
                             <div
                               className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors ${
                                 isActive
-                                  ? "bg-blue-600 text-white shadow-md shadow-blue-200"
+                                  ? "bg-[#286038] text-white shadow-md shadow-[#286038]/20"
                                   : "bg-slate-100 text-slate-500"
                               }`}
                             >
@@ -290,7 +290,7 @@ const NavigationDialog = ({
                             <motion.span 
                               initial={{ scale: 0.8, opacity: 0 }}
                               animate={{ scale: 1, opacity: 1 }}
-                              className="text-[10px] font-bold bg-blue-600 text-white px-2.5 py-1 rounded-lg"
+                              className="text-[10px] font-bold bg-[#286038] text-white px-2.5 py-1 rounded-lg"
                             >
                               ACTIVE
                             </motion.span>
@@ -343,79 +343,72 @@ const MobileBottomBar = () => {
         onClose={() => setDialogOpen(false)}
       />
 
-      <motion.nav
-        initial={false}
-        animate={{ y: 0 }}
-        transition={{ duration: 0.3, ease: "easeOut", delay: 0.05 }}
-        className="fixed bottom-0 left-0 right-0 z-[70] md:hidden gpu-layer"
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-[70] md:hidden bg-white/95 backdrop-blur-xl border-t border-slate-200/80 shadow-[0_-4px_24px_rgba(0,0,0,0.08)]"
       >
-        {/* Frosted glass bar */}
-        <div className="bg-white/90 backdrop-blur-xl border-t border-slate-200/80 shadow-[0_-4px_24px_rgba(0,0,0,0.08)]">
-          {/* Safe area padding for phones with home indicator */}
-          <div className="flex items-center justify-around px-2 pt-2 pb-[max(8px,env(safe-area-inset-bottom))]">
-            {TOP_NAV.map((item) => {
-              const isMore = item.path === null;
-              const Icon = item.icon;
-              const isActive = isMore
-                ? isMoreActive
-                : pathname === item.path;
+        <div className="flex items-center justify-around px-2 pt-2 pb-[max(8px,env(safe-area-inset-bottom))]">
+          {TOP_NAV.map((item) => {
+            const isMore = item.path === null;
+            const Icon = item.icon;
+            const isActive = isMore
+              ? isMoreActive
+              : pathname === item.path;
 
-              return (
-                <button
-                  key={item.name}
-                  onClick={() => {
-                    if (isMore) {
-                      setDialogOpen(true);
-                    } else {
-                      navigate(item.path!);
-                    }
-                  }}
-                  className="relative flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-colors"
-                >
-                  {/* Active pill indicator */}
-                  {isActive && (
-                    <motion.div
-                      layoutId="bottomBarIndicator"
-                      className="absolute inset-0 bg-blue-50 rounded-lg"
-                      transition={{ duration: 0.2 }}
-                    />
-                  )}
+            return (
+              <button
+                key={item.name}
+                onClick={() => {
+                  if (isMore) {
+                    setDialogOpen(true);
+                  } else {
+                    navigate(item.path!);
+                  }
+                }}
+                className="relative flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-colors cursor-pointer"
+              >
+                {/* Active pill indicator */}
+                {isActive && (
+                  <motion.div
+                    layoutId="bottomBarIndicator"
+                    className="absolute inset-0 bg-[#286038]/10 rounded-lg"
+                    transition={{ duration: 0.2 }}
+                  />
+                )}
 
-                  <div className="relative z-10">
-                    {isMore ? (
-                      <span
+                <div className="relative z-10">
+                  {isMore ? (
+                    <span
+                      className={`transition-colors ${
+                        isMoreActive ? "text-[#286038]" : "text-slate-400"
+                      }`}
+                    >
+                      <MoreIcon />
+                    </span>
+                  ) : (
+                    Icon && (
+                      <Icon
+                        size={20}
+                        strokeWidth={isActive ? 2 : 1.75}
                         className={`transition-colors ${
-                          isMoreActive ? "text-blue-600" : "text-slate-400"
+                          isActive ? "text-[#286038]" : "text-slate-400"
                         }`}
-                      >
-                        <MoreIcon />
-                      </span>
-                    ) : (
-                      Icon && (
-                        <Icon
-                          size={20}
-                          strokeWidth={isActive ? 2 : 1.75}
-                          className={`transition-colors ${
-                            isActive ? "text-blue-600" : "text-slate-400"
-                          }`}
-                        />
-                      )
-                    )}
-                  </div>
+                      />
+                    )
+                  )}
+                </div>
 
-                  <span
-                    className={`relative z-10 text-[10px] font-medium transition-colors leading-none ${
-                      isActive ? "text-blue-600" : "text-slate-400"
-                    }`}
-                  >
-                    {item.name}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+                <span
+                  className={`relative z-10 text-[10px] font-medium transition-colors leading-none ${
+                    isActive ? "text-[#286038] font-semibold" : "text-slate-400"
+                  }`}
+                >
+                  {item.name}
+                </span>
+              </button>
+            );
+          })}
         </div>
-      </motion.nav>
+      </nav>
     </>
   );
 };

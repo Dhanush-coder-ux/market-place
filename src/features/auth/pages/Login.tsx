@@ -9,7 +9,9 @@ import {
   Check,
   Copy,
   X,
-  PhoneCall
+  PhoneCall,
+  AlertCircle,
+  UserPlus
 } from "lucide-react";
 
 const SUPPORT_NUMBERS = [
@@ -38,6 +40,7 @@ const SCENE_DURATION = 7000; // 7 seconds per scene
 const Login = () => {
   const [searchParams] = useSearchParams();
   const isAutoLogin = searchParams.get("autologin") === "true";
+  const urlError = searchParams.get("error");
   const autoLoginTriggered = useRef(false);
 
   const [loading, setLoading] = useState(isAutoLogin);
@@ -122,6 +125,30 @@ const Login = () => {
     } catch (error) {
       console.error(error);
       showToast("Failed to initialize login. Please try again later.", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignUp = async () => {
+    setLoading(true);
+    try {
+      const response = await authApi.getSignupUrl();
+      const url =
+        response?.signup_url ||
+        response?.url ||
+        response?.data?.signup_url ||
+        response?.data?.url ||
+        response?.signin_url;
+
+      if (typeof url === "string" && url.startsWith("http")) {
+        window.location.href = url;
+      } else {
+        showToast("Unable to reach signup portal.", "error");
+      }
+    } catch (error) {
+      console.error(error);
+      showToast("Failed to initialize signup. Please try again.", "error");
     } finally {
       setLoading(false);
     }
@@ -237,7 +264,7 @@ const Login = () => {
           LEFT PANEL: inventQ Brand & Core Theme Blue Gradient Showcase
           ========================================================================= */}
       <aside
-        className="w-full lg:w-[48%] xl:w-[46%] text-white p-8 lg:p-12 flex flex-col justify-between relative overflow-hidden shrink-0 shadow-2xl"
+        className="hidden lg:flex lg:w-[48%] xl:w-[46%] text-white p-8 lg:p-12 flex-col justify-between relative overflow-hidden shrink-0 shadow-2xl"
         style={{
           background: `linear-gradient(to bottom, #286038 0%, #174B2E 50%, #0D3522 100%)`
         }}
@@ -550,17 +577,48 @@ const Login = () => {
       {/* =========================================================================
           RIGHT PANEL: Clean Direct Sign-In & Support Section
           ========================================================================= */}
-      <main className="flex-1 bg-white p-8 sm:p-12 lg:p-16 flex flex-col justify-between items-center overflow-y-auto">
-        <div className="w-full max-w-[392px] my-auto space-y-7">
+      <main className="flex-1 w-full min-h-screen lg:min-h-0 bg-white p-6 sm:p-12 lg:p-16 flex flex-col justify-between items-center overflow-y-auto">
+        <div className="w-full max-w-[392px] my-auto space-y-6">
+          {/* Mobile Header Logo */}
+          <div className="lg:hidden flex items-center justify-center gap-2 pt-2 pb-1">
+            <img
+              src="/logo/colored.png"
+              alt="inventQ"
+              className="h-10 w-auto object-contain"
+            />
+          </div>
+
           {/* Header */}
-          <div className="space-y-1.5">
-            <h2 className="text-[26px] font-bold text-slate-900 tracking-tight">
+          <div className="space-y-1.5 text-center sm:text-left">
+            <h2 className="text-[24px] sm:text-[26px] font-bold text-slate-900 tracking-tight">
               Sign in to your account
             </h2>
-            <p className="text-[13.5px] text-slate-500">
-              Welcome back. Enter your details to continue.
+            <p className="text-[13px] sm:text-[13.5px] text-slate-500">
+              Welcome back. Only registered accounts can access the store.
             </p>
           </div>
+
+          {/* URL Error Banner (e.g. user does not have an account yet) */}
+          {urlError && (
+            <div className="p-4 rounded-2xl bg-amber-50/90 border border-amber-200 text-amber-950 text-xs flex items-start gap-3 shadow-sm animate-in fade-in duration-200">
+              <AlertCircle size={20} className="text-amber-600 shrink-0 mt-0.5" />
+              <div className="space-y-1.5 flex-1">
+                <p className="font-bold text-amber-900 text-sm">Account Not Found</p>
+                <p className="text-amber-800 leading-relaxed text-[12.5px]">{urlError}</p>
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    onClick={handleSignUp}
+                    disabled={loading}
+                    className="inline-flex items-center gap-1.5 font-bold text-[#286038] hover:underline text-xs bg-white/80 px-2.5 py-1 rounded-lg border border-amber-200 cursor-pointer"
+                  >
+                    <UserPlus size={13} />
+                    <span>Create a new account now &rarr;</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Main Action Hook Card */}
           <div className="bg-slate-50/90 border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-5">
@@ -570,7 +628,7 @@ const Login = () => {
               </div>
               <div>
                 <h3 className="text-sm font-bold text-slate-900">Secure Store Access</h3>
-                <p className="text-xs text-slate-500">Single Sign-On with verified email or mobile OTP</p>
+                <p className="text-xs text-slate-500">Sign in securely with your verified account via DAuth</p>
               </div>
             </div>
 
@@ -582,20 +640,33 @@ const Login = () => {
               {loading ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white/35 border-t-white rounded-full animate-spin" />
-                  <span>Connecting to Portal…</span>
+                  <span>Connecting to DAuth…</span>
                 </>
               ) : (
                 <>
-                  <span>Sign in</span>
+                  <span>Sign in with DAuth</span>
                   <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
                 </>
               )}
             </button>
 
-            <p className="text-[11.5px] text-center text-slate-500 leading-relaxed">
+            {/* Don't have an account link */}
+            <div className="pt-2 border-t border-slate-200/60 text-center">
+              <span className="text-xs text-slate-600">Don't have an account? </span>
+              <button
+                type="button"
+                onClick={handleSignUp}
+                disabled={loading}
+                className="text-xs font-bold text-[#286038] hover:underline inline-flex items-center gap-0.5 cursor-pointer"
+              >
+                Sign up here &rarr;
+              </button>
+            </div>
+
+            <p className="text-[11px] text-center text-slate-400 leading-relaxed">
               By signing in, you agree to our{" "}
               <Link to="/terms" className="text-[#286038] font-semibold hover:underline">
-                Terms of Service
+                Terms
               </Link>{" "}
               and{" "}
               <Link to="/privacy" className="text-[#286038] font-semibold hover:underline">
@@ -604,6 +675,7 @@ const Login = () => {
               .
             </p>
           </div>
+
 
           {/* NEED HELP? Section */}
           <div className="space-y-3">

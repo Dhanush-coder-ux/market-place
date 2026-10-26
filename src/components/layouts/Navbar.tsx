@@ -26,7 +26,9 @@ import { useNotifications } from "@/context/NotificationContext";
 import { fetchMyShops } from "@/services/api/shopHelpers";
 import { setShopId } from "@/services/endpoints";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, Loader2, Check, LogOut } from "lucide-react";
+import { ChevronDown, Loader2, Check, LogOut, Download } from "lucide-react";
+import { usePWAInstall } from "@/hooks/usePWAInstall";
+import { DesktopInstallModal } from "@/components/common/DesktopInstallModal";
 
 // -----------------------------
 // Route Config
@@ -61,6 +63,9 @@ export const Navbar = () => {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  // ── PWA Desktop/Mobile App Installation ─────────────────────────────────────
+  const { isInstalled, promptInstall, isModalOpen, setIsModalOpen } = usePWAInstall();
 
   // ── Shop selector state ──────────────────────────────────────────────────────
   const [isShopMenuOpen, setIsShopMenuOpen] = useState(false);
@@ -329,7 +334,23 @@ export const Navbar = () => {
 
         {/* RIGHT - Actions */}
         <div className="flex items-center gap-2 sm:gap-4">
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
+            {!isInstalled && (
+              <button
+                type="button"
+                onClick={promptInstall}
+                style={{
+                  background: `linear-gradient(135deg, var(--t-primary, #286038), var(--t-sidebar-via, #103020))`,
+                  boxShadow: `0 2px 8px var(--t-btn-shadow, rgba(40, 96, 56, 0.25))`,
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-white font-semibold text-xs hover:opacity-95 hover:shadow-md transition-all active:scale-95 cursor-pointer shrink-0 border border-white/20"
+                title="Download / Install inventQ as Desktop App"
+              >
+                <Download size={13} strokeWidth={2.5} />
+                <span className="hidden sm:inline">Install App</span>
+              </button>
+            )}
+
             <Link to="/notifications" className="group">
               <button 
                 className="relative flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 backdrop-blur-md hover:bg-blue-500/20 text-blue-600 rounded-full transition-all duration-300 ease-out shadow-sm overflow-hidden border border-blue-500/20"
@@ -375,6 +396,13 @@ export const Navbar = () => {
           100% { left: 200%; }
         }
       `}</style>
+
+      {/* Desktop App Install Modal */}
+      <DesktopInstallModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onInstall={promptInstall}
+      />
     </>
   );
 };

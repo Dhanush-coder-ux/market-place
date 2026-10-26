@@ -699,6 +699,37 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
             console.log("=== EXTRACTED PROD ===", prod);
             if (!prod) return;
             const additional = prod.additional_infos || prod.datas || {};
+            const pInfo = prod.pricing_infos || {};
+
+            const resolvedMrp = String(prod.mrp ?? pInfo.mrp ?? additional.mrp ?? "");
+            const rawSellingPrice = prod.sell_price ??
+              pInfo.sell_price ??
+              pInfo.selling_price ??
+              prod.online_sell_price ??
+              additional.sell_price ??
+              additional.selling_price;
+            const resolvedSellingPrice = (rawSellingPrice !== undefined && rawSellingPrice !== null && rawSellingPrice !== "")
+              ? String(rawSellingPrice)
+              : "";
+
+            const resolvedDiscount = String(
+              prod.discount_percent ??
+              pInfo.discount_percent ??
+              additional.discount_percent ??
+              "0"
+            );
+
+            const rawCost = prod.buy_price ??
+              pInfo.buy_price ??
+              prod.cost_to_make ??
+              additional.cost_to_make ??
+              additional.buy_price;
+            const resolvedCost = (rawCost !== undefined && rawCost !== null && rawCost !== "")
+              ? String(rawCost)
+              : "";
+
+            const resolvedTrackStock = prod.have_tracking ?? prod.is_stock_tracked ?? prod.track_stock ?? true;
+
             const nextForm = {
               name: prod.name || "",
               stocks: prod.stock_infos?.available_stocks || 0,
@@ -709,11 +740,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
               unit: prod.unit_id || "",
               description: prod.description || "",
               is_active: prod.is_active ?? true,
-              mrp: String(prod.mrp ?? prod.pricing_infos?.mrp ?? additional.mrp ?? ""),
-              selling_price: String(prod.pricing_infos?.sell_price || ""),
-              discount_percent: String(prod.discount_percent ?? prod.pricing_infos?.discount_percent ?? additional.discount_percent ?? "0"),
-              offer_valid_until: prod.offer_valid_until || prod.pricing_infos?.offer_valid_until || additional.offer_valid_until || "",
-              cost_to_make: String(prod.pricing_infos?.buy_price || ""),
+              mrp: resolvedMrp,
+              selling_price: resolvedSellingPrice,
+              discount_percent: resolvedDiscount,
+              offer_valid_until: prod.offer_valid_until || pInfo.offer_valid_until || additional.offer_valid_until || "",
+              cost_to_make: resolvedCost,
               gst: String(prod.gst || "18").replace("%", ""),
               hsn: String(additional.hsn || ""),
               sku: prod.sku || "",
@@ -728,7 +759,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
               batch_name: prod.batch_infos?.name || "",
               mfg_date: prod.batch_infos?.manufacturing_date || "",
               exp_date: prod.batch_infos?.expiry_date || "",
-              track_stock: prod.have_tracking ?? true,
+              track_stock: !!resolvedTrackStock,
               low_stock_alert: additional.low_stock_alert || "Notify me",
               visible_online: prod.visible_online || false,
             };
@@ -884,12 +915,17 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     if (name === "gst") {
       setForm(p => ({ ...p, gst: value.replace(/[^0-9.]/g, "") }));
     } else if (name === "mrp") {
-      // Auto-populate selling_price when MRP is entered
-      setForm(p => ({
-        ...p,
-        mrp: value,
-        selling_price: value,
-      }));
+      setForm(p => {
+        // Auto-populate selling_price only if empty or equal to previous mrp
+        if (!p.selling_price || p.selling_price === p.mrp) {
+          return { ...p, mrp: value, selling_price: value };
+        }
+        return { ...p, mrp: value };
+      });
+    } else if (name === "selling_price") {
+      setForm(p => ({ ...p, selling_price: value }));
+    } else if (name === "discount_percent") {
+      setForm(p => ({ ...p, discount_percent: value }));
     } else if (name === "name") {
       setForm(p => {
         const stripped = p.brand && value.startsWith(p.brand + " ") ? value.slice(p.brand.length + 1) : value;
@@ -1132,19 +1168,23 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         gst: gstFormatted,
         reorder_point: Number(form.reorder_point) || 1,
         visible_online: form.visible_online,
-        // Preserve pricing: for stocked items, send if the user has provided a value;
-        // for made-to-order items, always send the entered value.
-        buy_price: form.selling_price || form.cost_to_make
-          ? (Number(form.cost_to_make) || null)
+        buy_price: form.cost_to_make !== "" && !isNaN(Number(form.cost_to_make))
+          ? Number(form.cost_to_make)
+          : (form.selling_price !== "" && !isNaN(Number(form.selling_price)) ? Number(form.selling_price) : null),
+        sell_price: form.selling_price !== "" && !isNaN(Number(form.selling_price))
+          ? Number(form.selling_price)
           : null,
-        sell_price: form.selling_price
-          ? (Number(form.selling_price) || null)
-          : null,
-        online_sell_price: form.selling_price ? (Number(form.selling_price) || 0) : 0,
+        online_sell_price: form.selling_price !== "" && !isNaN(Number(form.selling_price))
+          ? Number(form.selling_price)
+          : 0,
         mrp: form.mrp !== "" && !isNaN(Number(form.mrp)) ? Number(form.mrp) : null,
         discount_percent: form.discount_percent !== "" && !isNaN(Number(form.discount_percent)) ? Number(form.discount_percent) : 0,
         offer_valid_until: form.offer_valid_until || null,
-        custom_fields: customFieldsBlob,
+        custom_fields: {
+          ...customFieldsBlob,
+          sell_price: form.selling_price !== "" && !isNaN(Number(form.selling_price)) ? Number(form.selling_price) : null,
+          buy_price: form.cost_to_make !== "" && !isNaN(Number(form.cost_to_make)) ? Number(form.cost_to_make) : null,
+        },
       };
     } else {
       // ── CREATE: CreateProdInvSchema ──────────────────────────────────────
@@ -1904,29 +1944,70 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         leftEl={<IndianRupee size={13} />}
                         tooltip="The cost to make or purchase this item."
                       />
+                      <InputField
+                        label="Offer valid until"
+                        name="offer_valid_until"
+                        hint="optional"
+                        type="date"
+                        disabled={pricingHelperState.discountDisabled}
+                        value={form.offer_valid_until}
+                        onChange={handleChange}
+                        tooltip="After this date, discount stops applying."
+                      />
                     </div>
 
-                    {/* Live GST Split for Made-to-order */}
-                    {priceCalc && (
-                      <div className="p-3 bg-emerald-50/80 border border-emerald-200/80 rounded-xl flex items-center justify-between text-xs text-emerald-900 font-medium">
-                        <span>
-                          {isGstReg && gstRateNum > 0 ? (
-                            <>
-                              <strong>Live GST split:</strong> ₹{formatINR(priceCalc.tax.taxableValue)} base + ₹{formatINR(priceCalc.tax.gstAmount)} GST {gstRateNum}% = ₹{formatINR(priceCalc.finalPrice)}
-                            </>
-                          ) : (
-                            <>
-                              <strong>Selling price:</strong> ₹{formatINR(priceCalc.finalPrice)}
-                            </>
-                          )}
-                        </span>
-                        {priceCalc.profit !== undefined && (
-                          <span className="text-emerald-700 font-bold">
-                            Margin: {priceCalc.marginPercent}% · Profit ₹{formatINR(priceCalc.profit)}
+                    {/* Live GST Split & Dynamic Field State Helper for Made-to-order */}
+                    <div className="space-y-2 pt-1">
+                      {priceCalc && (
+                        <div className="p-3 bg-emerald-50/80 border border-emerald-200/80 rounded-xl flex items-center justify-between text-xs text-emerald-900 font-medium shadow-xs">
+                          <span className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                            {isGstReg && gstRateNum > 0 ? (
+                              <>
+                                <strong>Live GST split:</strong> ₹{formatINR(priceCalc.tax.taxableValue)} base + ₹{formatINR(priceCalc.tax.gstAmount)} GST {gstRateNum}% = ₹{formatINR(priceCalc.finalPrice)}
+                              </>
+                            ) : (
+                              <>
+                                <strong>Selling price:</strong> ₹{formatINR(priceCalc.finalPrice)}
+                              </>
+                            )}
                           </span>
+
+                          <div className="flex items-center gap-2">
+                            {priceCalc.customerSaving > 0 && (
+                              <span className="text-emerald-700 font-bold bg-emerald-100/70 px-2 py-0.5 rounded-md text-[11px]">
+                                {priceCalc.offMrpPercent}% off MRP · Saves ₹{formatINR(priceCalc.customerSaving)}
+                              </span>
+                            )}
+                            {priceCalc.discountAmount > 0 && priceCalc.customerSaving <= 0 && (
+                              <span className="text-emerald-700 font-bold bg-emerald-100/70 px-2 py-0.5 rounded-md text-[11px]">
+                                {priceCalc.discountPercent}% discount · Saves ₹{formatINR(priceCalc.discountAmount)}
+                              </span>
+                            )}
+                            {priceCalc.profit !== undefined && Number(form.cost_to_make) > 0 && (
+                              <span className="text-emerald-700 font-bold bg-emerald-100/50 px-2 py-0.5 rounded-md text-[11px]">
+                                Margin: {priceCalc.marginPercent}% · Profit ₹{formatINR(priceCalc.profit)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Helper alert card for made-to-order */}
+                      <div className={`p-2.5 rounded-lg border text-[11px] font-medium flex items-center gap-2 ${
+                        pricingHelperState.type === 'error' ? 'bg-red-50/70 border-red-200 text-red-700' :
+                        pricingHelperState.type === 'success' ? 'bg-emerald-50/60 border-emerald-150 text-emerald-800' :
+                        pricingHelperState.type === 'info' ? 'bg-blue-50/60 border-blue-150 text-blue-800' :
+                        'bg-slate-50 border-slate-200 text-slate-500'
+                      }`}>
+                        {pricingHelperState.type === 'error' ? (
+                          <AlertCircle size={13} className="shrink-0 text-red-500" />
+                        ) : (
+                          <Info size={13} className="shrink-0 text-slate-400" />
                         )}
+                        <span>{pricingHelperState.message}</span>
                       </div>
-                    )}
+                    </div>
 
                     <p className="text-[11px] text-slate-400 flex items-center gap-1.5">
                       <Check size={11} className="text-emerald-400" />

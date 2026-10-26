@@ -297,7 +297,7 @@ const MainLayout = () => {
   const { title, icon } = getPageHeaderInfo(location.pathname);
 
   return (
-    <div className="h-screen w-full flex overflow-hidden bg-slate-50">
+    <div className="h-screen h-[100dvh] max-h-[100dvh] w-full flex overflow-hidden bg-slate-50 relative">
       {/* Sidebar — full viewport height left column, hidden on mobile */}
       {!hideNav && (
         <div className="hidden md:flex flex-shrink-0 h-full">
@@ -306,7 +306,7 @@ const MainLayout = () => {
       )}
 
       {/* Right column: navbar sits at the top, content below */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         {!hideNav && <Navbar />}
         <SubscriptionAlertBanner />
 
@@ -358,10 +358,10 @@ const MainLayout = () => {
             </div>
           )}
         </main>
-
-        {/* Mobile Bottom Navigation Bar */}
-        {!isCleanMode && <MobileBottomBar />}
       </div>
+
+      {/* Mobile Bottom Navigation Bar - at layout root so it is truly fixed to viewport */}
+      {!isCleanMode && <MobileBottomBar />}
     </div>
   );
 };

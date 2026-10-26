@@ -186,6 +186,7 @@ let activeBluetoothDevice: any = null;
 let activeBluetoothServer: any = null;
 let activeBluetoothCharacteristic: any = null;
 let activeSerialPort: any = null;
+let activeUsbDevice: any = null;
 
 export function getActiveBluetoothSession() {
   return {
@@ -195,13 +196,35 @@ export function getActiveBluetoothSession() {
   };
 }
 
-// Standard Thermal Printer Bluetooth Service UUIDs (ESC/POS SPP profiles)
+export function getActiveUsbSession() {
+  return {
+    usbDevice: activeUsbDevice,
+    serialPort: activeSerialPort,
+  };
+}
+
+// Well-known BLE GATT Service UUIDs used by standard ESC/POS Bluetooth Thermal Printers
+// (GOOJPRT, PT-210, MPT-II, POS-5802, Netum, Xprinter, Epson, Zebra, MUNBYN, and generic POS printers)
 const KNOWN_BT_SERVICES = [
   "000018f0-0000-1000-8000-00805f9b34fb", // Common POS SPP
-  "e7810a71-73ae-499d-8c15-faa9aef0c3f2", // Mobile POS BLE
-  "49535343-fe7d-4ae5-8fa9-9fafd205e455", // ISSC Transparent
+  "000018f1-0000-1000-8000-00805f9b34fb",
+  "000018f2-0000-1000-8000-00805f9b34fb",
+  "0000ff00-0000-1000-8000-00805f9b34fb",
+  "0000ff11-0000-1000-8000-00805f9b34fb",
+  "0000ff12-0000-1000-8000-00805f9b34fb",
+  "0000fee7-0000-1000-8000-00805f9b34fb",
+  "0000fff0-0000-1000-8000-00805f9b34fb",
+  "0000fff1-0000-1000-8000-00805f9b34fb",
+  "0000af30-0000-1000-8000-00805f9b34fb",
+  "0000ae30-0000-1000-8000-00805f9b34fb",
+  "0000ae00-0000-1000-8000-00805f9b34fb",
+  "49535343-fe7d-4ae5-8fa9-9fafd205e455", // ISSC Transparent Service
+  "e7810a71-73ae-499d-8c15-faa9aef0c3f2", // Nordic UART Service (NUS)
+  "6e400001-b5a3-f393-e0a9-e50e24dcca9e", // Nordic UART v2
+  "0000ffe0-0000-1000-8000-00805f9b34fb", // HM-10 / CC2541 common BLE
+  "0000ffe1-0000-1000-8000-00805f9b34fb",
   "0000e0ff-3c17-d293-8e48-14fe2e4da212", // Custom ESC/POS
-  "00001101-0000-1000-8000-00805f9b34fb", // Serial Port Profile (SPP)
+  "0000180a-0000-1000-8000-00805f9b34fb", // Device Information
 ];
 
 /**
@@ -222,17 +245,11 @@ export async function pairBluetoothPrinter(): Promise<{
 
   try {
     const nav = navigator as any;
+    // Use acceptAllDevices: true so Chrome discovers all nearby Bluetooth printers (like KPC307, PT-210, etc.)
+    // without prematurely filtering them by name prefix or advertising UUIDs
     const device = await nav.bluetooth.requestDevice({
-      filters: [{ services: KNOWN_BT_SERVICES }].concat(
-        [{ namePrefix: "POS" }, { namePrefix: "RP" }, { namePrefix: "Thermal" }, { namePrefix: "MPT" }, { namePrefix: "MTP" }] as any
-      ),
+      acceptAllDevices: true,
       optionalServices: KNOWN_BT_SERVICES,
-    }).catch(async () => {
-      // Fallback: request all devices
-      return await nav.bluetooth.requestDevice({
-        acceptAllDevices: true,
-        optionalServices: KNOWN_BT_SERVICES,
-      });
     });
 
     if (!device) {
@@ -243,27 +260,35 @@ export async function pairBluetoothPrinter(): Promise<{
     const deviceName = device.name || "Bluetooth Thermal Printer";
     const deviceId = device.id;
 
+    // Disconnection listener
+    device.addEventListener("gattserverdisconnected", () => {
+      console.warn(`[Bluetooth Printer] Device "${device.name || "Printer"}" disconnected.`);
+      activeBluetoothCharacteristic = null;
+      activeBluetoothServer = null;
+    });
+
     // Connect to GATT Server
     const server = await device.gatt?.connect();
     activeBluetoothServer = server;
 
-    // Find writable characteristic
-    let foundChar: any = null;
-    const services = await server.getPrimaryServices().catch(() => []);
-    for (const service of services) {
-      const chars = await service.getCharacteristics().catch(() => []);
-      for (const char of chars) {
-        if (char.properties.write || char.properties.writeWithoutResponse) {
-          foundChar = char;
-          break;
-        }
-      }
-      if (foundChar) break;
-    }
-
+    // Find writable characteristic across known services first, then any discovered service
+    const foundChar = await discoverWritableCharacteristic(server);
     if (foundChar) {
       activeBluetoothCharacteristic = foundChar;
     }
+
+    // Persist paired device credentials to localStorage and config
+    try {
+      localStorage.setItem("inventq_paired_bt_printer_name", deviceName);
+      localStorage.setItem("inventq_paired_bt_printer_id", deviceId);
+      const curConfig = getPrinterConfig();
+      savePrinterConfig({
+        ...curConfig,
+        deviceName,
+        deviceId,
+        connectionType: "bluetooth",
+      });
+    } catch {}
 
     return {
       success: true,
@@ -272,6 +297,12 @@ export async function pairBluetoothPrinter(): Promise<{
       message: `Successfully paired with ${deviceName}`,
     };
   } catch (err: any) {
+    if (err.name === "NotFoundError" || err.message?.includes("cancelled") || err.message?.includes("canceled")) {
+      return {
+        success: false,
+        message: "Bluetooth pairing was cancelled. Click 'Pair Bluetooth' to select your printer.",
+      };
+    }
     console.error("Bluetooth pairing error:", err);
     return {
       success: false,
@@ -281,7 +312,209 @@ export async function pairBluetoothPrinter(): Promise<{
 }
 
 /**
+ * Finds a writable characteristic across available GATT services of the printer.
+ */
+async function discoverWritableCharacteristic(server: any): Promise<any> {
+  if (!server) return null;
+
+  for (const serviceUuid of KNOWN_BT_SERVICES) {
+    try {
+      const service = await server.getPrimaryService(serviceUuid);
+      if (service) {
+        const chars = await service.getCharacteristics();
+        for (const char of chars) {
+          if (char.properties.write || char.properties.writeWithoutResponse) {
+            return char;
+          }
+        }
+      }
+    } catch {
+      // Continue searching next service
+    }
+  }
+
+  // Fallback: search all discovered primary services
+  try {
+    const services = await server.getPrimaryServices();
+    for (const service of services) {
+      try {
+        const chars = await service.getCharacteristics();
+        for (const char of chars) {
+          if (char.properties.write || char.properties.writeWithoutResponse) {
+            return char;
+          }
+        }
+      } catch {}
+    }
+  } catch {}
+
+  return null;
+}
+
+/**
+ * Silently reconnects to a previously paired Bluetooth printer via navigator.bluetooth.getDevices()
+ * without opening any user prompt or dialog window.
+ */
+export async function attemptSilentBluetoothReconnect(): Promise<boolean> {
+  if (!isBluetoothSupported()) return false;
+  const nav = navigator as any;
+  if (typeof nav.bluetooth?.getDevices !== "function") return false;
+
+  try {
+    const permittedDevices: any[] = await nav.bluetooth.getDevices();
+    if (!permittedDevices || permittedDevices.length === 0) return false;
+
+    const config = getPrinterConfig();
+    const localName = localStorage.getItem("inventq_paired_bt_printer_name");
+    const localId = localStorage.getItem("inventq_paired_bt_printer_id");
+    const savedId = config.deviceId || localId;
+    const savedName = localName || config.deviceName;
+
+    // 1. Try to find the exact configured device by ID or name
+    let target = permittedDevices.find(
+      (d) => (savedId && d.id === savedId) || (savedName && d.name === savedName)
+    );
+
+    // 2. If only 1 permitted Bluetooth device is available on this origin, use it
+    if (!target && permittedDevices.length === 1) {
+      target = permittedDevices[0];
+    } else if (!target) {
+      // 3. Fallback: find any device with thermal/POS printer naming
+      target = permittedDevices.find(
+        (d) => d.name && /kpc|pos|printer|thermal|pt-|mpt|rp|bt/i.test(d.name)
+      ) || permittedDevices[0];
+    }
+
+    if (!target) return false;
+
+    console.log(`[Bluetooth Printer] Silent reconnect to permitted device "${target.name || target.id}" without prompt...`);
+    activeBluetoothDevice = target;
+
+    target.addEventListener("gattserverdisconnected", () => {
+      console.warn(`[Bluetooth Printer] Device "${target.name || "Printer"}" disconnected.`);
+      activeBluetoothCharacteristic = null;
+      activeBluetoothServer = null;
+    });
+
+    const server = target.gatt?.connected ? target.gatt : await target.gatt?.connect();
+    if (!server) return false;
+
+    activeBluetoothServer = server;
+    const foundChar = await discoverWritableCharacteristic(server);
+    if (foundChar) {
+      activeBluetoothCharacteristic = foundChar;
+      if (target.name) {
+        localStorage.setItem("inventq_paired_bt_printer_name", target.name);
+        localStorage.setItem("inventq_paired_bt_printer_id", target.id);
+      }
+      return true;
+    }
+  } catch (err) {
+    console.warn("[Bluetooth Printer] Silent getDevices reconnect error:", err);
+  }
+  return false;
+}
+
+/**
+ * Ensures active GATT connection to the Bluetooth printer before writing.
+ * 1. Checks in-memory active connection
+ * 2. Re-connects GATT directly if in-memory device handle is present (No picker dialog)
+ * 3. Attempts silent auto-reconnect via navigator.bluetooth.getDevices() (No picker dialog)
+ * 4. If device is not in memory, prompts device picker so user can select their Bluetooth thermal printer
+ */
+async function ensureBluetoothConnected(): Promise<any> {
+  if (
+    activeBluetoothDevice &&
+    activeBluetoothDevice.gatt &&
+    activeBluetoothDevice.gatt.connected &&
+    activeBluetoothCharacteristic
+  ) {
+    return activeBluetoothCharacteristic;
+  }
+
+  // If in-memory device handle is present, reconnect GATT directly
+  if (activeBluetoothDevice && activeBluetoothDevice.gatt) {
+    try {
+      console.log("[Bluetooth Printer] Re-connecting GATT server to in-memory device...");
+      const server = activeBluetoothDevice.gatt.connected
+        ? activeBluetoothDevice.gatt
+        : await activeBluetoothDevice.gatt.connect();
+      if (server) {
+        const characteristic = await discoverWritableCharacteristic(server);
+        if (characteristic) {
+          activeBluetoothServer = server;
+          activeBluetoothCharacteristic = characteristic;
+          return characteristic;
+        }
+      }
+    } catch (e) {
+      console.warn("[Bluetooth Printer] Reconnection to in-memory device failed, trying getDevices:", e);
+    }
+  }
+
+  // Silent auto-reconnect via navigator.bluetooth.getDevices() without opening any browser picker
+  const reconnected = await attemptSilentBluetoothReconnect();
+  if (reconnected && activeBluetoothCharacteristic) {
+    return activeBluetoothCharacteristic;
+  }
+
+  // If silent reconnect is not possible (e.g. first print after page reload),
+  // prompt the browser device picker so the user selects their Bluetooth thermal printer!
+  console.log("[Bluetooth Printer] Silent reconnect unavailable, requesting device via pair dialog...");
+  const pairRes = await pairBluetoothPrinter();
+  if (pairRes.success && activeBluetoothCharacteristic) {
+    return activeBluetoothCharacteristic;
+  }
+
+  throw new Error(pairRes.message || "Bluetooth printer is disconnected or out of range. Please turn it on or check pairing in Printers Config.");
+}
+
+/**
+ * Sends raw ESC/POS binary data to the connected Bluetooth thermal printer.
+ * Chunks data into small MTU packets (100 bytes) with a micro-delay (15ms)
+ * to prevent Bluetooth buffer overruns and 'GATT operation failed' errors.
+ */
+async function sendEscPosToBluetooth(data: Uint8Array): Promise<void> {
+  const characteristic = await ensureBluetoothConnected();
+  if (!characteristic) {
+    throw new Error("No writable Bluetooth characteristic available.");
+  }
+
+  // Standard BLE MTU for thermal printers is 64-100 bytes (512 bytes causes GATT buffer failures)
+  const CHUNK_SIZE = 100;
+  const totalLength = data.length;
+
+  for (let offset = 0; offset < totalLength; offset += CHUNK_SIZE) {
+    const chunk = data.slice(offset, Math.min(offset + CHUNK_SIZE, totalLength));
+
+    try {
+      if (characteristic.writeValueWithoutResponse) {
+        await characteristic.writeValueWithoutResponse(chunk);
+      } else if (characteristic.writeValue) {
+        await characteristic.writeValue(chunk);
+      } else {
+        await (characteristic as any).writeValueWithResponse(chunk);
+      }
+    } catch (writeErr) {
+      console.warn("[Bluetooth Printer] Write error, retrying with reconnection:", writeErr);
+      const reconnectedChar = await ensureBluetoothConnected();
+      if (reconnectedChar.writeValueWithoutResponse) {
+        await reconnectedChar.writeValueWithoutResponse(chunk);
+      } else {
+        await reconnectedChar.writeValue(chunk);
+      }
+    }
+
+    // Small micro-delay (15ms) between BLE packets so printer MCU receives cleanly
+    if (offset + CHUNK_SIZE < totalLength) {
+      await new Promise((resolve) => setTimeout(resolve, 15));
+    }
+  }
+}
+
+/**
  * Connect to USB / Serial Thermal Printer
+ * Supports both WebSerial (COM / Virtual COM ports) and WebUSB (Direct USB ESC/POS).
  */
 export async function pairUsbSerialPrinter(baudRate = 9600): Promise<{
   success: boolean;
@@ -290,11 +523,19 @@ export async function pairUsbSerialPrinter(baudRate = 9600): Promise<{
 }> {
   const nav = navigator as any;
 
+  // 1. Try WebSerial first (Windows COM ports, USB-to-Serial, and Bluetooth COM devices like KPC307)
   if (isSerialSupported()) {
     try {
       const port = await nav.serial.requestPort();
       if (!port) {
         return { success: false, message: "No USB/Serial port was selected." };
+      }
+
+      // If already opened, close before reopening with requested baud rate
+      if (port.readable || port.writable) {
+        try {
+          await port.close();
+        } catch {}
       }
 
       await port.open({ baudRate });
@@ -310,22 +551,31 @@ export async function pairUsbSerialPrinter(baudRate = 9600): Promise<{
         message: `Connected to ${devName}`,
       };
     } catch (err: any) {
-      console.error("Serial connection error:", err);
-      return {
-        success: false,
-        message: err.message || "Failed to connect to USB/Serial port.",
-      };
+      // User cancelled dialog
+      if (err.name === "NotFoundError" || err.message?.includes("cancelled") || err.message?.includes("canceled")) {
+        return {
+          success: false,
+          message: "Port selection was cancelled. Click 'Connect USB Port' to select your printer.",
+        };
+      }
+      console.warn("Serial connection error, checking WebUSB fallback:", err);
     }
-  } else if (isUsbSupported()) {
+  }
+
+  // 2. Fallback / Direct WebUSB (Raw USB Thermal Printers)
+  if (isUsbSupported()) {
     try {
       const device = await nav.usb.requestDevice({ filters: [] });
       if (!device) {
         return { success: false, message: "No USB printer was selected." };
       }
       await device.open();
-      await device.selectConfiguration(1);
+      if (device.configuration === null) {
+        await device.selectConfiguration(1);
+      }
       await device.claimInterface(0);
 
+      activeUsbDevice = device;
       const devName = device.productName || `USB Thermal Printer (${device.vendorId})`;
       return {
         success: true,
@@ -333,6 +583,12 @@ export async function pairUsbSerialPrinter(baudRate = 9600): Promise<{
         message: `Connected to ${devName}`,
       };
     } catch (err: any) {
+      if (err.name === "NotFoundError" || err.message?.includes("cancelled") || err.message?.includes("canceled")) {
+        return {
+          success: false,
+          message: "USB selection was cancelled. Click 'Connect USB Port' to select your printer.",
+        };
+      }
       console.error("USB connection error:", err);
       return {
         success: false,
@@ -604,8 +860,8 @@ export function buildEscPosBuffer(data: ReceiptData, config: PrinterConfig): Uin
   const banner = data.invoiceTypeTag
     ? `[ ${data.invoiceTypeTag.toUpperCase()} ]`
     : data.isDuplicate
-    ? "[ TAX INVOICE - DUPLICATE COPY ]"
-    : "[ TAX INVOICE ]";
+      ? "[ TAX INVOICE - DUPLICATE COPY ]"
+      : "[ TAX INVOICE ]";
   addLine();
   addCenter(banner, true);
 
@@ -789,7 +1045,7 @@ export function playPrinterSoundAlert(): void {
     if (!AudioContextClass) return;
     const ctx = new AudioContextClass();
     if (ctx.state === "suspended") {
-      ctx.resume().catch(() => {});
+      ctx.resume().catch(() => { });
     }
     const now = ctx.currentTime;
 
@@ -832,23 +1088,13 @@ export function printViaSystemDriver(
   return new Promise((resolve) => {
     const is58 = config.paperWidth === "58mm";
     const widthMm = is58 ? "58mm" : "80mm";
-    const printWindow = window.open("", "_blank", "width=420,height=600");
-
-    if (!printWindow) {
-      // Fallback: trigger standard window.print()
-      window.print();
-      return resolve({
-        success: true,
-        message: "Triggered browser standard print dialog.",
-      });
-    }
 
     const cleanedAddress = cleanShopAddress(data.shopAddress);
     const banner = data.invoiceTypeTag
       ? data.invoiceTypeTag
       : data.isDuplicate
-      ? "TAX INVOICE • DUPLICATE COPY"
-      : "TAX INVOICE";
+        ? "TAX INVOICE • DUPLICATE COPY"
+        : "TAX INVOICE";
 
     const itemsHtml = data.items
       .map((item) => {
@@ -898,7 +1144,7 @@ export function printViaSystemDriver(
           .flex-between { display: flex; justify-content: space-between; margin-bottom: 2px; }
           .banner { display: inline-block; padding: 2px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
           @media print {
-            body { padding: 4px; }
+            body { padding: 4px; width: 100%; }
           }
         </style>
       </head>
@@ -1017,28 +1263,64 @@ export function printViaSystemDriver(
           ${data.footerNote && data.footerNote.trim() && data.footerNote.trim() !== config.footerText?.trim() ? `<div style="margin-top: 2px; font-weight: 600; color: #475569;">${data.footerNote.trim()}</div>` : ""}
           ${data.reprintTimestamp || data.isDuplicate ? `<div style="margin-top: 3px; font-size: 8px; color: #94a3b8;">Reprinted on ${data.reprintTimestamp || new Date().toLocaleString("en-IN")}</div>` : ""}
         </div>
-
-        <script>
-          window.onload = function() {
-            window.focus();
-            window.print();
-            setTimeout(function() {
-              window.close();
-            }, 500);
-          };
-        </script>
       </body>
       </html>
     `;
 
-    printWindow.document.open();
-    printWindow.document.write(html);
-    printWindow.document.close();
+    // Remove any previously appended invisible print iframe
+    let printIframe = document.getElementById("inventq-pos-print-frame") as HTMLIFrameElement;
+    if (printIframe) {
+      try {
+        printIframe.remove();
+      } catch {}
+    }
 
-    resolve({
-      success: true,
-      message: "Receipt sent to printer spooler.",
-    });
+    // Create a hidden iframe so the browser print dialog is never blocked by popup blockers
+    printIframe = document.createElement("iframe");
+    printIframe.id = "inventq-pos-print-frame";
+    printIframe.style.position = "fixed";
+    printIframe.style.right = "0";
+    printIframe.style.bottom = "0";
+    printIframe.style.width = "0";
+    printIframe.style.height = "0";
+    printIframe.style.border = "none";
+    printIframe.style.visibility = "hidden";
+    document.body.appendChild(printIframe);
+
+    const doc = printIframe.contentWindow?.document;
+    if (!doc || !printIframe.contentWindow) {
+      window.print();
+      return resolve({
+        success: true,
+        message: "Triggered browser standard print dialog.",
+      });
+    }
+
+    doc.open();
+    doc.write(html);
+    doc.close();
+
+    const frameWin = printIframe.contentWindow;
+    setTimeout(() => {
+      try {
+        frameWin.focus();
+        frameWin.print();
+        if (config.enableBuzzer !== false) {
+          playPrinterSoundAlert();
+        }
+        resolve({
+          success: true,
+          message: "Receipt sent to printer spooler.",
+        });
+      } catch (err) {
+        console.warn("Iframe print invocation error:", err);
+        window.print();
+        resolve({
+          success: true,
+          message: "Triggered standard print dialog.",
+        });
+      }
+    }, 250);
   });
 }
 
@@ -1056,23 +1338,7 @@ export async function printReceipt(
   if (config.connectionType === "bluetooth") {
     try {
       const buffer = buildEscPosBuffer(data, config);
-      if (!activeBluetoothCharacteristic) {
-        const pairRes = await pairBluetoothPrinter();
-        if (!pairRes.success || !activeBluetoothCharacteristic) {
-          throw new Error(pairRes.message || "Bluetooth printer not connected. Please pair in Printers Config.");
-        }
-      }
-
-      // Send in chunks of 512 bytes (standard BLE MTU)
-      const chunkSize = 512;
-      for (let offset = 0; offset < buffer.length; offset += chunkSize) {
-        const slice = buffer.slice(offset, offset + chunkSize);
-        if (activeBluetoothCharacteristic.writeValueWithoutResponse) {
-          await activeBluetoothCharacteristic.writeValueWithoutResponse(slice);
-        } else {
-          await activeBluetoothCharacteristic.writeValue(slice);
-        }
-      }
+      await sendEscPosToBluetooth(buffer);
 
       if (config.enableBuzzer !== false) {
         playPrinterSoundAlert();
@@ -1082,10 +1348,10 @@ export async function printReceipt(
         message: `Printed successfully to Bluetooth printer: ${config.deviceName || "Thermal Printer"}`,
       };
     } catch (err: any) {
-      console.error("Bluetooth print failed:", err);
+      console.error("[Printer Service] Bluetooth direct ESC/POS print failed:", err);
       return {
         success: false,
-        message: `Bluetooth print failed: ${err.message || "Device disconnected"}`,
+        message: err.message || "Failed to print to Bluetooth printer. Please check printer power and pairing.",
       };
     }
   }
@@ -1094,30 +1360,128 @@ export async function printReceipt(
   if (config.connectionType === "usb") {
     try {
       const buffer = buildEscPosBuffer(data, config);
-      if (!activeSerialPort) {
-        const pairRes = await pairUsbSerialPrinter(config.baudRate || 9600);
-        if (!pairRes.success || !activeSerialPort) {
-          throw new Error(pairRes.message || "USB/Serial printer not connected.");
+      let printed = false;
+
+      // Try Direct WebUSB first if connected
+      if (activeUsbDevice) {
+        try {
+          if (!activeUsbDevice.opened) {
+            await activeUsbDevice.open();
+            if (activeUsbDevice.configuration === null) {
+              await activeUsbDevice.selectConfiguration(1);
+            }
+            await activeUsbDevice.claimInterface(0);
+          }
+          const endpoint = activeUsbDevice.configuration?.interfaces?.[0]?.alternate?.endpoints?.find(
+            (ep: any) => ep.direction === "out"
+          );
+          const endpointNumber = endpoint ? endpoint.endpointNumber : 1;
+          await activeUsbDevice.transferOut(endpointNumber, buffer);
+          printed = true;
+        } catch (usbErr) {
+          console.warn("Direct WebUSB print failed, falling back to WebSerial:", usbErr);
         }
       }
 
-      const writer = activeSerialPort.writable.getWriter();
-      await writer.write(buffer);
-      writer.releaseLock();
-
-      if (config.enableBuzzer !== false) {
-        playPrinterSoundAlert();
+      // Try WebSerial if connected
+      if (!printed && activeSerialPort) {
+        try {
+          if (!activeSerialPort.readable && !activeSerialPort.writable) {
+            await activeSerialPort.open({ baudRate: config.baudRate || 9600 });
+          }
+          const writer = activeSerialPort.writable.getWriter();
+          await writer.write(buffer);
+          writer.releaseLock();
+          printed = true;
+        } catch (serialErr) {
+          console.error("Direct WebSerial print failed:", serialErr);
+        }
       }
-      return {
-        success: true,
-        message: `Printed successfully to USB/Serial printer: ${config.deviceName || "Thermal Printer"}`,
-      };
+
+      // Check previously permitted Serial ports silently without prompt
+      if (!printed && isSerialSupported()) {
+        try {
+          const nav = navigator as any;
+          const ports = await nav.serial.getPorts();
+          if (ports && ports.length > 0) {
+            const port = ports[0];
+            if (!port.readable && !port.writable) {
+              await port.open({ baudRate: config.baudRate || 9600 });
+            }
+            activeSerialPort = port;
+            const writer = port.writable.getWriter();
+            await writer.write(buffer);
+            writer.releaseLock();
+            printed = true;
+          }
+        } catch (silentSerialErr) {
+          console.warn("[USB/Serial] Silent port reconnect error:", silentSerialErr);
+        }
+      }
+
+      // Check previously permitted USB devices silently without prompt
+      if (!printed && isUsbSupported()) {
+        try {
+          const nav = navigator as any;
+          const devices = await nav.usb.getDevices();
+          if (devices && devices.length > 0) {
+            const device = devices[0];
+            if (!device.opened) {
+              await device.open();
+              if (device.configuration === null) {
+                await device.selectConfiguration(1);
+              }
+              await device.claimInterface(0);
+            }
+            activeUsbDevice = device;
+            const endpoint = device.configuration?.interfaces?.[0]?.alternate?.endpoints?.find(
+              (ep: any) => ep.direction === "out"
+            );
+            const endpointNumber = endpoint ? endpoint.endpointNumber : 1;
+            await device.transferOut(endpointNumber, buffer);
+            printed = true;
+          }
+        } catch (silentUsbErr) {
+          console.warn("[WebUSB] Silent device reconnect error:", silentUsbErr);
+        }
+      }
+
+      // Only if no previously permitted port/device is found, prompt the user
+      if (!printed) {
+        const pairRes = await pairUsbSerialPrinter(config.baudRate || 9600);
+        if (!pairRes.success || (!activeSerialPort && !activeUsbDevice)) {
+          throw new Error(pairRes.message || "USB/Serial printer not connected.");
+        }
+
+        if (activeUsbDevice) {
+          const endpoint = activeUsbDevice.configuration?.interfaces?.[0]?.alternate?.endpoints?.find(
+            (ep: any) => ep.direction === "out"
+          );
+          const endpointNumber = endpoint ? endpoint.endpointNumber : 1;
+          await activeUsbDevice.transferOut(endpointNumber, buffer);
+          printed = true;
+        } else if (activeSerialPort) {
+          const writer = activeSerialPort.writable.getWriter();
+          await writer.write(buffer);
+          writer.releaseLock();
+          printed = true;
+        }
+      }
+
+      if (printed) {
+        if (config.enableBuzzer !== false) {
+          playPrinterSoundAlert();
+        }
+        return {
+          success: true,
+          message: `Printed successfully to USB/Serial printer: ${config.deviceName || "Thermal Printer"}`,
+        };
+      } else {
+        throw new Error("Could not send data to USB or Serial printer.");
+      }
     } catch (err: any) {
-      console.error("USB print failed:", err);
-      return {
-        success: false,
-        message: `USB print error: ${err.message || "Port disconnected"}`,
-      };
+      console.warn("[Printer Service] USB print unavailable, falling back to System Print Driver:", err);
+      return await printViaSystemDriver(data, config);
     }
   }
 
@@ -1149,25 +1513,21 @@ export async function printReceipt(
 
       if (resp.ok) {
         const json = await resp.json();
-        if (json.success && config.enableBuzzer !== false) {
-          playPrinterSoundAlert();
+        if (json.success) {
+          if (config.enableBuzzer !== false) {
+            playPrinterSoundAlert();
+          }
+          return {
+            success: true,
+            message: json.message,
+          };
         }
-        return {
-          success: Boolean(json.success),
-          message: json.message,
-        };
       }
 
-      return {
-        success: false,
-        message: `Network print failed with server status ${resp.status}`,
-      };
+      throw new Error(`Network printer responded with status ${resp.status}`);
     } catch (err: any) {
-      console.error("Network print failed:", err);
-      return {
-        success: false,
-        message: `Network print failed: ${err.message || "Could not reach printer bridge"}`,
-      };
+      console.warn("[Printer Service] Network print unavailable, falling back to System Print Driver:", err);
+      return await printViaSystemDriver(data, config);
     }
   }
 

@@ -429,7 +429,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
               basePrice: defaultVariant.price,
               mrp: mrpVal,
               productDiscountPercent: prodDiscount,
-              lineDiscountMode: '%',
+              lineDiscountMode: '₹',
               lineDiscountValue: 0,
               costPrice: costPriceVal,
               variantId: null,
@@ -656,7 +656,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
           basePrice: variant.price,
           mrp: mrpVal,
           productDiscountPercent: prodDiscount,
-          lineDiscountMode: '%',
+          lineDiscountMode: '₹',
           lineDiscountValue: 0,
           costPrice: costPriceVal,
           serialNumbers: serials,
@@ -1079,7 +1079,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                             type="button"
                             onClick={() => handleLineDiscountChange(item.id, '%', item.lineDiscountValue || 0)}
                             className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
-                              (item.lineDiscountMode || '%') === '%'
+                              item.lineDiscountMode === '%'
                                 ? 'bg-white text-blue-600 shadow-2xs'
                                 : 'text-slate-400 hover:text-slate-600'
                             }`}
@@ -1091,7 +1091,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                             type="button"
                             onClick={() => handleLineDiscountChange(item.id, '₹', item.lineDiscountValue || 0)}
                             className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
-                              item.lineDiscountMode === '₹'
+                              (item.lineDiscountMode || '₹') === '₹'
                                 ? 'bg-white text-blue-600 shadow-2xs'
                                 : 'text-slate-400 hover:text-slate-600'
                             }`}
@@ -1108,7 +1108,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                           placeholder="0"
                           onChange={(e) => {
                             const val = Math.max(0, parseFloat(e.target.value) || 0);
-                            handleLineDiscountChange(item.id, item.lineDiscountMode || '%', val);
+                            handleLineDiscountChange(item.id, item.lineDiscountMode || '₹', val);
                           }}
                           className="flex-1 w-full bg-transparent text-right outline-none text-[12px] font-bold text-slate-800 pr-1 tabular-nums"
                         />
@@ -1125,7 +1125,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                       const priceAfterProdDisc = Math.max(0, item.price - prodDiscPerUnit);
                       const lineBaseTotal = priceAfterProdDisc * item.qty;
 
-                      const lineDiscMode = item.lineDiscountMode || '%';
+                      const lineDiscMode = item.lineDiscountMode || '₹';
                       const lineDiscVal = item.lineDiscountValue || 0;
                       const lineDiscAmount = lineDiscMode === '%'
                         ? lineBaseTotal * (Math.min(100, Math.max(0, lineDiscVal)) / 100)

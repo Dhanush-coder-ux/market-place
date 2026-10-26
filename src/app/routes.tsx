@@ -88,6 +88,7 @@ function RouteErrorBoundary() {
 // ─── Layout & Auth ───────────────────────────────────────────────────────────
 const MainLayout = lazyRetry(() => import("../components/layouts/MainLayout"));
 const Login = lazyRetry(() => import("../features/auth/pages/Login"));
+const Signup = lazyRetry(() => import("../features/auth/pages/Signup"));
 const TermsOfService = lazyRetry(() => import("../features/legal/pages/TermsOfService"));
 const PrivacyPolicy = lazyRetry(() => import("../features/legal/pages/PrivacyPolicy"));
 const Security = lazyRetry(() => import("../features/legal/pages/Security"));
@@ -296,6 +297,14 @@ export const router = createBrowserRouter([
     element: (
       <Suspense fallback={<Loader />}>
         <Login />
+      </Suspense>
+    )
+  },
+  {
+    path: '/signup',
+    element: (
+      <Suspense fallback={<Loader />}>
+        <Signup />
       </Suspense>
     )
   },

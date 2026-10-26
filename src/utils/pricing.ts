@@ -209,7 +209,7 @@ export function calculateProductEffectivePrice(input: ProductPricingInfo & { isG
 // ----------------------------------------------------------------------------
 export function calculateBillTotals(
   lines: BillLineInput[],
-  billDiscount: { mode: '%' | '₹'; value: number } = { mode: '%', value: 0 },
+  billDiscount: { mode: '%' | '₹'; value: number } = { mode: '₹', value: 0 },
   options?: { isGstRegistered?: boolean }
 ): BillTotals {
   const isGstReg = options?.isGstRegistered !== undefined ? options.isGstRegistered : isShopGstRegistered();

@@ -149,7 +149,7 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
       0
     );
 
-    let taxable = Number(calc.taxable_value ?? calc.taxable_amount ?? 0);
+    let taxable = Number(calc.totalTaxable ?? calc.total_taxable ?? calc.taxable_amount ?? calc.taxable_value ?? 0);
     let gst = Number(calc.gst_amount ?? calc.total_tax ?? calc.tax ?? 0);
     let roundOff = Number(calc.round_off ?? calc.roundoff ?? 0);
     let grandTotal = Number(
@@ -173,16 +173,20 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
       subtotal = grandTotal + discountTotal - gst;
     }
 
-    const effectiveTaxable = taxable > 0 ? taxable : subtotal - discountTotal;
+    const effectiveTaxable = taxable > 0 
+      ? taxable 
+      : (gst > 0 ? (grandTotal - gst - roundOff) : (subtotal - discountTotal));
 
     // Detect tax rates
     let gstRate = 0;
-    if (calc.gst_rate !== undefined && Number(calc.gst_rate) > 0) {
+    if (calc.tax_groups && Array.isArray(calc.tax_groups) && calc.tax_groups.length > 0) {
+      gstRate = Number(calc.tax_groups[0].gstRate || calc.tax_groups[0].gst_rate || 0);
+    } else if (calc.gst_rate !== undefined && Number(calc.gst_rate) > 0) {
       gstRate = Number(calc.gst_rate);
     } else if (calc.tax_rate !== undefined && Number(calc.tax_rate) > 0) {
       gstRate = Number(calc.tax_rate);
     } else if (itemsRaw.length > 0) {
-      const itRate = Number(itemsRaw[0].gst_rate || itemsRaw[0].tax_rate || itemsRaw[0].gst_percentage || 0);
+      const itRate = Number(itemsRaw[0].gst_rate || itemsRaw[0].tax_rate || itemsRaw[0].gst_percentage || itemsRaw[0].gst || 0);
       if (itRate > 0) gstRate = itRate;
     }
     if (gstRate === 0 && effectiveTaxable > 0 && gst > 0) {

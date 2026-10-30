@@ -247,14 +247,16 @@ const WEEKEND = ["SATURDAY", "SUNDAY"];
 export default function OperatingHours({ onStatusChange }: { onStatusChange?: (status: React.ReactNode) => void }) {
   const { showToast } = useToast();
   const { shop } = useBusinessApi();
+  const currentShopId = localStorage.getItem("shop_id") || SHOP_ID;
   const [operatingHours, setOperatingHours] = useState<Array<{ day: string, open_at: string, close_at: string, id?: number }>>([]);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    shop.getOperatingHours(SHOP_ID).then(res => {
+    if (!currentShopId || currentShopId === "string") return;
+    shop.getOperatingHours(currentShopId).then(res => {
       if (res && res.data && Array.isArray(res.data)) {
         const hours = res.data.map((h: any) => ({
-          day: h.day,
+          day: (h.day || "").toUpperCase(),
           open_at: h.open_at ? (h.open_at.includes('+') ? h.open_at : `${h.open_at}+00:00`) : "09:00:00+00:00",
           close_at: h.close_at ? (h.close_at.includes('+') ? h.close_at : `${h.close_at}+00:00`) : "18:00:00+00:00",
           id: h.id
@@ -262,11 +264,11 @@ export default function OperatingHours({ onStatusChange }: { onStatusChange?: (s
         setOperatingHours(hours.filter((h: any) => ALL_DAYS.includes(h.day as any)));
       }
     }).catch(err => console.error("Failed to load operating hours:", err));
-  }, []);
+  }, [currentShopId]);
 
   const toggleDay = async (dayName: string, isOpen: boolean) => {
     if (isOpen) {
-      const existing = operatingHours.find(h => h.day === dayName);
+      const existing = operatingHours.find(h => h.day?.toUpperCase() === dayName.toUpperCase());
       if (existing?.id) {
         try {
           await shop.deleteOperatingHours(existing.id);
@@ -274,14 +276,14 @@ export default function OperatingHours({ onStatusChange }: { onStatusChange?: (s
           console.error(`Failed to delete operating hours for ${dayName}:`, err);
         }
       }
-      setOperatingHours(prev => prev.filter(h => h.day !== dayName));
+      setOperatingHours(prev => prev.filter(h => h.day?.toUpperCase() !== dayName.toUpperCase()));
     } else {
-      setOperatingHours(prev => [...prev, { day: dayName, open_at: "09:00:00+00:00", close_at: "21:00:00+00:00" }]);
+      setOperatingHours(prev => [...prev, { day: dayName.toUpperCase(), open_at: "09:00:00+00:00", close_at: "21:00:00+00:00" }]);
     }
   };
 
   const updateTime = (dayName: string, field: "open_at" | "close_at", newValue: string) => {
-    setOperatingHours(prev => prev.map(h => h.day === dayName ? { ...h, [field]: newValue } : h));
+    setOperatingHours(prev => prev.map(h => h.day?.toUpperCase() === dayName.toUpperCase() ? { ...h, [field]: newValue } : h));
   };
 
   const copyToAll = () => {
@@ -309,9 +311,13 @@ export default function OperatingHours({ onStatusChange }: { onStatusChange?: (s
   };
 
   const handleSave = async () => {
+    if (!currentShopId || currentShopId === "string") {
+      showToast("Please select or create a store first.", "error");
+      return;
+    }
     setIsSaving(true);
     try {
-      const currentRes = await shop.getOperatingHours(SHOP_ID);
+      const currentRes = await shop.getOperatingHours(currentShopId);
       
       // Delete all existing operating hours
       if (currentRes && currentRes.data && Array.isArray(currentRes.data)) {
@@ -324,19 +330,19 @@ export default function OperatingHours({ onStatusChange }: { onStatusChange?: (s
       // Create the current active ones
       const createPromises = operatingHours.map(async (config) => {
         const payload = {
-          day: config.day,
-          open_at: config.open_at.replace("+00:00", ""),
-          close_at: config.close_at.replace("+00:00", "")
+          day: config.day.toUpperCase(),
+          open_at: config.open_at.replace("+00:00", "").replace("Z", ""),
+          close_at: config.close_at.replace("+00:00", "").replace("Z", "")
         };
-        return shop.createOperatingHours(SHOP_ID, payload);
+        return shop.createOperatingHours(currentShopId, payload);
       });
 
       await Promise.all(createPromises);
       
-      const newRes = await shop.getOperatingHours(SHOP_ID);
+      const newRes = await shop.getOperatingHours(currentShopId);
       if (newRes && newRes.data && Array.isArray(newRes.data)) {
         const hours = newRes.data.map((h: any) => ({
-          day: h.day,
+          day: (h.day || "").toUpperCase(),
           open_at: h.open_at ? (h.open_at.includes('+') ? h.open_at : `${h.open_at}+00:00`) : "09:00:00+00:00",
           close_at: h.close_at ? (h.close_at.includes('+') ? h.close_at : `${h.close_at}+00:00`) : "18:00:00+00:00",
           id: h.id
@@ -426,7 +432,7 @@ export default function OperatingHours({ onStatusChange }: { onStatusChange?: (s
 
         <div className="space-y-2">
           {ALL_DAYS.map((dayName) => {
-            const hourConfig = operatingHours.find(h => h.day === dayName);
+            const hourConfig = operatingHours.find(h => h.day?.toUpperCase() === dayName.toUpperCase());
             const isOpen = !!hourConfig;
             const isWeekend = WEEKEND.includes(dayName);
 

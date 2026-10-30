@@ -482,7 +482,7 @@ const ProductDetail = () => {
                           <Layers size={12} className="text-indigo-500" />
                           <span className="text-[11px] font-bold text-indigo-600">Available in Batch & Variants tab</span>
                         </div>
-                      ) : buyingPrice !== null ? (
+                      ) : (buyingPrice !== null && buyingPrice !== undefined && Number(buyingPrice) > 0) ? (
                         <div className="flex flex-col">
                           {(() => {
                              const gstRate = parseFloat(String(gstValue).replace(/[^0-9.]/g, '')) || 0;
@@ -659,7 +659,7 @@ const ProductDetail = () => {
                               </p>
                               {isEditing ? (
                                 <div className="flex items-center gap-1.5 mt-1">
-                                  {field.type === 'boolean' ? (
+                                  {(field.type === 'boolean' || field.type === 'bool') ? (
                                     <label className="flex items-center gap-2 cursor-pointer flex-1 py-1">
                                       <input
                                         type="checkbox"
@@ -691,10 +691,10 @@ const ProductDetail = () => {
                                 </div>
                               ) : (
                                 <div className="flex items-center justify-between cursor-pointer"
-                                  onClick={() => { setEditingFieldId(field.id); setEditingValue(currentVal?.value ?? (field.type === 'boolean' ? 'false' : '')); }}>
+                                  onClick={() => { setEditingFieldId(field.id); setEditingValue(currentVal?.value ?? ((field.type === 'boolean' || field.type === 'bool') ? 'false' : '')); }}>
                                   <p className="text-xs font-bold text-slate-700 truncate">
-                                    {field.type === 'boolean' ? (
-                                      currentVal?.value === 'true' ? (
+                                    {(field.type === 'boolean' || field.type === 'bool') ? (
+                                      (String(currentVal?.value).toLowerCase() === 'true' || String(currentVal?.value).toLowerCase() === 'yes') ? (
                                         <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">Yes</span>
                                       ) : (
                                         <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-100 text-slate-500 border border-slate-200">No</span>

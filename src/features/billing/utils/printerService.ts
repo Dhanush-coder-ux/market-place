@@ -869,13 +869,16 @@ export function buildEscPosBuffer(data: ReceiptData, config: PrinterConfig): Uin
   addDivider();
   addRow("Order ID:", data.orderId || "N/A");
   addRow("Date & Time:", `${data.dateStr || ""} ${data.timeStr || ""}`.trim());
-  const custName =
-    data.customerName && data.customerName.toLowerCase() !== "walk-in"
-      ? data.customerName
-      : "Walk-in Customer";
-  addRow("Customer:", custName);
-  if (data.phone) {
-    addRow("Phone:", data.phone);
+  const isWalkIn =
+    !data.customerName ||
+    ["walk-in", "walk-in customer", "walk in", "walk in customer", "walkin", "walkin customer"].includes(
+      data.customerName.trim().toLowerCase()
+    );
+  if (!isWalkIn) {
+    addRow("Customer:", data.customerName || "");
+    if (data.phone) {
+      addRow("Phone:", data.phone);
+    }
   }
   addDivider();
 
@@ -944,16 +947,20 @@ export function buildEscPosBuffer(data: ReceiptData, config: PrinterConfig): Uin
     addRow("Discount Savings:", `-Rs.${data.discountAmount.toFixed(2)}`);
   }
 
-  if (data.taxableAmount && data.taxableAmount > 0) {
-    addRow("Taxable Value:", `Rs.${data.taxableAmount.toFixed(2)}`);
+  const effectiveTaxableAmount = (data.taxableAmount && data.taxableAmount > 0 && (data.gstAmount === 0 || data.taxableAmount < data.finalAmount))
+    ? data.taxableAmount
+    : (data.gstAmount > 0 ? Math.max(0, data.finalAmount - data.gstAmount - (data.roundOff || 0)) : (data.totalAmount - (data.discountAmount || 0)));
+
+  if (effectiveTaxableAmount > 0) {
+    addRow("Taxable Value:", `Rs.${effectiveTaxableAmount.toFixed(2)}`);
   }
 
   if (data.gstAmount > 0) {
     const totalTax = data.gstAmount;
-    const taxableVal = data.taxableAmount || (data.totalAmount - (data.discountAmount || 0));
-    const gstRate = data.gstRate ?? (taxableVal > 0 ? Math.round((totalTax / taxableVal) * 100) : 0);
-    const cgstRate = data.cgstRate ?? (gstRate > 0 ? gstRate / 2 : 0);
-    const sgstRate = data.sgstRate ?? (gstRate > 0 ? gstRate / 2 : 0);
+    const taxableVal = effectiveTaxableAmount;
+    const gstRate = data.gstRate && data.gstRate > 0 ? data.gstRate : (taxableVal > 0 ? Math.round((totalTax / taxableVal) * 100) : 0);
+    const cgstRate = data.cgstRate && data.cgstRate > 0 ? data.cgstRate : (gstRate > 0 ? gstRate / 2 : 0);
+    const sgstRate = data.sgstRate && data.sgstRate > 0 ? data.sgstRate : (gstRate > 0 ? gstRate / 2 : 0);
     const cgstAmt = data.cgstAmount ?? Math.round((totalTax / 2) * 100) / 100;
     const sgstAmt = data.sgstAmount ?? Math.round((totalTax - cgstAmt) * 100) / 100;
 
@@ -1096,6 +1103,16 @@ export function printViaSystemDriver(
         ? "TAX INVOICE • DUPLICATE COPY"
         : "TAX INVOICE";
 
+    const isWalkIn =
+      !data.customerName ||
+      ["walk-in", "walk-in customer", "walk in", "walk in customer", "walkin", "walkin customer"].includes(
+        data.customerName.trim().toLowerCase()
+      );
+
+    const effectiveTaxableAmount = (data.taxableAmount && data.taxableAmount > 0 && (data.gstAmount === 0 || data.taxableAmount < data.finalAmount))
+      ? data.taxableAmount
+      : (data.gstAmount > 0 ? Math.max(0, data.finalAmount - data.gstAmount - (data.roundOff || 0)) : (data.totalAmount - (data.discountAmount || 0)));
+
     const itemsHtml = data.items
       .map((item) => {
         const itemTotal = (item.tprice ?? item.qty * item.price).toFixed(2);
@@ -1167,15 +1184,17 @@ export function printViaSystemDriver(
           <span>Date & Time:</span>
           <span>${data.dateStr || ""} ${data.timeStr || ""}</span>
         </div>
+        ${!isWalkIn ? `
         <div class="flex-between">
           <span>Customer:</span>
-          <span class="bold">${data.customerName || "Walk-in Customer"}</span>
+          <span class="bold">${data.customerName}</span>
         </div>
         ${data.phone ? `
         <div class="flex-between">
           <span>Phone:</span>
           <span>${data.phone}</span>
         </div>` : ""}
+        ` : ""}
 
         <div class="divider"></div>
 
@@ -1199,22 +1218,22 @@ export function printViaSystemDriver(
           <span>Discount Savings:</span>
           <span>-₹${data.discountAmount.toFixed(2)}</span>
         </div>` : ""}
-        ${data.taxableAmount && data.taxableAmount > 0 ? `
+        ${effectiveTaxableAmount > 0 ? `
         <div class="flex-between" style="color: #475569; font-size: 10px;">
           <span>Taxable Value:</span>
-          <span>₹${data.taxableAmount.toFixed(2)}</span>
+          <span>₹${effectiveTaxableAmount.toFixed(2)}</span>
         </div>` : ""}
         ${data.gstAmount > 0 ? `
         <div class="flex-between" style="color: #475569; font-size: 10px;">
-          <span>CGST (${data.cgstRate ?? (data.gstRate ? data.gstRate / 2 : (data.taxableAmount ? Math.round((data.gstAmount / data.taxableAmount) * 50) : 0))}%):</span>
+          <span>CGST (${data.cgstRate && data.cgstRate > 0 ? data.cgstRate : (data.gstRate ? data.gstRate / 2 : (effectiveTaxableAmount ? Math.round((data.gstAmount / effectiveTaxableAmount) * 50) : 0))}%):</span>
           <span>₹${(data.cgstAmount ?? Math.round((data.gstAmount / 2) * 100) / 100).toFixed(2)}</span>
         </div>
         <div class="flex-between" style="color: #475569; font-size: 10px;">
-          <span>SGST (${data.sgstRate ?? (data.gstRate ? data.gstRate / 2 : (data.taxableAmount ? Math.round((data.gstAmount / data.taxableAmount) * 50) : 0))}%):</span>
+          <span>SGST (${data.sgstRate && data.sgstRate > 0 ? data.sgstRate : (data.gstRate ? data.gstRate / 2 : (effectiveTaxableAmount ? Math.round((data.gstAmount / effectiveTaxableAmount) * 50) : 0))}%):</span>
           <span>₹${(data.sgstAmount ?? Math.round((data.gstAmount - (data.cgstAmount ?? Math.round((data.gstAmount / 2) * 100) / 100)) * 100) / 100).toFixed(2)}</span>
         </div>
         <div class="flex-between" style="font-weight: 600;">
-          <span>Total Tax / GST${data.gstRate ? ` (${data.gstRate}%)` : ""}:</span>
+          <span>Total Tax / GST${(data.gstRate && data.gstRate > 0 ? data.gstRate : (effectiveTaxableAmount ? Math.round((data.gstAmount / effectiveTaxableAmount) * 100) : 0)) ? ` (${data.gstRate && data.gstRate > 0 ? data.gstRate : Math.round((data.gstAmount / effectiveTaxableAmount) * 100)}%)` : ""}:</span>
           <span>₹${data.gstAmount.toFixed(2)}</span>
         </div>` : ""}
         ${data.roundOff && data.roundOff !== 0 ? `

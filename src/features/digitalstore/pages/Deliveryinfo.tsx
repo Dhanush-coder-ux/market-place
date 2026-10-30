@@ -470,7 +470,7 @@ export default function DeliveryPreferences({ onStatusChange }: { onStatusChange
 
   const [deliveryConfigs, setDeliveryConfigs] = useState<Record<string, DeliveryConfig>>({
     normal: {
-      enabled: true,
+      enabled: false,
       pricingModel: "DISTANCE_TIERED",
       speed: "2–3 Business Days",
       minOrderAmount: 0,
@@ -509,7 +509,7 @@ export default function DeliveryPreferences({ onStatusChange }: { onStatusChange
       deliveryBy: "INHOUSE",
     },
     pickuponly: {
-      enabled: true,
+      enabled: false,
       pricingModel: "FLAT",
       speed: "Same Day",
       minOrderAmount: 0,
@@ -538,9 +538,12 @@ export default function DeliveryPreferences({ onStatusChange }: { onStatusChange
     shop.getDeliveryOptions(currentShopId)
       .then((res: any) => {
         const dataList = res?.data;
-        if (Array.isArray(dataList) && dataList.length > 0) {
+        if (Array.isArray(dataList)) {
           setDeliveryConfigs((prev) => {
             const next = { ...prev };
+            Object.keys(next).forEach((k) => {
+              next[k] = { ...next[k], enabled: false };
+            });
             dataList.forEach((item: any) => {
               const matchedMeta = DELIVERY_OPTIONS_CONFIG.find(
                 (m) => m.backendType === item.type || m.legacyBackendTypes?.includes(item.type)
@@ -549,7 +552,7 @@ export default function DeliveryPreferences({ onStatusChange }: { onStatusChange
                 const isDistance = item.pricing_model === "DISTANCE_TIERED" || (item.base_distance > 0 || (item.charge_per_km > 0 && item.base_distance !== undefined));
                 next[matchedMeta.key] = {
                   id: item.id,
-                  enabled: item.enabled !== undefined ? item.enabled : true,
+                  enabled: item.enabled !== false && item.enabled !== 0,
                   pricingModel: isDistance ? "DISTANCE_TIERED" : "FLAT",
                   speed: item.speed || matchedMeta.defaultSpeed,
                   minOrderAmount: item.min_order_amount ?? 0,
@@ -633,21 +636,15 @@ export default function DeliveryPreferences({ onStatusChange }: { onStatusChange
           enabled: conf.enabled,
         };
 
-        if (!conf.enabled) {
-          if (conf.id) {
-            await shop.updateDeliveryOption(conf.id, { ...payload, id: conf.id, enabled: false });
-          }
+        if (conf.id) {
+          await shop.updateDeliveryOption(conf.id, { ...payload, id: conf.id, enabled: !!conf.enabled });
         } else {
-          if (conf.id) {
-            await shop.updateDeliveryOption(conf.id, { ...payload, id: conf.id });
-          } else {
-            const res = await shop.createDeliveryOption(currentShopId, payload);
-            if (res && res.data && res.data.id) {
-              setDeliveryConfigs((prev) => ({
-                ...prev,
-                [meta.key]: { ...prev[meta.key], id: res.data.id },
-              }));
-            }
+          const res = await shop.createDeliveryOption(currentShopId, { ...payload, enabled: !!conf.enabled });
+          if (res && res.data && res.data.id) {
+            setDeliveryConfigs((prev) => ({
+              ...prev,
+              [meta.key]: { ...prev[meta.key], id: res.data.id },
+            }));
           }
         }
       });

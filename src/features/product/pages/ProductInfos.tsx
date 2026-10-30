@@ -508,6 +508,14 @@ const ProductRow = React.memo(
                 }
               }
 
+              if (key === "buy_price" && (!actualNumericPrice || isNaN(Number(actualNumericPrice)) || Number(actualNumericPrice) <= 0)) {
+                return (
+                  <td key={key} className="px-3 py-2.5 whitespace-nowrap">
+                    <span className="text-[13px] font-semibold text-slate-400">—</span>
+                  </td>
+                );
+              }
+
               if (key === "sell_price") {
                 const mrpValue = (datas as any).mrp || (p as any).mrp || (p as any).additional_infos?.mrp;
                 const gstValue = (p as any).gst || datas.gst || "18";

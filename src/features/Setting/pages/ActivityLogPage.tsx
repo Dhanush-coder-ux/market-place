@@ -2,6 +2,10 @@ import { useEffect, useState, useMemo } from "react";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { utilityApi } from "@/services/api/utility";
+import { supplierCustomFieldsApi } from "@/services/api/supplierCustomFields";
+import { customerCustomFieldsApi } from "@/services/api/customer";
+import { inventoryCustomFieldsApi } from "@/services/api/inventory";
+import { purchaseCustomFieldsApi } from "@/services/api/purchaseCustomFields";
 import { format } from "date-fns";
 import "./ActivityLog.css";
 
@@ -193,11 +197,59 @@ function getActuallyChangedFields(changes?: { field: string; before: unknown; af
     const b = pyLiteralParse(c.before);
     const a = pyLiteralParse(c.after);
 
-    // If both are objects and field is custom_fields or additional_infos
-    if ((fieldLower === "custom_fields" || fieldLower === "custom fields" || fieldLower === "additional_infos" || fieldLower === "additional infos") &&
-        typeof b === "object" && typeof a === "object" && b !== null && a !== null) {
-      const bObj = b as Record<string, any>;
-      const aObj = a as Record<string, any>;
+    // If field is contact_infos, unpack email and mobile_number
+    if (fieldLower === "contact_infos" || fieldLower === "contact infos") {
+      const bObj = (typeof b === "object" && b !== null) ? (b as Record<string, any>) : {};
+      const aObj = (typeof a === "object" && a !== null) ? (a as Record<string, any>) : {};
+      if (!isValEqual(bObj.email, aObj.email)) {
+        results.push({
+          field: "email",
+          before: bObj.email !== undefined && bObj.email !== null ? bObj.email : null,
+          after: aObj.email !== undefined && aObj.email !== null ? aObj.email : null,
+        });
+      }
+      if (!isValEqual(bObj.mobile_number, aObj.mobile_number)) {
+        results.push({
+          field: "mobile number",
+          before: bObj.mobile_number !== undefined && bObj.mobile_number !== null ? bObj.mobile_number : null,
+          after: aObj.mobile_number !== undefined && aObj.mobile_number !== null ? aObj.mobile_number : null,
+        });
+      }
+      continue;
+    }
+
+    // If field is credit_infos, unpack credit limit, terms, notes
+    if (fieldLower === "credit_infos" || fieldLower === "credit infos") {
+      const bObj = (typeof b === "object" && b !== null) ? (b as Record<string, any>) : {};
+      const aObj = (typeof a === "object" && a !== null) ? (a as Record<string, any>) : {};
+      if (!isValEqual(bObj.limit, aObj.limit)) {
+        results.push({
+          field: "credit limit",
+          before: bObj.limit !== undefined && bObj.limit !== null ? bObj.limit : null,
+          after: aObj.limit !== undefined && aObj.limit !== null ? aObj.limit : null,
+        });
+      }
+      if (!isValEqual(bObj.terms, aObj.terms)) {
+        results.push({
+          field: "credit terms",
+          before: bObj.terms !== undefined && bObj.terms !== null ? bObj.terms : null,
+          after: aObj.terms !== undefined && aObj.terms !== null ? aObj.terms : null,
+        });
+      }
+      if (!isValEqual(bObj.notes, aObj.notes)) {
+        results.push({
+          field: "credit notes",
+          before: bObj.notes !== undefined && bObj.notes !== null ? bObj.notes : null,
+          after: aObj.notes !== undefined && aObj.notes !== null ? aObj.notes : null,
+        });
+      }
+      continue;
+    }
+
+    // If field is custom_fields or additional_infos, unpack nested object entries into separate fields
+    if (fieldLower === "custom_fields" || fieldLower === "custom fields" || fieldLower === "additional_infos" || fieldLower === "additional infos") {
+      const bObj = (typeof b === "object" && b !== null) ? (b as Record<string, any>) : {};
+      const aObj = (typeof a === "object" && a !== null) ? (a as Record<string, any>) : {};
       const skipSubKeys = new Set(["mrp", "discount_percent", "offer_valid_until", "buy_price", "sell_price", "online_sell_price", "reorder_point", "online_reorder_point", "storage_location", "return_policy", "variant_types"]);
       const allSubKeys = Array.from(new Set([...Object.keys(bObj), ...Object.keys(aObj)]));
       for (const subK of allSubKeys) {
@@ -208,8 +260,8 @@ function getActuallyChangedFields(changes?: { field: string; before: unknown; af
         if (!isValEqual(bObj[subK], aObj[subK])) {
           results.push({
             field: subK,
-            before: bObj[subK],
-            after: aObj[subK]
+            before: bObj[subK] !== undefined ? bObj[subK] : null,
+            after: aObj[subK] !== undefined ? aObj[subK] : null
           });
         }
       }
@@ -226,12 +278,18 @@ function getActuallyChangedFields(changes?: { field: string; before: unknown; af
   return results;
 }
 
-function formatFieldName(rawField: string): string {
+function formatFieldName(rawField: string, customFieldMap: Record<string, string> = {}): string {
   if (!rawField) return "";
+  const rawClean = rawField.trim().toLowerCase();
+  if (customFieldMap[rawClean]) return customFieldMap[rawClean];
   let f = rawField.replace(/_/g, " ").trim();
   const lower = f.toLowerCase();
+  if (customFieldMap[lower]) return customFieldMap[lower];
   if (lower === "unit id" || lower === "unit_id") return "unit";
   if (lower === "category id" || lower === "category_id") return "category";
+  if (lower === "credit limit" || lower === "credit_limit") return "Credit Limit";
+  if (lower === "mobile number" || lower === "mobile_number") return "Mobile Number";
+  if (lower === "email") return "Email";
   if (lower.endsWith(" id")) {
     f = f.slice(0, -3).trim();
   }
@@ -242,11 +300,20 @@ function resolveDisplayValue(
   field: string,
   val: unknown,
   unitMap: Record<string, string>,
-  categoryMap: Record<string, string>
+  categoryMap: Record<string, string>,
+  customFieldMap: Record<string, string> = {}
 ): unknown {
   if (val === null || val === undefined || val === "" || val === "None" || val === "null") return val;
   const str = String(val).trim();
-  const fLower = formatFieldName(field).toLowerCase();
+  const fLower = formatFieldName(field, customFieldMap).toLowerCase();
+
+  if (fLower === "credit limit" || fLower.includes("credit limit")) {
+    const rawDigits = str.replace(/[^0-9.]/g, "");
+    const num = Number(rawDigits);
+    if (!isNaN(num) && rawDigits !== "") {
+      return `₹${num.toLocaleString('en-IN')}`;
+    }
+  }
 
   if (fLower.includes("unit") && unitMap[str]) {
     return unitMap[str];
@@ -256,31 +323,39 @@ function resolveDisplayValue(
   }
   if (unitMap[str]) return unitMap[str];
   if (categoryMap[str]) return categoryMap[str];
+  if (customFieldMap[str.toLowerCase()]) return customFieldMap[str.toLowerCase()];
 
   // If value is a 36-char raw UUID
   const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
   if (isUUID) {
     if (fLower.includes("unit")) return "Unit";
     if (fLower.includes("category")) return "Category";
+    if (customFieldMap[str.toLowerCase()]) return customFieldMap[str.toLowerCase()];
     return str.substring(0, 8) + "…";
   }
 
   return val;
 }
 
-function cleanHumanDescription(rawDesc?: string, actualChanges?: { field: string }[]): string {
+function cleanHumanDescription(rawDesc?: string, actualChanges?: { field: string }[], customFieldMap: Record<string, string> = {}): string {
   if (!rawDesc) return "";
   if (actualChanges && actualChanges.length > 0) {
-    const fields = Array.from(new Set(actualChanges.map(c => formatFieldName(c.field))));
+    const fields = Array.from(new Set(actualChanges.map(c => formatFieldName(c.field, customFieldMap))));
     return `Updated ${fields.join(", ")}`;
   }
-  return rawDesc
+  let desc = rawDesc
     .replace(/\bunit_id\b/gi, "unit")
     .replace(/\bunit id\b/gi, "unit")
     .replace(/\bcategory_id\b/gi, "category")
     .replace(/\bcategory id\b/gi, "category")
     .replace(/\b(\w+)_id\b/gi, "$1")
     .replace(/\b(\w+) id\b/gi, "$1");
+  for (const [key, label] of Object.entries(customFieldMap)) {
+    if (key.length >= 10 && label) {
+      desc = desc.split(key).join(label);
+    }
+  }
+  return desc;
 }
 
 interface LogEntry {
@@ -324,14 +399,19 @@ function getDisplayName(e: LogEntry): { value: string; technical: boolean } {
   return { value: raw, technical: true };
 }
 
-const StructuredValueViewer = ({ data, level = 0 }: { data: any; level?: number }) => {
+const StructuredValueViewer = ({ data, level = 0, customFieldMap = {} }: { data: any; level?: number; customFieldMap?: Record<string, string> }) => {
   if (data === null || data === undefined || data === "null" || data === "None") return <span className="text-slate-400 italic font-medium">—</span>;
   if (typeof data === "boolean" || data === "true" || data === "false" || data === "True" || data === "False") {
     const isTrue = data === true || data === "true" || data === "True";
     return <span className={`px-1.5 py-0.5 rounded ${isTrue ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'} text-[10px] font-bold uppercase`}>{isTrue ? "Yes" : "No"}</span>;
   }
   if (typeof data === "number") return <span className="text-slate-800 font-bold">{data.toLocaleString()}</span>;
-  if (typeof data === "string") return <span className="text-slate-700 font-medium break-words w-full inline-block">{data}</span>;
+  if (typeof data === "string") {
+    const strLower = data.toLowerCase().trim();
+    if (strLower === "true" || strLower === "yes") return <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase">Yes</span>;
+    if (strLower === "false" || strLower === "no") return <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-bold uppercase">No</span>;
+    return <span className="text-slate-700 font-medium break-words w-full inline-block">{data}</span>;
+  }
 
   if (Array.isArray(data)) {
     if (data.length === 0) return <span className="text-slate-400 italic">Empty</span>;
@@ -342,7 +422,7 @@ const StructuredValueViewer = ({ data, level = 0 }: { data: any; level?: number 
             <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-2 pb-1 border-b border-slate-100">
               Item {idx + 1}
             </div>
-            <StructuredValueViewer data={val} level={level + 1} />
+            <StructuredValueViewer data={val} level={level + 1} customFieldMap={customFieldMap} />
           </div>
         ))}
       </div>
@@ -354,16 +434,19 @@ const StructuredValueViewer = ({ data, level = 0 }: { data: any; level?: number 
     if (keys.length === 0) return <span className="text-slate-400 italic">Empty</span>;
     return (
       <div className="grid grid-cols-1 2xl:grid-cols-2 gap-x-4 gap-y-2.5 w-full">
-        {keys.map((key) => (
-          <div key={key} className="flex flex-col w-full overflow-hidden">
-            <span className="font-semibold text-slate-400 text-[9px] uppercase tracking-wide truncate mb-0.5" title={key.replace(/_/g, ' ')}>
-              {key.replace(/_/g, ' ')}
-            </span>
-            <div className="text-[12px] text-slate-800 break-words w-full leading-snug">
-              <StructuredValueViewer data={(data as any)[key]} level={level + 1} />
+        {keys.map((key) => {
+          const displayLabel = customFieldMap[key.toLowerCase()] || customFieldMap[key.trim().toLowerCase()] || key.replace(/_/g, ' ');
+          return (
+            <div key={key} className="flex flex-col w-full overflow-hidden">
+              <span className="font-semibold text-slate-400 text-[9px] uppercase tracking-wide truncate mb-0.5" title={displayLabel}>
+                {displayLabel}
+              </span>
+              <div className="text-[12px] text-slate-800 break-words w-full leading-snug">
+                <StructuredValueViewer data={(data as any)[key]} level={level + 1} customFieldMap={customFieldMap} />
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     );
   }
@@ -371,11 +454,11 @@ const StructuredValueViewer = ({ data, level = 0 }: { data: any; level?: number 
   return <span className="break-words">{String(data)}</span>;
 };
 
-const ChangeValueRenderer = ({ val, isDeleted }: { val: unknown, isDeleted?: boolean }) => {
+const ChangeValueRenderer = ({ val, isDeleted, customFieldMap = {} }: { val: unknown, isDeleted?: boolean, customFieldMap?: Record<string, string> }) => {
   if (typeof val === 'object' && val !== null) {
     return (
       <div className={`custom-scrollbar p-2.5 rounded-xl border max-h-[260px] overflow-y-auto overflow-x-hidden w-full ${isDeleted ? 'bg-rose-50/50 border-rose-100 opacity-90' : 'bg-slate-50/70 border-slate-200'}`}>
-        <StructuredValueViewer data={val} />
+        <StructuredValueViewer data={val} customFieldMap={customFieldMap} />
       </div>
     );
   }
@@ -405,14 +488,19 @@ export const ActivityLogPage = () => {
   const [openSet, setOpenSet] = useState<Set<string>>(new Set());
   const [unitMap, setUnitMap] = useState<Record<string, string>>({});
   const [categoryMap, setCategoryMap] = useState<Record<string, string>>({});
+  const [customFieldMap, setCustomFieldMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
     let mounted = true;
     const fetchLookups = async () => {
       try {
-        const [catRes, unitRes] = await Promise.allSettled([
+        const [catRes, unitRes, supCfRes, custCfRes, invCfRes, purCfRes] = await Promise.allSettled([
           utilityApi.getShopCategories(SHOP_ID, { limit: "100", offset: "1" }),
           utilityApi.getShopUnits(SHOP_ID, { limit: "100", offset: "1" }),
+          supplierCustomFieldsApi.getAllFields(SHOP_ID),
+          customerCustomFieldsApi.getAllFields(SHOP_ID),
+          inventoryCustomFieldsApi.getAllFields(SHOP_ID),
+          purchaseCustomFieldsApi.getAllFields(SHOP_ID),
         ]);
         if (!mounted) return;
         const uMap: Record<string, string> = {};
@@ -443,8 +531,28 @@ export const ActivityLogPage = () => {
           }
         }
         setCategoryMap(cMap);
+
+        const cfMap: Record<string, string> = {};
+        const registerFields = (res: PromiseSettledResult<any>) => {
+          if (res.status === "fulfilled" && res.value) {
+            const arr = Array.isArray(res.value) ? res.value : (res.value?.data || []);
+            if (Array.isArray(arr)) {
+              for (const f of arr) {
+                const label = f.label_name || f.field_name || f.name;
+                if (!label) continue;
+                if (f.id) cfMap[String(f.id).toLowerCase()] = label;
+                if (f.field_name) cfMap[String(f.field_name).toLowerCase()] = label;
+              }
+            }
+          }
+        };
+        registerFields(supCfRes);
+        registerFields(custCfRes);
+        registerFields(invCfRes);
+        registerFields(purCfRes);
+        setCustomFieldMap(cfMap);
       } catch (err) {
-        console.error("Failed to load unit/category lookups", err);
+        console.error("Failed to load unit/category/custom field lookups", err);
       }
     };
     fetchLookups();
@@ -467,6 +575,13 @@ export const ActivityLogPage = () => {
           if (typeof parsedChanges === "string") {
             try { parsedChanges = JSON.parse(parsedChanges); }
             catch (_) { parsedChanges = []; }
+          }
+          if (Array.isArray(parsedChanges)) {
+            parsedChanges = parsedChanges.map((c: any) => ({
+              ...c,
+              before: c.before !== undefined ? c.before : c.old_value,
+              after: c.after !== undefined ? c.after : c.new_value,
+            }));
           }
 
           // Derive a filter-friendly category. Actions are only ever
@@ -707,12 +822,12 @@ export const ActivityLogPage = () => {
                               {(() => {
                                 if (e.action === "update") {
                                   if (actualChanges.length > 0) {
-                                    const fieldNames = Array.from(new Set(actualChanges.map(c => formatFieldName(c.field))));
+                                    const fieldNames = Array.from(new Set(actualChanges.map(c => formatFieldName(c.field, customFieldMap))));
                                     return `Updated ${fieldNames.join(", ")}`;
                                   }
-                                  return cleanHumanDescription(e.description, actualChanges) || (disp.value ? `Updated ${disp.value}` : "Updated");
+                                  return cleanHumanDescription(e.description, actualChanges, customFieldMap) || (disp.value ? `Updated ${disp.value}` : "Updated");
                                 }
-                                return cleanHumanDescription(e.description, actualChanges) || (e.action === "create" ? `Created ${disp.value}` : e.action.toUpperCase());
+                                return cleanHumanDescription(e.description, actualChanges, customFieldMap) || (e.action === "create" ? `Created ${disp.value}` : e.action.toUpperCase());
                               })()}
                             </div>
                           </>
@@ -773,19 +888,19 @@ export const ActivityLogPage = () => {
                                     actualChanges.map((c, idx) => {
                                       const parsedBefore = pyLiteralParse(c.before);
                                       const parsedAfter = pyLiteralParse(c.after);
-                                      const displayBefore = resolveDisplayValue(c.field, parsedBefore, unitMap, categoryMap);
-                                      const displayAfter = resolveDisplayValue(c.field, parsedAfter, unitMap, categoryMap);
+                                      const displayBefore = resolveDisplayValue(c.field, parsedBefore, unitMap, categoryMap, customFieldMap);
+                                      const displayAfter = resolveDisplayValue(c.field, parsedAfter, unitMap, categoryMap, customFieldMap);
                                       const isObjBefore = typeof displayBefore === 'object' && displayBefore !== null;
                                       const isObjAfter = typeof displayAfter === 'object' && displayAfter !== null;
 
                                       return (
                                         <div key={idx} className="drow">
-                                          <span className="dfield">{formatFieldName(c.field)}</span>
+                                          <span className="dfield">{formatFieldName(c.field, customFieldMap)}</span>
                                           {displayBefore === undefined || displayBefore === null || displayBefore === "" || displayBefore === "None" ? (
                                             <span className="dnew">— not set —</span>
                                           ) : (
                                             <span className={`dwas ${isObjBefore ? 'd-obj' : ''}`}>
-                                              <ChangeValueRenderer val={displayBefore} isDeleted />
+                                              <ChangeValueRenderer val={displayBefore} isDeleted customFieldMap={customFieldMap} />
                                             </span>
                                           )}
                                           <span className="darr"><ArrIcon /></span>
@@ -793,7 +908,7 @@ export const ActivityLogPage = () => {
                                             {displayAfter === undefined || displayAfter === null || displayAfter === "" || displayAfter === "None" ? (
                                               <span className="text-slate-400 italic">— not set —</span>
                                             ) : (
-                                              <ChangeValueRenderer val={displayAfter} />
+                                              <ChangeValueRenderer val={displayAfter} customFieldMap={customFieldMap} />
                                             )}
                                           </span>
                                         </div>
@@ -801,7 +916,7 @@ export const ActivityLogPage = () => {
                                     })
                                   ) : (
                                     <div className="empty" style={{ padding: "20px" }}>
-                                      {cleanHumanDescription(e.description, actualChanges) || "No field-level changes recorded."}
+                                      {cleanHumanDescription(e.description, actualChanges, customFieldMap) || "No field-level changes recorded."}
                                     </div>
                                   )}
                                 </div>
@@ -849,7 +964,7 @@ export const ActivityLogPage = () => {
                                 {e.description && (
                                   <div className="mrow">
                                     <span className="mk">Description</span>
-                                    <span className="mv reason">{cleanHumanDescription(e.description, actualChanges)}</span>
+                                    <span className="mv reason">{cleanHumanDescription(e.description, actualChanges, customFieldMap)}</span>
                                   </div>
                                 )}
                               </div>

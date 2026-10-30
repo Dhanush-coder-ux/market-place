@@ -34,6 +34,9 @@ export interface VariantCombination {
   price: string;
   buy_price: string;
   mrp: string;
+  discount_type?: "price" | "percent";
+  discount_value?: string;
+  discount_percent?: string;
   stock: string;
   active: boolean;
   serials: SerialEntry[];
@@ -234,23 +237,86 @@ interface VariantMatrixTableProps {
   onChange: (combos: VariantCombination[]) => void;
   trackStock?: boolean;
   baseMrp?: number;
+  productId?: string;
+  onCheckStock?: (combo: VariantCombination) => Promise<boolean>;
+  onStockError?: (msg: string) => void;
 }
 
 export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
-  combinations, onChange, trackStock: _trackStock, baseMrp
+  combinations, onChange, trackStock: _trackStock, baseMrp, productId: _productId, onCheckStock, onStockError
 }) => {
 
   const [barcodeBase, setbarcodeBase] = useState("");
+  const [checkingId, setCheckingId] = useState<string | null>(null);
 
-  const update = (id: string, field: keyof VariantCombination, val: unknown) => {
-    onChange(combinations.map(c => c.id === id ? { ...c, [field]: val } : c));
+  const update = (id: string, updates: Partial<VariantCombination>) => {
+    onChange(combinations.map(c => c.id === id ? { ...c, ...updates } : c));
   };
 
   const activeCount = combinations.filter(c => c.active).length;
 
-  const bulkToggleAll = (active: boolean) => {
-    if (!active && combinations.length <= 1) return; // Can't turn off all if only 1
-    onChange(combinations.map(c => ({ ...c, active })));
+  const handleToggle = async (combo: VariantCombination) => {
+    if (combo.active) {
+      if (activeCount <= 1) {
+        onStockError?.("At least one variant must remain active.");
+        return;
+      }
+      if (onCheckStock) {
+        setCheckingId(combo.id);
+        try {
+          const allowed = await onCheckStock(combo);
+          if (!allowed) {
+            return;
+          }
+        } finally {
+          setCheckingId(null);
+        }
+      } else {
+        const s = parseFloat(combo.stock) || 0;
+        if (s > 0) {
+          onStockError?.(`Cannot disable variant '${combo.barcode || combo.sku || "this variant"}': it has stock (${s} available).`);
+          return;
+        }
+      }
+      update(combo.id, { active: false });
+    } else {
+      update(combo.id, { active: true });
+    }
+  };
+
+  const bulkToggleAll = async (active: boolean) => {
+    if (!active) {
+      if (combinations.length <= 1) return;
+      const updatedCombos = [...combinations];
+      let hasBlocked = false;
+
+      for (let i = 0; i < updatedCombos.length; i++) {
+        const combo = updatedCombos[i];
+        if (!combo.active) continue;
+        if (onCheckStock) {
+          const allowed = await onCheckStock(combo);
+          if (allowed) {
+            updatedCombos[i] = { ...combo, active: false };
+          } else {
+            hasBlocked = true;
+          }
+        } else {
+          const s = parseFloat(combo.stock) || 0;
+          if (s <= 0) {
+            updatedCombos[i] = { ...combo, active: false };
+          } else {
+            hasBlocked = true;
+          }
+        }
+      }
+
+      if (hasBlocked) {
+        onStockError?.("Some variants could not be disabled because they have active stock.");
+      }
+      onChange(updatedCombos);
+    } else {
+      onChange(combinations.map(c => ({ ...c, active: true })));
+    }
   };
 
   const regenAllbarcodes = (basebarcode: string) => {
@@ -259,6 +325,122 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
       ...c,
       barcode: `${basebarcode}-${Object.values(c.attributes).map(v => v.slice(0, 3).toUpperCase()).join("-")}-${String(i + 1).padStart(2, "0")}`,
     })));
+  };
+
+  const handleMrpChange = (combo: VariantCombination, val: string) => {
+    const clean = val.replace(/[^0-9.]/g, "");
+    const numMrp = parseFloat(clean) || 0;
+    const discType = combo.discount_type || "price";
+    const numDisc = parseFloat(combo.discount_value || "0") || 0;
+
+    let newPrice = combo.price;
+    let newDiscPercent = combo.discount_percent || "0";
+
+    if (numMrp > 0 && numDisc > 0) {
+      if (discType === "price") {
+        const sp = Math.max(0, numMrp - numDisc);
+        newPrice = sp % 1 === 0 ? String(sp) : sp.toFixed(2);
+        newDiscPercent = ((numDisc / numMrp) * 100).toFixed(2);
+      } else {
+        const discAmt = (numMrp * numDisc) / 100;
+        const sp = Math.max(0, numMrp - discAmt);
+        newPrice = sp % 1 === 0 ? String(sp) : sp.toFixed(2);
+        newDiscPercent = String(numDisc);
+      }
+    } else if (numMrp > 0 && combo.price) {
+      const sp = parseFloat(combo.price) || 0;
+      if (numMrp >= sp && sp > 0) {
+        const diff = numMrp - sp;
+        newDiscPercent = ((diff / numMrp) * 100).toFixed(2);
+      }
+    }
+
+    update(combo.id, {
+      mrp: clean,
+      price: newPrice,
+      discount_percent: newDiscPercent,
+    });
+  };
+
+  const handleDiscountChange = (combo: VariantCombination, val: string, discType: "price" | "percent") => {
+    const clean = val.replace(/[^0-9.]/g, "");
+    const numVal = parseFloat(clean) || 0;
+    const effectiveMrp = parseFloat(combo.mrp) || baseMrp || 0;
+
+    let newPrice = combo.price;
+    let newDiscPercent = "0";
+
+    if (effectiveMrp > 0) {
+      if (discType === "price") {
+        const sp = Math.max(0, effectiveMrp - numVal);
+        newPrice = clean === "" ? String(effectiveMrp) : (sp % 1 === 0 ? String(sp) : sp.toFixed(2));
+        newDiscPercent = numVal > 0 ? ((numVal / effectiveMrp) * 100).toFixed(2) : "0";
+      } else {
+        const pct = Math.min(99.99, numVal);
+        const discAmt = (effectiveMrp * pct) / 100;
+        const sp = Math.max(0, effectiveMrp - discAmt);
+        newPrice = clean === "" ? String(effectiveMrp) : (sp % 1 === 0 ? String(sp) : sp.toFixed(2));
+        newDiscPercent = String(pct);
+      }
+    }
+
+    update(combo.id, {
+      discount_value: clean,
+      discount_type: discType,
+      discount_percent: newDiscPercent,
+      price: newPrice,
+    });
+  };
+
+  const handleDiscountTypeChange = (combo: VariantCombination, nextType: "price" | "percent") => {
+    const effectiveMrp = parseFloat(combo.mrp) || baseMrp || 0;
+    const sp = parseFloat(combo.price) || 0;
+    let newDiscVal = combo.discount_value || "";
+
+    if (effectiveMrp > 0 && sp > 0 && effectiveMrp >= sp) {
+      const diff = effectiveMrp - sp;
+      if (nextType === "price") {
+        newDiscVal = diff % 1 === 0 ? String(diff) : diff.toFixed(2);
+      } else {
+        const pct = (diff / effectiveMrp) * 100;
+        newDiscVal = pct % 1 === 0 ? String(pct) : pct.toFixed(2);
+      }
+    }
+
+    update(combo.id, {
+      discount_type: nextType,
+      discount_value: newDiscVal,
+    });
+  };
+
+  const handleSellPriceChange = (combo: VariantCombination, val: string) => {
+    const clean = val.replace(/[^0-9.]/g, "");
+    const sp = parseFloat(clean) || 0;
+    const effectiveMrp = parseFloat(combo.mrp) || baseMrp || 0;
+    const discType = combo.discount_type || "price";
+
+    let newDiscVal = combo.discount_value || "";
+    let newDiscPercent = combo.discount_percent || "0";
+
+    if (effectiveMrp > 0 && sp > 0 && effectiveMrp >= sp) {
+      const diff = effectiveMrp - sp;
+      if (discType === "price") {
+        newDiscVal = diff % 1 === 0 ? String(diff) : diff.toFixed(2);
+      } else {
+        const pct = (diff / effectiveMrp) * 100;
+        newDiscVal = pct % 1 === 0 ? String(pct) : pct.toFixed(2);
+      }
+      newDiscPercent = ((diff / effectiveMrp) * 100).toFixed(2);
+    } else if (clean === "" || sp === 0) {
+      newDiscVal = "";
+      newDiscPercent = "0";
+    }
+
+    update(combo.id, {
+      price: clean,
+      discount_value: newDiscVal,
+      discount_percent: newDiscPercent,
+    });
   };
 
   if (combinations.length === 0) return null;
@@ -306,85 +488,173 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
       {/* Table Container */}
       <div className="border border-slate-200 rounded-lg overflow-hidden shadow-sm bg-white">
         <div className="overflow-x-auto custom-scrollbar">
-          <table className="w-full text-left border-collapse min-w-[800px]">
+          <table className="w-full text-left border-collapse min-w-[950px]">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100">
                 {attrKeys.map(k => (
-                  <th key={k} className="px-5 py-4 text-[10px] font-black uppercase text-slate-400 whitespace-nowrap">
+                  <th key={k} className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 whitespace-nowrap">
                     {k}
                   </th>
                 ))}
-                <th className="px-5 py-4 text-[10px] font-black uppercase text-slate-400 whitespace-nowrap">Barcode</th>
-                <th className="px-5 py-4 text-center text-[10px] font-black uppercase text-slate-400">Sell Price</th>
-                <th className="px-5 py-4 text-[10px] font-black uppercase text-slate-400 whitespace-nowrap">Storage Location</th>
-                <th className="px-5 py-4 text-center text-[10px] font-black uppercase text-slate-400">Reorder Pt</th>
-                <th className="px-5 py-4 text-center text-[10px] font-black uppercase text-slate-400">Active</th>
+                <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 whitespace-nowrap">Barcode</th>
+                <th className="px-4 py-3.5 text-center text-[10px] font-black uppercase text-slate-400 whitespace-nowrap">MRP</th>
+                <th className="px-4 py-3.5 text-center text-[10px] font-black uppercase text-slate-400 whitespace-nowrap">Discount</th>
+                <th className="px-4 py-3.5 text-center text-[10px] font-black uppercase text-slate-400 whitespace-nowrap">Sell Price</th>
+                <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 whitespace-nowrap">Storage Location</th>
+                <th className="px-4 py-3.5 text-center text-[10px] font-black uppercase text-slate-400 whitespace-nowrap">Reorder Pt</th>
+                <th className="px-4 py-3.5 text-center text-[10px] font-black uppercase text-slate-400 whitespace-nowrap">Active</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {combinations.map((combo) => {
-                const effectiveMrp = combo.mrp && !isNaN(Number(combo.mrp)) && Number(combo.mrp) > 0 ? Number(combo.mrp) : baseMrp;
-                const isOverMrp = effectiveMrp && effectiveMrp > 0 && combo.price && !isNaN(Number(combo.price)) && Number(combo.price) > effectiveMrp;
+                const effectiveMrp = combo.mrp && !isNaN(Number(combo.mrp)) && Number(combo.mrp) > 0 ? Number(combo.mrp) : (baseMrp || 0);
+                const comboSp = combo.price && !isNaN(Number(combo.price)) ? Number(combo.price) : 0;
+                const isOverMrp = effectiveMrp > 0 && comboSp > 0 && comboSp > effectiveMrp;
+                const diffAmount = effectiveMrp > 0 && comboSp > 0 && effectiveMrp > comboSp ? effectiveMrp - comboSp : 0;
+                const diffPct = effectiveMrp > 0 && diffAmount > 0 ? (diffAmount / effectiveMrp) * 100 : 0;
 
                 return (
                   <React.Fragment key={combo.id}>
                     <tr className={`hover:bg-slate-50/50 transition-all duration-150 ${!combo.active ? "opacity-40 grayscale-[0.5]" : ""}`}>
                       {attrKeys.map(k => (
-                        <td key={k} className="px-5 py-4">
-                          <span className="inline-flex items-center px-3 py-1 rounded-lg text-[11px] font-black  tracking-tight bg-slate-100 text-slate-600">
+                        <td key={k} className="px-4 py-3.5">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-black tracking-tight bg-slate-100 text-slate-700">
                             {combo.attributes[k]}
                           </span>
                         </td>
                       ))}
-                      <td className="px-5 py-4">
+                      <td className="px-4 py-3.5">
                         <input
-                          className="h-9 px-3 text-xs border border-slate-200 rounded-lg w-32 font-mono focus:ring-2 focus:ring-blue-100 outline-none"
+                          className="h-9 px-2.5 text-xs border border-slate-200 rounded-lg w-28 font-mono focus:ring-2 focus:ring-blue-100 outline-none"
                           placeholder="SKU-001"
                           value={combo.barcode}
-                          onChange={e => update(combo.id, "barcode", e.target.value)}
+                          onChange={e => update(combo.id, { barcode: e.target.value })}
                         />
                       </td>
-                      <td className="px-5 py-4">
-                        <input
-                          className={`h-9 px-3 text-xs border rounded-lg w-24 text-center font-mono focus:ring-2 focus:ring-blue-100 outline-none ${
-                            isOverMrp
-                              ? "border-red-300 bg-red-50/50 text-red-700"
-                              : "border-slate-200"
-                          }`}
-                          placeholder="0.00"
-                          type="number"
-                          title={isOverMrp ? `Selling price cannot exceed MRP (₹${effectiveMrp})` : undefined}
-                          value={combo.price}
-                          onChange={e => update(combo.id, "price", e.target.value)}
-                        />
+
+                      {/* MRP Column */}
+                      <td className="px-4 py-3.5">
+                        <div className="flex flex-col items-center">
+                          <div className="relative">
+                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-semibold">₹</span>
+                            <input
+                              className="h-9 pl-6 pr-2 text-xs border border-slate-200 rounded-lg w-24 text-right font-mono focus:ring-2 focus:ring-blue-100 outline-none"
+                              placeholder={baseMrp ? String(baseMrp) : "0.00"}
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={combo.mrp || ""}
+                              onChange={e => handleMrpChange(combo, e.target.value)}
+                            />
+                          </div>
+                        </div>
                       </td>
-                      <td className="px-5 py-4">
+
+                      {/* Discount Column */}
+                      <td className="px-4 py-3.5">
+                        <div className="flex flex-col items-center">
+                          <div className="flex items-center">
+                            <div className="relative flex-1">
+                              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-semibold">
+                                {combo.discount_type === "percent" ? "%" : "₹"}
+                              </span>
+                              <input
+                                className="h-9 pl-5 pr-1 text-xs border border-r-0 border-slate-200 rounded-l-lg w-20 text-right font-mono focus:ring-2 focus:ring-blue-100 outline-none"
+                                placeholder="0"
+                                type="number"
+                                min="0"
+                                step={combo.discount_type === "percent" ? "0.1" : "1"}
+                                value={combo.discount_value || ""}
+                                onChange={e => handleDiscountChange(combo, e.target.value, combo.discount_type || "price")}
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              title={`Switch to ${combo.discount_type === "percent" ? "Direct Price (₹)" : "Percentage (%)"}`}
+                              onClick={() => {
+                                const next = combo.discount_type === "percent" ? "price" : "percent";
+                                handleDiscountTypeChange(combo, next);
+                              }}
+                              className="h-9 px-2 text-[10px] font-bold border border-slate-200 rounded-r-lg bg-slate-50 hover:bg-slate-100 text-slate-600 transition-colors"
+                            >
+                              {combo.discount_type === "percent" ? "%" : "₹"}
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Sell Price Column */}
+                      <td className="px-4 py-3.5">
+                        <div className="flex flex-col items-center">
+                          <div className="relative">
+                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-semibold">₹</span>
+                            <input
+                              className={`h-9 pl-6 pr-2 text-xs border rounded-lg w-24 text-right font-mono focus:ring-2 focus:ring-blue-100 outline-none ${
+                                isOverMrp
+                                  ? "border-red-300 bg-red-50/50 text-red-700 font-bold"
+                                  : "border-slate-200"
+                              }`}
+                              placeholder="0.00"
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              title={isOverMrp ? `Selling price cannot exceed MRP (₹${effectiveMrp})` : undefined}
+                              value={combo.price}
+                              onChange={e => handleSellPriceChange(combo, e.target.value)}
+                            />
+                          </div>
+                          {diffAmount > 0 && effectiveMrp > 0 && !isOverMrp && (
+                            <span className="text-[10px] text-emerald-600 font-bold mt-0.5 whitespace-nowrap">
+                              Save ₹{diffAmount % 1 === 0 ? diffAmount : diffAmount.toFixed(2)} ({diffPct.toFixed(0)}%)
+                            </span>
+                          )}
+                          {isOverMrp && (
+                            <span className="text-[9px] text-red-500 font-bold mt-0.5 whitespace-nowrap">
+                              Exceeds MRP
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      <td className="px-4 py-3.5">
                         <input
-                          className="h-9 px-3 text-xs border border-slate-200 rounded-lg w-36 focus:ring-2 focus:ring-blue-100 outline-none"
-                          placeholder="e.g. Aisle 4, Shelf B"
+                          className="h-9 px-2.5 text-xs border border-slate-200 rounded-lg w-32 focus:ring-2 focus:ring-blue-100 outline-none"
+                          placeholder="e.g. Shelf B"
                           value={combo.location || ""}
-                          onChange={e => update(combo.id, "location", e.target.value)}
+                          onChange={e => update(combo.id, { location: e.target.value })}
                         />
                       </td>
-                      <td className="px-5 py-4">
+
+                      <td className="px-4 py-3.5 text-center">
                         <input
-                          className="h-9 px-3 text-xs border border-slate-200 rounded-lg w-20 text-center font-mono focus:ring-2 focus:ring-blue-100 outline-none"
+                          className="h-9 px-2 text-xs border border-slate-200 rounded-lg w-16 text-center font-mono focus:ring-2 focus:ring-blue-100 outline-none"
                           placeholder="5"
                           type="number"
                           value={combo.reorder_point}
-                          onChange={e => update(combo.id, "reorder_point", e.target.value)}
+                          onChange={e => update(combo.id, { reorder_point: e.target.value })}
                         />
                       </td>
-                      <td className="px-5 py-4 text-center">
-                        <button type="button"
-                          onClick={() => {
-                            // Prevent turning off the last active variant
-                            if (combo.active && activeCount <= 1) return;
-                            update(combo.id, "active", !combo.active);
-                          }}
-                          disabled={combo.active && activeCount <= 1}
-                          className={`relative inline-flex h-5 w-10 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out outline-none ${combo.active ? "bg-blue-600" : "bg-slate-200"} ${combo.active && activeCount <= 1 ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}>
-                          <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${combo.active ? "translate-x-5" : "translate-x-0"}`} />
+
+                      {/* Active Toggle Column */}
+                      <td className="px-4 py-3.5 text-center">
+                        <button
+                          type="button"
+                          onClick={() => handleToggle(combo)}
+                          disabled={checkingId === combo.id || (combo.active && activeCount <= 1)}
+                          title={combo.active && activeCount <= 1 ? "At least one variant must remain active" : (combo.active ? "Click to disable variant" : "Click to enable variant")}
+                          className={`relative inline-flex h-5 w-10 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out outline-none ${
+                            combo.active ? "bg-emerald-600" : "bg-slate-200"
+                          } ${combo.active && activeCount <= 1 ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                        >
+                          {checkingId === combo.id ? (
+                            <span className="w-3 h-3 m-0.5 border border-white/50 border-t-white rounded-full animate-spin" />
+                          ) : (
+                            <span
+                              className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                combo.active ? "translate-x-5" : "translate-x-0"
+                              }`}
+                            />
+                          )}
                         </button>
                       </td>
                     </tr>
@@ -402,7 +672,15 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
 export const generateCombinations = (
   variantTypes: VariantType[],
   existing: VariantCombination[],
-  defaults: { buy_price: string; sell_price: string; mrp: string; reorder_point: string }
+  defaults: {
+    buy_price: string;
+    sell_price: string;
+    mrp: string;
+    reorder_point: string;
+    discount_type?: "price" | "percent";
+    discount_value?: string;
+    discount_percent?: string;
+  }
 ): VariantCombination[] => {
   const validTypes = variantTypes.filter(t => t.values.length > 0);
   if (validTypes.length === 0) return [];
@@ -436,6 +714,9 @@ export const generateCombinations = (
       price: defaults.sell_price,
       buy_price: defaults.buy_price,
       mrp: defaults.mrp,
+      discount_type: defaults.discount_type || "price",
+      discount_value: defaults.discount_value || "",
+      discount_percent: defaults.discount_percent || "0",
       reorder_point: defaults.reorder_point,
       stock: "0",
       active: true,
@@ -443,4 +724,3 @@ export const generateCombinations = (
     };
   });
 };
-

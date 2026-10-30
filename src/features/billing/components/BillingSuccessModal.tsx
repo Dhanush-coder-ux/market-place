@@ -130,17 +130,35 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
       const curDateStr = now.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
       const curTimeStr = now.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true }).toLowerCase();
 
-      const subtotalVal = Number(details.totalAmount || 0);
+      const subtotalVal = Number(details.billTotals?.baseSubtotal ?? details.totalAmount ?? 0);
       const discountVal = Number(details.billTotals?.totalDiscountGiven || 0);
-      const taxableVal = Number(details.billTotals?.taxableAmount || (subtotalVal - discountVal));
+      const gstVal = Number(details.billTotals?.totalGst ?? details.gstAmount ?? 0);
+      const taxableVal = Number(
+        details.billTotals?.totalTaxable ??
+        details.billTotals?.taxable_amount ??
+        details.billTotals?.taxableAmount ??
+        (gstVal > 0 ? (details.finalAmount - gstVal - Number(details.billTotals?.roundOff || 0)) : (subtotalVal - discountVal))
+      );
       const totalUnitsVal = details.items.reduce((sum: number, it: any) => sum + Number(it.qty || 1), 0);
 
-      const gstVal = details.gstAmount;
-      const rawGstRate = taxableVal > 0 ? Math.round((gstVal / taxableVal) * 100) : 0;
-      const cgstRateVal = rawGstRate > 0 ? rawGstRate / 2 : 0;
-      const sgstRateVal = rawGstRate > 0 ? rawGstRate / 2 : 0;
-      const cgstAmtVal = details.billTotals?.cgst ?? Math.round((gstVal / 2) * 100) / 100;
-      const sgstAmtVal = details.billTotals?.sgst ?? Math.round((gstVal - cgstAmtVal) * 100) / 100;
+      // Detect GST rate
+      let detectedGstRate = 0;
+      if (details.billTotals?.taxGroups && details.billTotals.taxGroups.length > 0) {
+        detectedGstRate = Number(details.billTotals.taxGroups[0].gstRate || 0);
+      } else if (details.items && details.items.length > 0) {
+        const itemWithGst = details.items.find((it: any) => Number(it.gst ?? it.gstRate ?? it.tax_rate ?? 0) > 0);
+        if (itemWithGst) {
+          detectedGstRate = Number(itemWithGst.gst ?? itemWithGst.gstRate ?? itemWithGst.tax_rate);
+        }
+      }
+      if (detectedGstRate === 0 && taxableVal > 0 && gstVal > 0) {
+        detectedGstRate = Math.round((gstVal / taxableVal) * 100);
+      }
+
+      const cgstRateVal = detectedGstRate > 0 ? detectedGstRate / 2 : 0;
+      const sgstRateVal = detectedGstRate > 0 ? detectedGstRate / 2 : 0;
+      const cgstAmtVal = Number(details.billTotals?.cgst ?? (details.billTotals?.totalGst ? Math.round((details.billTotals.totalGst / 2) * 100) / 100 : Math.round((gstVal / 2) * 100) / 100));
+      const sgstAmtVal = Number(details.billTotals?.sgst ?? Math.round((gstVal - cgstAmtVal) * 100) / 100);
 
       const receiptData: ReceiptData = {
         shopName: shopData?.shop_name || shopData?.name,
@@ -168,7 +186,7 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
         sgstAmount: sgstAmtVal,
         cgstRate: cgstRateVal,
         sgstRate: sgstRateVal,
-        gstRate: rawGstRate,
+        gstRate: detectedGstRate,
         roundOff: Number(details.billTotals?.roundOff || 0),
         finalAmount: details.finalAmount,
         totalUnits: totalUnitsVal,
@@ -340,12 +358,14 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
           {/* Body Section */}
           <div className="p-[16px_20px_0] max-h-[50vh] overflow-y-auto custom-scrollbar">
             
-            <div className="flex justify-between text-[12.5px] py-1.5">
-              <span className="text-[#7A8497] flex items-center gap-1.5">
-                <User size={13} className="text-[#A7B0C0]" /> Customer
-              </span>
-              <span className="font-semibold text-[#12161F]">{details.customerName || 'Walk-in'}</span>
-            </div>
+            {Boolean(details.customerName) && !["walk-in", "walk-in customer", "walk in", "walk in customer", "walkin", "walkin customer"].includes(details.customerName.trim().toLowerCase()) && (
+              <div className="flex justify-between text-[12.5px] py-1.5">
+                <span className="text-[#7A8497] flex items-center gap-1.5">
+                  <User size={13} className="text-[#A7B0C0]" /> Customer
+                </span>
+                <span className="font-semibold text-[#12161F]">{details.customerName}</span>
+              </div>
+            )}
             <div className="flex justify-between text-[12.5px] py-1.5 border-t border-[#E6EAF1]">
               <span className="text-[#7A8497] flex items-center gap-1.5">
                 <Clock size={13} className="text-[#A7B0C0]" /> Billed at
@@ -719,15 +739,19 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
                   <span className="text-[#8A857C]">Time</span>
                   <span>{timeStr}</span>
                 </div>
-                <div className="flex justify-between text-[10px]">
-                  <span className="text-[#8A857C]">Customer</span>
-                  <span>{details.customerName || "Walk-in"}</span>
-                </div>
-                {details.phone && (
-                  <div className="flex justify-between text-[10px]">
-                    <span className="text-[#8A857C]">Phone</span>
-                    <span>{details.phone}</span>
-                  </div>
+                {Boolean(details.customerName) && !["walk-in", "walk-in customer", "walk in", "walk in customer", "walkin", "walkin customer"].includes(details.customerName.trim().toLowerCase()) && (
+                  <>
+                    <div className="flex justify-between text-[10px]">
+                      <span className="text-[#8A857C]">Customer</span>
+                      <span>{details.customerName}</span>
+                    </div>
+                    {details.phone && (
+                      <div className="flex justify-between text-[10px]">
+                        <span className="text-[#8A857C]">Phone</span>
+                        <span>{details.phone}</span>
+                      </div>
+                    )}
+                  </>
                 )}
 
                 <hr className="receipt-separator" />

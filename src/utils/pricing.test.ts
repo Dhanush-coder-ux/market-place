@@ -7,29 +7,37 @@ function expectEq(label: string, actual: number, expected: number) {
 }
 
 export function runPricingTests(): boolean {
+  // User Case: ₹95 at 18% GST
+  const tUser = calculateTaxSplit(95, 18);
+  expectEq("User Taxable", tUser.taxableValue, 77.90);
+  expectEq("User GST", tUser.gstAmount, 17.10);
+  expectEq("User CGST", tUser.cgst, 8.55);
+  expectEq("User SGST", tUser.sgst, 8.55);
+  expectEq("User Total", tUser.taxableValue + tUser.cgst + tUser.sgst, 95.00);
+
   // T1: ₹105 at 5% GST
   const t1 = calculateTaxSplit(105, 5);
-  expectEq("T1 Taxable", t1.taxableValue, 100.00);
-  expectEq("T1 GST", t1.gstAmount, 5.00);
-  expectEq("T1 CGST", t1.cgst, 2.50);
-  expectEq("T1 SGST", t1.sgst, 2.50);
+  expectEq("T1 Taxable", t1.taxableValue, 99.75);
+  expectEq("T1 GST", t1.gstAmount, 5.25);
+  expectEq("T1 CGST", t1.cgst, 2.63);
+  expectEq("T1 SGST", t1.sgst, 2.62);
 
   // T2: ₹100 at 5% GST
   const t2 = calculateTaxSplit(100, 5);
-  expectEq("T2 Taxable", t2.taxableValue, 95.24);
-  expectEq("T2 GST", t2.gstAmount, 4.76);
-  expectEq("T2 CGST", t2.cgst, 2.38);
-  expectEq("T2 SGST", t2.sgst, 2.38);
+  expectEq("T2 Taxable", t2.taxableValue, 95.00);
+  expectEq("T2 GST", t2.gstAmount, 5.00);
+  expectEq("T2 CGST", t2.cgst, 2.50);
+  expectEq("T2 SGST", t2.sgst, 2.50);
 
   // T3: ₹118 at 18% GST
   const t3 = calculateTaxSplit(118, 18);
-  expectEq("T3 Taxable", t3.taxableValue, 100.00);
-  expectEq("T3 GST", t3.gstAmount, 18.00);
+  expectEq("T3 Taxable", t3.taxableValue, 96.76);
+  expectEq("T3 GST", t3.gstAmount, 21.24);
 
   // T4: ₹100 at 18% GST
   const t4 = calculateTaxSplit(100, 18);
-  expectEq("T4 Taxable", t4.taxableValue, 84.75);
-  expectEq("T4 GST", t4.gstAmount, 15.25);
+  expectEq("T4 Taxable", t4.taxableValue, 82.00);
+  expectEq("T4 GST", t4.gstAmount, 18.00);
 
   // T5: ₹100 at 0% GST
   const t5 = calculateTaxSplit(100, 0);
@@ -81,22 +89,22 @@ export function runPricingTests(): boolean {
   );
   expectEq("T10 Kurta Bill Share", t10.lines[0].billDiscountShare, 100.00);
   expectEq("T10 Kurta Final", t10.lines[0].finalInclusive, 900.00);
-  expectEq("T10 Kurta Taxable", t10.lines[0].taxableValue, 857.14);
-  expectEq("T10 Kurta GST", t10.lines[0].gstAmount, 42.86);
+  expectEq("T10 Kurta Taxable", t10.lines[0].taxableValue, 855.00);
+  expectEq("T10 Kurta GST", t10.lines[0].gstAmount, 45.00);
 
   expectEq("T10 Headphone Bill Share", t10.lines[1].billDiscountShare, 200.00);
   expectEq("T10 Headphone Final", t10.lines[1].finalInclusive, 1800.00);
-  expectEq("T10 Headphone Taxable", t10.lines[1].taxableValue, 1525.42);
-  expectEq("T10 Headphone GST", t10.lines[1].gstAmount, 274.58);
+  expectEq("T10 Headphone Taxable", t10.lines[1].taxableValue, 1476.00);
+  expectEq("T10 Headphone GST", t10.lines[1].gstAmount, 324.00);
 
   expectEq("T10 Gross Subtotal", t10.baseSubtotal, 3000.00);
-  expectEq("T10 Total Taxable", t10.totalTaxable, 2382.56);
-  expectEq("T10 Total GST", t10.totalGst, 317.44);
+  expectEq("T10 Total Taxable", t10.totalTaxable, 2331.00);
+  expectEq("T10 Total GST", t10.totalGst, 369.00);
   expectEq("T10 Payable", t10.payable, 2700.00);
 
   // T11: Rounding test
-  expectEq("T11 Taxable 95.24", t2.taxableValue, 95.24);
-  expectEq("T11 GST 4.76", t2.gstAmount, 4.76);
+  expectEq("T11 Taxable 95.00", t2.taxableValue, 95.00);
+  expectEq("T11 GST 5.00", t2.gstAmount, 5.00);
 
   // T13: Expired offer check
   const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];

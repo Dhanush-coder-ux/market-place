@@ -123,6 +123,7 @@ export default function EmployeeDetail() {
   const salaryRange = employee.datas?.salary_range ?? (employee as any).additional_infos?.salary_range;
   const fullAddress = employee.datas?.address?.full_address ?? (employee as any).additional_infos?.address?.full_address;
   const zipCode = employee.datas?.address?.zip_code ?? (employee as any).additional_infos?.address?.zip_code;
+  const displayJoinDate = employee.joined_date ? String(employee.joined_date).split(/[T ]/)[0] : "—";
 
   return (
     <div className="flex-1 flex flex-col min-h-0 h-full bg-slate-50/50 font-sans overflow-hidden relative">
@@ -202,8 +203,8 @@ export default function EmployeeDetail() {
                   onClick={() => setViewValue({ label: "Access Role", value: String(employee.role || "—") })}
                 />
                 <DetailItem
-                  icon={Calendar} label="Joining Date" value={String(employee.joined_date || "—")}
-                  onClick={() => setViewValue({ label: "Joining Date", value: String(employee.joined_date || "—") })}
+                  icon={Calendar} label="Joining Date" value={displayJoinDate}
+                  onClick={() => setViewValue({ label: "Joining Date", value: displayJoinDate })}
                 />
                 <DetailItem
                   icon={Database} label="Salary Range" value={salaryRange ? `₹${salaryRange}` : "—"}

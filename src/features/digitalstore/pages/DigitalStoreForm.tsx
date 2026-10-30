@@ -190,9 +190,14 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
 
       const fullPayload = {
         ...payload,
-        operating_hours: form.operatingHours,
-        delivery_options: Object.entries(form.deliveryOptions).filter(([_, d]) => d.enabled).map(([key, d]) => ({
+        operating_hours: form.operatingHours.map(hr => ({
+          day: hr.day.toUpperCase(),
+          open_at: hr.open_at.replace("+00:00", "").replace("Z", ""),
+          close_at: hr.close_at.replace("+00:00", "").replace("Z", "")
+        })),
+        delivery_options: Object.entries(form.deliveryOptions).map(([key, d]) => ({
           type: key === "instant" ? "INSTANT" : key === "standard" ? "STANDARD" : key === "pickuponly" ? "PICKUP_ONLY" : "NATIONWIDE",
+          enabled: !!d.enabled,
           speed: d.speed,
           free_shipping_amount: d.freeThreshold || 0,
           radius: d.radius || 0,

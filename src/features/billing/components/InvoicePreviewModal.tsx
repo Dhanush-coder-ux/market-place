@@ -190,21 +190,200 @@ ${(err as Error)?.message ?? String(err)}`);
 
   if (!isOpen) return null;
 
+  // ── Print Invoice (isolated iframe to prevent blank pages from modal/no-scroll) ──
+  const handlePrint = () => {
+    const el = invoiceRef.current;
+    if (!el) {
+      window.print();
+      return;
+    }
+
+    const existingFrame = document.getElementById("inventq-invoice-print-frame");
+    if (existingFrame) {
+      try {
+        existingFrame.remove();
+      } catch {}
+    }
+
+    const iframe = document.createElement("iframe");
+    iframe.id = "inventq-invoice-print-frame";
+    iframe.style.position = "fixed";
+    iframe.style.top = "0";
+    iframe.style.left = "0";
+    iframe.style.width = "100%";
+    iframe.style.height = "100%";
+    iframe.style.border = "none";
+    iframe.style.opacity = "0";
+    iframe.style.pointerEvents = "none";
+    iframe.style.zIndex = "-9999";
+    document.body.appendChild(iframe);
+
+    const iframeDoc = iframe.contentWindow?.document || iframe.contentDocument;
+    if (!iframeDoc || !iframe.contentWindow) {
+      window.print();
+      return;
+    }
+
+    // Include stylesheet links and non-conflicting style tags
+    const headStyles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
+      .filter((node) => {
+        const text = node.textContent || "";
+        return !text.includes("visibility: hidden !important");
+      })
+      .map((node) => node.outerHTML)
+      .join("\n");
+
+    const cloned = el.cloneNode(true) as HTMLElement;
+    cloned.style.transform = "none";
+    cloned.style.margin = "0 auto";
+    cloned.style.maxWidth = "100%";
+    cloned.style.width = "100%";
+
+    iframeDoc.open();
+    iframeDoc.write(`
+      <!DOCTYPE html>
+      <html lang="en">
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <title>Tax Invoice - ${orderId || "Order"}</title>
+          ${headStyles}
+          <style>
+            @page {
+              size: A4 portrait;
+              margin: 8mm;
+            }
+            *, *::before, *::after {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              box-sizing: border-box;
+            }
+            html, body {
+              margin: 0 !important;
+              padding: 0 !important;
+              background: #ffffff !important;
+              color: #0f172a !important;
+              width: 100% !important;
+              min-height: 100% !important;
+              font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+            }
+            body, body * {
+              visibility: visible !important;
+            }
+            .print-area, .print-area * {
+              visibility: visible !important;
+            }
+            .invoice-print-wrapper {
+              width: 100% !important;
+              max-width: 680px !important;
+              margin: 0 auto !important;
+              padding: 4mm 0 !important;
+              background: #ffffff !important;
+              visibility: visible !important;
+            }
+            .invoice-print-wrapper > div {
+              box-shadow: none !important;
+              max-width: 100% !important;
+              width: 100% !important;
+              border: 1px solid #e2e8f0 !important;
+              border-radius: 8px !important;
+              visibility: visible !important;
+            }
+            .no-print, .no-print * {
+              display: none !important;
+              visibility: hidden !important;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="print-area invoice-print-wrapper">
+            ${cloned.outerHTML}
+          </div>
+        </body>
+      </html>
+    `);
+    iframeDoc.close();
+
+    const triggerPrint = () => {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      } catch (err) {
+        console.warn("Iframe print error:", err);
+        window.print();
+      } finally {
+        setTimeout(() => {
+          try {
+            if (document.body.contains(iframe)) {
+              document.body.removeChild(iframe);
+            }
+          } catch {}
+        }, 60000);
+      }
+    };
+
+    const imgs = Array.from(iframeDoc.getElementsByTagName("img"));
+    const links = Array.from(iframeDoc.querySelectorAll('link[rel="stylesheet"]'));
+    let pending = imgs.length + links.length;
+    let fired = false;
+
+    const onDone = () => {
+      if (fired) return;
+      fired = true;
+      setTimeout(triggerPrint, 250);
+    };
+
+    if (pending === 0) {
+      setTimeout(onDone, 150);
+    } else {
+      const handleLoaded = () => {
+        pending--;
+        if (pending <= 0) onDone();
+      };
+
+      imgs.forEach((img) => {
+        if (img.complete) {
+          handleLoaded();
+        } else {
+          img.onload = handleLoaded;
+          img.onerror = handleLoaded;
+        }
+      });
+
+      links.forEach((link: any) => {
+        link.onload = handleLoaded;
+        link.onerror = handleLoaded;
+      });
+
+      setTimeout(onDone, 1000);
+    }
+  };
+
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center p-3 sm:p-6 print:p-0">
       {/* Styles for Printing */}
       <style dangerouslySetInnerHTML={{
         __html: `
         @media print {
-          body * { visibility: hidden; }
-          .print-area, .print-area * { visibility: visible; }
-          .print-area {
-            position: fixed; left: 0; top: 0;
-            width: 100%; margin: 0; padding: 0;
-            box-shadow: none !important; border: none !important;
+          html, body, .no-scroll {
+            overflow: visible !important;
+            height: auto !important;
+            min-height: 100% !important;
+            background: #ffffff !important;
           }
-          .no-print { display: none !important; }
-          @page { size: A4; margin: 15mm; }
+          #inventq-invoice-print-frame {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            z-index: 999999 !important;
+          }
+          .no-print, .no-print * { display: none !important; }
+          @page { size: A4 portrait; margin: 8mm; }
         }
       `}} />
 
@@ -256,7 +435,7 @@ ${(err as Error)?.message ?? String(err)}`);
           {orderId && (
             <div className="flex gap-2">
               <button
-                onClick={() => window.print()}
+                onClick={handlePrint}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-slate-200 text-[12px] font-medium text-slate-600 bg-white hover:bg-slate-50 transition-colors"
               >
                 <Printer size={13} /> Print

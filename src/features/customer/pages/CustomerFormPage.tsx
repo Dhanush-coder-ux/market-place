@@ -590,7 +590,7 @@ const CustomerFormPage = () => {
                             className="w-4 h-4 rounded accent-[#286038] cursor-pointer"
                           />
                           <label htmlFor={`cf_${field.id}`} className="text-xs font-semibold text-slate-600 cursor-pointer">
-                            {field.label_name}
+                            {customFieldValues[field.id] === 'true' ? 'Yes' : 'No'}
                           </label>
                         </div>
                       ) : (

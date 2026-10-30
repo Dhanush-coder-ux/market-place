@@ -171,10 +171,11 @@ interface InputFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
   rightEl?: React.ReactNode;
   error?: string;
   tooltip?: string;
+  customHeader?: React.ReactNode;
 }
-const InputField: React.FC<InputFieldProps> = ({ label, required, hint, leftEl, rightEl, error, tooltip, className = "", ...rest }) => (
+const InputField: React.FC<InputFieldProps> = ({ label, required, hint, leftEl, rightEl, error, tooltip, customHeader, className = "", ...rest }) => (
   <div className={`transition-opacity duration-200 ${rest.disabled ? "opacity-50" : ""}`}>
-    {label && <Label text={label} required={required} hint={hint} tooltip={tooltip} />}
+    {customHeader ? customHeader : (label && <Label text={label} required={required} hint={hint} tooltip={tooltip} />)}
     <div className="relative">
       {leftEl && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">{leftEl}</span>}
       <input
@@ -467,6 +468,62 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   const [barcodePrefix, setBarcodePrefix] = useState("");
   const [generatingBarcode, setGeneratingBarcode] = useState(false);
 
+  // Dual discount modes: Direct price (amount) and percentage. Direct price is selected by default.
+  const [discountType, setDiscountType] = useState<"price" | "percent">("price");
+  const [discountAmount, setDiscountAmount] = useState<string>("");
+
+  const getEffectiveBasePrice = (overrideSellingPrice?: string, overrideMrp?: string) => {
+    const sp = overrideSellingPrice !== undefined ? Number(overrideSellingPrice) : Number(form.selling_price);
+    const mrp = overrideMrp !== undefined ? Number(overrideMrp) : Number(form.mrp);
+    if (!isNaN(sp) && sp > 0) return sp;
+    if (!isNaN(mrp) && mrp > 0) return mrp;
+    return 0;
+  };
+
+  const handleDiscountAmountChange = (valStr: string) => {
+    const clean = valStr.replace(/[^0-9.]/g, "");
+    setDiscountAmount(clean);
+    const base = getEffectiveBasePrice();
+    const amt = parseFloat(clean);
+    if (!isNaN(amt) && amt > 0 && base > 0) {
+      const pct = Math.min(99.99, (amt / base) * 100);
+      setForm(p => ({ ...p, discount_percent: pct % 1 === 0 ? String(pct) : pct.toFixed(2) }));
+    } else if (clean === "" || amt === 0) {
+      setForm(p => ({ ...p, discount_percent: "0" }));
+    }
+  };
+
+  const handleDiscountPercentChange = (valStr: string) => {
+    const clean = valStr.replace(/[^0-9.]/g, "");
+    setForm(p => ({ ...p, discount_percent: clean }));
+    const base = getEffectiveBasePrice();
+    const pct = parseFloat(clean);
+    if (!isNaN(pct) && pct > 0 && base > 0) {
+      const amt = (base * pct) / 100;
+      setDiscountAmount(amt % 1 === 0 ? String(amt) : amt.toFixed(2));
+    } else if (clean === "" || pct === 0) {
+      setDiscountAmount("");
+    }
+  };
+
+  const handleDiscountTypeChange = (newType: "price" | "percent") => {
+    setDiscountType(newType);
+    const base = getEffectiveBasePrice();
+    if (newType === "price") {
+      const pct = parseFloat(form.discount_percent);
+      if (!isNaN(pct) && pct > 0 && base > 0) {
+        const amt = (base * pct) / 100;
+        setDiscountAmount(amt % 1 === 0 ? String(amt) : amt.toFixed(2));
+      }
+    } else {
+      const amt = parseFloat(discountAmount);
+      if (!isNaN(amt) && amt > 0 && base > 0) {
+        const pct = Math.min(99.99, (amt / base) * 100);
+        setForm(p => ({ ...p, discount_percent: pct % 1 === 0 ? String(pct) : pct.toFixed(2) }));
+      }
+    }
+  };
+
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [units, setUnits] = useState<{ id: string; name: string }[]>([]);
 
@@ -661,7 +718,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   // Image is only required for new products; in edit mode the server already has images
   if (!id && existingImages.length === 0 && selectedImageFiles.length === 0) missingFields.push("image");
   if (!form.track_stock && !form.selling_price) missingFields.push("selling price");
-  if (!form.track_stock && !form.cost_to_make) missingFields.push("cost");
 
   useEffect(() => {
     setBottomActions(
@@ -719,12 +775,21 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
               "0"
             );
 
+            // Compute initial direct price discount amount
+            const baseForDiscount = Number(resolvedSellingPrice) || Number(resolvedMrp) || 0;
+            if (baseForDiscount > 0 && Number(resolvedDiscount) > 0) {
+              const initAmt = (baseForDiscount * Number(resolvedDiscount)) / 100;
+              setDiscountAmount(initAmt % 1 === 0 ? String(initAmt) : initAmt.toFixed(2));
+            } else {
+              setDiscountAmount("");
+            }
+
             const rawCost = prod.buy_price ??
               pInfo.buy_price ??
               prod.cost_to_make ??
               additional.cost_to_make ??
               additional.buy_price;
-            const resolvedCost = (rawCost !== undefined && rawCost !== null && rawCost !== "")
+            const resolvedCost = (rawCost !== undefined && rawCost !== null && rawCost !== "" && Number(rawCost) > 0)
               ? String(rawCost)
               : "";
 
@@ -826,17 +891,38 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                 const reorderInfo = v.reorder_point_infos && Object.keys(v.reorder_point_infos).length > 0 ? v.reorder_point_infos : (v.batch_infos?.[0]?.reorder_point_infos || {});
                 const stlInfo = v.storage_location_infos && Object.keys(v.storage_location_infos).length > 0 ? v.storage_location_infos : (v.batch_infos?.[0]?.storage_location_infos || {});
 
+                const varMrp = String(v.additional_infos?.mrp || pricing.mrp || "");
+                const varSellPrice = String(pricing.sell_price || v.sell_price || "");
+                const varDiscPercent = String(v.additional_infos?.discount_percent || pricing.discount_percent || "");
+                let initialDiscVal = "";
+                let initialDiscType: "price" | "percent" = "price";
+                if (varMrp && varSellPrice) {
+                  const mrpNum = Number(varMrp);
+                  const spNum = Number(varSellPrice);
+                  if (mrpNum > spNum) {
+                    const diff = mrpNum - spNum;
+                    initialDiscVal = diff % 1 === 0 ? String(diff) : diff.toFixed(2);
+                    initialDiscType = "price";
+                  }
+                } else if (varDiscPercent && Number(varDiscPercent) > 0) {
+                  initialDiscVal = varDiscPercent;
+                  initialDiscType = "percent";
+                }
+
                 return {
                   id: v.id || uid(),
                   attributes: attrs,
                   barcode: v.additional_infos?.barcode || v.barcode || "",
                   sku: v.additional_infos?.sku || v.sku || v.barcode || "",
-                  price: String(pricing.sell_price || v.sell_price || ""),
+                  price: varSellPrice,
                   buy_price: String(pricing.buy_price || v.buy_price || ""),
-                  mrp: String(v.additional_infos?.mrp || pricing.mrp || ""),
+                  mrp: varMrp,
+                  discount_type: initialDiscType,
+                  discount_value: initialDiscVal,
+                  discount_percent: varDiscPercent,
                   reorder_point: String(reorderInfo.reorder_point || v.reorder_point || "1"),
                   location: stlInfo.storage_location || stlInfo.name || v.storage_location || prod.storage_location_infos?.storage_location || "",
-                  stock: String(stockInfo.available_stocks || "0"),
+                  stock: String(stockInfo.available_stocks ?? stockInfo.current_stock ?? "0"),
                   active: true,
                   serials: (v.additional_infos?.serial_numbers || v.serial_numbers || []).map((sn: any) => ({
                     id: uid(), serial: sn, status: "available" as const, purchaseDate: "", warrantyMonths: "12",
@@ -905,7 +991,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       return;
     }
     const newCombos = generateCombinations(variantTypes, combinations, {
-      buy_price: "0", sell_price: "0", mrp: "0", reorder_point: form.reorder_point || "1",
+      buy_price: form.cost_to_make || "0",
+      sell_price: form.selling_price || "0",
+      mrp: form.mrp || "0",
+      discount_type: discountType,
+      discount_value: discountType === "price" ? discountAmount : form.discount_percent,
+      discount_percent: form.discount_percent || "0",
+      reorder_point: form.reorder_point || "1",
     });
     setCombinations(newCombos);
   }, [variantTypes, form.has_variants]);
@@ -922,8 +1014,24 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         }
         return { ...p, mrp: value };
       });
+      if (discountType === "price" && discountAmount) {
+        const amt = parseFloat(discountAmount);
+        const base = Number(form.selling_price) || Number(value) || 0;
+        if (!isNaN(amt) && amt > 0 && base > 0) {
+          const pct = Math.min(99.99, (amt / base) * 100);
+          setForm(p => ({ ...p, discount_percent: pct % 1 === 0 ? String(pct) : pct.toFixed(2) }));
+        }
+      }
     } else if (name === "selling_price") {
       setForm(p => ({ ...p, selling_price: value }));
+      if (discountType === "price" && discountAmount) {
+        const amt = parseFloat(discountAmount);
+        const base = Number(value) || Number(form.mrp) || 0;
+        if (!isNaN(amt) && amt > 0 && base > 0) {
+          const pct = Math.min(99.99, (amt / base) * 100);
+          setForm(p => ({ ...p, discount_percent: pct % 1 === 0 ? String(pct) : pct.toFixed(2) }));
+        }
+      }
     } else if (name === "discount_percent") {
       setForm(p => ({ ...p, discount_percent: value }));
     } else if (name === "name") {
@@ -957,6 +1065,50 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   const removeSelectedImage = (index: number) => setSelectedImageFiles(prev => prev.filter((_, i) => i !== index));
 
   /* ─── Submit ─── */
+  const handleVariantCheckStock = async (combo: VariantCombination): Promise<boolean> => {
+    const localStock = parseFloat(combo.stock) || 0;
+    if (localStock > 0) {
+      showToast(`Cannot disable variant '${combo.barcode || combo.sku || "this variant"}': it has stock (${localStock} available).`, "error");
+      return false;
+    }
+
+    if (id && !combo.id.startsWith("id_")) {
+      try {
+        const res: any = await inventoryApi.getInventoryById(SHOP_ID, id);
+        const productData = res?.data || res?.datas || res;
+        const variantsList = productData?.variants || productData?.variant_infos || [];
+        let liveStock = 0;
+
+        if (Array.isArray(variantsList)) {
+          const match = variantsList.find((v: any) => v.id === combo.id || v.barcode === combo.barcode);
+          if (match) {
+            const stInfo = match.stock_infos || match.batch_infos?.[0]?.stock_infos || {};
+            liveStock = parseFloat(stInfo.available_stocks ?? stInfo.current_stock ?? match.available_stocks ?? 0) || 0;
+          }
+        } else if (typeof variantsList === "object" && variantsList !== null) {
+          for (const [vId, vData] of Object.entries(variantsList)) {
+            const v = vData as any;
+            if (vId === combo.id || v?.id === combo.id || v?.barcode === combo.barcode) {
+              const stInfo = v.stock_infos || v.batch_infos?.[0]?.stock_infos || {};
+              liveStock = parseFloat(stInfo.available_stocks ?? stInfo.current_stock ?? v.available_stocks ?? 0) || 0;
+              break;
+            }
+          }
+        }
+
+        if (liveStock > 0) {
+          showToast(`Cannot disable variant: it has stock (${liveStock} available).`, "error");
+          setCombinations(prev => prev.map(c => c.id === combo.id ? { ...c, stock: String(liveStock) } : c));
+          return false;
+        }
+      } catch (err) {
+        console.error("Failed to verify variant stock from backend:", err);
+      }
+    }
+
+    return true;
+  };
+
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (isSubmittingRef.current) return;
@@ -1076,6 +1228,19 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
 
       const parsedMrp = combo.mrp !== "" && !isNaN(Number(combo.mrp)) ? Number(combo.mrp) : (form.mrp !== "" && !isNaN(Number(form.mrp)) ? Number(form.mrp) : null);
 
+      let variantDiscPercent = 0;
+      if (combo.discount_percent !== undefined && combo.discount_percent !== "" && !isNaN(Number(combo.discount_percent))) {
+        variantDiscPercent = Number(combo.discount_percent);
+      } else if (combo.discount_value !== undefined && combo.discount_value !== "" && !isNaN(Number(combo.discount_value))) {
+        if (combo.discount_type === "percent") {
+          variantDiscPercent = Number(combo.discount_value);
+        } else if (parsedMrp && parsedMrp > 0) {
+          variantDiscPercent = Number(((Number(combo.discount_value) / parsedMrp) * 100).toFixed(2));
+        }
+      } else if (form.discount_percent !== "" && !isNaN(Number(form.discount_percent))) {
+        variantDiscPercent = Number(form.discount_percent);
+      }
+
       return {
         ...(id && !isNew ? { id: combo.id } : {}),   // only include id on update for existing variants
         name: variantName,
@@ -1085,7 +1250,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         sell_price: parsedSellPrice,
         online_sell_price: parsedSellPrice || 0,
         mrp: parsedMrp,
-        discount_percent: Number(form.discount_percent) || 0,
+        discount_percent: variantDiscPercent,
         offer_valid_until: form.offer_valid_until || null,
         visible_online: form.visible_online,
       };
@@ -1170,7 +1335,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         visible_online: form.visible_online,
         buy_price: form.cost_to_make !== "" && !isNaN(Number(form.cost_to_make))
           ? Number(form.cost_to_make)
-          : (form.selling_price !== "" && !isNaN(Number(form.selling_price)) ? Number(form.selling_price) : null),
+          : null,
         sell_price: form.selling_price !== "" && !isNaN(Number(form.selling_price))
           ? Number(form.selling_price)
           : null,
@@ -1208,7 +1373,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         storage_location: form.location || null,
         buy_price: form.cost_to_make !== "" && !isNaN(Number(form.cost_to_make))
           ? Number(form.cost_to_make)
-          : (form.selling_price !== "" && !isNaN(Number(form.selling_price)) ? Number(form.selling_price) : null),
+          : null,
         sell_price: form.selling_price !== "" && !isNaN(Number(form.selling_price))
           ? Number(form.selling_price)
           : null,
@@ -1223,7 +1388,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         visible_online: form.visible_online,
         custom_fields: {
           ...customFieldsBlob,
-          opening_stock: 0,
         },
       };
     }
@@ -1623,6 +1787,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         onChange={setCombinations}
                         trackStock={form.track_stock}
                         baseMrp={numMrp}
+                        productId={id}
+                        onCheckStock={handleVariantCheckStock}
+                        onStockError={(msg) => showToast(msg, "error")}
                       />
                     </div>
                   )}
@@ -1797,16 +1964,57 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         error={sellingPriceError}
                       />
                       <InputField
-                        label="Discount (%)"
-                        name="discount_percent"
-                        hint="default 0"
+                        customHeader={
+                          <div className="flex items-center justify-between mb-1.5">
+                            <div className="flex items-center gap-1">
+                              <span className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
+                                Discount {discountType === "price" ? "(₹)" : "(%)"}
+                              </span>
+                              <span className="ml-1 text-[11px] font-normal text-slate-400 lowercase">
+                                ({discountType === "price" ? "default ₹0" : "default 0"})
+                              </span>
+                              <div className="group relative flex items-center ml-1">
+                                <Info size={11} className="text-slate-400 cursor-help hover:text-indigo-500 transition-colors" />
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-52 p-2.5 bg-slate-800 text-white text-[10px] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl normal-case font-medium tracking-normal leading-relaxed">
+                                  {discountType === "price" ? "Direct price discount subtracted from selling price." : "Percentage discount off the selling price."}
+                                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-800" />
+                                </div>
+                              </div>
+                            </div>
+                            <div className="inline-flex items-center rounded-md bg-slate-100 p-0.5 border border-slate-200 shadow-2xs">
+                              <button
+                                type="button"
+                                onClick={() => handleDiscountTypeChange("price")}
+                                className={`px-2 py-0.5 text-[11px] font-medium rounded transition-all ${
+                                  discountType === "price"
+                                    ? "bg-white text-emerald-700 shadow-xs font-bold"
+                                    : "text-slate-500 hover:text-slate-800"
+                                }`}
+                              >
+                                ₹ Price
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDiscountTypeChange("percent")}
+                                className={`px-2 py-0.5 text-[11px] font-medium rounded transition-all ${
+                                  discountType === "percent"
+                                    ? "bg-white text-emerald-700 shadow-xs font-bold"
+                                    : "text-slate-500 hover:text-slate-800"
+                                }`}
+                              >
+                                % Percent
+                              </button>
+                            </div>
+                          </div>
+                        }
+                        name={discountType === "price" ? "discount_amount" : "discount_percent"}
                         type="number"
                         disabled={pricingHelperState.discountDisabled}
-                        value={form.discount_percent}
-                        onChange={handleChange}
-                        placeholder="0"
-                        rightEl="%"
-                        tooltip="Always reduces the selling price (never the MRP)."
+                        value={discountType === "price" ? discountAmount : form.discount_percent}
+                        onChange={e => discountType === "price" ? handleDiscountAmountChange(e.target.value) : handleDiscountPercentChange(e.target.value)}
+                        placeholder={discountType === "price" ? "0.00" : "0"}
+                        leftEl={discountType === "price" ? <IndianRupee size={13} /> : undefined}
+                        rightEl={discountType === "percent" ? "%" : undefined}
                       />
                     </div>
 
@@ -1920,15 +2128,56 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         error={sellingPriceError}
                       />
                       <InputField
-                        label="Discount (%)"
-                        name="discount_percent"
-                        hint="default 0"
+                        customHeader={
+                          <div className="flex items-center justify-between mb-1.5">
+                            <div className="flex items-center gap-1">
+                              <span className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
+                                Discount {discountType === "price" ? "(₹)" : "(%)"}
+                              </span>
+                              <span className="ml-1 text-[11px] font-normal text-slate-400 lowercase">
+                                ({discountType === "price" ? "default ₹0" : "default 0"})
+                              </span>
+                              <div className="group relative flex items-center ml-1">
+                                <Info size={11} className="text-slate-400 cursor-help hover:text-indigo-500 transition-colors" />
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-52 p-2.5 bg-slate-800 text-white text-[10px] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl normal-case font-medium tracking-normal leading-relaxed">
+                                  {discountType === "price" ? "Direct price discount subtracted from selling price." : "Percentage discount off the selling price."}
+                                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-800" />
+                                </div>
+                              </div>
+                            </div>
+                            <div className="inline-flex items-center rounded-md bg-slate-100 p-0.5 border border-slate-200 shadow-2xs">
+                              <button
+                                type="button"
+                                onClick={() => handleDiscountTypeChange("price")}
+                                className={`px-2 py-0.5 text-[11px] font-medium rounded transition-all ${
+                                  discountType === "price"
+                                    ? "bg-white text-emerald-700 shadow-xs font-bold"
+                                    : "text-slate-500 hover:text-slate-800"
+                                }`}
+                              >
+                                ₹ Price
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDiscountTypeChange("percent")}
+                                className={`px-2 py-0.5 text-[11px] font-medium rounded transition-all ${
+                                  discountType === "percent"
+                                    ? "bg-white text-emerald-700 shadow-xs font-bold"
+                                    : "text-slate-500 hover:text-slate-800"
+                                }`}
+                              >
+                                % Percent
+                              </button>
+                            </div>
+                          </div>
+                        }
+                        name={discountType === "price" ? "discount_amount" : "discount_percent"}
                         type="number"
-                        value={form.discount_percent}
-                        onChange={handleChange}
-                        placeholder="0"
-                        rightEl="%"
-                        tooltip="Always reduces selling price."
+                        value={discountType === "price" ? discountAmount : form.discount_percent}
+                        onChange={e => discountType === "price" ? handleDiscountAmountChange(e.target.value) : handleDiscountPercentChange(e.target.value)}
+                        placeholder={discountType === "price" ? "0.00" : "0"}
+                        leftEl={discountType === "price" ? <IndianRupee size={13} /> : undefined}
+                        rightEl={discountType === "percent" ? "%" : undefined}
                       />
                     </div>
 
@@ -2162,7 +2411,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                             className="w-4 h-4 rounded accent-[#286038] cursor-pointer"
                           />
                           <label htmlFor={`cf_${field.id}`} className="text-xs font-semibold text-slate-600 cursor-pointer">
-                            {field.label_name}
+                            {customFieldValues[field.id] === 'true' ? 'Yes' : 'No'}
                           </label>
                         </div>
                       ) : (

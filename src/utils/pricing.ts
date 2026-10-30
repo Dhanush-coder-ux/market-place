@@ -125,9 +125,8 @@ export function calculateTaxSplit(inclusivePrice: number, gstRate: number): TaxS
     };
   }
 
-  const rateMultiplier = 1 + cleanRate / 100;
-  const taxableValue = Math.round((cleanInclusive / rateMultiplier) * 100) / 100;
-  const gstAmount = Math.round((cleanInclusive - taxableValue) * 100) / 100;
+  const gstAmount = Math.round((cleanInclusive * (cleanRate / 100)) * 100) / 100;
+  const taxableValue = Math.round((cleanInclusive - gstAmount) * 100) / 100;
   const cgst = Math.round((gstAmount / 2) * 100) / 100;
   const sgst = Math.round((gstAmount - cgst) * 100) / 100; // ensures cgst + sgst == gstAmount
 

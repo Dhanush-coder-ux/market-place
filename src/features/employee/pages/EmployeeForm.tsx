@@ -141,8 +141,18 @@ const EmployeeForm = () => {
         if (res?.data) {
           const empData = Array.isArray(res.data) ? res.data[0] : res.data;
           const datas = empData.datas || {};
-          const addr = datas.address || {};
           const additional = empData.additional_infos || {};
+          const addr = datas.address || additional.address || empData.address || {};
+
+          // Format joined_date cleanly for <input type="date"> (must be YYYY-MM-DD)
+          // empData.joined_date can be "2026-10-31 00:00:00" or ISO format "2026-10-31T00:00:00"
+          const rawJoinDate = empData.joined_date || empData.join_date || empData.joinDate || datas.joined_date || additional.joined_date || "";
+          const resolvedJoinDate = rawJoinDate 
+            ? String(rawJoinDate).split(/[T ]/)[0] 
+            : new Date().toISOString().split('T')[0];
+
+          const resolvedAddress = addr.full_address || addr.address || datas.full_address || additional.full_address || empData.full_address || (typeof empData.address === "string" ? empData.address : "") || "";
+          const resolvedZipCode = addr.zip_code || addr.zipcode || datas.zip_code || datas.zipcode || additional.zip_code || additional.zipcode || empData.zip_code || empData.zipcode || "";
 
           setFormData({
             ...initialFormData,
@@ -150,9 +160,9 @@ const EmployeeForm = () => {
             email: empData.email || "",
             role: empData.role || "ADMIN",
             mobile_number: empData.mobile_number || "",
-            joinDate: empData.joined_date ? empData.joined_date.split('T')[0] : new Date().toISOString().split('T')[0],
-            address: addr.full_address || "",
-            zip_code: addr.zip_code || "",
+            joinDate: resolvedJoinDate,
+            address: resolvedAddress,
+            zip_code: resolvedZipCode,
             salary_range: String(datas.salary_range || additional.salary_range || ""),
           });
 
@@ -201,11 +211,10 @@ const EmployeeForm = () => {
       }
     };
 
+    payload.datas = nestedData;
+    payload.additional_infos = nestedData;
     if (id) {
       payload.id = id;
-      payload.datas = nestedData;
-    } else {
-      payload.additional_infos = nestedData;
     }
 
     try {

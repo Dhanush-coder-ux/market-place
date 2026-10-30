@@ -130,12 +130,14 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
           </div>
         </div>
         
-        {/* Customer Info */}
-        <div className={config.customer.wrapper}>
-           <p className={config.customer.title}>Billed To</p>
-           <p className={config.customer.name}>{customerName || "Walk-in Customer"}</p>
-           {phone && <p className={config.customer.phone}>{phone}</p>}
-        </div>
+        {/* Customer Info (Omitted for walk-in customers) */}
+        {Boolean(customerName) && !["walk-in", "walk-in customer", "walk in", "walk in customer", "walkin", "walkin customer"].includes(customerName.trim().toLowerCase()) && (
+          <div className={config.customer.wrapper}>
+             <p className={config.customer.title}>Billed To</p>
+             <p className={config.customer.name}>{customerName}</p>
+             {phone && <p className={config.customer.phone}>{phone}</p>}
+          </div>
+        )}
 
         {/* Customer Savings Highlight Banner (Section 8.3) */}
         {hasSavings && (

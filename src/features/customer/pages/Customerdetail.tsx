@@ -558,13 +558,27 @@ export default function CustomerDetail() {
 
                                 {isEditing ? (
                                   <div className="flex items-center gap-1.5 mt-1">
-                                    <input
-                                      autoFocus
-                                      type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
-                                      value={editingValue}
-                                      onChange={(e) => setEditingValue(e.target.value)}
-                                      className="flex-1 h-8 px-2 text-xs font-semibold bg-white border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200 transition-all"
-                                    />
+                                    {(field.type === 'boolean' || field.type === 'bool') ? (
+                                      <label className="flex items-center gap-2 cursor-pointer flex-1 py-1">
+                                        <input
+                                          type="checkbox"
+                                          checked={editingValue === 'true'}
+                                          onChange={(e) => setEditingValue(String(e.target.checked))}
+                                          className="w-4 h-4 rounded accent-indigo-600 cursor-pointer"
+                                        />
+                                        <span className="text-xs font-semibold text-slate-700">
+                                          {editingValue === 'true' ? 'Yes' : 'No'}
+                                        </span>
+                                      </label>
+                                    ) : (
+                                      <input
+                                        autoFocus
+                                        type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+                                        value={editingValue}
+                                        onChange={(e) => setEditingValue(e.target.value)}
+                                        className="flex-1 h-8 px-2 text-xs font-semibold bg-white border border-indigo-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200 transition-all"
+                                      />
+                                    )}
                                     <button
                                       onClick={() => handleSaveCustomField(field.id)}
                                       disabled={cfSaving}
@@ -584,11 +598,21 @@ export default function CustomerDetail() {
                                     className="flex items-center justify-between mt-1 cursor-pointer"
                                     onClick={() => {
                                       setEditingFieldId(field.id);
-                                      setEditingValue(currentVal?.value ?? '');
+                                      setEditingValue(currentVal?.value ?? ((field.type === 'boolean' || field.type === 'bool') ? 'false' : ''));
                                     }}
                                   >
                                     <p className="text-sm font-bold text-slate-700 truncate">
-                                      {currentVal?.value || <span className="text-slate-300 font-medium italic">Click to set value</span>}
+                                      {(field.type === 'boolean' || field.type === 'bool') ? (
+                                        (String(currentVal?.value).toLowerCase() === 'true' || String(currentVal?.value).toLowerCase() === 'yes') ? (
+                                          <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">Yes</span>
+                                        ) : (String(currentVal?.value).toLowerCase() === 'false' || String(currentVal?.value).toLowerCase() === 'no') ? (
+                                          <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-100 text-slate-500 border border-slate-200">No</span>
+                                        ) : (
+                                          <span className="text-slate-300 font-medium italic">Click to set value</span>
+                                        )
+                                      ) : (
+                                        currentVal?.value || <span className="text-slate-300 font-medium italic">Click to set value</span>
+                                      )}
                                     </p>
                                     <Pencil size={11} className="text-slate-300 group-hover:text-indigo-400 transition-colors ml-2 shrink-0" />
                                   </div>

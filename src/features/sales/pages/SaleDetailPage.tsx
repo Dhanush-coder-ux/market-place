@@ -630,7 +630,7 @@ const SaleDetailPage: React.FC = () => {
         <ProfileHeaderCard
           name={
             <div className="flex items-center gap-2">
-              <span>Order ${sale.ui_id}</span>
+              <span>Order {sale.ui_id || sale.id?.slice(0, 8).toUpperCase()}</span>
               {hasReturns && <AntBadge variant="tx-sales-return" type="tag">Returned</AntBadge>}
             </div>
           }

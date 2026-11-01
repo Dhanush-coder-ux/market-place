@@ -2449,9 +2449,14 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         isOpen={modalState.type === "Category"}
         onClose={() => setModalState({ type: null, query: "" })}
         type="categories"
-        onSuccess={async (val) => {
-          await fetchDropdowns();
+        onSuccess={(val) => {
+          setCategories(prev => {
+            if (prev.some(c => c.id === val.id)) return prev;
+            return [{ id: val.id, name: val.name }, ...prev];
+          });
           setForm(p => ({ ...p, category: val.id }));
+          setVariantTypes([]);
+          setCombinations([]);
         }}
       />
 
@@ -2459,8 +2464,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         isOpen={modalState.type === "Unit"}
         onClose={() => setModalState({ type: null, query: "" })}
         type="units"
-        onSuccess={async (val) => {
-          await fetchDropdowns();
+        onSuccess={(val) => {
+          setUnits(prev => {
+            if (prev.some(u => u.id === val.id)) return prev;
+            return [{ id: val.id, name: val.name }, ...prev];
+          });
           setForm(p => ({ ...p, unit: val.id }));
         }}
       />

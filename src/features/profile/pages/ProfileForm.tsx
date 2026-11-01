@@ -268,9 +268,9 @@ const ProfileForm: React.FC = () => {
     <div className="min-h-screen bg-slate-50/50 font-sans">
       <NavigationBlocker data={formData} isLoading={loadingData} isSubmitting={submitting} />
       <div className="mx-auto space-y-4 relative">
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-6 gap-6 items-start">
+        <form onSubmit={handleSubmit} className="space-y-6">
           {/* BOX 1: IDENTITY (Spans 6 cols) */}
-          <div className="lg:col-span-6 bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md h-full">
+          <div className="w-full bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md h-full">
             <div className="px-6 py-4 bg-gradient-to-r from-blue-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
                 <Store size={18} />
@@ -332,77 +332,8 @@ const ProfileForm: React.FC = () => {
             </div>
           </div>
 
-          {/* BOX 2: CONTACT & LOCATION (Spans 4 cols) */}
-          <div className="lg:col-span-4 bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md h-full">
-            <div className="px-6 py-4 bg-gradient-to-r from-emerald-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600">
-                <MapPin size={18} />
-              </div>
-              <h2 className="text-xs font-bold text-slate-800">Contact & Location</h2>
-            </div>
-            <div className="p-8 space-y-6">
-              <div className="space-y-1.5">
-                <label className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 ml-1">
-                  Pick Location on Map
-                  <div className="group relative">
-                    <Info size={12} className="text-slate-400 cursor-help hover:text-blue-500 transition-colors" />
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-slate-800 text-white text-[10px] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl">
-                      Click on the map or search to set your shop's exact location. Coordinates will be captured automatically.
-                      <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-800" />
-                    </div>
-                  </div>
-                </label>
-                <LocationMapPicker
-                  lat={parseFloat(formData.latitude) || undefined}
-                  lng={parseFloat(formData.longitude) || undefined}
-                  onChange={(coords, address) => {
-                    setFormData((prev) => ({
-                      ...prev,
-                      latitude: String(coords.lat),
-                      longitude: String(coords.lng),
-                      full_address: address || prev.full_address,
-                    }));
-                  }}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-500 ml-1">
-                  Full Address
-                </label>
-                <textarea
-                  name="full_address"
-                  value={formData.full_address}
-                  onChange={handleChange}
-                  rows={3}
-                  className="w-full px-4 py-3 rounded-lg border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 transition-all duration-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none resize-none"
-                  placeholder="Full street address including area"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Input
-                  label="PIN Code"
-                  name="pincode"
-                  value={formData.pincode}
-                  onChange={handleChange}
-                  placeholder="600001"
-                  leftIcon={<Hash size={16} className="text-slate-300" />}
-                />
-                <Input
-                  label="Landmark"
-                  name="landmark"
-                  value={formData.landmark}
-                  onChange={handleChange}
-                  placeholder="e.g. Near City Mall"
-                  leftIcon={<MapPin size={16} className="text-slate-300" />}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* BOX 3: LEGAL & TAX (Spans 2 cols) */}
-          <div className="lg:col-span-2 bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md h-full">
+          {/* BOX 2: LEGAL & TAX */}
+          <div className="w-full bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md h-full">
             <div className="px-6 py-4 bg-gradient-to-r from-purple-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center text-purple-600">
                 <BadgeCheck size={18} />
@@ -518,7 +449,76 @@ const ProfileForm: React.FC = () => {
               )}
             </div>
           </div>
-        </form>
+        {/* BOX 3: CONTACT & LOCATION */}
+          <div className="w-full bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md h-full">
+            <div className="px-6 py-4 bg-gradient-to-r from-emerald-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600">
+                <MapPin size={18} />
+              </div>
+              <h2 className="text-xs font-bold text-slate-800">Contact & Location</h2>
+            </div>
+            <div className="p-8 space-y-6">
+              <div className="space-y-1.5">
+                <label className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 ml-1">
+                  Pick Location on Map
+                  <div className="group relative">
+                    <Info size={12} className="text-slate-400 cursor-help hover:text-blue-500 transition-colors" />
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-slate-800 text-white text-[10px] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl">
+                      Click on the map or search to set your shop's exact location. Coordinates will be captured automatically.
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-800" />
+                    </div>
+                  </div>
+                </label>
+                <LocationMapPicker
+                  lat={parseFloat(formData.latitude) || undefined}
+                  lng={parseFloat(formData.longitude) || undefined}
+                  onChange={(coords, address) => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      latitude: String(coords.lat),
+                      longitude: String(coords.lng),
+                      full_address: address || prev.full_address,
+                    }));
+                  }}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-slate-500 ml-1">
+                  Full Address
+                </label>
+                <textarea
+                  name="full_address"
+                  value={formData.full_address}
+                  onChange={handleChange}
+                  rows={3}
+                  className="w-full px-4 py-3 rounded-lg border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 transition-all duration-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none resize-none"
+                  placeholder="Full street address including area"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Input
+                  label="PIN Code"
+                  name="pincode"
+                  value={formData.pincode}
+                  onChange={handleChange}
+                  placeholder="600001"
+                  leftIcon={<Hash size={16} className="text-slate-300" />}
+                />
+                <Input
+                  label="Landmark"
+                  name="landmark"
+                  value={formData.landmark}
+                  onChange={handleChange}
+                  placeholder="e.g. Near City Mall"
+                  leftIcon={<MapPin size={16} className="text-slate-300" />}
+                />
+              </div>
+            </div>
+          </div>
+
+          </form>
 
         {!id && (
           <div className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6 shadow-sm mt-8 relative z-10">

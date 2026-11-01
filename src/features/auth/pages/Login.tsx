@@ -628,7 +628,7 @@ const Login = () => {
               </div>
               <div>
                 <h3 className="text-sm font-bold text-slate-900">Secure Store Access</h3>
-                <p className="text-xs text-slate-500">Sign in securely with your verified account via DAuth</p>
+                <p className="text-xs text-slate-500">Sign in securely with your verified account</p>
               </div>
             </div>
 
@@ -640,11 +640,11 @@ const Login = () => {
               {loading ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white/35 border-t-white rounded-full animate-spin" />
-                  <span>Connecting to DAuth…</span>
+                  <span>Signing in…</span>
                 </>
               ) : (
                 <>
-                  <span>Sign in with DAuth</span>
+                  <span>Sign in</span>
                   <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
                 </>
               )}

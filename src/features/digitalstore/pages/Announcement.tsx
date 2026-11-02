@@ -2,7 +2,7 @@ import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { useToast } from "@/context/ToastContext";
 import { useState, useRef, useEffect } from "react";
 import {
-  Megaphone, RefreshCw, Gift, Sparkles,
+  Megaphone, RefreshCw, Gift, Wand2, UserPlus,
   Inbox, Send, Clock,
   Copy, Trash2, Edit3, CheckCircle2,
   Smile, Timer, Calendar, FileText, UserCheck,
@@ -533,7 +533,7 @@ export default function AnnouncementsPage() {
                         {aiLoading ? (
                           <span className="w-3 h-3 border-2 border-slate-200 border-t-blue-600 rounded-full inline-block ann-spin" />
                         ) : (
-                          <Sparkles size={12} />
+                          <Wand2 size={12} />
                         )}
                         AI Suggest
                       </button>
@@ -696,7 +696,7 @@ export default function AnnouncementsPage() {
                     options={AUDIENCE_OPTIONS.map((o) => ({
                       label: o.label,
                       value: o.value,
-                      icon: o.value === "all" ? <Users size={13} className="text-slate-400" /> : o.value === "returning" ? <UserCheck size={13} className="text-blue-500" /> : <Sparkles size={13} className="text-emerald-500" />
+                      icon: o.value === "all" ? <Users size={13} className="text-slate-400" /> : o.value === "returning" ? <UserCheck size={13} className="text-blue-500" /> : <UserPlus size={13} className="text-emerald-500" />
                     }))}
                     value={audience}
                     onValueChange={(val) => setAudience(val)}

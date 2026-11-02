@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Sparkles, Store, Users, Database, Award, Loader2, CreditCard, History } from "lucide-react";
+import { Layers, Store, Users, Database, Award, Loader2, CreditCard, History } from "lucide-react";
 import { SubscriptionData, SubscriptionCatalogResponse, TransactionItem } from "../types";
 import { subscriptionApi } from "@/services/api/subscription";
 import { RazorpayCheckoutModal } from "../components/RazorpayCheckoutModal";
@@ -1444,7 +1444,7 @@ const PricingPlansPage: React.FC<PricingPlansPageProps> = ({ isEmbedded = false 
                   sku_expansion: <Database size={16} strokeWidth={2} />,
                   verified_badge: <Award size={16} strokeWidth={2} />,
                 };
-                const Icon = iconsMap[a.id] || <Sparkles size={16} strokeWidth={2} />;
+                const Icon = iconsMap[a.id] || <Layers size={16} strokeWidth={2} />;
 
                 let ctrl;
                 if (isComplimentary) {

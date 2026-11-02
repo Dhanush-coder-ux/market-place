@@ -8,7 +8,7 @@ import {
   XCircle, 
   CheckCheck,
   RefreshCw,
-  Sparkles,
+  Megaphone,
   Wifi,
   WifiOff
 } from "lucide-react";
@@ -24,7 +24,7 @@ const getIconForType = (type?: string) => {
     case "success":
       return <CheckCircle className="w-5 h-5 text-emerald-500" />;
     case "announcement":
-      return <Sparkles className="w-5 h-5 text-purple-500" />;
+      return <Megaphone className="w-5 h-5 text-purple-500" />;
     case "info":
     default:
       return <Info className="w-5 h-5 text-blue-500" />;

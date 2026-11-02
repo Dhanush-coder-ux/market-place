@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { createPortal } from "react-dom";
-import { X, CheckCircle, ShieldCheck, CreditCard, Sparkles, Loader2, AlertCircle } from "lucide-react";
+import { X, CheckCircle, ShieldCheck, CreditCard, Lock, Loader2, AlertCircle } from "lucide-react";
 import { PlanItem, AddonItem } from "../types";
 import { subscriptionApi } from "@/services/api/subscription";
 import { useToast } from "@/context/ToastContext";
@@ -287,7 +287,7 @@ export const RazorpayCheckoutModal: React.FC<RazorpayCheckoutModalProps> = ({
                   <span>Instant plan upgrade</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <Sparkles size={14} className="text-blue-500 shrink-0" />
+                  <Lock size={14} className="text-emerald-500 shrink-0" />
                   <span>100% Secure SSL Payment</span>
                 </div>
                 <div className="flex items-center gap-1.5">

@@ -4,7 +4,7 @@ import {
   Store,
   Wifi,
   CheckCircle2,
-  Sparkles,
+  
   ShoppingBag,
   Truck,
   Zap,
@@ -233,7 +233,7 @@ export const StoreLaunchAnimationModal: React.FC<StoreLaunchModalProps> = ({
                     <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-ping" />
                   </div>
                   <div className="px-2 py-0.5 rounded-full bg-emerald-600 text-white font-extrabold text-[9px] shadow-2xs flex items-center gap-1">
-                    <Sparkles size={9} />
+                    <Radio size={9} />
                     <span>ONLINE</span>
                   </div>
                 </div>

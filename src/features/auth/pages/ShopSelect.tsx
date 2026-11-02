@@ -10,7 +10,7 @@ import {
   Search,
   LogOut,
   ShoppingBag,
-  Sparkles,
+  ArrowLeftRight,
   Tag,
   CheckCircle2
 } from "lucide-react";
@@ -388,7 +388,7 @@ const ShopSelect = () => {
         {/* Helper Footer Note */}
         <div className="pt-2 text-center">
           <p className="text-xs text-slate-400 font-medium flex items-center justify-center gap-1.5">
-            <Sparkles size={12} className="text-amber-500" />
+            <ArrowLeftRight size={12} className="text-blue-500" />
             <span>You can switch between storefront branches anytime from your top navigation menu.</span>
           </p>
         </div>

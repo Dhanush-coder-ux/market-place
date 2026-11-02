@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Monitor, Download, Laptop, X, ShieldCheck, Zap, Printer, Sparkles, Smartphone, Check, ArrowUpRight } from 'lucide-react';
+import { Monitor, Download, Laptop, X, ShieldCheck, Zap, Printer, AppWindow, Smartphone, Check, ArrowUpRight } from 'lucide-react';
 import { downloadDesktopShortcut } from '@/hooks/usePWAInstall';
 
 interface DesktopInstallModalProps {
@@ -69,8 +69,8 @@ export const DesktopInstallModal: React.FC<DesktopInstallModalProps> = ({
                     <span className="text-[10px] font-extrabold uppercase tracking-widest text-white/95 bg-white/15 px-2.5 py-0.5 rounded-full backdrop-blur-sm border border-white/20">
                       Desktop Web App
                     </span>
-                    <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-300">
-                      <Sparkles size={11} /> Standalone
+                    <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-200">
+                      <AppWindow size={11} /> Standalone
                     </span>
                   </div>
                   <h3 className="text-xl font-black mt-1 text-white tracking-tight">Install inventQ App</h3>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RefreshCw, Sparkles, X, ArrowRight } from 'lucide-react';
+import { RefreshCw, ArrowUpCircle, X, ArrowRight } from 'lucide-react';
 import { useVersionManager } from '@/hooks/useVersionManager';
 
 export const VersionUpdatePrompt: React.FC = () => {
@@ -42,7 +42,7 @@ export const VersionUpdatePrompt: React.FC = () => {
 
           <div className="flex items-start gap-3.5">
             <div className="w-10 h-10 rounded-xl bg-[#F4F8F4] text-[#286038] border border-[#A8C898] flex items-center justify-center shrink-0 shadow-xs">
-              <Sparkles size={18} />
+              <ArrowUpCircle size={20} />
             </div>
 
             <div className="flex-1 pr-4">

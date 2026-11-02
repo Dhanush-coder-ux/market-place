@@ -5,7 +5,7 @@ import { useToast } from "@/context/ToastContext";
 import {
   UserPlus,
   ArrowRight,
-  Sparkles,
+  Store,
   ShieldCheck,
   CheckCircle2,
   Check
@@ -70,7 +70,7 @@ const Signup = () => {
 
           <div className="pt-6 space-y-3">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/15 text-xs text-[#A8C898] backdrop-blur-sm">
-              <Sparkles size={14} className="text-[#C49850]" />
+              <Store size={14} className="text-[#C49850]" />
               <span>Instant Multi-Store Onboarding</span>
             </div>
             <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight">

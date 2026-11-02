@@ -10,7 +10,7 @@ import {
   Timer,
   Check,
   Loader2,
-  Sparkles,
+  Lightbulb,
   Calculator,
   ArrowRight
 } from "lucide-react";
@@ -729,7 +729,7 @@ export default function DeliveryPreferences({ shopId, initialOptions, onStatusCh
 
       {/* Helper note */}
       <div className="flex items-start gap-2.5 bg-blue-50/60 border border-blue-100 rounded-2xl px-4 py-3.5">
-        <Sparkles size={16} className="text-blue-500 mt-0.5 shrink-0" />
+        <Lightbulb size={16} className="text-amber-500 mt-0.5 shrink-0" />
         <p className="text-[12px] text-blue-800 leading-relaxed">
           <span className="font-bold">Pro Tip:</span> Offering distance-tiered delivery (e.g. ₹100 for first 10 km, then ₹10 per extra km) ensures fair delivery compensation while staying competitive for local buyers.
         </p>

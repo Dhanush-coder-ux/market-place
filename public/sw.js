@@ -1,10 +1,10 @@
 /**
  * inventQ Progressive Web App (PWA) Service Worker
- * Version: 1.0.1
+ * Version: 1.0.5
  * Enables desktop/mobile installation, offline shell caching, and version updates.
  */
 
-const CACHE_VERSION = 'v1.0.1';
+const CACHE_VERSION = 'v1.0.5';
 const CACHE_NAME = `inventq-pwa-${CACHE_VERSION}`;
 
 const ASSETS_TO_CACHE = [

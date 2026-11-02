@@ -22,12 +22,14 @@ export const fetchMyShops = async (): Promise<any[]> => {
       if (!userId) return [];
 
       const res = await apiClient.get(`${ENDPOINTS.SHOPS}/by/user/${userId}`);
-      const data = res?.data ?? res ?? [];
+      const raw = res?.datas ?? res?.data ?? res ?? [];
+      const data = Array.isArray(raw) ? raw : (raw?.datas ?? raw?.data ?? [raw]);
       return Array.isArray(data) ? data.filter(Boolean) : [data].filter(Boolean);
     } else if (sessionId) {
       // Session ID: use /my-shops (apiClient automatically sends X-Session-ID)
       const res = await apiClient.get(`${ENDPOINTS.SHOPS}/my-shops`);
-      const data = res?.data ?? res ?? [];
+      const raw = res?.datas ?? res?.data ?? res ?? [];
+      const data = Array.isArray(raw) ? raw : (raw?.datas ?? raw?.data ?? [raw]);
       return Array.isArray(data) ? data.filter(Boolean) : [data].filter(Boolean);
     }
     return [];

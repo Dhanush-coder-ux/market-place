@@ -14,24 +14,23 @@ import {
   UserPlus
 } from "lucide-react";
 
-const SUPPORT_NUMBERS = [
+const SUPPORT_SECTIONS = [
   {
-    label: "Direct Technical Support",
-    number: "+91 8248692839",
-    raw: "+918248692839",
-    desc: "Available for POS, counter, & live sync assistance"
+    id: "technical",
+    label: "Technical Support",
+    desc: "Available for POS, counter, live sync, billing & account assistance",
+    numbers: [
+      { number: "+91 8248692839", raw: "+918248692839" },
+      { number: "+91 8825773207", raw: "+918825773207" }
+    ]
   },
   {
-    label: "Onboarding & Retail Setup",
-    number: "+91 8883442378",
-    raw: "+918883442378",
-    desc: "New store onboarding, catalog, & hardware setup"
-  },
-  {
-    label: "Billing & Account Assistance",
-    number: "+91 8825773207",
-    raw: "+918825773207",
-    desc: "Invoicing, GST reports, & subscription queries"
+    id: "sales",
+    label: "Sales & Onboarding",
+    desc: "New store onboarding, catalog, retail setup & demos",
+    numbers: [
+      { number: "+91 9344972468", raw: "+919344972468" }
+    ]
   }
 ];
 
@@ -45,7 +44,7 @@ const Login = () => {
 
   const [loading, setLoading] = useState(isAutoLogin);
   const [showSupportModal, setShowSupportModal] = useState(false);
-  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [currentScene, setCurrentScene] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [kpiValues, setKpiValues] = useState({
@@ -165,12 +164,12 @@ const Login = () => {
     window.location.href = `tel:${rawNumber}`;
   };
 
-  const handleCopy = (num: string, idx: number, e: React.MouseEvent) => {
+  const handleCopy = (num: string, key: string, e: React.MouseEvent) => {
     e.stopPropagation();
     navigator.clipboard.writeText(num);
-    setCopiedIndex(idx);
+    setCopiedKey(key);
     showToast("Phone number copied to clipboard", "success");
-    setTimeout(() => setCopiedIndex(null), 2000);
+    setTimeout(() => setCopiedKey(null), 2000);
   };
 
   if (isAutoLogin && loading) {
@@ -628,7 +627,7 @@ const Login = () => {
               </div>
               <div>
                 <h3 className="text-sm font-bold text-slate-900">Secure Store Access</h3>
-                <p className="text-xs text-slate-500">Sign in securely with your verified account via DAuth</p>
+                <p className="text-xs text-slate-500">Sign in securely with your verified account</p>
               </div>
             </div>
 
@@ -640,11 +639,11 @@ const Login = () => {
               {loading ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white/35 border-t-white rounded-full animate-spin" />
-                  <span>Connecting to DAuth…</span>
+                  <span>Signing in…</span>
                 </>
               ) : (
                 <>
-                  <span>Sign in with DAuth</span>
+                  <span>Sign In</span>
                   <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
                 </>
               )}
@@ -768,34 +767,58 @@ const Login = () => {
               </p>
             </div>
 
-            <div className="space-y-3">
-              {SUPPORT_NUMBERS.map((item, idx) => (
+            <div className="space-y-3.5">
+              {SUPPORT_SECTIONS.map((section) => (
                 <div
-                  key={item.raw}
-                  onClick={() => handleDial(item.raw)}
-                  className="p-4 rounded-xl bg-slate-50 hover:bg-[#F4F8F4]/70 border border-slate-200 hover:border-[#88B878] transition-all cursor-pointer flex items-center justify-between gap-3 group"
+                  key={section.id}
+                  className="p-4 rounded-xl bg-slate-50 border border-slate-200/90 space-y-2.5"
                 >
                   <div className="space-y-0.5">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-[#286038] block">
-                      {item.label}
+                      {section.label}
                     </span>
-                    <div className="text-base font-bold text-slate-900 font-mono tracking-tight group-hover:text-[#286038] transition-colors">
-                      {item.number}
-                    </div>
-                    <p className="text-[11px] text-slate-500">{item.desc}</p>
+                    <p className="text-[11px] text-slate-500">{section.desc}</p>
                   </div>
 
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <button
-                      onClick={(e) => handleCopy(item.number, idx, e)}
-                      className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-white transition-all"
-                      title="Copy number"
-                    >
-                      {copiedIndex === idx ? <Check size={16} className="text-[#286038]" /> : <Copy size={16} />}
-                    </button>
-                    <div className="p-2.5 rounded-xl bg-[#286038] text-white shadow-sm group-hover:scale-105 transition-transform">
-                      <Phone size={16} />
-                    </div>
+                  <div className="space-y-2 pt-1 border-t border-slate-200/60">
+                    {section.numbers.map((phone, pIdx) => {
+                      const copyKey = `${section.id}-${pIdx}`;
+                      return (
+                        <div
+                          key={phone.raw}
+                          onClick={() => handleDial(phone.raw)}
+                          className="px-3.5 py-2.5 rounded-xl bg-white hover:bg-[#F4F8F4] border border-slate-200 hover:border-[#88B878] transition-all cursor-pointer flex items-center justify-between gap-3 group shadow-xs"
+                        >
+                          <div className="text-[14.5px] font-bold text-slate-900 font-mono tracking-tight group-hover:text-[#286038] transition-colors flex items-center gap-2">
+                            <PhoneCall size={14} className="text-[#286038] opacity-70 group-hover:opacity-100" />
+                            <span>{phone.number}</span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              onClick={(e) => handleCopy(phone.number, copyKey, e)}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all cursor-pointer"
+                              title="Copy number"
+                            >
+                              {copiedKey === copyKey ? (
+                                <Check size={15} className="text-[#286038]" />
+                              ) : (
+                                <Copy size={15} />
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDial(phone.raw)}
+                              className="p-2 rounded-xl bg-[#286038] text-white shadow-xs group-hover:scale-105 transition-transform cursor-pointer"
+                              title="Call number"
+                            >
+                              <Phone size={13} />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               ))}

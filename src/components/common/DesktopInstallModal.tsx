@@ -1,22 +1,32 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Monitor, Download, Laptop, X, ShieldCheck, Zap, Printer, Sparkles, Smartphone } from 'lucide-react';
+import { Monitor, Download, Laptop, X, ShieldCheck, Zap, Printer, Sparkles, Smartphone, Check, ArrowUpRight } from 'lucide-react';
+import { downloadDesktopShortcut } from '@/hooks/usePWAInstall';
 
 interface DesktopInstallModalProps {
   isOpen: boolean;
   onClose: () => void;
   onInstall?: () => void;
+  isPromptReady?: boolean;
 }
 
 export const DesktopInstallModal: React.FC<DesktopInstallModalProps> = ({
   isOpen,
   onClose,
   onInstall,
+  isPromptReady = false,
 }) => {
+  const [downloaded, setDownloaded] = useState(false);
   const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.userAgent);
   const isMobile = typeof navigator !== 'undefined' && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
   if (!isOpen) return null;
+
+  const handleDownloadShortcut = () => {
+    downloadDesktopShortcut();
+    setDownloaded(true);
+    setTimeout(() => setDownloaded(false), 4000);
+  };
 
   return (
     <AnimatePresence>
@@ -68,14 +78,14 @@ export const DesktopInstallModal: React.FC<DesktopInstallModalProps> = ({
               </div>
               <button
                 onClick={onClose}
-                className="w-8 h-8 rounded-full bg-black/20 hover:bg-black/35 flex items-center justify-center text-white/80 hover:text-white transition-colors"
+                className="w-8 h-8 rounded-full bg-black/20 hover:bg-black/35 flex items-center justify-center text-white/80 hover:text-white transition-colors cursor-pointer"
                 title="Close"
               >
                 <X size={16} />
               </button>
             </div>
             <p className="text-xs text-white/90 mt-3.5 leading-relaxed">
-              Install inventQ directly onto your desktop or home screen for lightning-fast POS billing, offline access, and a distraction-free fullscreen window.
+              Run inventQ as a standalone desktop or home screen app for lightning-fast POS billing, hardware printer access, and distraction-free fullscreen window.
             </p>
           </div>
 
@@ -94,7 +104,7 @@ export const DesktopInstallModal: React.FC<DesktopInstallModalProps> = ({
                   <span>Instant Launch</span>
                 </div>
                 <p className="text-[11px] text-slate-600 leading-snug">
-                  Launches immediately from your Windows Taskbar, macOS Dock, or Desktop icon.
+                  Launches immediately from your Windows Taskbar, macOS Dock, or Desktop.
                 </p>
               </div>
 
@@ -124,10 +134,27 @@ export const DesktopInstallModal: React.FC<DesktopInstallModalProps> = ({
                   <span>Automatic Sync</span>
                 </div>
                 <p className="text-[11px] text-slate-600 leading-snug">
-                  Always stays up-to-date with automatic background caching.
+                  Always stays up-to-date with automatic background updates & cache sync.
                 </p>
               </div>
             </div>
+
+            {/* Address bar install hint for Chrome / Edge / Brave */}
+            {!isMobile && (
+              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200/80 flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-[#286038] text-white flex items-center justify-center shrink-0 mt-0.5">
+                  <ArrowUpRight size={16} />
+                </div>
+                <div className="text-xs">
+                  <p className="font-bold text-slate-900">
+                    Direct Browser Install Available:
+                  </p>
+                  <p className="text-slate-600 text-[11.5px] mt-0.5">
+                    Click the <strong>Install icon (⊕ / ⤓)</strong> in your browser address bar (top-right next to the URL) to add inventQ directly to your PC.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Platform instructions */}
             <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs text-slate-700 space-y-2">
@@ -145,7 +172,7 @@ export const DesktopInstallModal: React.FC<DesktopInstallModalProps> = ({
                 ) : (
                   <>
                     <Monitor size={14} style={{ color: 'var(--t-primary, #286038)' }} className="shrink-0" />
-                    <span>Windows / Linux (Chrome / Edge / Brave):</span>
+                    <span>Windows / Linux (Chrome / Brave / Edge):</span>
                   </>
                 )}
               </p>
@@ -164,8 +191,8 @@ export const DesktopInstallModal: React.FC<DesktopInstallModalProps> = ({
                   </>
                 ) : (
                   <>
-                    <li>Click the <strong>Install icon (⊕ / ⤓)</strong> on the right side of your Chrome/Edge address bar.</li>
-                    <li>Or click <strong>⋮ (Menu)</strong> &rarr; <strong>Cast, save, and share</strong> &rarr; <strong>Install inventQ</strong>.</li>
+                    <li>Click the <strong>Install icon (⊕ / ⤓)</strong> on the right side of your Chrome/Brave/Edge address bar.</li>
+                    <li>Or click <strong>⋮ (Menu)</strong> &rarr; <strong>Save and share</strong> &rarr; <strong>Install inventQ</strong>.</li>
                     <li>A desktop shortcut and Start Menu entry will be created automatically.</li>
                   </>
                 )}
@@ -173,31 +200,70 @@ export const DesktopInstallModal: React.FC<DesktopInstallModalProps> = ({
             </div>
 
             {/* Action Buttons */}
-            <div className="flex items-center gap-3 pt-2">
-              {onInstall && (
+            <div className="space-y-2.5 pt-1">
+              <div className="flex flex-col sm:flex-row items-center gap-2.5">
+                {isPromptReady && onInstall ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onInstall();
+                      onClose();
+                    }}
+                    style={{
+                      background: `linear-gradient(135deg, var(--t-primary, #286038), var(--t-sidebar-via, #103020))`,
+                      boxShadow: `0 4px 14px var(--t-btn-shadow, rgba(40, 96, 56, 0.35))`,
+                    }}
+                    className="w-full sm:flex-1 flex items-center justify-center gap-2 text-white font-bold h-11 px-5 rounded-xl transition-all hover:opacity-95 active:scale-[0.98] cursor-pointer text-sm"
+                  >
+                    <Download size={16} />
+                    <span>Trigger Browser Install</span>
+                  </button>
+                ) : null}
+
                 <button
                   type="button"
-                  onClick={() => {
-                    onInstall();
-                    onClose();
-                  }}
+                  onClick={handleDownloadShortcut}
                   style={{
-                    background: `linear-gradient(135deg, var(--t-primary, #286038), var(--t-sidebar-via, #103020))`,
-                    boxShadow: `0 4px 14px var(--t-btn-shadow, rgba(40, 96, 56, 0.35))`,
+                    background: !(isPromptReady && onInstall)
+                      ? `linear-gradient(135deg, var(--t-primary, #286038), var(--t-sidebar-via, #103020))`
+                      : undefined,
+                    boxShadow: !(isPromptReady && onInstall)
+                      ? `0 4px 14px var(--t-btn-shadow, rgba(40, 96, 56, 0.35))`
+                      : undefined,
                   }}
-                  className="flex-1 flex items-center justify-center gap-2 text-white font-bold h-11 px-5 rounded-xl transition-all hover:opacity-95 active:scale-[0.98] cursor-pointer text-sm"
+                  className={`w-full sm:flex-1 flex items-center justify-center gap-2 font-bold h-11 px-5 rounded-xl transition-all active:scale-[0.98] cursor-pointer text-sm ${
+                    !(isPromptReady && onInstall)
+                      ? 'text-white hover:opacity-95'
+                      : 'bg-[#F4F8F4] text-[#286038] border border-[#A8C898] hover:bg-[#EAF4E6]'
+                  }`}
                 >
-                  <Download size={16} />
-                  <span>Install / Download App Now</span>
+                  {downloaded ? (
+                    <>
+                      <Check size={16} className="text-emerald-500" />
+                      <span>Downloaded Successfully!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Download size={16} />
+                      <span>Direct Download Desktop App (.url)</span>
+                    </>
+                  )}
                 </button>
+
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="w-full sm:w-auto px-5 h-11 rounded-xl font-semibold border border-slate-200 text-slate-700 hover:bg-slate-100 transition-colors text-sm cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+
+              {downloaded && (
+                <p className="text-[11.5px] text-center text-emerald-700 font-medium animate-in fade-in">
+                  Shortcut downloaded! Drag it to your Desktop or pin to Taskbar to open inventQ anytime.
+                </p>
               )}
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-5 h-11 rounded-xl font-semibold border border-slate-200 text-slate-700 hover:bg-slate-100 transition-colors text-sm cursor-pointer"
-              >
-                Close
-              </button>
             </div>
           </div>
         </motion.div>

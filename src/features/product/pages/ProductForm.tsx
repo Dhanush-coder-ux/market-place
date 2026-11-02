@@ -658,10 +658,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         discountPercent: numDiscount,
         offerValidUntil: form.offer_valid_until || null,
         isGstRegistered: isGstReg,
+        costPrice: Number(form.cost_to_make || 0),
       });
     }
     return null;
-  }, [numSellingPrice, numMrp, gstRateNum, numDiscount, form.offer_valid_until, isGstReg]);
+  }, [numSellingPrice, numMrp, gstRateNum, numDiscount, form.offer_valid_until, isGstReg, form.cost_to_make]);
 
   const pricingHelperState = useMemo(() => {
     const hasMrp = numMrp > 0;
@@ -705,11 +706,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   }, [numMrp, numSellingPrice, priceCalc]);
 
   const sellingPriceError = useMemo(() => {
-    if (numMrp > 0 && numSellingPrice > 0 && numSellingPrice > numMrp) {
+    if (form.track_stock && numMrp > 0 && numSellingPrice > numMrp) {
       return `Selling price (₹${formatINR(numSellingPrice)}) cannot exceed MRP (₹${formatINR(numMrp)})`;
     }
     return undefined;
-  }, [numMrp, numSellingPrice]);
+  }, [numMrp, numSellingPrice, form.track_stock]);
 
   // Validation computed values
   const missingFields: string[] = [];
@@ -1150,8 +1151,14 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       }
     }
 
-    // V1: selling_price > mrp (🔴 Block save — Legal Metrology requirement)
-    if (numMrp > 0 && numSp > 0 && numSp > numMrp) {
+    // Mandatory Cost to make for untracked / made-to-order products
+    if (!form.track_stock && (!form.cost_to_make || Number(form.cost_to_make) <= 0)) {
+      showToast("Cost to make (Buy price) is mandatory for untracked / made-to-order products.", "error");
+      return;
+    }
+
+    // V1: selling_price > mrp (🔴 Block save — Legal Metrology requirement for tracked products with MRP)
+    if (form.track_stock && numMrp > 0 && numSp > 0 && numSp > numMrp) {
       showToast(`Selling price cannot be above MRP. You entered ₹${numSp.toFixed(2)} but the MRP is ₹${numMrp.toFixed(2)}. Maximum you can charge is ₹${numMrp.toFixed(2)}.`, "error");
       return;
     }
@@ -1198,6 +1205,19 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       isSubmittingRef.current = false;
       setIsSubmitting(false);
       return;
+    }
+
+    if (!form.track_stock && form.has_variants) {
+      for (const combo of activeCombinations) {
+        const comboCost = combo.buy_price !== "" && !isNaN(Number(combo.buy_price)) ? Number(combo.buy_price) : Number(form.cost_to_make);
+        if (comboCost <= 0) {
+          const varLabel = Object.values(combo.attributes).join(" / ") || "variant";
+          showToast(`Cost to make (Buy price) is mandatory for variant "${varLabel}".`, "error");
+          isSubmittingRef.current = false;
+          setIsSubmitting(false);
+          return;
+        }
+      }
     }
 
     if (form.has_variants) {
@@ -1342,7 +1362,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         online_sell_price: form.selling_price !== "" && !isNaN(Number(form.selling_price))
           ? Number(form.selling_price)
           : 0,
-        mrp: form.mrp !== "" && !isNaN(Number(form.mrp)) ? Number(form.mrp) : null,
+        mrp: form.track_stock && form.mrp !== "" && !isNaN(Number(form.mrp)) ? Number(form.mrp) : null,
         discount_percent: form.discount_percent !== "" && !isNaN(Number(form.discount_percent)) ? Number(form.discount_percent) : 0,
         offer_valid_until: form.offer_valid_until || null,
         custom_fields: {
@@ -1380,7 +1400,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         online_sell_price: form.selling_price !== "" && !isNaN(Number(form.selling_price))
           ? Number(form.selling_price)
           : 0,
-        mrp: form.mrp !== "" && !isNaN(Number(form.mrp)) ? Number(form.mrp) : null,
+        mrp: form.track_stock && form.mrp !== "" && !isNaN(Number(form.mrp)) ? Number(form.mrp) : null,
         discount_percent: form.discount_percent !== "" && !isNaN(Number(form.discount_percent)) ? Number(form.discount_percent) : 0,
         offer_valid_until: form.offer_valid_until || null,
         gst: gstFormatted,
@@ -2061,11 +2081,24 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                             <strong>Live GST split:</strong> ₹{formatINR(priceCalc.tax.taxableValue)} base + ₹{formatINR(priceCalc.tax.gstAmount)} GST {gstRateNum}% = ₹{formatINR(priceCalc.finalPrice)}
                           </span>
-                          {priceCalc.customerSaving > 0 && (
-                            <span className="text-emerald-700 font-bold bg-emerald-100/70 px-2 py-0.5 rounded-md text-[11px]">
-                              {priceCalc.offMrpPercent}% off MRP · Saves ₹{formatINR(priceCalc.customerSaving)}
-                            </span>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {priceCalc.customerSaving > 0 && (
+                              <span className="text-emerald-700 font-bold bg-emerald-100/70 px-2 py-0.5 rounded-md text-[11px]">
+                                {priceCalc.offMrpPercent}% off MRP · Saves ₹{formatINR(priceCalc.customerSaving)}
+                              </span>
+                            )}
+                            {priceCalc.profit !== undefined && Number(form.cost_to_make) > 0 && (
+                              priceCalc.profit < 0 ? (
+                                <span className="text-rose-700 font-bold bg-rose-100/80 border border-rose-200/80 px-2 py-0.5 rounded-md text-[11px]">
+                                  Margin: {priceCalc.marginPercent}% · Loss ₹{formatINR(Math.abs(priceCalc.profit))}
+                                </span>
+                              ) : (
+                                <span className="text-emerald-700 font-bold bg-emerald-100/80 border border-emerald-200/80 px-2 py-0.5 rounded-md text-[11px]">
+                                  Margin: {priceCalc.marginPercent}% · Profit ₹{formatINR(priceCalc.profit)}
+                                </span>
+                              )
+                            )}
+                          </div>
                         </div>
                       )}
 
@@ -2105,15 +2138,16 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         />
                       </div>
                       <InputField
-                        label="MRP"
-                        name="mrp"
-                        hint="optional"
+                        label="Cost to make (Buy price)"
+                        name="cost_to_make"
+                        required
+                        hint="mandatory"
                         type="number"
-                        value={form.mrp}
+                        value={form.cost_to_make}
                         onChange={handleChange}
                         placeholder="0.00"
                         leftEl={<IndianRupee size={13} />}
-                        tooltip="Maximum Retail Price."
+                        tooltip="Estimated recipe / production cost to make this untracked item. Mandatory for profit tracking."
                       />
                       <InputField
                         label={isGstReg ? "Selling price (incl. GST)" : "Selling price"}
@@ -2183,17 +2217,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <InputField
-                        label="Cost to make (Buy price)"
-                        name="cost_to_make"
-                        hint="optional"
-                        type="number"
-                        value={form.cost_to_make}
-                        onChange={handleChange}
-                        placeholder="0.00"
-                        leftEl={<IndianRupee size={13} />}
-                        tooltip="The cost to make or purchase this item."
-                      />
-                      <InputField
                         label="Offer valid until"
                         name="offer_valid_until"
                         hint="optional"
@@ -2234,9 +2257,15 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                               </span>
                             )}
                             {priceCalc.profit !== undefined && Number(form.cost_to_make) > 0 && (
-                              <span className="text-emerald-700 font-bold bg-emerald-100/50 px-2 py-0.5 rounded-md text-[11px]">
-                                Margin: {priceCalc.marginPercent}% · Profit ₹{formatINR(priceCalc.profit)}
-                              </span>
+                              priceCalc.profit < 0 ? (
+                                <span className="text-rose-700 font-bold bg-rose-100/80 border border-rose-200/80 px-2 py-0.5 rounded-md text-[11px]">
+                                  Margin: {priceCalc.marginPercent}% · Loss ₹{formatINR(Math.abs(priceCalc.profit))}
+                                </span>
+                              ) : (
+                                <span className="text-emerald-700 font-bold bg-emerald-100/80 border border-emerald-200/80 px-2 py-0.5 rounded-md text-[11px]">
+                                  Margin: {priceCalc.marginPercent}% · Profit ₹{formatINR(priceCalc.profit)}
+                                </span>
+                              )
                             )}
                           </div>
                         </div>

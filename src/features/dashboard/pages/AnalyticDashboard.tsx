@@ -133,6 +133,18 @@ const startOfDay = (d: Date) => {
   return r;
 };
 
+
+const normalizePaymentMethod = (val: string): "Cash" | "UPI" | "Card" | "Bank Transfer" | "Credit" => {
+  if (!val) return "Cash";
+  const u = String(val).trim().toUpperCase();
+  if (u === "CASH") return "Cash";
+  if (u === "CARD" || u.includes("DEBIT") || u.includes("CREDIT_CARD") || u.includes("POS")) return "Card";
+  if (u === "UPI" || u === "GPAY" || u === "G-PAY" || u === "PHONEPE" || u === "PAYTM" || u === "QR") return "UPI";
+  if (u.includes("BANK") || u === "NEFT" || u === "RTGS" || u === "IMPS" || u.includes("NETBANKING")) return "Bank Transfer";
+  if (u === "CREDIT" || u === "ON_CREDIT" || u === "ON CREDIT") return "Credit";
+  return "Cash";
+};
+
 const formatDateParam = (d: Date) => {
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, "0");
@@ -204,8 +216,25 @@ const AnalyticsDashboard = () => {
 
   const [selectedSupplier, setSelectedSupplier] = useState<string>("");
   const [suppliers, setSuppliers] = useState<any[]>([]);
-  const [customCategories, setCustomCategories] = useState<string[]>([]);
   const [productsList, setProductsList] = useState<any[]>([]);
+
+  const [ordersList, setOrdersList] = useState<any[]>([]);
+
+  const fetchOrders = useCallback(async () => {
+    const shopId = getActiveShopId();
+    if (!shopId) return;
+    try {
+      const res = await apiClient.get(`${ENDPOINTS.ORDERS}/${shopId}?limit=100`);
+      if (res?.data) {
+        const arr = Array.isArray(res.data) ? res.data : (res.data.datas || res.data.orders || []);
+        setOrdersList(arr);
+      }
+    } catch (e) { }
+  }, [getActiveShopId]);
+
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
 
   // Fetch product list for names mapping
   useEffect(() => {
@@ -238,17 +267,6 @@ const AnalyticsDashboard = () => {
     };
 
     fetchSuppliers();
-    const fetchCustomCategories = async () => {
-      try {
-        const res = await apiClient.get(`${ENDPOINTS.SHOP_CATEGORIES}`, { shop_id: shopId });
-        if (res?.data) {
-          const arr = Array.isArray(res.data) ? res.data : (res.data.datas || []);
-          const names = arr.map((c: any) => c.name).filter(Boolean);
-          setCustomCategories(names);
-        }
-      } catch (e) { }
-    };
-    fetchCustomCategories();
   }, [getActiveShopId]);
 
   // ── Compute dates ──
@@ -277,6 +295,7 @@ const AnalyticsDashboard = () => {
       }
       if (selectedSupplier) queryParams.supplier_id = selectedSupplier;
 
+      fetchOrders();
       const res = await analytics.getUnifiedDashboard(queryParams);
       if (res) {
         setStats(res.data || res.datas || res);
@@ -347,7 +366,82 @@ const AnalyticsDashboard = () => {
   const grossMargin = netRevenue > 0 ? (totalProfit / netRevenue) * 100 : 0;
   
   const customerOutstanding = Number(customerOverall?.total_outstandings ?? 0);
-  const receivedAmount = Number(customerOverall?.total_cleared_amounts ?? Math.max(0, netRevenue - customerOutstanding));
+  const receivedAmount = useMemo(() => {
+    if (ordersList.length > 0) {
+      const filtered = ordersList.filter((o: any) => {
+        const st = String(o?.status || "").toUpperCase();
+        if (st === "CANCELLED" || st === "CANCELED") return false;
+        if (!dateRange?.start || !dateRange?.end) return true;
+        const oDate = new Date(o.created_at || o.date || 0);
+        return oDate >= dateRange.start && oDate <= dateRange.end;
+      });
+
+      let sumReceived = 0;
+      let hasCompletedOrders = false;
+      filtered.forEach((o: any) => {
+        const calcInfo = o.calculation_infos || {};
+        const total = Number(
+          calcInfo.grand_total ??
+          calcInfo.total ??
+          o.item_infos?.total_order_amount ??
+          o.total_sellprice ??
+          o.total_amount ??
+          o.total ??
+          0
+        );
+
+        const pInfos = o.payment_infos || o.payments || {};
+        let orderReceived = 0;
+        let isCredit = false;
+
+        if (typeof pInfos === "object" && !Array.isArray(pInfos) && Object.keys(pInfos).length > 0) {
+          Object.entries(pInfos).forEach(([k, v]) => {
+            const amt = Number(typeof v === "object" ? (v as any)?.amount : v) || 0;
+            if (normalizePaymentMethod(k) !== "Credit") {
+              orderReceived += amt;
+            } else {
+              isCredit = true;
+            }
+          });
+        } else if (Array.isArray(pInfos) && pInfos.length > 0) {
+          pInfos.forEach((p: any) => {
+            const m = typeof p === "string" ? p : (p.method || p.payment_method || p.mode || "");
+            const amt = Number(p.amount) || total;
+            if (normalizePaymentMethod(m) !== "Credit") {
+              orderReceived += amt;
+            } else {
+              isCredit = true;
+            }
+          });
+        } else if (o.payment_method || o.payment_mode) {
+          if (normalizePaymentMethod(o.payment_method || o.payment_mode) !== "Credit") {
+            orderReceived = total;
+          } else {
+            isCredit = true;
+          }
+        } else {
+          orderReceived = total;
+        }
+
+        if (orderReceived <= 0 && !isCredit && total > 0) {
+          orderReceived = total;
+        }
+        sumReceived += orderReceived;
+        hasCompletedOrders = true;
+      });
+
+      if (hasCompletedOrders && sumReceived > 0) return sumReceived;
+    }
+
+    if (salesOverall.total_received_amount && salesOverall.total_received_amount > 0) {
+      return Number(salesOverall.total_received_amount);
+    }
+    if (salesOverall.total_bill_amount && salesOverall.total_bill_amount > 0) {
+      return Number(salesOverall.total_bill_amount);
+    }
+
+    return Number(customerOverall?.total_cleared_amounts ?? Math.max(0, netRevenue - customerOutstanding));
+  }, [ordersList, dateRange, salesOverall, customerOverall, customerOutstanding, netRevenue]);
 
   const totalReturnsCount = 0;
 
@@ -435,31 +529,121 @@ const AnalyticsDashboard = () => {
 
   // Payment Breakdown
   const paymentBreakdown = useMemo(() => {
-    let offlineAmt = salesOverall.total_offline_sales_amount ?? 0;
-    let onlineAmt = salesOverall.total_online_sales_amount ?? 0;
-    let offlineCount = salesOverall.total_offline_sales ?? 0;
-    let onlineCount = salesOverall.total_online_sales ?? 0;
+    const backendBreakdown = salesOverall.payment_breakdown || (stats?.dashboard?.sales as any)?.payment_breakdown;
 
-    if (offlineAmt === 0 && onlineAmt === 0 && netRevenue > 0) {
-      offlineAmt = netRevenue;
-      offlineCount = totalOrders || 1;
+    const counts: Record<string, { name: string; value: number; count: number; color: string }> = {
+      Cash: { name: "Cash", value: 0, count: 0, color: "#10b981" },
+      UPI: { name: "UPI", value: 0, count: 0, color: "#3b82f6" },
+      Card: { name: "Card", value: 0, count: 0, color: "#6366f1" },
+      "Bank Transfer": { name: "Bank Transfer", value: 0, count: 0, color: "#06b6d4" },
+      Credit: { name: "Credit", value: 0, count: 0, color: "#f59e0b" },
+    };
+
+    if (ordersList.length > 0) {
+      const filtered = ordersList.filter((o: any) => {
+        const st = String(o?.status || "").toUpperCase();
+        if (st === "CANCELLED" || st === "CANCELED") return false;
+        if (!dateRange?.start || !dateRange?.end) return true;
+        const oDate = new Date(o.created_at || o.date || 0);
+        return oDate >= dateRange.start && oDate <= dateRange.end;
+      });
+
+      filtered.forEach((o: any) => {
+        const calcInfo = o.calculation_infos || {};
+        const total = Number(
+          calcInfo.grand_total ??
+          calcInfo.total ??
+          o.item_infos?.total_order_amount ??
+          o.total_sellprice ??
+          o.total_amount ??
+          o.total ??
+          0
+        );
+
+        const pInfos = o.payment_infos || o.payments || {};
+        if (typeof pInfos === "object" && !Array.isArray(pInfos) && Object.keys(pInfos).length > 0) {
+          Object.entries(pInfos).forEach(([k, v]) => {
+            const amt = Number(typeof v === "object" ? (v as any)?.amount : v) || 0;
+            const norm = normalizePaymentMethod(k);
+            if (counts[norm]) {
+              counts[norm].value += amt;
+              counts[norm].count += 1;
+            }
+          });
+        } else if (Array.isArray(pInfos) && pInfos.length > 0) {
+          pInfos.forEach((p: any) => {
+            const m = typeof p === "string" ? p : (p.method || p.payment_method || p.mode || "");
+            const amt = Number(p.amount) || total;
+            const norm = normalizePaymentMethod(m);
+            if (counts[norm]) {
+              counts[norm].value += amt;
+              counts[norm].count += 1;
+            }
+          });
+        } else if (o.payment_method || o.payment_mode) {
+          const norm = normalizePaymentMethod(o.payment_method || o.payment_mode);
+          if (counts[norm]) {
+            counts[norm].value += total;
+            counts[norm].count += 1;
+          }
+        } else {
+          counts["Cash"].value += total;
+          counts["Cash"].count += 1;
+        }
+      });
+    } else if (Array.isArray(backendBreakdown) && backendBreakdown.length > 0) {
+      backendBreakdown.forEach((item: any) => {
+        const norm = normalizePaymentMethod(item.name || item._id);
+        if (counts[norm]) {
+          counts[norm].value += Number(item.amount ?? item.value ?? 0);
+          counts[norm].count += Number(item.count ?? 0);
+        }
+      });
     }
 
-    const data = [];
-    if (offlineAmt > 0 || offlineCount > 0) {
-      data.push({ name: "Offline", value: offlineAmt, count: offlineCount, color: "#10b981" });
+    const active = Object.values(counts).filter((c) => c.value > 0 || c.count > 0);
+    if (active.length === 0) {
+      return [{ name: "Cash", value: 0, count: 0, color: "#10b981" }];
     }
-    if (onlineAmt > 0 || onlineCount > 0) {
-      data.push({ name: "Online", value: onlineAmt, count: onlineCount, color: "#3b82f6" });
-    }
-    if (data.length === 0) {
-      data.push({ name: "Offline", value: 0, count: 0, color: "#10b981" });
-    }
-    return data;
-  }, [salesOverall, netRevenue, totalOrders]);
+    return active;
+  }, [ordersList, dateRange, salesOverall, stats]);
 
   // Top Products
   const topProducts = useMemo(() => {
+    if (ordersList.length > 0) {
+      const filtered = ordersList.filter((o: any) => {
+        const st = String(o?.status || "").toUpperCase();
+        if (st === "CANCELLED" || st === "CANCELED") return false;
+        if (!dateRange?.start || !dateRange?.end) return true;
+        const oDate = new Date(o.created_at || o.date || 0);
+        return oDate >= dateRange.start && oDate <= dateRange.end;
+      });
+
+      const prodMap: Record<string, { product_id: string; name: string; total_qty: number; total_revenue: number; total_profit: number }> = {};
+      filtered.forEach((o: any) => {
+        const items = o.items || [];
+        items.forEach((item: any) => {
+          const pid = item.product_id || item.inventory_id || item.id;
+          if (!pid) return;
+          const name = productNameMap[pid] || item.name || "Product";
+          const qty = Number(item.quantity ?? item.stocks ?? 1);
+          const rev = Number(item.total_amount ?? (Number(item.sell_price || 0) * qty));
+          const cost = Number(item.buy_price || 0) * qty;
+          const profit = Math.max(0, rev - cost);
+
+          if (!prodMap[pid]) {
+            prodMap[pid] = { product_id: pid, name, total_qty: 0, total_revenue: 0, total_profit: 0 };
+          }
+          prodMap[pid].total_qty += qty;
+          prodMap[pid].total_revenue += rev;
+          prodMap[pid].total_profit += profit;
+        });
+      });
+
+      const list = Object.values(prodMap).sort((a, b) => b.total_revenue - a.total_revenue);
+      if (list.length > 0) return list;
+    }
+
     const raw = stats?.top?.top_products || stats?.dashboard?.inventory?.top_products || [];
     return raw.map((p: any) => {
       const pName = productNameMap[p.product_id] || p.product_name || p.name || p.product_id || "Product";
@@ -475,7 +659,7 @@ const AnalyticsDashboard = () => {
         total_profit: totalProfitVal,
       };
     });
-  }, [stats, productNameMap]);
+  }, [ordersList, dateRange, stats, productNameMap]);
 
   // Sales by Category
   const salesByCategory = useMemo(() => {
@@ -486,18 +670,11 @@ const AnalyticsDashboard = () => {
       map[catName] = (map[catName] || 0) + (p.total_revenue || 0);
     });
 
-    if (customCategories.length > 0) {
-      customCategories.forEach((cat) => {
-        if (map[cat] === undefined) {
-          map[cat] = 0;
-        }
-      });
-    }
-
     return Object.entries(map)
+      .filter(([_, revenue]) => revenue > 0)
       .map(([category, revenue]) => ({ category, revenue }))
       .sort((a, b) => b.revenue - a.revenue);
-  }, [topProducts, productsList, customCategories]);
+  }, [topProducts, productsList]);
 
   // Top Suppliers
   const topSuppliers = useMemo(() => {
@@ -686,11 +863,7 @@ const AnalyticsDashboard = () => {
               </div>
             </div>
 
-            <div className="mt-4 pt-3.5 border-t border-slate-100">
-              <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
-                Total Cost: <span className="text-slate-700">{fmt(totalCost)}</span>
-              </p>
-            </div>
+
           </div>
 
           {/* Total Purchase */}

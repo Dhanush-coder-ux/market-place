@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, ReactNode, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle2, AlertCircle, Info, X } from "lucide-react";
 
@@ -18,6 +18,7 @@ const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
 export const ToastProvider = ({ children }: { children: ReactNode }) => {
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const recentToastsRef = useRef<Map<string, number>>(new Map());
 
   const showToast = useCallback((message: string | any, type: ToastType = "success") => {
     let finalMsg = message;
@@ -31,10 +32,32 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
         message.detail ||
         JSON.stringify(message);
     }
+    const msgStr = String(finalMsg || "").trim();
+    if (!msgStr) return;
+
+    // Rate-limit identical messages within 2 seconds
+    const key = `${type}:${msgStr}`;
+    const now = Date.now();
+    const lastShown = recentToastsRef.current.get(key) || 0;
+    if (now - lastShown < 2000) {
+      return;
+    }
+    recentToastsRef.current.set(key, now);
+
     const id = Math.random().toString(36).substring(2, 9);
-    setToasts((prev) => [...prev, { id, message: String(finalMsg), type }]);
+    setToasts((prev) => {
+      // Don't show duplicate toast if already currently visible
+      if (prev.some((t) => t.message === msgStr && t.type === type)) {
+        return prev;
+      }
+      // Cap at most 3 simultaneous toasts
+      const trimmed = prev.length >= 3 ? prev.slice(prev.length - 2) : prev;
+      return [...trimmed, { id, message: msgStr, type }];
+    });
+
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
+      recentToastsRef.current.delete(key);
     }, 4500);
   }, []);
 

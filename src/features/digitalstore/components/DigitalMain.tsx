@@ -269,7 +269,8 @@ const DigitalMain = () => {
   };
 
   useEffect(() => {
-    if (!SHOP_ID || SHOP_ID === "string") {
+    const activeShopId = localStorage.getItem("shop_id") || SHOP_ID;
+    if (!activeShopId || activeShopId === "string") {
       setNeedsSetup(true);
       setLoading(false);
       return;
@@ -278,9 +279,9 @@ const DigitalMain = () => {
       setLoading(true);
       try {
         const [shopRes, productsRes, followersRes] = await Promise.allSettled([
-          shopApi.getShopById(SHOP_ID),
-          inventoryApi.getInventoriesByShop(SHOP_ID, { limit: "50" }),
-          shopApi.getShopFollowers(SHOP_ID),
+          shopApi.getShopById(activeShopId),
+          inventoryApi.getInventoriesByShop(activeShopId, { limit: "50" }),
+          shopApi.getShopFollowers(activeShopId),
         ]);
 
         if (shopRes.status === "fulfilled" && (shopRes.value?.data || shopRes.value)) {

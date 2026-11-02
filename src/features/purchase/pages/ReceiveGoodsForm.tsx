@@ -52,6 +52,7 @@ type POProduct = {
   reason: string;
   customReason: string;
   sellPrice: number;
+  mrp?: number;
   serialTracking: boolean;
   serialNumbers: string[];
   // Extended tracking
@@ -766,6 +767,17 @@ const ReceiveGoodForm = () => {
     }
     if (!stats.serialValid) {
       showToast("Please enter all required serial numbers for serial-tracked items", "error");
+      return;
+    }
+
+    // Validate selling price vs MRP
+    const exceedingMrp = items.find(p => {
+      const sp = Number(p.sellPrice) || 0;
+      const mrp = Number(p.mrp) || 0;
+      return mrp > 0 && sp > mrp;
+    });
+    if (exceedingMrp) {
+      showToast(`Selling price cannot be above MRP for "${exceedingMrp.name || 'item'}". Selling price is ₹${Number(exceedingMrp.sellPrice).toFixed(2)}, but MRP is ₹${Number(exceedingMrp.mrp).toFixed(2)}.`, "error");
       return;
     }
 

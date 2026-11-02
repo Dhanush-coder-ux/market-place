@@ -494,6 +494,14 @@ const PurchaseForm = () => {
     setSoldStockWarnings([]);
   }
 
+  const exceedingMrpProduct = useMemo(() => {
+    return products.find(p => {
+      const sp = Number(p.sellingPrice) || 0;
+      const mrp = Number(p.mrp) || 0;
+      return mrp > 0 && sp > mrp;
+    });
+  }, [products]);
+
   const handleSavePurchase = useCallback(async (isDraft: boolean | React.MouseEvent = false) => {
     const draftStatus = typeof isDraft === 'boolean' && isDraft;
     if (isSubmittingRef.current) return;
@@ -520,6 +528,12 @@ const PurchaseForm = () => {
     const unselected = products.find(p => !p.inventory_id && p.name);
     if (unselected) {
       showToast(`Product "${unselected.name}" was not selected from inventory. Please search and select it.`, "error");
+      return;
+    }
+
+    // Validate selling price vs MRP
+    if (exceedingMrpProduct) {
+      showToast(`Selling price cannot be above MRP for "${exceedingMrpProduct.name || 'item'}". Selling price is ₹${Number(exceedingMrpProduct.sellingPrice).toFixed(2)}, but MRP is ₹${Number(exceedingMrpProduct.mrp).toFixed(2)}.`, "error");
       return;
     }
 
@@ -615,7 +629,8 @@ const PurchaseForm = () => {
           reorder_point_infos: p.reorderPoint ? { reorder_point: Number(p.reorderPoint) } : null,
           pricing_infos: {
             buy_price: Number(rowBaseCost.toFixed(2)),
-            sell_price: Number(finalSellPrice.toFixed(2))
+            sell_price: Number(finalSellPrice.toFixed(2)),
+            mrp: p.mrp !== undefined && p.mrp !== null && p.mrp !== "" ? Number(p.mrp) : undefined
           },
           gst: String(p.taxGst || 0).includes("%") ? String(p.taxGst || 0) : `${p.taxGst || 0}%`,
           stock_infos: {
@@ -733,14 +748,16 @@ const PurchaseForm = () => {
   // --- Header Actions ---
   useEffect(() => {
     const isDraft = !id || existingStatus === "DRAFT";
+    const hasMrpError = !!exceedingMrpProduct;
     setBottomActions(
       <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300">
         {isDraft && (
           <button
             type="button"
             onClick={() => handleSavePurchase(true)}
-            disabled={submitting}
-            className="px-4 h-8 rounded-xl border border-blue-100 text-blue-600 font-medium text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2 whitespace-nowrap overflow-hidden disabled:opacity-50"
+            disabled={submitting || hasMrpError}
+            title={hasMrpError ? `Selling price cannot be above MRP for "${exceedingMrpProduct?.name || 'item'}"` : undefined}
+            className="px-4 h-8 rounded-xl border border-blue-100 text-blue-600 font-medium text-xs bg-blue-50/50 hover:bg-blue-100 transition-all flex items-center gap-2 whitespace-nowrap overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Bookmark size={14} className="shrink-0" />
             <span className="truncate">{id && existingStatus === "DRAFT" ? "Update Draft" : "Save Draft"}</span>
@@ -749,15 +766,16 @@ const PurchaseForm = () => {
         <GradientButton
           icon={submitting ? <Loader className="h-4 w-4" /> : <Save size={16} />}
           onClick={() => handleSavePurchase(false)}
-          disabled={submitting}
-          className="rounded-xl shadow-md text-xs px-8 h-8 flex items-center"
+          disabled={submitting || hasMrpError}
+          title={hasMrpError ? `Selling price cannot be above MRP for "${exceedingMrpProduct?.name || 'item'}"` : undefined}
+          className="rounded-xl shadow-md text-xs px-8 h-8 flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {submitting ? "Processing..." : (id ? (existingStatus === "DRAFT" ? "Create Purchase" : "Update Purchase") : "Confirm Purchase")}
         </GradientButton>
       </div>
     );
     return () => setBottomActions(null);
-  }, [setBottomActions, submitting, id, existingStatus, handleSavePurchase]);
+  }, [setBottomActions, submitting, id, existingStatus, handleSavePurchase, exceedingMrpProduct]);
 
   const handleAddNewProduct = useCallback((query: string) => {
     openQuickCreate("PRODUCT", (newProduct: any) => {

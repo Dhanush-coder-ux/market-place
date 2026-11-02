@@ -81,6 +81,25 @@
   </style>
 
   <title>inventQ | Complete Retail Solution</title>
+
+  <!-- ─── Early PWA beforeinstallprompt capture ─────────────────────────────
+       Catches beforeinstallprompt immediately on page load so it is NEVER lost
+       when React scripts download and initialize asynchronously.
+  ────────────────────────────────────────────────────────────────────────── -->
+  <script>
+    window.__deferredPwaPrompt = null;
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault();
+      window.__deferredPwaPrompt = e;
+      window.dispatchEvent(new CustomEvent('pwa-prompt-ready', { detail: e }));
+      console.log('[PWA] beforeinstallprompt captured early by index.html');
+    });
+    window.addEventListener('appinstalled', function () {
+      window.__deferredPwaPrompt = null;
+      window.dispatchEvent(new CustomEvent('pwa-installed'));
+      console.log('[PWA] inventQ was installed as PWA app.');
+    });
+  </script>
 </head>
 
 <body>
@@ -104,12 +123,42 @@
         }, 300);
       }
 
-      // Register PWA Service Worker
+      // Register PWA Service Worker & listen for updates
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js').then((reg) => {
           console.log('[PWA] Service Worker registered with scope:', reg.scope);
+          window.__swRegistration = reg;
+          window.dispatchEvent(new CustomEvent('sw-registered', { detail: reg }));
+
+          // If a new worker is already waiting, emit update event immediately
+          if (reg.waiting) {
+            console.log('[PWA] Existing waiting worker found.');
+            window.dispatchEvent(new CustomEvent('sw-update-available', { detail: reg.waiting }));
+          }
+
+          // Listen for new workers installing and transitioning to waiting
+          reg.addEventListener('updatefound', () => {
+            const installing = reg.installing;
+            if (installing) {
+              installing.addEventListener('statechange', () => {
+                if (installing.state === 'installed' && navigator.serviceWorker.controller) {
+                  console.log('[PWA] New service worker installed and waiting.');
+                  window.dispatchEvent(new CustomEvent('sw-update-available', { detail: installing }));
+                }
+              });
+            }
+          });
         }).catch((err) => {
           console.warn('[PWA] Service Worker registration failed:', err);
+        });
+
+        // Controller change listener for smooth refresh
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (!refreshing) {
+            refreshing = true;
+            window.location.reload();
+          }
         });
       }
     });

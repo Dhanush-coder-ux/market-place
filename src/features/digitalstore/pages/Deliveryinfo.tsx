@@ -463,10 +463,16 @@ export function DeliveryCardInner({
   );
 }
 
-export default function DeliveryPreferences({ onStatusChange }: { onStatusChange?: (status: React.ReactNode) => void }) {
+interface DeliveryPreferencesProps {
+  shopId?: string;
+  initialOptions?: any[];
+  onStatusChange?: (status: React.ReactNode) => void;
+}
+
+export default function DeliveryPreferences({ shopId, initialOptions, onStatusChange }: DeliveryPreferencesProps) {
   const { showToast } = useToast();
   const { shop } = useBusinessApi();
-  const currentShopId = localStorage.getItem("shop_id") || SHOP_ID;
+  const currentShopId = shopId || localStorage.getItem("shop_id") || SHOP_ID;
 
   const [deliveryConfigs, setDeliveryConfigs] = useState<Record<string, DeliveryConfig>>({
     normal: {
@@ -527,6 +533,53 @@ export default function DeliveryPreferences({ onStatusChange }: { onStatusChange
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
+  const populateConfigs = (dataList: any[]) => {
+    if (!Array.isArray(dataList) || dataList.length === 0) return;
+    setDeliveryConfigs((prev) => {
+      const next = { ...prev };
+      Object.keys(next).forEach((k) => {
+        next[k] = { ...next[k], enabled: false };
+      });
+      dataList.forEach((item: any) => {
+        const itemType = (item.type || "").toUpperCase();
+        const matchedMeta = DELIVERY_OPTIONS_CONFIG.find(
+          (m) =>
+            m.backendType === itemType ||
+            m.legacyBackendTypes?.map((t) => t.toUpperCase()).includes(itemType)
+        );
+        if (matchedMeta) {
+          const isDistance =
+            item.pricing_model === "DISTANCE_TIERED" ||
+            Number(item.base_distance) > 0 ||
+            (Number(item.charge_per_km) > 0 && item.base_distance !== undefined);
+          next[matchedMeta.key] = {
+            id: item.id,
+            enabled: item.enabled !== false && item.enabled !== 0 && item.enabled !== "false",
+            pricingModel: isDistance ? "DISTANCE_TIERED" : "FLAT",
+            speed: item.speed || matchedMeta.defaultSpeed,
+            minOrderAmount: item.min_order_amount ?? 0,
+            deliveryCharge: item.delivery_charge ?? 0,
+            baseDistance: item.base_distance ?? 10,
+            extraDistanceStep: item.extra_distance_step ?? 1,
+            chargePerKm: item.charge_per_km ?? 0,
+            freeThreshold: item.free_shipping_amount ?? 0,
+            radius: item.radius ?? 0,
+            deliveryBy: item.delivery_by === "INHOUSE" ? "INHOUSE" : "PARTNERS",
+          };
+        }
+      });
+      return next;
+    });
+  };
+
+  // Immediate initialization from initialOptions if provided
+  useEffect(() => {
+    if (initialOptions && Array.isArray(initialOptions) && initialOptions.length > 0) {
+      populateConfigs(initialOptions);
+      setIsLoading(false);
+    }
+  }, [initialOptions]);
+
   // Load existing options from backend
   useEffect(() => {
     if (!currentShopId || currentShopId === "string") {
@@ -537,41 +590,14 @@ export default function DeliveryPreferences({ onStatusChange }: { onStatusChange
     setIsLoading(true);
     shop.getDeliveryOptions(currentShopId)
       .then((res: any) => {
-        const dataList = res?.data;
-        if (Array.isArray(dataList)) {
-          setDeliveryConfigs((prev) => {
-            const next = { ...prev };
-            Object.keys(next).forEach((k) => {
-              next[k] = { ...next[k], enabled: false };
-            });
-            dataList.forEach((item: any) => {
-              const matchedMeta = DELIVERY_OPTIONS_CONFIG.find(
-                (m) => m.backendType === item.type || m.legacyBackendTypes?.includes(item.type)
-              );
-              if (matchedMeta) {
-                const isDistance = item.pricing_model === "DISTANCE_TIERED" || (item.base_distance > 0 || (item.charge_per_km > 0 && item.base_distance !== undefined));
-                next[matchedMeta.key] = {
-                  id: item.id,
-                  enabled: item.enabled !== false && item.enabled !== 0,
-                  pricingModel: isDistance ? "DISTANCE_TIERED" : "FLAT",
-                  speed: item.speed || matchedMeta.defaultSpeed,
-                  minOrderAmount: item.min_order_amount ?? 0,
-                  deliveryCharge: item.delivery_charge ?? 0,
-                  baseDistance: item.base_distance ?? 10,
-                  extraDistanceStep: item.extra_distance_step ?? 1,
-                  chargePerKm: item.charge_per_km ?? 0,
-                  freeThreshold: item.free_shipping_amount ?? 0,
-                  radius: item.radius ?? 0,
-                  deliveryBy: item.delivery_by === "INHOUSE" ? "INHOUSE" : "PARTNERS",
-                };
-              }
-            });
-            return next;
-          });
+        const raw = res?.datas ?? res?.data ?? res;
+        const dataList = Array.isArray(raw) ? raw : (raw?.datas ?? raw?.data ?? []);
+        if (Array.isArray(dataList) && dataList.length > 0) {
+          populateConfigs(dataList);
         }
       })
-      .catch((err) => {
-        console.error("Failed to fetch delivery options:", err);
+      .catch((err: any) => {
+        console.error("Failed to load delivery options:", err);
       })
       .finally(() => {
         setIsLoading(false);

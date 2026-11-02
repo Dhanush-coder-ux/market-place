@@ -1,15 +1,18 @@
 /**
  * inventQ Progressive Web App (PWA) Service Worker
- * Enables desktop/mobile installation and offline shell caching.
+ * Version: 1.0.1
+ * Enables desktop/mobile installation, offline shell caching, and version updates.
  */
 
-const CACHE_NAME = 'inventq-pwa-v1';
+const CACHE_VERSION = 'v1.0.1';
+const CACHE_NAME = `inventq-pwa-${CACHE_VERSION}`;
 
 const ASSETS_TO_CACHE = [
   '/',
   '/manifest.json',
   '/pwa-192x192.png',
   '/pwa-512x512.png',
+  '/pwa-maskable-512x512.png',
   '/icon.png',
 ];
 
@@ -21,7 +24,7 @@ self.addEventListener('install', (event) => {
       });
     })
   );
-  self.skipWaiting();
+  // Waiting for client to confirm refresh via SKIP_WAITING message
 });
 
 self.addEventListener('activate', (event) => {
@@ -30,13 +33,21 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         keys.map((key) => {
           if (key !== CACHE_NAME) {
+            console.log('[SW] Deleting old cache:', key);
             return caches.delete(key);
           }
         })
       );
-    })
+    }).then(() => self.clients.claim())
   );
-  self.clients.claim();
+});
+
+// Listen for message from client (user clicks "Refresh / Update")
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    console.log('[SW] Received SKIP_WAITING from client. Activating new worker...');
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener('fetch', (event) => {
@@ -46,8 +57,19 @@ self.addEventListener('fetch', (event) => {
   // Skip non-HTTP(S) schemes
   if (!url.protocol.startsWith('http')) return;
 
-  // Skip local development Vite HMR & API endpoints
-  if (url.pathname.startsWith('/api') || url.pathname.includes('/ws') || url.pathname.includes('hot-update')) {
+  // Never cache version.json so version polling is always 100% fresh
+  if (url.pathname === '/version.json') {
+    return;
+  }
+
+  // Skip API endpoints, websockets, and Vite hot-update modules
+  if (
+    url.pathname.startsWith('/api') ||
+    url.pathname.includes('/ws') ||
+    url.pathname.includes('hot-update') ||
+    url.pathname.includes('@vite') ||
+    url.pathname.includes('@react-refresh')
+  ) {
     return;
   }
 

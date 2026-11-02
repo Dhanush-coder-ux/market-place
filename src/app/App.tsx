@@ -2,6 +2,7 @@ import { RouterProvider } from 'react-router-dom'
 import '../App.css'
 import { router } from './routes'
 import SessionExpiryModal from '@/components/ui/SessionExpiryModal'
+import { VersionUpdatePrompt } from '@/components/common/VersionUpdatePrompt'
 
 function App() {
   // Capture session_id and other user parameters from URL query params
@@ -30,6 +31,7 @@ function App() {
     <>
       <RouterProvider router={router} />
       <SessionExpiryModal />
+      <VersionUpdatePrompt />
     </>
   )
 }

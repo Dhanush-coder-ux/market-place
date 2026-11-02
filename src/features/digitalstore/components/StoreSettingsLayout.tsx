@@ -407,7 +407,7 @@ export function StoreSettingsLayout({ shop }: { shop: any }) {
               </div>
               {hoursStatus && <div className="shrink-0 ml-4">{hoursStatus}</div>}
             </div>
-            <OperatingHours onStatusChange={setHoursStatus} />
+            <OperatingHours shopId={shop?.id} initialHours={shop?.operating_hours} onStatusChange={setHoursStatus} />
           </div>
         )}
 
@@ -423,7 +423,7 @@ export function StoreSettingsLayout({ shop }: { shop: any }) {
               </div>
               {deliveryStatus && <div className="shrink-0 ml-4">{deliveryStatus}</div>}
             </div>
-            <DeliveryPreferences onStatusChange={setDeliveryStatus} />
+            <DeliveryPreferences shopId={shop?.id} initialOptions={shop?.delivery_options} onStatusChange={setDeliveryStatus} />
           </div>
         )}
 

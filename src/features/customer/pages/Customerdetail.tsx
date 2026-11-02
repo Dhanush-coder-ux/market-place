@@ -558,7 +558,7 @@ export default function CustomerDetail() {
 
                                 {isEditing ? (
                                   <div className="flex items-center gap-1.5 mt-1">
-                                    {(field.type === 'boolean' || field.type === 'bool') ? (
+                                    {(field.type?.toLowerCase() === 'boolean' || field.type?.toLowerCase() === 'bool' || field.type?.toLowerCase() === 'checkbox' || String(currentVal?.value).toLowerCase() === 'true' || String(currentVal?.value).toLowerCase() === 'false') ? (
                                       <label className="flex items-center gap-2 cursor-pointer flex-1 py-1">
                                         <input
                                           type="checkbox"
@@ -598,11 +598,11 @@ export default function CustomerDetail() {
                                     className="flex items-center justify-between mt-1 cursor-pointer"
                                     onClick={() => {
                                       setEditingFieldId(field.id);
-                                      setEditingValue(currentVal?.value ?? ((field.type === 'boolean' || field.type === 'bool') ? 'false' : ''));
+                                      setEditingValue(currentVal?.value ?? ((field.type?.toLowerCase() === 'boolean' || field.type?.toLowerCase() === 'bool' || field.type?.toLowerCase() === 'checkbox' || String(currentVal?.value).toLowerCase() === 'true' || String(currentVal?.value).toLowerCase() === 'false') ? 'false' : ''));
                                     }}
                                   >
                                     <p className="text-sm font-bold text-slate-700 truncate">
-                                      {(field.type === 'boolean' || field.type === 'bool') ? (
+                                      {(field.type?.toLowerCase() === 'boolean' || field.type?.toLowerCase() === 'bool' || field.type?.toLowerCase() === 'checkbox' || String(currentVal?.value).toLowerCase() === 'true' || String(currentVal?.value).toLowerCase() === 'false') ? (
                                         (String(currentVal?.value).toLowerCase() === 'true' || String(currentVal?.value).toLowerCase() === 'yes') ? (
                                           <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">Yes</span>
                                         ) : (String(currentVal?.value).toLowerCase() === 'false' || String(currentVal?.value).toLowerCase() === 'no') ? (

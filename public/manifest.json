@@ -1,13 +1,16 @@
 {
   "name": "inventQ - Complete Retail Solution",
   "short_name": "inventQ",
+  "id": "/",
   "description": "Complete Retail ERP for inventory, POS billing, orders, and shop management.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "window-controls-overlay"],
   "background_color": "#f8fafc",
   "theme_color": "#286038",
   "orientation": "any",
+  "prefer_related_applications": false,
   "categories": ["business", "finance", "productivity"],
   "icons": [
     {
@@ -40,14 +43,14 @@
       "name": "Billing POS",
       "short_name": "POS",
       "description": "Quick POS Billing & Thermal Printing",
-      "url": "/pos",
+      "url": "/billing",
       "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
     },
     {
       "name": "Products",
       "short_name": "Products",
       "description": "Manage products & stock",
-      "url": "/products",
+      "url": "/product/all",
       "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
     },
     {

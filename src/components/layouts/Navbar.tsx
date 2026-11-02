@@ -65,7 +65,7 @@ export const Navbar = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   // ── PWA Desktop/Mobile App Installation ─────────────────────────────────────
-  const { isInstalled, promptInstall, isModalOpen, setIsModalOpen } = usePWAInstall();
+  const { isInstalled, promptInstall, isModalOpen, setIsModalOpen, isPromptReady } = usePWAInstall();
 
   // ── Shop selector state ──────────────────────────────────────────────────────
   const [isShopMenuOpen, setIsShopMenuOpen] = useState(false);
@@ -402,6 +402,7 @@ export const Navbar = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onInstall={promptInstall}
+        isPromptReady={isPromptReady}
       />
     </>
   );

@@ -402,7 +402,14 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
         if (offerUntil && new Date(offerUntil).getTime() < new Date().setHours(0, 0, 0, 0)) {
           prodDiscount = 0;
         }
-        const costPriceVal = Number(fullProduct.pricing_infos?.buy_price ?? fullProduct.buy_price ?? 0) || undefined;
+        const costPriceVal = Number(
+          fullProduct.pricing_infos?.buy_price ??
+          fullProduct.buy_price ??
+          (fullProduct as any).cost_to_make ??
+          (fullProduct as any).custom_fields?.cost_to_make ??
+          (fullProduct as any).custom_fields?.buy_price ??
+          0
+        ) || undefined;
 
         if (existingIndex !== -1) {
           updatedItems = items.map((item, idx) => {
@@ -623,7 +630,14 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
     if (offerUntil && new Date(offerUntil).getTime() < new Date().setHours(0, 0, 0, 0)) {
       prodDiscount = 0;
     }
-    const costPriceVal = Number(pendingProduct.pricing_infos?.buy_price ?? pendingProduct.buy_price ?? 0) || undefined;
+    const costPriceVal = Number(
+      pendingProduct.pricing_infos?.buy_price ??
+      pendingProduct.buy_price ??
+      (pendingProduct as any).cost_to_make ??
+      (pendingProduct as any).custom_fields?.cost_to_make ??
+      (pendingProduct as any).custom_fields?.buy_price ??
+      0
+    ) || undefined;
 
     if (existingIndex !== -1) {
       updatedItems = items.map((item, idx) => {

@@ -30,10 +30,14 @@ import {
   testNetworkPrinter,
   printTestReceipt,
   DEFAULT_PRINTER_CONFIG,
+  DIGITAL_STORE_QR_MESSAGES,
+  DEFAULT_DIGITAL_STORE_QR_MESSAGE,
   PrinterConnectionType,
   PaperWidth,
 } from "../utils/printerService";
 import { useToast } from "@/context/ToastContext";
+import { shopApi } from "@/services/api/shop";
+import { SHOP_ID, getShopId } from "@/services/endpoints";
 
 interface PrinterConfigModalProps {
   isOpen: boolean;
@@ -50,10 +54,32 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
   const [config, setConfig] = useState<PrinterConfig>(DEFAULT_PRINTER_CONFIG);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
+  const [fetchedShopData, setFetchedShopData] = useState<any>(null);
   const [statusMessage, setStatusMessage] = useState<{
     type: "success" | "error" | "info";
     text: string;
   } | null>(null);
+
+  // Fetch shop details if not provided to detect digital store status
+  useEffect(() => {
+    if (isOpen && !shopData) {
+      const activeShopId = getShopId() || SHOP_ID;
+      if (activeShopId && activeShopId !== "string") {
+        shopApi
+          .getShopById(activeShopId)
+          .then((res) => {
+            const data = res?.data ?? res;
+            setFetchedShopData(data);
+          })
+          .catch((err) => console.warn("Failed to fetch shop details in PrinterConfigModal:", err));
+      }
+    }
+  }, [isOpen, shopData]);
+
+  const activeShop = shopData || fetchedShopData;
+  const isDigitalStoreEnabled = Boolean(
+    activeShop?.visible_online || activeShop?.is_digital_store_configured
+  );
 
   // Load saved config on open
   useEffect(() => {
@@ -606,6 +632,81 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
               </div>
 
             </div>
+
+            {/* Bill settings - Digital Store QR on bill (Visible when Digital Store is enabled) */}
+            {isDigitalStoreEnabled && (
+              <div className="p-3.5 bg-white border border-slate-200 rounded-xl space-y-3">
+                <div>
+                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                    Bill settings
+                  </h4>
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-xs font-bold text-slate-800">
+                      Print Digital Store QR on bill
+                    </span>
+                    <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                      Optional
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Show your online store link to customers on printed bills.
+                  </p>
+                </div>
+
+                <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-800">
+                    Include Digital Store QR
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(config.includeDigitalStoreQr)}
+                    onChange={(e) =>
+                      setConfig((prev) => ({
+                        ...prev,
+                        includeDigitalStoreQr: e.target.checked,
+                        digitalStoreQrMessage:
+                          prev.digitalStoreQrMessage || DEFAULT_DIGITAL_STORE_QR_MESSAGE,
+                      }))
+                    }
+                    className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer accent-slate-900"
+                  />
+                </div>
+
+                {config.includeDigitalStoreQr && (
+                  <div className="pt-2 border-t border-slate-100 space-y-2">
+                    <label className="text-xs font-bold text-slate-700 block">
+                      Choose bill message
+                    </label>
+                    <div className="space-y-2">
+                      {DIGITAL_STORE_QR_MESSAGES.map((msg) => (
+                        <label
+                          key={msg}
+                          className="flex items-center gap-2.5 text-xs text-slate-700 cursor-pointer hover:text-slate-900"
+                        >
+                          <input
+                            type="radio"
+                            name="digitalStoreQrMessageConfigModal"
+                            value={msg}
+                            checked={
+                              (config.digitalStoreQrMessage ||
+                                DEFAULT_DIGITAL_STORE_QR_MESSAGE) === msg
+                            }
+                            onChange={() =>
+                              setConfig((prev) => ({
+                                ...prev,
+                                digitalStoreQrMessage: msg,
+                              }))
+                            }
+                            className="w-4 h-4 text-emerald-600 border-slate-300 focus:ring-emerald-500 cursor-pointer accent-slate-900"
+                          />
+                          <span className="font-medium">{msg}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Receipt Footer Message */}
             <div className="space-y-1">

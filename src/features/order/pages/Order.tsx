@@ -29,15 +29,19 @@ const toCardShape = (o: OrderRecord, customerMap?: Record<string, { name: string
   const name = onlineObj.name || onlineObj.customer_name || anyOrder.customer_name || anyOrder.user_name || o.customer_name || custObj.customer_name || custObj.name || addObj.customer_name || addObj.name || dataObj.customer_name || dataObj.name || c?.name || "Customer";
   const phone = onlineObj.phone || onlineObj.customer_phone || anyOrder.customer_phone || anyOrder.customer_number || o.customer_number || custObj.mobile_number || custObj.phone || addObj.customer_phone || addObj.phone || dataObj.phone || dataObj.customer_phone || c?.phone || "—";
   
+  const delivery = Number(chargesObj.delivery_charge ?? chargesObj.delivery_charges ?? chargesObj.delivery_fee ?? 0) || 0;
   let rawTotal = calcObj.total ?? calcObj.grand_total ?? o.total_amount ?? o.total ?? anyOrder.total_order_value ?? dataObj.total_amount;
   if (rawTotal === undefined || rawTotal === null || Number(rawTotal) === 0) {
     if (itemObj.total_order_amount !== undefined) {
       const base = Number(itemObj.total_order_amount) || 0;
-      const gst = Number(itemObj.total_order_gst_amount) || 0;
-      const delivery = Number(chargesObj.delivery_charge ?? chargesObj.delivery_charges ?? chargesObj.delivery_fee ?? 0) || 0;
-      rawTotal = base + gst + delivery;
+      rawTotal = base + delivery;
     } else {
-      rawTotal = calcObj.sub_total ?? itemObj.total_order_amount ?? o.pending_amount ?? 0;
+      rawTotal = (calcObj.sub_total ?? itemObj.total_order_amount ?? o.pending_amount ?? 0) + delivery;
+    }
+  } else {
+    const baseItems = Number(itemObj.total_order_amount ?? 0);
+    if (baseItems > 0 && Math.abs(Number(rawTotal) - baseItems) < 0.01 && delivery > 0) {
+      rawTotal = Number(rawTotal) + delivery;
     }
   }
   const totalAmount = Number(Number(rawTotal).toFixed(2));
@@ -70,7 +74,6 @@ const parseOrderForDetail = (
   const itemInfos = o.item_infos || {};
   const addInfos = o.additional_infos || {};
   const charges = o.charges_infos || {};
-  const dataObj = o.datas || {};
 
   // Extract items from fullOrder.items or calculation_infos.items or fallback
   const rawItems: any[] = Array.isArray(o.items) && o.items.length > 0 
@@ -143,10 +146,16 @@ const parseOrderForDetail = (
 
     const gstLabel = gstRate > 0 ? `${gstRate}%` : (i.gst ? String(i.gst) : "0%");
 
+    // Subtract GST amount from item price so price is the true pre-tax Base Price
+    const baseItemPrice = i.taxable_price !== undefined && !isNaN(Number(i.taxable_price))
+      ? Number(i.taxable_price)
+      : (gstAmount > 0 ? Math.max(0, (lineTotal - gstAmount) / qty) : price);
+
     return {
       name: itemName,
       qty,
-      price: Number(price.toFixed(2)),
+      price: Number(baseItemPrice.toFixed(2)),
+      inclusivePrice: Number(price.toFixed(2)),
       total: Number(lineTotal.toFixed(2)),
       gst: gstLabel,
       gstRate,
@@ -204,35 +213,19 @@ const parseOrderForDetail = (
 
   // Subtotal (Taxable / Base amount excl. GST)
   const itemsSum = mappedItems.reduce((acc, it) => acc + it.total, 0);
-  const rawSubtotal =
-    calc.taxable_amount ??
-    calc.base_subtotal ??
-    calc.subtotal ??
-    calc.sub_total ??
-    itemInfos.total_order_amount ??
-    (itemsSum > 0 ? itemsSum : (o.total_amount ?? o.total_sellprice ?? cardShape.totalAmount ?? 0));
+  const totalGst = mappedItems.reduce((acc, it) => acc + (it.gstAmount || 0), 0);
+  const effectiveGst = gstAmount > 0 ? gstAmount : totalGst;
+
+  // Subtract GST amount from items total so subtotal is the true Base Price before tax
+  let rawSubtotal = calc.taxable_amount ?? calc.base_subtotal;
+  if (rawSubtotal === undefined || rawSubtotal === null) {
+    const rawItemsVal = itemInfos.total_order_amount ?? (itemsSum > 0 ? itemsSum : (o.total_amount ?? o.total_sellprice ?? cardShape.totalAmount ?? 0));
+    rawSubtotal = Math.max(0, Number(rawItemsVal) - effectiveGst);
+  }
   const subtotal = Number(Number(rawSubtotal).toFixed(2));
 
-  // Grand Total
-  let rawGrandTotal =
-    calc.grand_total ??
-    calc.total ??
-    calc.gross ??
-    o.total_sellprice ??
-    o.total_amount ??
-    dataObj.total_amount;
-
-  if (rawGrandTotal === undefined || rawGrandTotal === null || Number(rawGrandTotal) === 0) {
-    rawGrandTotal = subtotal + gstAmount + deliveryCharge - discount;
-  } else {
-    // If rawGrandTotal equals subtotal and GST was not included in it
-    const numGrand = Number(rawGrandTotal);
-    if (gstAmount > 0 && Math.abs(numGrand - subtotal) < 0.01) {
-      rawGrandTotal = subtotal + gstAmount + deliveryCharge - discount;
-    }
-  }
-
-  const grandTotal = Number(Number(rawGrandTotal).toFixed(2));
+  // Grand Total = Base Subtotal + GST Amount + Delivery Charge - Discount
+  const grandTotal = Number((subtotal + effectiveGst + deliveryCharge - discount).toFixed(2));
 
   return {
     ...cardShape,

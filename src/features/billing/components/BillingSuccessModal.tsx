@@ -10,8 +10,10 @@ import {
   getPrintersList,
   SavedPrinter,
   getPrinterConfig,
+  getDigitalStoreUrl,
 } from "../utils/printerService";
 import { useToast } from "@/context/ToastContext";
+import { QRCodeSVG } from "qrcode.react";
 
 /* ─── Types ─────────────────────────────────────────────────────────────── */
 
@@ -193,6 +195,20 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
         isDuplicate: false,
         invoiceTypeTag: "TAX INVOICE",
         payments: details.payments,
+        shopId: shopData?.id,
+        digitalStoreUrl: shopData?.additional_infos?.website || getDigitalStoreUrl(shopData?.id),
+        includeDigitalStoreQr: Boolean(
+          (printersList.find((p) => p.id === selectedPrinterId) ||
+            printersList.find((p) => p.isDefault) ||
+            printersList[0] ||
+            getPrinterConfig()).includeDigitalStoreQr && (shopData?.visible_online !== false)
+        ),
+        digitalStoreQrMessage: (
+          printersList.find((p) => p.id === selectedPrinterId) ||
+          printersList.find((p) => p.isDefault) ||
+          printersList[0] ||
+          getPrinterConfig()
+        ).digitalStoreQrMessage,
       };
 
       const targetPrinter =
@@ -870,6 +886,40 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
                 )}
 
                 <hr className="receipt-separator" />
+
+                {/* ── Digital Store QR on Receipt (Visible when enabled) ── */}
+                {Boolean(selectedPrinter?.includeDigitalStoreQr && (shopData?.visible_online !== false)) && (
+                  <div className="text-center my-2.5 pt-2 border-t border-dashed border-[#DDD7CD]">
+                    <div className="text-[12px] font-black text-[#e11d48] tracking-wider uppercase">
+                      YOUR SHOP IS ONLINE!
+                    </div>
+                    <div className="text-[9.5px] font-medium text-[#2d3748] mt-0.5">
+                      {selectedPrinter?.digitalStoreQrMessage || "Scan to browse & order online."}
+                    </div>
+                    <div className="flex justify-center my-2">
+                      <div className="p-2 bg-white rounded-lg border border-[#e2e8f0] shadow-xs inline-flex items-center justify-center">
+                        <QRCodeSVG
+                          value={
+                            shopData?.additional_infos?.website ||
+                            getDigitalStoreUrl(shopData?.id)
+                          }
+                          size={110}
+                          level="M"
+                        />
+                      </div>
+                    </div>
+                    <div className="text-[9px] font-medium text-[#4a5568]">
+                      Scan to visit our online store
+                    </div>
+                    <div className="my-2 border-t border-dashed border-[#DDD7CD]" />
+                    <div className="text-[11px] font-black text-[#e11d48]">
+                      ShopQ
+                    </div>
+                    <div className="text-[7.5px] text-[#718096]">
+                      Discover and shop local stores on ShopQ
+                    </div>
+                  </div>
+                )}
 
                 {/* ── Footer ─────────────────────────────────── */}
                 <div className="text-center text-[9px] text-[#8A857C] mt-1 space-y-0.5">

@@ -16,8 +16,10 @@ import {
   getPrintersList,
   SavedPrinter,
   cleanShopAddress,
+  getDigitalStoreUrl,
 } from "@/features/billing/utils/printerService";
 import { PrinterConfigModal } from "@/features/billing/components/PrinterConfigModal";
+import { QRCodeSVG } from "qrcode.react";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { extractSaleCustomerInfo } from "../type";
 import { useToast } from "@/context/ToastContext";
@@ -349,6 +351,15 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
         invoiceTypeTag: "TAX INVOICE - DUPLICATE COPY",
         payments: paymentMethods.map((p) => ({ mode: p.mode, amount: p.amount })),
         reprintTimestamp: `${formattedDateTime.date}, ${formattedDateTime.time}`,
+        shopId: (sale as any)?.shop_id || shopData?.id,
+        digitalStoreUrl: shopData?.additional_infos?.website || getDigitalStoreUrl((sale as any)?.shop_id || shopData?.id),
+        includeDigitalStoreQr: Boolean(
+          (printersList.find((p) => p.id === targetPrinterId) || getPrinterConfig())
+            ?.includeDigitalStoreQr && (shopData?.visible_online !== false)
+        ),
+        digitalStoreQrMessage: (
+          printersList.find((p) => p.id === targetPrinterId) || getPrinterConfig()
+        )?.digitalStoreQrMessage,
       };
 
       const targetPrinter =
@@ -377,7 +388,7 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div
-        className="bg-white rounded-2xl shadow-2xl border border-slate-200/80 flex flex-col w-full max-w-xl max-h-[92vh] overflow-hidden"
+        className="bg-white rounded-2xl shadow-2xl border border-slate-200/80 flex flex-col w-full max-w-xl min-h-0 max-h-[90vh] h-[88vh] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* ── Modal Header ── */}
@@ -422,11 +433,11 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
         </div>
 
         {/* ── Modal Body (Thermal Receipt Preview) ── */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-100/70 flex justify-center custom-scrollbar">
+        <div className="modal-content flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 pb-8 bg-slate-100/80 flex justify-center items-start custom-scrollbar" style={{ WebkitOverflowScrolling: "touch", overscrollBehavior: "contain", scrollbarWidth: "thin", scrollbarColor: "#94a3b8 #f1f5f9" }}>
           <div
             ref={receiptRef}
             id="printable-receipt"
-            className="w-full max-w-[340px] bg-white rounded-lg shadow-md border border-slate-200 p-5 font-mono text-[11px] text-slate-800 leading-relaxed select-text"
+            className="w-full max-w-[340px] shrink-0 bg-white rounded-lg shadow-md border border-slate-200 p-5 pb-8 mb-4 font-mono text-[11px] text-slate-800 leading-relaxed select-text"
           >
             {/* Header: Shop Info */}
             <div className="text-center pb-3 border-b border-dashed border-slate-300">
@@ -595,10 +606,44 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
               ))}
             </div>
 
+            {/* Digital Store QR Section (Visible when enabled) */}
+            {Boolean(
+              (printersList.find((p) => p.id === targetPrinterId) || getPrinterConfig())
+                ?.includeDigitalStoreQr && (shopData?.visible_online !== false)
+            ) && (
+              <div className="pt-3 pb-2 text-center border-t border-dashed border-slate-200">
+                <p className="text-[11px] font-black text-[#e11d48] uppercase tracking-wide">
+                  YOUR SHOP IS ONLINE!
+                </p>
+                <p className="text-[9px] font-medium text-slate-700 mt-0.5">
+                  {(printersList.find((p) => p.id === targetPrinterId) || getPrinterConfig())
+                    ?.digitalStoreQrMessage || "Scan to browse & order online."}
+                </p>
+                <div className="flex justify-center my-2">
+                  <div className="p-1.5 bg-white rounded-lg border border-slate-200 shadow-2xs inline-flex items-center justify-center">
+                    <QRCodeSVG
+                      value={
+                        shopData?.additional_infos?.website ||
+                        getDigitalStoreUrl((sale as any)?.shop_id || shopData?.id)
+                      }
+                      size={105}
+                      level="M"
+                    />
+                  </div>
+                </div>
+                <p className="text-[8.5px] font-medium text-slate-500">
+                  Scan to visit our online store
+                </p>
+                <div className="my-2 border-t border-dashed border-slate-200" />
+                <p className="text-[10px] font-black text-[#e11d48]">ShopQ</p>
+                <p className="text-[7.5px] text-slate-400">Discover and shop local stores on ShopQ</p>
+              </div>
+            )}
+
             {/* Footer */}
             <div className="pt-3 text-center text-[9px] text-slate-400 space-y-0.5">
               <p className="font-semibold text-slate-600">
-                Thank you for your business!
+                {(printersList.find((p) => p.id === targetPrinterId) || getPrinterConfig())?.footerText || "Thank you for shopping with us! Please visit again."}
               </p>
               <p>Goods once sold will not be returned without bill.</p>
               <p className="text-[8px] text-slate-400 mt-1">
@@ -671,6 +716,7 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
 
       {/* Global Printers Configuration Modal (if requested from reprint) */}
       <PrinterConfigModal
+        shopData={shopData}
         isOpen={isPrinterConfigOpen}
         onClose={() => setIsPrinterConfigOpen(false)}
       />

@@ -2,7 +2,7 @@ import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { useToast } from "@/context/ToastContext";
 import { useState, useRef, useEffect } from "react";
 import {
-  Megaphone, RefreshCw, Gift, Wand2, UserPlus,
+  Megaphone, RefreshCw, Gift, Wand2,
   Inbox, Send, Clock,
   Copy, Trash2, Edit3, CheckCircle2,
   Smile, Timer, Calendar, FileText, UserCheck,
@@ -14,7 +14,7 @@ import { SHOP_ID } from "@/services/endpoints";
 // ─── Types & Interfaces ──────────────────────────────────────────────────────
 
 type AnnouncementType = "Announcement" | "Update" | "Offer";
-type StatusType = "Draft" | "Scheduled" | "Published";
+type StatusType = "Draft" | "Scheduled" | "Published" | "Expired";
 
 interface AnnouncementItem {
   id: number;
@@ -24,7 +24,6 @@ interface AnnouncementItem {
   status: StatusType;
   audience: string;
   views: number;
-  call_to_action?: string;
   schedule_at?: string | null;
   expire_at?: string | null;
 }
@@ -79,6 +78,7 @@ const STATUS_CONFIG: Record<StatusType, { dot: string; bg: string; text: string;
   Draft:     { dot: "bg-slate-400",   bg: "bg-slate-100",   text: "text-slate-600",   border: "border-slate-200" },
   Scheduled: { dot: "bg-amber-500",   bg: "bg-amber-50",    text: "text-amber-700",   border: "border-amber-200" },
   Published: { dot: "bg-emerald-500", bg: "bg-emerald-50",  text: "text-emerald-700", border: "border-emerald-200" },
+  Expired:   { dot: "bg-rose-500",    bg: "bg-rose-50",     text: "text-rose-700",    border: "border-rose-200" },
 };
 
 const AI_SUGGESTIONS: { text: string; type: AnnouncementType }[] = [
@@ -118,13 +118,39 @@ function fmtDate(dateStr: string): string {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function StatusBadge({ status }: { status: StatusType }) {
-  const cfg = STATUS_CONFIG[status];
+function StatusBadge({
+  status,
+  scheduleAt,
+  expireAt,
+}: {
+  status: StatusType;
+  scheduleAt?: string | null;
+  expireAt?: string | null;
+}) {
+  const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.Draft;
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium ${cfg.bg} ${cfg.text} border ${cfg.border}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} inline-block`} />
-      {status}
-    </span>
+    <div className="flex flex-col items-start gap-0.5">
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${cfg.bg} ${cfg.text} border ${cfg.border}`}>
+        <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} inline-block`} />
+        {status}
+      </span>
+      {status === "Scheduled" && scheduleAt && (
+        <span className="text-[10px] text-amber-600 flex items-center gap-1 font-medium whitespace-nowrap">
+          <Clock size={10} />
+          {new Date(scheduleAt).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </span>
+      )}
+      {status === "Expired" && expireAt && (
+        <span className="text-[10px] text-rose-500 flex items-center gap-1 font-medium whitespace-nowrap">
+          Expired: {fmtDate(expireAt)}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -200,8 +226,6 @@ export default function AnnouncementsPage() {
   const [audience, setAudience] = useState("ALL_FOLLOWED_USERS");
   const [scheduleDate, setScheduleDate] = useState("");
   const [scheduleTime, setScheduleTime] = useState("");
-  const [ctaLabel, setCtaLabel] = useState("");
-  const [ctaUrl, setCtaUrl] = useState("");
   const [sent, setSent] = useState(false);
   const [, setIsSaving] = useState(false);
 
@@ -220,39 +244,69 @@ export default function AnnouncementsPage() {
 
   // Map API to UI Enums
   const apiToType = (t: string): AnnouncementType => {
-    if (t === "OFFER") return "Offer";
-    if (t === "UPDATES") return "Update";
+    const raw = String(t || "").toUpperCase();
+    if (raw === "OFFER") return "Offer";
+    if (raw === "UPDATES") return "Update";
     return "Announcement";
   };
+
   const typeToApi = (t: AnnouncementType) => {
     if (t === "Update") return "UPDATES";
     return t.toUpperCase();
   };
-  const apiToStatus = (s: string): StatusType => {
-    if (s === "SCHEDULED") return "Scheduled";
-    if (s === "PUBLISHED") return "Published";
+
+  const apiToStatus = (
+    s: any,
+    scheduleAt?: string | null,
+    expireAt?: string | null
+  ): StatusType => {
+    if (expireAt && new Date(expireAt).getTime() < Date.now()) {
+      return "Expired";
+    }
+    const raw = String(s || "").trim().toUpperCase();
+    if (raw === "EXPIRED") return "Expired";
+    if (raw === "DRAFT") return "Draft";
+    if (raw === "PUBLISHED" || raw === "ACTIVE" || raw === "LIVE") return "Published";
+    if (raw === "SCHEDULED") {
+      if (scheduleAt && new Date(scheduleAt).getTime() <= Date.now()) {
+        return "Published";
+      }
+      return "Scheduled";
+    }
+    if (scheduleAt && new Date(scheduleAt).getTime() > Date.now()) {
+      return "Scheduled";
+    }
+    if (scheduleAt && new Date(scheduleAt).getTime() <= Date.now()) {
+      return "Published";
+    }
     return "Draft";
   };
-  const statusToApi = (s: StatusType) => s.toUpperCase();
+
+  const statusToApi = (s: StatusType) => {
+    if (s === "Scheduled") return "SCHEDULED";
+    if (s === "Published") return "PUBLISHED";
+    if (s === "Expired") return "EXPIRED";
+    return "DRAFT";
+  };
 
   const loadAnnouncements = () => {
     shop.getAnnouncements(SHOP_ID).then((res) => {
-      if (res && res.data && Array.isArray(res.data)) {
-        setHistory(
-          res.data.map((d: any) => ({
-            id: d.id,
-            text: d.message || "",
-            date: d.schedule_at || d.created_at || new Date().toISOString(),
-            type: apiToType(d.type),
-            status: apiToStatus(d.status),
-            audience: d.send_to || "ALL_FOLLOWED_USERS",
-            views: 0,
-            call_to_action: d.call_to_action,
-            schedule_at: d.schedule_at,
-            expire_at: d.expire_at,
-          }))
-        );
-      }
+      const list = Array.isArray(res) 
+        ? res 
+        : (Array.isArray(res?.data) ? res.data : (Array.isArray(res?.detail?.data) ? res.detail.data : []));
+      setHistory(
+        list.map((d: any) => ({
+          id: d.id,
+          text: d.message || "",
+          date: d.schedule_at || d.created_at || new Date().toISOString(),
+          type: apiToType(d.type),
+          status: apiToStatus(d.status, d.schedule_at, d.expire_at),
+          audience: d.send_to || "ALL_FOLLOWED_USERS",
+          views: 0,
+          schedule_at: d.schedule_at,
+          expire_at: d.expire_at,
+        }))
+      );
     }).catch(console.error);
   };
 
@@ -269,23 +323,30 @@ export default function AnnouncementsPage() {
   const publishedCount = history.filter((h) => h.status === "Published").length;
   const scheduledCount = history.filter((h) => h.status === "Scheduled").length;
   const draftCount = history.filter((h) => h.status === "Draft").length;
+  const expiredCount = history.filter((h) => h.status === "Expired").length;
 
   const resetForm = () => {
-    setText(""); setCtaLabel(""); setCtaUrl("");
-    setStatus("Draft"); setScheduleDate(""); setScheduleTime(""); setEditingId(null);
+    setText("");
+    setStatus("Draft");
+    setScheduleDate("");
+    setScheduleTime("");
+    setEditingId(null);
   };
 
-  const handlePublish = async () => {
+  const handlePublish = async (overrideStatus?: StatusType) => {
     if (!text.trim()) return;
     setIsSaving(true);
+    const targetStatus = overrideStatus || status;
     const apiType = typeToApi(type);
-    const apiStatus = scheduleDate ? "SCHEDULED" : statusToApi(status);
-    const cta = ctaLabel && ctaUrl ? `${ctaLabel}||${ctaUrl}` : ctaLabel;
+    const apiStatus = targetStatus === "Scheduled" || (scheduleDate && targetStatus !== "Draft" && targetStatus !== "Published")
+      ? "SCHEDULED"
+      : statusToApi(targetStatus);
+
     const payload = {
       type: apiType,
-      message: text,
-      call_to_action: cta || null,
-      schedule_at: scheduleDate
+      message: text.trim(),
+      call_to_action: null,
+      schedule_at: (targetStatus === "Scheduled" || (scheduleDate && targetStatus !== "Draft" && targetStatus !== "Published")) && scheduleDate
         ? new Date(`${scheduleDate}T${scheduleTime || "00:00"}`).toISOString()
         : null,
       send_to: audience,
@@ -294,12 +355,21 @@ export default function AnnouncementsPage() {
     try {
       if (editingId) {
         await shop.updateAnnouncement(editingId, { ...payload, id: editingId });
+        showToast("Announcement updated successfully", "success");
       } else {
         await shop.createAnnouncement(SHOP_ID, payload);
+        showToast(
+          targetStatus === "Published"
+            ? "Announcement published!"
+            : targetStatus === "Scheduled"
+            ? "Announcement scheduled!"
+            : "Draft saved!",
+          "success"
+        );
       }
       setSent(true);
       loadAnnouncements();
-      setTimeout(() => { setSent(false); resetForm(); }, 1800);
+      setTimeout(() => { setSent(false); resetForm(); }, 1200);
     } catch (err) {
       console.error(err);
       showToast("Failed to save announcement", "error");
@@ -314,11 +384,6 @@ export default function AnnouncementsPage() {
     setStatus("Draft");
     setAudience(item.audience);
     setEditingId(null);
-    if (item.call_to_action) {
-      const parts = item.call_to_action.split("||");
-      setCtaLabel(parts[0] || "");
-      setCtaUrl(parts[1] || "");
-    }
     setActiveTab("editor");
     textRef.current?.focus();
   };
@@ -330,14 +395,13 @@ export default function AnnouncementsPage() {
     setAudience(item.audience);
     setEditingId(item.id);
     if (item.schedule_at) {
-      const iso = new Date(item.schedule_at).toISOString();
+      const d = new Date(item.schedule_at);
+      const iso = d.toISOString();
       setScheduleDate(iso.slice(0, 10));
       setScheduleTime(iso.slice(11, 16));
-    }
-    if (item.call_to_action) {
-      const parts = item.call_to_action.split("||");
-      setCtaLabel(parts[0] || "");
-      setCtaUrl(parts[1] || "");
+    } else {
+      setScheduleDate("");
+      setScheduleTime("");
     }
     setActiveTab("editor");
     textRef.current?.focus();
@@ -350,6 +414,7 @@ export default function AnnouncementsPage() {
         await shop.deleteAnnouncement(deleteTarget.id);
         setHistory((prev) => prev.filter((h) => h.id !== deleteTarget.id));
         setDeleteTarget(null);
+        showToast("Announcement deleted", "success");
       } catch (err) {
         console.error(err);
         showToast("Failed to delete announcement", "error");
@@ -428,12 +493,21 @@ export default function AnnouncementsPage() {
                 <Edit3 size={12} className="text-slate-400" />
                 {draftCount} drafts
               </span>
+              {expiredCount > 0 && (
+                <>
+                  <span className="text-slate-300">·</span>
+                  <span className="flex items-center gap-1">
+                    <X size={12} className="text-rose-500" />
+                    {expiredCount} expired
+                  </span>
+                </>
+              )}
             </div>
 
             <div className="flex bg-white border border-slate-200 rounded-lg overflow-hidden">
               <button
                 onClick={() => setActiveTab("editor")}
-                className={`px-4 py-2 text-sm font-medium transition-colors ${
+                className={`px-4 py-2 text-sm font-medium transition-colors cursor-pointer ${
                   activeTab === "editor"
                     ? "bg-blue-600 text-white"
                     : "text-slate-600 hover:bg-slate-50"
@@ -443,7 +517,7 @@ export default function AnnouncementsPage() {
               </button>
               <button
                 onClick={() => setActiveTab("history")}
-                className={`px-4 py-2 text-sm font-medium transition-colors border-l border-slate-200 ${
+                className={`px-4 py-2 text-sm font-medium transition-colors border-l border-slate-200 cursor-pointer ${
                   activeTab === "history"
                     ? "bg-blue-600 text-white"
                     : "text-slate-600 hover:bg-slate-50"
@@ -486,7 +560,7 @@ export default function AnnouncementsPage() {
                   </label>
                   <textarea
                     ref={textRef}
-                    rows={6}
+                    rows={7}
                     maxLength={MAX}
                     value={text}
                     onChange={(e) => setText(e.target.value)}
@@ -568,35 +642,6 @@ export default function AnnouncementsPage() {
                     </div>
                   </div>
                 )}
-              </div>
-
-              {/* CTA (optional) */}
-              <div className="bg-white rounded-xl border border-slate-200 p-4">
-                <label className="block text-xs font-medium text-slate-500 mb-3">
-                  Call to Action <span className="text-slate-400 font-normal">(optional)</span>
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[11px] text-slate-500 mb-1">Button Label</label>
-                    <input
-                      type="text"
-                      value={ctaLabel}
-                      onChange={(e) => setCtaLabel(e.target.value)}
-                      placeholder="e.g. Shop Now"
-                      className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 transition-all"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] text-slate-500 mb-1">URL</label>
-                    <input
-                      type="url"
-                      value={ctaUrl}
-                      onChange={(e) => setCtaUrl(e.target.value)}
-                      placeholder="https://…"
-                      className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 transition-all"
-                    />
-                  </div>
-                </div>
               </div>
             </div>
 
@@ -696,7 +741,7 @@ export default function AnnouncementsPage() {
                     options={AUDIENCE_OPTIONS.map((o) => ({
                       label: o.label,
                       value: o.value,
-                      icon: o.value === "all" ? <Users size={13} className="text-slate-400" /> : o.value === "returning" ? <UserCheck size={13} className="text-blue-500" /> : <UserPlus size={13} className="text-emerald-500" />
+                      icon: o.value === "ALL_USERS" ? <Users size={13} className="text-slate-400" /> : <UserCheck size={13} className="text-blue-500" />
                     }))}
                     value={audience}
                     onValueChange={(val) => setAudience(val)}
@@ -710,7 +755,7 @@ export default function AnnouncementsPage() {
                 {/* Actions */}
                 <div className="space-y-2">
                   <button
-                    onClick={() => { setStatus("Draft"); handlePublish(); }}
+                    onClick={() => handlePublish("Draft")}
                     disabled={!text.trim() || sent}
                     className="w-full h-9 px-4 rounded-lg border border-slate-200 text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                   >
@@ -718,7 +763,7 @@ export default function AnnouncementsPage() {
                   </button>
 
                   <button
-                    onClick={handlePublish}
+                    onClick={() => handlePublish(status === "Scheduled" ? "Scheduled" : "Published")}
                     disabled={!text.trim() || sent}
                     className={`w-full h-9 px-4 rounded-lg text-sm font-semibold transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
                       sent
@@ -745,16 +790,13 @@ export default function AnnouncementsPage() {
                     <span className="text-[12px] text-slate-500">Type</span>
                     <TypeBadge type={type} />
                   </div>
-                  <div className="flex items-center justify-between py-1 border-b border-slate-100">
+                  <div className="flex items-center justify-between py-1">
                     <span className="text-[12px] text-slate-500">Status</span>
-                    <StatusBadge status={scheduleDate ? "Scheduled" : status} />
+                    <StatusBadge
+                      status={status === "Scheduled" || scheduleDate ? "Scheduled" : status}
+                      scheduleAt={scheduleDate && scheduleTime ? `${scheduleDate}T${scheduleTime}` : null}
+                    />
                   </div>
-                  {ctaLabel && (
-                    <div className="flex items-center justify-between py-1">
-                      <span className="text-[12px] text-slate-500">CTA</span>
-                      <span className="text-[12px] font-medium text-blue-600">{ctaLabel}</span>
-                    </div>
-                  )}
                 </div>
               )}
             </div>
@@ -788,9 +830,10 @@ export default function AnnouncementsPage() {
                 <ReusableSelect
                   options={[
                     { label: "All Statuses", value: "All" },
-                    { label: "Draft", value: "Draft" },
+                    { label: "Published", value: "Published" },
                     { label: "Scheduled", value: "Scheduled" },
-                    { label: "Published", value: "Published" }
+                    { label: "Draft", value: "Draft" },
+                    { label: "Expired", value: "Expired" }
                   ]}
                   value={filterStatus}
                   onValueChange={(val) => setFilterStatus(val as StatusType | "All")}
@@ -806,7 +849,7 @@ export default function AnnouncementsPage() {
             </div>
 
             {/* Table header */}
-            <div className="grid grid-cols-[1fr_110px_100px_120px] gap-4 px-5 py-2.5 border-b border-slate-100 bg-slate-50/40">
+            <div className="grid grid-cols-[1fr_110px_140px_110px] gap-4 px-5 py-2.5 border-b border-slate-100 bg-slate-50/40">
               {["Message", "Type", "Status", "Actions"].map((h) => (
                 <span key={h} className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">
                   {h}
@@ -827,20 +870,40 @@ export default function AnnouncementsPage() {
               filteredHistory.map((item, idx) => (
                 <div
                   key={item.id}
-                  className={`grid grid-cols-[1fr_110px_100px_120px] gap-4 px-5 py-3.5 items-center hover:bg-slate-50/70 transition-colors ${
+                  className={`grid grid-cols-[1fr_110px_140px_110px] gap-4 px-5 py-3.5 items-center hover:bg-slate-50/70 transition-colors ${
                     idx < filteredHistory.length - 1 ? "border-b border-slate-100" : ""
                   }`}
                   style={{ animation: `ann-fadeIn 0.15s ease ${idx * 0.03}s both` }}
                 >
                   {/* Message */}
                   <div>
-                    <p className="text-sm font-medium text-slate-800 line-clamp-1">{item.text}</p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">
-                      {timeAgo(item.date)} · {fmtDate(item.date)}
+                    <p className="text-sm font-medium text-slate-800 line-clamp-2 leading-snug">{item.text}</p>
+                    <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1.5">
+                      <span>{timeAgo(item.date)}</span>
+                      <span>·</span>
+                      <span>{fmtDate(item.date)}</span>
+                      {item.audience && (
+                        <>
+                          <span>·</span>
+                          <span className="text-slate-500 font-medium">
+                            {item.audience === "ALL_FOLLOWED_USERS" ? "Followers" : "All Users"}
+                          </span>
+                        </>
+                      )}
                     </p>
                   </div>
-                  <TypeBadge type={item.type} />
-                  <StatusBadge status={item.status} />
+
+                  <div>
+                    <TypeBadge type={item.type} />
+                  </div>
+
+                  <div>
+                    <StatusBadge
+                      status={item.status}
+                      scheduleAt={item.schedule_at}
+                      expireAt={item.expire_at}
+                    />
+                  </div>
 
                   {/* Actions */}
                   <div className="flex gap-1.5">

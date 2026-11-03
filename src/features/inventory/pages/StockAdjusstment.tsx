@@ -740,11 +740,11 @@ export default function StockAdjustmentPage() {
       <div className="w-full px-4 md:px-6 lg:px-8 space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-[2000px] mx-auto pb-12 pt-2">
 
         {/* Header Info Banner */}
-        <div className="flex items-start gap-3 rounded-2xl border border-amber-200/80 bg-gradient-to-r from-amber-50/80 to-amber-50/30 p-4 text-[12px] text-amber-900 shadow-sm leading-relaxed">
-          <AlertTriangle size={18} className="shrink-0 mt-0.5 text-amber-600" />
+        <div className="flex items-start gap-3 rounded-2xl border border-emerald-200/70 bg-emerald-50/40 backdrop-blur-md bg-gradient-to-r from-emerald-50/80 via-emerald-50/40 to-emerald-50/20 p-4 text-[12px] text-emerald-900 shadow-sm leading-relaxed">
+          <AlertTriangle size={18} className="shrink-0 mt-0.5 text-emerald-600" />
           <div>
-            <span className="font-black uppercase tracking-wider text-[10px] mr-2 bg-amber-100/80 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-md shadow-[0_1px_2px_rgba(0,0,0,0.05)]">Physical Check</span>
-            <span className="font-medium">Stock adjustments immediately update inventory counts but do not overwrite previous ledger histories. Use strictly for loss, physical correction, damage, or item expiry.</span>
+            <span className="font-black uppercase tracking-wider text-[10px] mr-2 bg-emerald-100/80 text-emerald-800 border border-emerald-200/80 px-2 py-0.5 rounded-md shadow-[0_1px_2px_rgba(0,0,0,0.03)] backdrop-blur-sm">Physical Check</span>
+            <span className="font-medium text-emerald-950/85">Stock adjustments immediately update inventory counts but do not overwrite previous ledger histories. Use strictly for loss, physical correction, damage, or item expiry.</span>
           </div>
         </div>
 

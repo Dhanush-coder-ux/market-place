@@ -27,6 +27,8 @@ import {
   PrinterConnectionType,
   PaperWidth,
   DEFAULT_PRINTER_CONFIG,
+  DIGITAL_STORE_QR_MESSAGES,
+  DEFAULT_DIGITAL_STORE_QR_MESSAGE,
   getPrintersList,
   savePrintersList,
   setDefaultPrinter,
@@ -38,6 +40,8 @@ import {
   playPrinterSoundAlert,
 } from "@/features/billing/utils/printerService";
 import { useToast } from "@/context/ToastContext";
+import { shopApi } from "@/services/api/shop";
+import { SHOP_ID, getShopId } from "@/services/endpoints";
 
 const ROLE_LABELS: Record<PrinterRole, { label: string; badge: string }> = {
   receipt: {
@@ -65,6 +69,7 @@ export const PrinterSettingsTab: React.FC = () => {
   const [isNewPrinter, setIsNewPrinter] = useState(false);
   const [isTestingId, setIsTestingId] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [shopData, setShopData] = useState<any>(null);
   const [statusMessage, setStatusMessage] = useState<{
     type: "success" | "error" | "info";
     text: string;
@@ -92,6 +97,24 @@ export const PrinterSettingsTab: React.FC = () => {
       setPrinters(list);
     }
   }, []);
+
+  // Fetch active shop info to check if digital store is enabled
+  useEffect(() => {
+    const activeShopId = getShopId() || SHOP_ID;
+    if (activeShopId && activeShopId !== "string") {
+      shopApi
+        .getShopById(activeShopId)
+        .then((res) => {
+          const data = res?.data ?? res;
+          setShopData(data);
+        })
+        .catch((err) => console.warn("Failed to fetch shop info in PrinterSettingsTab:", err));
+    }
+  }, []);
+
+  const isDigitalStoreEnabled = Boolean(
+    shopData?.visible_online || shopData?.is_digital_store_configured
+  );
 
   // Open modal to add a new printer
   const handleAddNew = () => {
@@ -271,7 +294,7 @@ export const PrinterSettingsTab: React.FC = () => {
   const handleTestPrint = async (printer: SavedPrinter) => {
     setIsTestingId(printer.id);
     try {
-      const res = await printTestReceipt(printer);
+      const res = await printTestReceipt(printer, shopData);
       if (res.success) {
         showToast(`Test receipt sent to "${printer.name}"!`, "success");
       } else {
@@ -1011,6 +1034,84 @@ export const PrinterSettingsTab: React.FC = () => {
                   />
                 </div>
               </div>
+
+              {/* Bill settings - Digital Store QR on bill (Visible only if Digital Store is enabled) */}
+              {isDigitalStoreEnabled && (
+                <div className="p-4 rounded-xl border border-slate-200/80 bg-white space-y-3">
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                      Bill settings
+                    </h4>
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="text-xs font-bold text-slate-800">
+                        Print Digital Store QR on bill
+                      </span>
+                      <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                        Optional
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Show your online store link to customers on printed bills.
+                    </p>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-800">
+                      Include Digital Store QR
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(editingPrinter.includeDigitalStoreQr)}
+                      onChange={(e) =>
+                        setEditingPrinter((prev) =>
+                          prev
+                            ? {
+                                ...prev,
+                                includeDigitalStoreQr: e.target.checked,
+                                digitalStoreQrMessage:
+                                  prev.digitalStoreQrMessage || DEFAULT_DIGITAL_STORE_QR_MESSAGE,
+                              }
+                            : null
+                        )
+                      }
+                      className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer accent-slate-900"
+                    />
+                  </div>
+
+                  {editingPrinter.includeDigitalStoreQr && (
+                    <div className="pt-2 border-t border-slate-100 space-y-2">
+                      <label className="text-xs font-bold text-slate-700 block">
+                        Choose bill message
+                      </label>
+                      <div className="space-y-2">
+                        {DIGITAL_STORE_QR_MESSAGES.map((msg) => (
+                          <label
+                            key={msg}
+                            className="flex items-center gap-2.5 text-xs text-slate-700 cursor-pointer hover:text-slate-900"
+                          >
+                            <input
+                              type="radio"
+                              name="digitalStoreQrMessageTab"
+                              value={msg}
+                              checked={
+                                (editingPrinter.digitalStoreQrMessage ||
+                                  DEFAULT_DIGITAL_STORE_QR_MESSAGE) === msg
+                              }
+                              onChange={() =>
+                                setEditingPrinter((prev) =>
+                                  prev ? { ...prev, digitalStoreQrMessage: msg } : null
+                                )
+                              }
+                              className="w-4 h-4 text-emerald-600 border-slate-300 focus:ring-emerald-500 cursor-pointer accent-slate-900"
+                            />
+                            <span className="font-medium">{msg}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Custom Receipt Footer Note */}
               <div className="p-4 rounded-xl border border-slate-200/80 bg-slate-50/50 space-y-2">

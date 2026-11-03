@@ -3,6 +3,8 @@ import { INVOICE_TEMPLATES } from "./invoice-templates";
 import { Banknote, Smartphone, Wallet, Check, BadgePercent } from "lucide-react";
 import type { BillingItem } from "../types";
 import { calculateBillTotals, formatINR, type BillTotals } from "@/utils/pricing";
+import { getPrinterConfig } from "../utils/printerService";
+import { QRCodeSVG } from "qrcode.react";
 
 const payMeta: Record<string, { label: string; icon: React.ReactNode }> = {
   cash:   { label: "Cash",       icon: <Banknote   size={12} strokeWidth={1.5} /> },
@@ -319,6 +321,33 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
              </div>
           </div>
         </div>
+
+        {/* Digital Store Banner & QR if enabled */}
+        {Boolean(shopData?.visible_online && getPrinterConfig().includeDigitalStoreQr) && (
+          <div className="mx-6 mb-3 p-3 bg-gradient-to-r from-rose-50/60 to-slate-50 border border-rose-100 rounded-xl flex items-center justify-between">
+            <div>
+              <p className="text-[11px] font-black text-rose-600 uppercase tracking-wide">
+                YOUR SHOP IS ONLINE!
+              </p>
+              <p className="text-[10px] text-slate-700 font-medium mt-0.5">
+                {getPrinterConfig().digitalStoreQrMessage || "Scan to browse & order online."}
+              </p>
+              <p className="text-[9px] text-slate-400 mt-1">
+                Scan to visit our online store · Powered by ShopQ
+              </p>
+            </div>
+            <div className="p-1 bg-white border border-slate-200 rounded-lg shadow-2xs shrink-0">
+              <QRCodeSVG
+                value={
+                  shopData?.additional_infos?.website ||
+                  `${window.location.origin}/store/${shopData?.id || ""}`
+                }
+                size={70}
+                level="M"
+              />
+            </div>
+          </div>
+        )}
 
         {/* Footer */}
         <div className={config.footer.wrapper}>

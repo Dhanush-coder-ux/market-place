@@ -1,4 +1,7 @@
 import { getGatewayBaseUrl } from "@/services/api/tokenManager";
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { QRCodeSVG } from "qrcode.react";
 
 export type PrinterConnectionType = "system" | "bluetooth" | "usb" | "network";
 export type PaperWidth = "58mm" | "80mm";
@@ -29,6 +32,9 @@ export interface PrinterConfig {
   footerText?: string;
   showShopGst?: boolean;
   showShopPhone?: boolean;
+  // Digital Store Bill Settings
+  includeDigitalStoreQr?: boolean;
+  digitalStoreQrMessage?: string;
 }
 
 export const DEFAULT_PRINTER_CONFIG: PrinterConfig = {
@@ -47,7 +53,17 @@ export const DEFAULT_PRINTER_CONFIG: PrinterConfig = {
   showShopGst: true,
   showShopPhone: true,
   footerText: "Thank you for shopping with us! Please visit again.",
+  includeDigitalStoreQr: false,
+  digitalStoreQrMessage: "Your shop is online! Scan to browse & order.",
 };
+
+export const DIGITAL_STORE_QR_MESSAGES = [
+  "Your shop is online! Scan to browse & order.",
+  "Your favourite shop, now online! Scan here.",
+  "We're online! Scan to shop.",
+] as const;
+
+export const DEFAULT_DIGITAL_STORE_QR_MESSAGE = "Your shop is online! Scan to browse & order.";
 
 export type PrinterRole = "receipt" | "kitchen" | "label" | "backup";
 
@@ -705,11 +721,44 @@ export interface ReceiptData {
   payments?: Array<{ mode: string; amount: number; tendered?: number }>;
   footerNote?: string;
   reprintTimestamp?: string;
+  shopId?: string;
+  digitalStoreUrl?: string;
+  includeDigitalStoreQr?: boolean;
+  digitalStoreQrMessage?: string;
 }
 
 /**
  * Sanitize address object or string so '[object Object]' or 'Not specified' never appears on receipts
  */
+/**
+ * Get digital store URL for QR code encoding
+ */
+export function getDigitalStoreUrl(shopId?: string, websiteUrl?: string): string {
+  if (websiteUrl && websiteUrl.trim()) return websiteUrl.trim();
+  const id = shopId || (typeof localStorage !== "undefined" ? localStorage.getItem("shop_id") : "") || "";
+  const origin = typeof window !== "undefined" ? window.location.origin : "https://inventq.in";
+  return `${origin}/store/${id}`;
+}
+
+/**
+ * Generate crisp, high-contrast QR SVG HTML markup for thermal receipt printing
+ */
+export function generateQrSvgHtml(url: string, size = 135): string {
+  try {
+    return renderToStaticMarkup(
+      React.createElement(QRCodeSVG, {
+        value: url,
+        size: size,
+        level: "M",
+        includeMargin: false,
+      })
+    );
+  } catch (err) {
+    console.error("Failed to generate QR SVG string:", err);
+    return "";
+  }
+}
+
 export function cleanShopAddress(addr: any): string | null {
   if (!addr) return null;
   let str = "";
@@ -782,6 +831,44 @@ export function buildEscPosBuffer(data: ReceiptData, config: PrinterConfig): Uin
     const clean = str.replace(/\s+/g, " ").trim();
     if (!clean) return;
 
+    bytes.push(0x1b, 0x61, 0x01); // Center alignment
+    if (isBold) bytes.push(0x1b, 0x45, 0x01);
+
+    if (clean.length > colWidth) {
+      const words = clean.split(" ");
+      let currentLine = "";
+      for (const word of words) {
+        const testLine = currentLine ? `${currentLine} ${word}` : word;
+        if (testLine.length <= colWidth) {
+          currentLine = testLine;
+        } else {
+          if (currentLine) {
+            addStr(currentLine);
+            bytes.push(0x0a);
+          }
+          currentLine = word;
+        }
+      }
+      if (currentLine) {
+        addStr(currentLine);
+        bytes.push(0x0a);
+      }
+    } else {
+      addStr(clean);
+      bytes.push(0x0a);
+    }
+
+    if (isBold) bytes.push(0x1b, 0x45, 0x00);
+    bytes.push(0x1b, 0x61, 0x00); // Reset to left alignment
+  };
+
+  // Deprecated legacy space-padding replaced by hardware center alignment
+  const _unusedLegacyPad = () => {
+    const str = "";
+    const isBold = false;
+    const clean = str.replace(/\s+/g, " ").trim();
+    if (!clean) return;
+
     if (clean.length > colWidth) {
       const words = clean.split(" ");
       let currentLine = "";
@@ -820,6 +907,8 @@ export function buildEscPosBuffer(data: ReceiptData, config: PrinterConfig): Uin
     bytes.push(0x0a);
   };
 
+  void _unusedLegacyPad;
+
   const addRow = (left: string, right: string) => {
     const maxLeft = colWidth - right.length - 1;
     const l = left.length > maxLeft ? left.substring(0, maxLeft) : left;
@@ -828,7 +917,9 @@ export function buildEscPosBuffer(data: ReceiptData, config: PrinterConfig): Uin
   };
 
   const addDivider = () => {
+    bytes.push(0x1b, 0x61, 0x01);
     addLine("-".repeat(colWidth));
+    bytes.push(0x1b, 0x61, 0x00);
   };
 
   // 1. Initialize printer
@@ -1008,6 +1099,44 @@ export function buildEscPosBuffer(data: ReceiptData, config: PrinterConfig): Uin
 
   addDivider();
 
+  // Digital Store QR Code Section (Printed before footer)
+  const shouldPrintDigitalQr = Boolean(data.includeDigitalStoreQr ?? config.includeDigitalStoreQr);
+  const digitalStoreUrl = data.digitalStoreUrl || getDigitalStoreUrl(data.shopId);
+  const qrMessage = data.digitalStoreQrMessage || config.digitalStoreQrMessage || DEFAULT_DIGITAL_STORE_QR_MESSAGE;
+
+  if (shouldPrintDigitalQr && digitalStoreUrl) {
+
+    addCenter("YOUR SHOP IS ONLINE!", true);
+
+    addCenter(qrMessage);
+
+    const moduleSize = config.paperWidth === "58mm" ? 5 : 7;
+    const qrBytes = new TextEncoder().encode(digitalStoreUrl);
+    const len = qrBytes.length + 3;
+    const pL = len & 0xff;
+    const pH = (len >> 8) & 0xff;
+
+    bytes.push(0x1b, 0x61, 0x01); // Center align
+    bytes.push(0x1d, 0x28, 0x6b, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00); // Model 2
+    bytes.push(0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x43, moduleSize); // Module size
+    bytes.push(0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x45, 0x31); // Level M
+    bytes.push(0x1d, 0x28, 0x6b, pL, pH, 0x31, 0x50, 0x30); // Store
+    for (let i = 0; i < qrBytes.length; i++) {
+      bytes.push(qrBytes[i]);
+    }
+    bytes.push(0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x51, 0x30); // Print
+    bytes.push(0x1b, 0x61, 0x00); // Reset Left
+    bytes.push(0x0a);
+
+    addCenter("Scan to visit our online store");
+    addDivider();
+
+    addCenter("ShopQ", true);
+
+    addCenter("Discover and shop local stores on ShopQ");
+    addDivider();
+  }
+
   // 8. Footer: Centered
   if (config.footerText && config.footerText.trim()) {
     addCenter(config.footerText.trim());
@@ -1095,6 +1224,12 @@ export function printViaSystemDriver(
   return new Promise((resolve) => {
     const is58 = config.paperWidth === "58mm";
     const widthMm = is58 ? "58mm" : "80mm";
+
+    const shouldPrintDigitalQr = Boolean(data.includeDigitalStoreQr ?? config.includeDigitalStoreQr);
+    const digitalStoreUrl = data.digitalStoreUrl || getDigitalStoreUrl(data.shopId);
+    const qrMessage = data.digitalStoreQrMessage || config.digitalStoreQrMessage || DEFAULT_DIGITAL_STORE_QR_MESSAGE;
+    const qrSvgSize = is58 ? 115 : 140;
+    const qrSvgHtml = (shouldPrintDigitalQr && digitalStoreUrl) ? generateQrSvgHtml(digitalStoreUrl, qrSvgSize) : "";
 
     const cleanedAddress = cleanShopAddress(data.shopAddress);
     const banner = data.invoiceTypeTag
@@ -1275,6 +1410,23 @@ export function printViaSystemDriver(
         `}
 
         <div class="divider"></div>
+
+        ${shouldPrintDigitalQr && digitalStoreUrl ? `
+        <div class="divider"></div>
+        <div class="center" style="margin: 10px 0 6px 0;">
+          <div style="font-size: 13px; font-weight: 900; color: #e11d48; text-transform: uppercase; letter-spacing: 0.5px;">YOUR SHOP IS ONLINE!</div>
+          <div style="font-size: 10px; color: #1e293b; margin-top: 2px; font-weight: 600;">${qrMessage}</div>
+          <div style="display: flex; justify-content: center; align-items: center; margin: 8px 0;">
+            <div style="padding: 6px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center;">
+              ${qrSvgHtml}
+            </div>
+          </div>
+          <div style="font-size: 9.5px; color: #475569; font-weight: 500;">Scan to visit our online store</div>
+          <div class="divider" style="margin: 8px 0;"></div>
+          <div style="font-size: 11px; font-weight: 800; color: #e11d48; letter-spacing: 0.3px;">ShopQ</div>
+          <div style="font-size: 8.5px; color: #64748b; margin-top: 1px;">Discover and shop local stores on ShopQ</div>
+        </div>
+        ` : ""}
 
         <div class="center" style="font-size: 9px; color: #64748b; margin-top: 8px;">
           <div style="font-weight: 700; color: #334155;">${(config.footerText && config.footerText.trim()) ? config.footerText.trim() : "Thank you for your business!"}</div>
@@ -1584,6 +1736,9 @@ export async function printTestReceipt(
     invoiceTypeTag: "DIAGNOSTIC TEST RECEIPT",
     payments: [{ mode: "cash", amount: 293.82, tendered: 300.0 }],
     footerNote: `CONFIG TEST OK - Mode: ${config.connectionType.toUpperCase()} - Paper: ${config.paperWidth}`,
+    digitalStoreUrl: shopInfo?.additional_infos?.website || getDigitalStoreUrl(shopInfo?.id),
+    includeDigitalStoreQr: config.includeDigitalStoreQr,
+    digitalStoreQrMessage: config.digitalStoreQrMessage,
   };
 
   return await printReceipt(testData, config);

@@ -71,7 +71,10 @@ export const Navbar = () => {
   const [isShopMenuOpen, setIsShopMenuOpen] = useState(false);
   const [shops, setShops] = useState<Array<{ id: string; name: string; logo_url?: string; categories?: string[]; visible_online?: boolean }>>([]);
   const [shopsLoading, setShopsLoading] = useState(true);
-  const [currentShopId, setCurrentShopId] = useState<string | null>(() => localStorage.getItem("shop_id"));
+  const [currentShopId, setCurrentShopId] = useState<string | null>(() => {
+    const sid = localStorage.getItem("shop_id");
+    return sid && sid !== "string" ? sid : null;
+  });
   const cachedShopName = localStorage.getItem("shop_name") || "Shop A";
   const [selectedShop, setSelectedShop] = useState<{ name: string; initial: string; logo_url?: string }>({
     name: cachedShopName,
@@ -84,9 +87,11 @@ export const Navbar = () => {
       .then((list) => {
         setShops(list);
         const shopId = localStorage.getItem("shop_id");
-        const shop = list.find((s: any) => s.id === shopId) ?? list[0];
+        const shop = (shopId && shopId !== "string" ? list.find((s: any) => s.id === shopId) : null) ?? list[0];
         if (shop) {
           setCurrentShopId(shop.id);
+          setShopId(shop.id);
+          localStorage.setItem("shop_id", shop.id);
           setSelectedShop({ name: shop.name, initial: shop.name.charAt(0).toUpperCase(), logo_url: shop.logo_url });
           localStorage.setItem("shop_name", shop.name);
           if (shop.logo_url) {

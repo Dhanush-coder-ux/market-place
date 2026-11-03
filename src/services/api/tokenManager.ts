@@ -31,18 +31,31 @@ export const getGatewayBaseUrl = (): string => {
   return url;
 };
 
-export const isJwtExpired = (token: string | null): boolean => {
-  if (!token) return true;
+/**
+ * Safely parse standard Base64URL encoded JWT payload across all browsers
+ */
+export const parseJwtPayload = (token: string | null): any => {
+  if (!token) return null;
   try {
     const parts = token.split(".");
-    if (parts.length !== 3) return true;
-    const payload = JSON.parse(atob(parts[1]));
-    if (!payload?.exp) return false;
-    // 30 second safety margin
-    return payload.exp * 1000 <= Date.now() + 30_000;
+    if (parts.length !== 3) return null;
+    let base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    while (base64.length % 4 !== 0) {
+      base64 += "=";
+    }
+    const decoded = atob(base64);
+    return JSON.parse(decoded);
   } catch {
-    return true;
+    return null;
   }
+};
+
+export const isJwtExpired = (token: string | null): boolean => {
+  if (!token) return true;
+  const payload = parseJwtPayload(token);
+  if (!payload?.exp) return false;
+  // 30 second safety margin
+  return payload.exp * 1000 <= Date.now() + 30_000;
 };
 
 export const clearAuthAndRedirect = () => {
@@ -71,14 +84,9 @@ export const refreshTokens = async (): Promise<string | null> => {
 
   refreshPromise = (async () => {
     let tokenVersion = "1";
-    try {
-      const parts = refreshToken.split(".");
-      if (parts.length === 3) {
-        const p = JSON.parse(atob(parts[1]));
-        if (p.version) tokenVersion = p.version;
-      }
-    } catch {
-      // ignore
+    const p = parseJwtPayload(refreshToken);
+    if (p?.version) {
+      tokenVersion = String(p.version);
     }
 
     try {

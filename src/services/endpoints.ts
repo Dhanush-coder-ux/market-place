@@ -108,12 +108,31 @@ export const ENDPOINTS = {
   NOTIFICATIONS: "/notifications",
 } as const;
 
-// Dynamically loaded from local storage or defaults to the actual shop in the DB
-export let SHOP_ID = localStorage.getItem("shop_id") || "string";
+// Dynamically loaded from local storage or defaults to empty string
+const rawShopId = typeof window !== "undefined" ? localStorage.getItem("shop_id") : "";
+export let SHOP_ID = rawShopId && rawShopId !== "string" ? rawShopId : "";
 
-export const getShopId = (): string => localStorage.getItem("shop_id") || SHOP_ID || "";
+export const getShopId = (): string => {
+  if (typeof window === "undefined") return "";
+  const sid = localStorage.getItem("shop_id");
+  if (sid && sid !== "string") {
+    SHOP_ID = sid;
+    return sid;
+  }
+  if (SHOP_ID && SHOP_ID !== "string") return SHOP_ID;
+  return "";
+};
 
 export const setShopId = (id: string) => {
-  SHOP_ID = id;
-  localStorage.setItem("shop_id", id);
+  if (id && id !== "string") {
+    SHOP_ID = id;
+    if (typeof window !== "undefined") {
+      localStorage.setItem("shop_id", id);
+    }
+  } else {
+    SHOP_ID = "";
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("shop_id");
+    }
+  }
 };

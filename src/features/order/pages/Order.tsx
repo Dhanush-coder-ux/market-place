@@ -257,7 +257,8 @@ const parseOrderForDetail = (
 
 const Order = () => {
   const { loading, error, clearError } = useApi();
-  const currentShopId = getShopId() || localStorage.getItem("shop_id") || SHOP_ID || "";
+  const rawId = getShopId() || localStorage.getItem("shop_id") || SHOP_ID || "";
+  const currentShopId = rawId && rawId !== "string" ? rawId : "";
   const [customerMap, setCustomerMap] = useState<Record<string, { name: string, phone: string }>>({});
 
   const [orders, setOrders] = useState<OrderRecord[]>([]);
@@ -288,7 +289,7 @@ const Order = () => {
   const [verifyingOrder, setVerifyingOrder] = useState<{ id: string; shopId?: string; billNo: string; customerName: string } | null>(null);
 
   useEffect(() => {
-    if (!currentShopId) return;
+    if (!currentShopId || currentShopId === "string") return;
     customerApi.getCustomersByShopId(currentShopId, { limit: "100", offset: "1" })
       .then((res: any) => {
         if (res?.data) {
@@ -308,7 +309,7 @@ const Order = () => {
 
   // Fetch overall counts across all statuses (independent of active status tab filter)
   useEffect(() => {
-    if (!currentShopId) return;
+    if (!currentShopId || currentShopId === "string") return;
     const countParams: any = {
       limit: "100",
       offset: "1",
@@ -357,7 +358,7 @@ const Order = () => {
 
   // Fetch orders according to the currently active status tab & filters
   useEffect(() => {
-    if (!currentShopId) return;
+    if (!currentShopId || currentShopId === "string") return;
     const params: any = {
       limit: "50",
       offset: "1",
@@ -425,8 +426,8 @@ const Order = () => {
       const res = await orderApi.getOrderById(targetShopId, order.id);
       if (res?.data) {
         const fullOrder = Array.isArray(res.data) 
-          ? res.data[0] 
-          : (Array.isArray(res.data.datas) ? res.data.datas[0] : res.data);
+            ? res.data[0] 
+            : (Array.isArray(res.data.datas) ? res.data.datas[0] : res.data);
 
         setSelectedOrder(parseOrderForDetail(fullOrder, order, customerMap));
         setIsOpen(true);

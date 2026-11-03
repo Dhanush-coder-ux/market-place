@@ -6,8 +6,9 @@ import { usePurchaseSettings } from "@/context/PurchaseContext";
 import type { SidebarLink, SubItem, SubGroup, SubLink } from "@/utils/constants";
 import { employeeApi } from "@/services/api/employee";
 import { apiClient } from "@/services/api/apiClient";
-import { ENDPOINTS } from "@/services/endpoints";
+import { ENDPOINTS, setShopId } from "@/services/endpoints";
 import { fetchMyShops } from "@/services/api/shopHelpers";
+import { parseJwtPayload } from "@/services/api/tokenManager";
 
 // ─── Type Guards ─────────────────────────────────────────────────────────────
 
@@ -62,7 +63,10 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
 
   // ── Shop selector state ──────────────────────────────────────────────────────
   const [shops, setShops] = useState<Array<{ id: string; name: string; logo_url?: string; categories?: string[]; visible_online?: boolean }>>([]);
-  const [currentShopId, setCurrentShopId] = useState<string | null>(() => localStorage.getItem("shop_id"));
+  const [currentShopId, setCurrentShopId] = useState<string | null>(() => {
+    const sid = localStorage.getItem("shop_id");
+    return sid && sid !== "string" ? sid : null;
+  });
 
   // ── User profile state ───────────────────────────────────────────────────────
   const [userInfo, setUserInfo] = useState<{ name: string; email: string; initial: string }>(() => {
@@ -72,10 +76,12 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
     const token = localStorage.getItem("auth_token");
     if (token && token.split(".").length === 3) {
       try {
-        const payload = JSON.parse(atob(token.split(".")[1]));
-        if (!email && payload.email) email = payload.email;
-        if (!name && (payload.entity_name || payload.name || payload.user_name)) {
-          name = payload.entity_name || payload.name || payload.user_name;
+        const payload = parseJwtPayload(token);
+        if (payload) {
+          if (!email && payload.email) email = payload.email;
+          if (!name && (payload.entity_name || payload.name || payload.user_name)) {
+            name = payload.entity_name || payload.name || payload.user_name;
+          }
         }
       } catch (e) {
         console.warn("Could not decode token for user info:", e);
@@ -103,9 +109,13 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
       .then((list) => {
         setShops(list);
         const shopId = localStorage.getItem("shop_id");
-        const shop = list.find((s: any) => s.id === shopId) ?? list[0];
+        const shop = (shopId && shopId !== "string" ? list.find((s: any) => s.id === shopId) : null) ?? list[0];
         if (shop) {
           setCurrentShopId(shop.id);
+          if (!shopId || shopId === "string") {
+            setShopId(shop.id);
+            localStorage.setItem("shop_id", shop.id);
+          }
         }
       })
       .catch(() => {});
@@ -135,7 +145,7 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
   useEffect(() => {
     const shopId = localStorage.getItem("shop_id");
     const userId = localStorage.getItem("user_id");
-    if (!shopId || !userId) return;
+    if (!shopId || !userId || shopId === "string") return;
 
     employeeApi.getEmployeesByShop(shopId)
       .then((empRes: any) => {
@@ -255,8 +265,6 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
       }}
       className="relative flex flex-col h-full flex-shrink-0 border-r border-white/10 transition-[width] duration-200 ease-[cubic-bezier(0.4,0,0.2,1)]"
     >
-      {/* Subtle inner texture overlay (Removed to prevent shadow overlay as requested) */}
-
       {/* Brand Logo */}
       <div className={`relative flex-shrink-0 flex items-center ${isOpen ? 'px-4 pt-5 pb-2' : 'justify-center pt-5 pb-2'}`}>
         <img 
@@ -265,8 +273,6 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
           className={isOpen ? "h-[38px] w-auto object-contain drop-shadow-md" : "h-[32px] w-auto object-contain"}
         />
       </div>
-
-
 
       {/* ── Floating collapse toggle — right edge of sidebar ── */}
       <button

@@ -3,6 +3,7 @@ import {
   ensureFreshToken,
   refreshTokens,
   clearAuthAndRedirect,
+  parseJwtPayload,
 } from "./tokenManager";
 
 interface RequestOptions {
@@ -119,19 +120,22 @@ const getHeaders = (customToken?: string | null): Record<string, string> => {
   let userId = localStorage.getItem("user_id");
   const sessionId = localStorage.getItem("session_id");
 
+  if (shopId === "string") {
+    shopId = null;
+    localStorage.removeItem("shop_id");
+  }
+
   if (token && (!shopId || !userId)) {
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
+    const payload = parseJwtPayload(token);
+    if (payload) {
       if (payload.user_id && !userId) {
         userId = payload.user_id;
         if (userId) localStorage.setItem("user_id", userId);
       }
       if (payload.shop_id && !shopId) {
         shopId = payload.shop_id;
-        if (shopId) localStorage.setItem("shop_id", shopId);
+        if (shopId && shopId !== "string") localStorage.setItem("shop_id", shopId);
       }
-    } catch {
-      // ignore
     }
   }
 
@@ -141,8 +145,8 @@ const getHeaders = (customToken?: string | null): Record<string, string> => {
 
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
+    const payload = parseJwtPayload(token);
+    if (payload) {
       const userInfos = {
         user_id: payload.user_id || payload.sub || userId,
         id: payload.user_id || payload.sub || userId,
@@ -151,12 +155,10 @@ const getHeaders = (customToken?: string | null): Record<string, string> => {
         role: payload.role || payload.entity_type || "User"
       };
       headers["x-user-infos"] = JSON.stringify(userInfos);
-    } catch {
-      // ignore
     }
   }
 
-  if (shopId) {
+  if (shopId && shopId !== "string") {
     headers["x-shop-id"] = shopId;
   }
   if (userId) {

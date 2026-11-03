@@ -6,6 +6,7 @@ export type OrderItem = {
   name: string;
   qty: number;
   price: number;
+  inclusivePrice?: number;
   total: number;
   gst?: string;
   gstRate?: number;
@@ -38,6 +39,25 @@ const OrderDetailView: React.FC<{ order: OrderDetailType }> = ({ order }) => {
   const hasGst = gstAmt > 0;
   const cgstVal = order.cgst !== undefined ? order.cgst : Number((gstAmt / 2).toFixed(2));
   const sgstVal = order.sgst !== undefined ? order.sgst : Number((gstAmt / 2).toFixed(2));
+  const deliveryCharge = Number(order.deliveryCharge || 0);
+  const discount = Number(order.discount || 0);
+
+  // Items Base Subtotal (excluding GST)
+  // If order.subtotal was already computed as base (pre-tax), preserve it.
+  // If order.subtotal was passed as inclusive of GST (equal to or close to grandTotal),
+  // subtract gstAmt so Items Base Subtotal is strictly pre-tax.
+  const rawSubtotal = Number(order.subtotal || 0);
+  const grandTotal = Number(order.grandTotal || 0);
+  const baseSubtotal =
+    gstAmt > 0 && grandTotal > 0 && Math.abs(rawSubtotal - grandTotal) < 1
+      ? Math.max(0, Number((rawSubtotal - gstAmt).toFixed(2)))
+      : rawSubtotal;
+
+  // Total payable: grandTotal if available, else Base Subtotal + Total GST + Delivery Charge - Discount
+  const totalPayable =
+    grandTotal > 0
+      ? grandTotal
+      : Number((baseSubtotal + gstAmt + deliveryCharge - discount).toFixed(2));
 
   return (
     <div className="space-y-5 p-2 font-sans">
@@ -114,7 +134,7 @@ const OrderDetailView: React.FC<{ order: OrderDetailType }> = ({ order }) => {
 
           <div>
             <span className="text-slate-500">Subtotal: </span>
-            <span className="font-bold text-slate-800">₹{(order.subtotal || 0).toFixed(2)}</span>
+            <span className="font-bold text-slate-800 font-mono">₹{baseSubtotal.toFixed(2)}</span>
           </div>
 
           <div className="col-span-2 pt-2 border-t border-slate-100 flex flex-col gap-1">
@@ -137,6 +157,7 @@ const OrderDetailView: React.FC<{ order: OrderDetailType }> = ({ order }) => {
               </div>
             )}
           </div>
+
           {order.status_updated_by && (
             <div className="col-span-2 text-xs text-slate-500 pt-2 border-t border-slate-100">
               <span className="font-semibold text-slate-700">Updated by:</span> {order.status_updated_by}
@@ -169,31 +190,43 @@ const OrderDetailView: React.FC<{ order: OrderDetailType }> = ({ order }) => {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {order.items.length > 0 ? (
-                order.items.map((item, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="py-3 px-3.5 font-medium text-slate-800 max-w-[140px] truncate" title={item.name}>
-                      {item.name}
-                    </td>
-                    <td className="py-3 px-2 text-center font-mono text-slate-600">
-                      {item.qty}
-                    </td>
-                    <td className="py-3 px-2 text-right font-mono text-slate-600">
-                      ₹{(item.price || 0).toFixed(2)}
-                    </td>
-                    <td className="py-3 px-2 text-center">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                        item.gstRate && item.gstRate > 0
-                          ? "bg-blue-50 text-blue-700 border border-blue-200"
-                          : "bg-slate-100 text-slate-500"
-                      }`}>
-                        {item.gst || (item.gstRate ? `${item.gstRate}%` : "0%")}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3.5 font-bold text-slate-800 text-right font-mono">
-                      ₹{(item.total || 0).toFixed(2)}
-                    </td>
-                  </tr>
-                ))
+                order.items.map((item, idx) => {
+                  const itmQty = item.qty || 1;
+                  const itmTotal = Number(item.total || 0);
+                  const itmGstAmt = Number(item.gstAmount || 0);
+                  // Subtract GST amount to display true base price (excluding GST)
+                  const itmBasePrice = item.price !== undefined && item.inclusivePrice !== undefined
+                    ? item.price
+                    : (itmGstAmt > 0 && itmTotal > 0
+                        ? Math.max(0, (itmTotal - itmGstAmt) / itmQty)
+                        : Math.max(0, Number(item.price || 0)));
+
+                  return (
+                    <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="py-3 px-3.5 font-medium text-slate-800 max-w-[140px] truncate" title={item.name}>
+                        {item.name}
+                      </td>
+                      <td className="py-3 px-2 text-center font-mono text-slate-600">
+                        {itmQty}
+                      </td>
+                      <td className="py-3 px-2 text-right font-mono text-slate-600" title="Base price (excluding GST)">
+                        ₹{(itmBasePrice || 0).toFixed(2)}
+                      </td>
+                      <td className="py-3 px-2 text-center">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          item.gstRate && item.gstRate > 0
+                            ? "bg-blue-50 text-blue-700 border border-blue-200"
+                            : "bg-slate-100 text-slate-500"
+                        }`}>
+                          {item.gst || (item.gstRate ? `${item.gstRate}%` : "0%")}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3.5 font-bold text-slate-800 text-right font-mono">
+                        ₹{(item.total || 0).toFixed(2)}
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
                   <td colSpan={5} className="py-6 text-center text-slate-400">
@@ -215,26 +248,28 @@ const OrderDetailView: React.FC<{ order: OrderDetailType }> = ({ order }) => {
         <div className="space-y-2 text-xs text-slate-600 pb-3 border-b border-slate-100">
           <div className="flex justify-between items-center">
             <span>Items Base Subtotal:</span>
-            <span className="font-semibold text-slate-800 font-mono">₹{(order.subtotal || 0).toFixed(2)}</span>
+            <span className="font-semibold text-slate-800 font-mono">₹{baseSubtotal.toFixed(2)}</span>
           </div>
 
-          {order.deliveryCharge !== undefined && order.deliveryCharge > 0 && (
+          {deliveryCharge !== undefined && (
             <div className="flex justify-between items-center">
               <span className="flex items-center gap-1.5 text-slate-600">
                 <Truck size={13} className="text-slate-400" />
                 Delivery Fee:
               </span>
-              <span className="font-semibold text-slate-800 font-mono">₹{(order.deliveryCharge || 0).toFixed(2)}</span>
+              <span className="font-semibold text-slate-800 font-mono">
+                {deliveryCharge > 0 ? `₹${deliveryCharge.toFixed(2)}` : "₹0.00 (Free)"}
+              </span>
             </div>
           )}
 
-          {order.discount !== undefined && order.discount > 0 && (
+          {discount > 0 && (
             <div className="flex justify-between items-center text-emerald-600 font-medium">
               <span className="flex items-center gap-1.5">
                 <Tag size={13} />
                 Discount:
               </span>
-              <span className="font-mono font-bold">-₹{(order.discount || 0).toFixed(2)}</span>
+              <span className="font-mono font-bold">-₹{discount.toFixed(2)}</span>
             </div>
           )}
 
@@ -258,7 +293,7 @@ const OrderDetailView: React.FC<{ order: OrderDetailType }> = ({ order }) => {
           <span>Total Payable:</span>
           <span className="flex items-center gap-0.5 text-xl font-extrabold text-blue-600 font-mono">
             <IndianRupee size={18} strokeWidth={2.5} />
-            {(order.grandTotal || 0).toFixed(2)}
+            {totalPayable.toFixed(2)}
           </span>
         </div>
       </div>
@@ -267,5 +302,3 @@ const OrderDetailView: React.FC<{ order: OrderDetailType }> = ({ order }) => {
 };
 
 export default OrderDetailView;
-
-

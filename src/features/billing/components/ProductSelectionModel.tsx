@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { X, CheckCircle2, AlertCircle, Barcode, CalendarDays, ChevronRight, ArrowLeft, Package, Check, Search } from "lucide-react";
-import { InventoryItem, ProductVariant } from "../types";
+import { InventoryItem, ProductVariant, cleanVariantLabel, formatVariantLabel } from "../types";
 import { AntBadge } from "@/components/ui/AntBadge";
 
 const formatDate = (dateStr?: string) => {
@@ -68,17 +68,7 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
 
     return raw.map((v: any) => {
       const combDatas = v.datas || {};
-      const attributes = v.attributes || combDatas.attributes || combDatas.datas?.attributes || {};
-      let variantLabel = v.name || combDatas.name;
-      if (variantLabel) {
-        // Keep the defined name
-      } else if (attributes && Object.keys(attributes).length > 0) {
-        variantLabel = Object.values(attributes).join(' / ');
-      } else if (v.barcode && combDatas.barcode && v.barcode !== combDatas.barcode) {
-        variantLabel = v.barcode;
-      } else {
-        variantLabel = v.barcode || "Standard Variant";
-      }
+      const variantLabel = formatVariantLabel(v, combDatas);
 
       let price = v.price || v.pricing_infos?.sell_price || v.sell_price || combDatas.sell_price || combDatas.price || product.price || 0;
       if (!price && Array.isArray(v.batch_infos) && v.batch_infos.length > 0) {
@@ -445,7 +435,7 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className={`text-sm font-bold ${isSelected ? "text-blue-900" : "text-slate-700"}`}>
-                                {variant.name}
+                                {cleanVariantLabel(variant.name)}
                               </p>
                               <p className="text-xs font-medium text-slate-400 mt-0.5">Stock: {variant.stock} units</p>
                             </div>
@@ -726,7 +716,7 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                   <div className="p-4 bg-slate-50 rounded-lg border border-slate-100 flex items-center justify-between">
                     <div>
                       <p className="text-[10px] font-bold text-slate-400 mb-0.5">Selected Variant</p>
-                      <p className="text-sm font-bold text-slate-800">{selectedVariant?.name}</p>
+                      <p className="text-sm font-bold text-slate-800">{cleanVariantLabel(selectedVariant?.name)}</p>
                     </div>
                     <p className="text-sm font-bold text-slate-700">{fmt(selectedVariant?.price || 0)}</p>
                   </div>

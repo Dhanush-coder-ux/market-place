@@ -1,3 +1,4 @@
+import { cleanVariantLabel } from "../types";
 import React, { useMemo } from "react";
 import { INVOICE_TEMPLATES } from "./invoice-templates";
 import { Banknote, Smartphone, Wallet, Check, BadgePercent } from "lucide-react";
@@ -179,7 +180,7 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
                      <td className="py-3 pl-6 pr-2 text-[10px] text-slate-400 tabular-nums">{i + 1}</td>
                      <td className="py-3 px-2">
                        <p className={config.table.cellStrong}>{baseName}</p>
-                       {variantName && <p className={config.table.cellMuted}>{variantName}</p>}
+                       {variantName && <p className={config.table.cellMuted}>{cleanVariantLabel(variantName)}</p>}
                        {line.code && <p className={`text-[9px] font-mono ${config.table.cellMuted}`}>{line.code}</p>}
                        {/* Subline discount breakdown per Section 8.1 */}
                        {line.productDiscountAmount > 0 && (

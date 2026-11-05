@@ -1240,7 +1240,20 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     // For CREATE  → CreateProdInvVariantType  (no id field)
     // For UPDATE  → UpdateProdInvVariantType  (id field optional, pricing_id etc.)
     const mappedVariants = activeCombinations.map(combo => {
-      const variantName = Object.entries(combo.attributes).map(([k, v]) => `${k.toLowerCase()} : ${v}`).join(" / ");
+      const variantName = Object.entries(combo.attributes)
+        .map(([k, v]) => {
+          const cleanK = k.trim().toLowerCase();
+          let cleanV = String(v).trim();
+          while (/^(variant|varient)\s*:\s*/i.test(cleanV)) {
+            cleanV = cleanV.replace(/^(variant|varient)\s*:\s*/i, "").trim();
+          }
+          if (cleanK === "variant" || cleanK === "varient") {
+            return cleanV;
+          }
+          return `${cleanK} : ${cleanV}`;
+        })
+        .filter(Boolean)
+        .join(" / ");
       const isNew = combo.id.startsWith("id_");
 
       const parsedBuyPrice = combo.buy_price !== "" && !isNaN(Number(combo.buy_price)) ? Number(combo.buy_price) : null;
@@ -1292,7 +1305,20 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       // Store variant attribute map for edit-time reconstruction
       variant_attribute_map: form.has_variants
         ? activeCombinations.reduce((acc, combo) => {
-          const name = Object.entries(combo.attributes).map(([k, v]) => `${k.toLowerCase()} : ${v}`).join(" / ");
+          const name = Object.entries(combo.attributes)
+            .map(([k, v]) => {
+              const cleanK = k.trim().toLowerCase();
+              let cleanV = String(v).trim();
+              while (/^(variant|varient)\s*:\s*/i.test(cleanV)) {
+                cleanV = cleanV.replace(/^(variant|varient)\s*:\s*/i, "").trim();
+              }
+              if (cleanK === "variant" || cleanK === "varient") {
+                return cleanV;
+              }
+              return `${cleanK} : ${cleanV}`;
+            })
+            .filter(Boolean)
+            .join(" / ");
           acc[name] = { attributes: combo.attributes, barcode: combo.barcode, sku: combo.sku, mrp: combo.mrp };
           return acc;
         }, {} as Record<string, any>)

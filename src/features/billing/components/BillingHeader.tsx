@@ -222,7 +222,7 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
             {/* Level 1: Product Offers Discount */}
             {billTotals && billTotals.productDiscountTotal > 0 && (
               <div className="flex justify-between text-emerald-700">
-                <span>Product Offers</span>
+                <span>Discount Offer</span>
                 <span className="font-bold tabular-nums">−₹{formatPrice(billTotals.productDiscountTotal)}</span>
               </div>
             )}

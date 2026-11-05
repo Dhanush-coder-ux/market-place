@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback, useEffect, useRef } from "react"
 import { Package, Trash2, Barcode, Search, Plus, Minus, RotateCcw, Layers, Hash, Zap, Tag } from "lucide-react";
 import { AntBadge } from "@/components/ui/AntBadge";
 import { v4 as uuidv4 } from "uuid";
-import { BillingItem, ProductVariant } from "../types";
+import { BillingItem, ProductVariant, cleanVariantLabel, formatVariantLabel } from "../types";
 import ProductSelectionModal from "./ProductSelectionModel";
 import { useToast } from "@/context/ToastContext";
 import { inventoryApi } from "@/services/api/inventory";
@@ -272,18 +272,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
 
       let mappedVariants = rawVariants.map((v: any) => {
         const combDatas = v.datas || {};
-        const attributes = v.attributes || combDatas.attributes || combDatas.datas?.attributes || {};
-        let variantLabel = v.name || combDatas.name;
-        if (variantLabel) {
-          // Keep the defined name
-        } else if (attributes && Object.keys(attributes).length > 0) {
-          variantLabel = Object.values(attributes).join(' / ');
-        } else if (v.barcode && combDatas.barcode && v.barcode !== combDatas.barcode) {
-          variantLabel = v.barcode;
-        }
-        if (!variantLabel) {
-          variantLabel = "Standard Variant";
-        }
+        const variantLabel = formatVariantLabel(v, combDatas);
 
         let calculatedPrice = v.pricing_infos?.sell_price || v.sell_price || v.price || combDatas.sell_price || combDatas.price;
         if (!calculatedPrice && Array.isArray(v.batch_infos) && v.batch_infos.length > 0) {
@@ -663,7 +652,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
           id: uuidv4(),
           inventoryId: pendingProduct.id,
           code: pendingProduct.product_barcode,
-          name: variant.id === "default" ? pendingProduct.product_name : `${pendingProduct.product_name} - ${variant.name}`,
+          name: variant.id === "default" ? pendingProduct.product_name : `${pendingProduct.product_name} - ${cleanVariantLabel(variant.name)}`,
           price: variant.price,
           qty: quantity,
           tprice: quantity * variant.price,
@@ -932,7 +921,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                         <p className="text-[13px] font-bold text-slate-800 truncate leading-snug">{baseName}</p>
                         {variantName && (
                           <AntBadge variant="lb-variant" type="tag" icon={<Layers size={10} className="mr-1 inline" />}>
-                            {variantName}
+                            {cleanVariantLabel(variantName)}
                           </AntBadge>
                         )}
                         {item.gst !== undefined && (

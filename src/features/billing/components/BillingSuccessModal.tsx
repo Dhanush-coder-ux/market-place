@@ -426,7 +426,7 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
                   </div>
                   {details.billTotals.productDiscountTotal > 0 && (
                     <div className="flex justify-between text-[12px] py-0.5 text-blue-600">
-                      <span>Product Offers</span>
+                      <span>Discount Offer</span>
                       <span className="font-mono font-medium">-₹{details.billTotals.productDiscountTotal.toFixed(2)}</span>
                     </div>
                   )}

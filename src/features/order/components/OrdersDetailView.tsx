@@ -4,6 +4,8 @@ import { AntBadge } from "@/components/ui/AntBadge";
 
 export type OrderItem = {
   name: string;
+  variant?: string;
+  variantName?: string;
   qty: number;
   price: number;
   inclusivePrice?: number;
@@ -11,6 +13,34 @@ export type OrderItem = {
   gst?: string;
   gstRate?: number;
   gstAmount?: number;
+};
+
+/**
+ * Strips redundant "variant :", "varient :", "vairent :" labels from variant text or product names.
+ * Preserves the actual variant value (e.g. "varient : size 9" -> "size 9", "Product (varient : size 9)" -> "Product (size 9)").
+ */
+export const cleanVariantText = (text?: string | null): string => {
+  if (!text || typeof text !== "string") return "";
+  let s = text.trim();
+  if (!s) return "";
+
+  // 1. Strip redundant variant/varient/vairent prefix followed by :, -, or =
+  // E.g. 'varient : size 9' -> 'size 9'
+  // E.g. 'Shoe (varient : size 9)' -> 'Shoe (size 9)'
+  s = s.replace(/\b(?:variant|varient|vairent)\s*[:=-]\s*/gi, "");
+
+  // 2. Strip isolated variant/varient/vairent inside brackets/parentheses e.g. '(varient)' -> ''
+  s = s.replace(/\s*[\(\[]\s*(?:variant|varient|vairent)\s*[\)\]]/gi, "");
+
+  // 3. Clean up leftover empty parentheses or brackets e.g. 'Shoe ()' -> 'Shoe'
+  s = s.replace(/\s*[\(\[]\s*[\)\]]/g, "");
+
+  // 4. If the entire remaining text is just 'variant', 'varient', or 'vairent', clear it
+  if (/^(?:variant|varient|vairent)$/i.test(s.trim())) {
+    return "";
+  }
+
+  return s.trim();
 };
 
 export type OrderDetailType = {
@@ -201,10 +231,23 @@ const OrderDetailView: React.FC<{ order: OrderDetailType }> = ({ order }) => {
                         ? Math.max(0, (itmTotal - itmGstAmt) / itmQty)
                         : Math.max(0, Number(item.price || 0)));
 
+                  const cleanedItemName = cleanVariantText(item.name);
+                  const rawVar = item.variant || item.variantName || "";
+                  const cleanedVar = cleanVariantText(rawVar);
+                  const hasSeparateVariant =
+                    cleanedVar &&
+                    !cleanedItemName.toLowerCase().includes(cleanedVar.toLowerCase());
+                  const displayName = cleanedItemName || cleanedVar || "Item";
+
                   return (
                     <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="py-3 px-3.5 font-medium text-slate-800 max-w-[140px] truncate" title={item.name}>
-                        {item.name}
+                      <td className="py-3 px-3.5 font-medium text-slate-800 max-w-[180px]" title={displayName}>
+                        <div className="truncate">{displayName}</div>
+                        {hasSeparateVariant && (
+                          <div className="text-[11px] text-slate-500 font-normal truncate mt-0.5" title={cleanedVar}>
+                            {cleanedVar}
+                          </div>
+                        )}
                       </td>
                       <td className="py-3 px-2 text-center font-mono text-slate-600">
                         {itmQty}

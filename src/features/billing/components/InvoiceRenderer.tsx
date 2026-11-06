@@ -327,14 +327,8 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
         {Boolean(shopData?.visible_online && getPrinterConfig().includeDigitalStoreQr) && (
           <div className="mx-6 mb-3 p-3 bg-gradient-to-r from-rose-50/60 to-slate-50 border border-rose-100 rounded-xl flex items-center justify-between">
             <div>
-              <p className="text-[11px] font-black text-rose-600 uppercase tracking-wide">
-                YOUR SHOP IS ONLINE!
-              </p>
-              <p className="text-[10px] text-slate-700 font-medium mt-0.5">
-                {getPrinterConfig().digitalStoreQrMessage || "Scan to browse & order online."}
-              </p>
-              <p className="text-[9px] text-slate-400 mt-1">
-                Scan to visit our online store · Powered by ShopQ
+              <p className="text-[9px] text-slate-500 font-medium">
+                Scan to visit our online store
               </p>
             </div>
             <div className="p-1 bg-white border border-slate-200 rounded-lg shadow-2xs shrink-0">

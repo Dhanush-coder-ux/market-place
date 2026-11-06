@@ -43,6 +43,51 @@ export const resolveInitialSellingPrice = (sellPrice: any, mrp: any): number => 
   return 0;
 };
 
+/**
+ * Resolves initial buy price from product or variant object, inspecting common pricing fields.
+ */
+export const resolveInitialBuyPrice = (entity: any, parent: any = null): any => {
+  const getFrom = (obj: any) => {
+    if (!obj) return undefined;
+    const d = obj.datas || {};
+    const pricing = obj.pricing_infos || d.pricing_infos || (Array.isArray(obj.pricing_infos) ? obj.pricing_infos[0] : null);
+    const p0 = Array.isArray(pricing) ? pricing[0] : pricing;
+
+    const candidates = [
+      obj.buy_price,
+      obj.costPrice,
+      obj.cost_price,
+      p0?.buy_price,
+      p0?.costPrice,
+      p0?.cost_price,
+      d.buy_price,
+      d.costPrice,
+      d.cost_price,
+      obj.pricing?.buy_price,
+      d.pricing?.buy_price,
+    ];
+
+    for (const val of candidates) {
+      if (val !== undefined && val !== null && val !== "") {
+        const num = Number(val);
+        if (!isNaN(num)) return num;
+        return val;
+      }
+    }
+    return undefined;
+  };
+
+  const entityPrice = getFrom(entity);
+  if (entityPrice !== undefined) return entityPrice;
+
+  if (parent) {
+    const parentPrice = getFrom(parent);
+    if (parentPrice !== undefined) return parentPrice;
+  }
+
+  return "";
+};
+
 // ─── Inline Unit Selector ──────────────────────────────────────────────────────
 const UnitDropdown = ({
   units,
@@ -280,13 +325,14 @@ export const InventoryItemsCard = ({
       const rawVariantMrp = variantData?.mrp ?? variantData?.pricing_infos?.mrp ?? variantData?.pricing_infos?.additional_infos?.mrp ?? variantData?.datas?.mrp ?? baseOpt.mrp ?? baseOpt.pricing_infos?.mrp ?? baseOpt.pricing_infos?.additional_infos?.mrp ?? baseOpt.datas?.mrp ?? baseOpt.pricing_infos?.[0]?.mrp ?? baseOpt.pricing_infos?.[0]?.additional_infos?.mrp;
       const initialVariantSp = resolveInitialSellingPrice(rawVariantSp, rawVariantMrp);
       const variantMrp = rawVariantMrp !== undefined && rawVariantMrp !== null && rawVariantMrp !== "" ? Number(rawVariantMrp) : undefined;
+      const initialVariantBp = resolveInitialBuyPrice(variantData, baseOpt);
 
       next[targetIdx] = {
         ...next[targetIdx],
         inventory_id: baseOpt.id || baseOpt.inventory_id,
         variant_id: variantItem.id,
         name: variantModal.baseProduct,
-        costPrice: getVal("buy_price", getVal("costPrice")),
+        costPrice: initialVariantBp !== "" ? initialVariantBp : getVal("buy_price", getVal("costPrice")),
         sellingPrice: initialVariantSp,
         mrp: variantMrp,
         taxGst: getVal("gst") !== undefined && getVal("gst") !== null && getVal("gst") !== "" ? parseInt(getVal("gst")) : 18,
@@ -475,13 +521,14 @@ export const InventoryItemsCard = ({
         const rawVarMrp = opt.mrp ?? opt.pricing_infos?.mrp ?? opt.pricing_infos?.additional_infos?.mrp ?? d.mrp ?? d.pricing_infos?.mrp ?? d.pricing_infos?.additional_infos?.mrp ?? opt.pricing_infos?.[0]?.mrp ?? opt.pricing_infos?.[0]?.additional_infos?.mrp;
         const initialVarSp = resolveInitialSellingPrice(rawVarSp, rawVarMrp);
         const resolvedVarMrp = rawVarMrp !== undefined && rawVarMrp !== null && rawVarMrp !== "" ? Number(rawVarMrp) : undefined;
+        const initialVarBp = resolveInitialBuyPrice(opt);
 
         updateProductFields(targetIndex, {
           inventory_id: parentId,
           variant_id: vId,
           name: (opt.name || "").split(" (")[0],
           variant: opt.variant_name || (opt.attributes ? Object.values(opt.attributes).join(' - ') : (d.attributes ? Object.values(d.attributes).join(' - ') : opt.name?.split(" - ")[1])),
-          costPrice: get("buy_price"),
+          costPrice: initialVarBp !== "" ? initialVarBp : get("buy_price", get("costPrice")),
           sellingPrice: initialVarSp,
           mrp: resolvedVarMrp,
           taxGst: get("gst") !== undefined && get("gst") !== null && get("gst") !== "" ? parseInt(get("gst")) : 18,

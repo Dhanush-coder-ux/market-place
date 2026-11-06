@@ -706,11 +706,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   }, [numMrp, numSellingPrice, priceCalc]);
 
   const sellingPriceError = useMemo(() => {
-    if (form.track_stock && numMrp > 0 && numSellingPrice > numMrp) {
+    if (numMrp > 0 && numSellingPrice > numMrp) {
       return `Selling price (₹${formatINR(numSellingPrice)}) cannot exceed MRP (₹${formatINR(numMrp)})`;
     }
     return undefined;
-  }, [numMrp, numSellingPrice, form.track_stock]);
+  }, [numMrp, numSellingPrice]);
 
   // Validation computed values
   const missingFields: string[] = [];
@@ -1129,9 +1129,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     const numDisc = form.discount_percent ? Number(form.discount_percent) : 0;
     const numCost = form.cost_to_make ? Number(form.cost_to_make) : 0;
 
-    // V4: MRP <= 0 when entered (🔴 Block save)
-    if (form.mrp && numMrp <= 0) {
-      showToast("MRP must be greater than zero.", "error");
+    // MRP is optional in all cases. Only block if negative.
+    if (form.mrp && Number(form.mrp) < 0) {
+      showToast("MRP cannot be negative.", "error");
       return;
     }
 
@@ -1157,8 +1157,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       return;
     }
 
-    // V1: selling_price > mrp (🔴 Block save — Legal Metrology requirement for tracked products with MRP)
-    if (form.track_stock && numMrp > 0 && numSp > 0 && numSp > numMrp) {
+    // V1: selling_price > mrp (🔴 Block save when MRP is set — Legal Metrology requirement)
+    if (numMrp > 0 && numSp > 0 && numSp > numMrp) {
       showToast(`Selling price cannot be above MRP. You entered ₹${numSp.toFixed(2)} but the MRP is ₹${numMrp.toFixed(2)}. Maximum you can charge is ₹${numMrp.toFixed(2)}.`, "error");
       return;
     }
@@ -1388,7 +1388,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         online_sell_price: form.selling_price !== "" && !isNaN(Number(form.selling_price))
           ? Number(form.selling_price)
           : 0,
-        mrp: form.track_stock && form.mrp !== "" && !isNaN(Number(form.mrp)) ? Number(form.mrp) : null,
+        mrp: form.mrp !== "" && !isNaN(Number(form.mrp)) && Number(form.mrp) > 0 ? Number(form.mrp) : null,
         discount_percent: form.discount_percent !== "" && !isNaN(Number(form.discount_percent)) ? Number(form.discount_percent) : 0,
         offer_valid_until: form.offer_valid_until || null,
         custom_fields: {
@@ -1426,7 +1426,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         online_sell_price: form.selling_price !== "" && !isNaN(Number(form.selling_price))
           ? Number(form.selling_price)
           : 0,
-        mrp: form.track_stock && form.mrp !== "" && !isNaN(Number(form.mrp)) ? Number(form.mrp) : null,
+        mrp: form.mrp !== "" && !isNaN(Number(form.mrp)) && Number(form.mrp) > 0 ? Number(form.mrp) : null,
         discount_percent: form.discount_percent !== "" && !isNaN(Number(form.discount_percent)) ? Number(form.discount_percent) : 0,
         offer_valid_until: form.offer_valid_until || null,
         gst: gstFormatted,
@@ -2152,8 +2152,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         <strong>Made-to-order item.</strong> Since this isn't purchased as stock, set its prices here so it can be billed. We'll use these to calculate your profit.
                       </p>
                     </div>
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                      {/* GST Rate - first, near to MRP */}
+                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                      {/* GST Rate */}
                       <div>
                         <Label text="GST rate" required tooltip="Applicable GST tax rate." />
                         <ReusableSelect
@@ -2163,6 +2163,17 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                           placeholder="18%"
                         />
                       </div>
+                      <InputField
+                        label="MRP"
+                        name="mrp"
+                        hint="optional"
+                        type="number"
+                        value={form.mrp}
+                        onChange={handleChange}
+                        placeholder="0.00"
+                        leftEl={<IndianRupee size={13} />}
+                        tooltip="Maximum Retail Price (optional)."
+                      />
                       <InputField
                         label="Cost to make (Buy price)"
                         name="cost_to_make"

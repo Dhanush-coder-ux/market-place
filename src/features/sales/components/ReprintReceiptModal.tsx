@@ -612,13 +612,6 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
                 ?.includeDigitalStoreQr && (shopData?.visible_online !== false)
             ) && (
               <div className="pt-3 pb-2 text-center border-t border-dashed border-slate-200">
-                <p className="text-[11px] font-black text-[#e11d48] uppercase tracking-wide">
-                  YOUR SHOP IS ONLINE!
-                </p>
-                <p className="text-[9px] font-medium text-slate-700 mt-0.5">
-                  {(printersList.find((p) => p.id === targetPrinterId) || getPrinterConfig())
-                    ?.digitalStoreQrMessage || "Scan to browse & order online."}
-                </p>
                 <div className="flex justify-center my-2">
                   <div className="p-1.5 bg-white rounded-lg border border-slate-200 shadow-2xs inline-flex items-center justify-center">
                     <QRCodeSVG
@@ -634,9 +627,6 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
                 <p className="text-[8.5px] font-medium text-slate-500">
                   Scan to visit our online store
                 </p>
-                <div className="my-2 border-t border-dashed border-slate-200" />
-                <p className="text-[10px] font-black text-[#e11d48]">ShopQ</p>
-                <p className="text-[7.5px] text-slate-400">Discover and shop local stores on ShopQ</p>
               </div>
             )}
 

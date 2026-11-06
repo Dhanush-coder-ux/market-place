@@ -209,7 +209,7 @@ function DetailDrawer({ movement, onClose }: DetailDrawerProps) {
                           <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-slate-200/50">
                             {p.variant && (
                               <div className="pl-2.5 border-l-2 border-violet-200">
-                                <AntBadge variant="at-variant" type="tag">V: {p.variant}</AntBadge>
+                                <AntBadge variant="at-variant" type="tag">{p.variant}</AntBadge>
                               </div>
                             )}
                             {p.batch && (
@@ -1087,7 +1087,7 @@ export default function StockMovementPage() {
                               <span className="text-[9px] font-medium text-slate-400 font-mono">{hasList ? firstProd.skuLabel : m.skuLabel}: {hasList ? firstProd.skuValue : m.skuValue}</span>
                               {(hasList ? firstProd.variant : m.variant) && (
                                 <span onClick={(e) => copyToClipboard(e, (hasList ? firstProd.variant : m.variant) || "")} className="cursor-pointer" title="Click to copy">
-                                  <AntBadge variant="at-variant" type="tag">V: {formatVariantBrief(hasList ? firstProd.variant : m.variant)}</AntBadge>
+                                  <AntBadge variant="at-variant" type="tag">{formatVariantBrief(hasList ? firstProd.variant : m.variant)}</AntBadge>
                                 </span>
                               )}
                               {(hasList ? firstProd.batch : m.batch) && (

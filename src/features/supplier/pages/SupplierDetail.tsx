@@ -250,13 +250,13 @@ export default function SupplierDetail() {
   }, [id, refreshSupplierData]);
 
   useEffect(() => {
-    if (!id || activeTab !== 1) return;
+    if (!id || (activeTab !== 1 && activeTab !== 2)) return;
     setPurLoading(true);
     getData(`${ENDPOINTS.PURCHASES}/by/supplier/${SHOP_ID}/${id}`, { exclude_cancel: "true", exclude_draft: "true" }).then((res: any) => {
       setPurchases(res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : []);
       setPurLoading(false);
     }).catch(() => setPurLoading(false));
-  }, [activeTab, id]);
+  }, [activeTab, id, getData]);
 
   useEffect(() => {
     if (!id || activeTab !== 2) return;
@@ -669,6 +669,47 @@ export default function SupplierDetail() {
         </div>
 
           {activeTab === 2 && (() => {
+            const getReturnTypeLabel = (h: any) => {
+              const invKey = String(h.invoice_no || h.reference_no || h.ref_no || h.entity_id || "").toLowerCase().trim();
+              const matchedPurchase = purchases.find((p: any) => {
+                const pId = String(p.id || p.purchase_id || "").toLowerCase().trim();
+                const pInv = String(p.invoice_no || "").toLowerCase().trim();
+                const pUi = String(p.ui_id || "").toLowerCase().trim();
+                return (pId && (pId === invKey || pId === String(h.entity_id || "").toLowerCase().trim())) ||
+                       (pInv && (pInv === invKey)) ||
+                       (pUi && (pUi === invKey));
+              });
+
+              const supplierHasOutstanding = (currentOutstandingVal > 0);
+              const purchaseCurrentOutstanding = Number(matchedPurchase?.outstanding_amount ?? matchedPurchase?.outstanding ?? 0);
+              
+              const returnList = matchedPurchase?.returns || matchedPurchase?.purchase_returns || [];
+              const matchedReturn = returnList.find((r: any) => 
+                (r.id && (r.id === h.entity_id || r.id === h.id)) ||
+                (r.ui_id && r.ui_id === h.entity_id)
+              );
+              const adjustedInReturn = Number(matchedReturn?.payment_infos?.adjusted_against_outstanding ?? 0);
+              const cashRefundInReturn = Number(matchedReturn?.payment_infos?.cash_refund ?? 0);
+
+              const purTotalCost = Number(matchedPurchase?.total_cost ?? matchedPurchase?.item_infos?.total_pur_cost ?? 0);
+              const purPaidAmount = Number(matchedPurchase?.paid_amount ?? matchedPurchase?.payment_infos?.[0]?.amount ?? 0);
+
+              const purchaseHasOutstanding = 
+                Number(h.outstanding_amount ?? 0) > 0 ||
+                purchaseCurrentOutstanding > 0 ||
+                adjustedInReturn > 0 ||
+                (matchedPurchase ? (purPaidAmount < purTotalCost) : false);
+
+              const isExplicitCashRefund = (cashRefundInReturn > 0 && adjustedInReturn === 0 && !supplierHasOutstanding);
+
+              if (String(h.payment_method).toUpperCase() === 'REFUND' || String(h.payment_method).toUpperCase() === 'REFUNDED') {
+                return "REFUNDED";
+              }
+
+              const shouldShowAdjusted = (supplierHasOutstanding || purchaseHasOutstanding) && !isExplicitCashRefund;
+              return shouldShowAdjusted ? "ADJUSTED" : "REFUNDED";
+            };
+
             const filteredHistory = clearedHistory.filter((h) => {
               if (!ledgerSearch.trim()) return true;
               const q = ledgerSearch.toLowerCase();
@@ -676,7 +717,12 @@ export default function SupplierDetail() {
               const notes = String(h.notes || "").toLowerCase();
               const method = String(h.payment_method || h.method || "").toLowerCase();
               const amount = String(h.cleared_amount ?? h.amount ?? "").toLowerCase();
-              return refOrInvoice.includes(q) || notes.includes(q) || method.includes(q) || amount.includes(q);
+
+              const isRet = h.type === 'PURCHASE_RETURN' || h.type === 'REFUND' || h.type === 'REFUNDED' || h.entity_name?.toLowerCase().includes('return') || h.notes?.toLowerCase().includes('refund') || h.notes?.toLowerCase().includes('return') || h.payment_method?.toLowerCase() === 'adjusted';
+              const retLabel = isRet ? getReturnTypeLabel(h).toLowerCase() : "";
+              const labelMatches = isRet && (retLabel.includes(q) || ("refunded".includes(q) && retLabel === "refunded") || ("adjusted".includes(q) && retLabel === "adjusted"));
+
+              return refOrInvoice.includes(q) || notes.includes(q) || method.includes(q) || amount.includes(q) || labelMatches;
             });
 
             return (
@@ -727,17 +773,28 @@ export default function SupplierDetail() {
                           </td></tr>
                         ) : (
                           filteredHistory.map((h, i) => {
-                          const isRefund = h.type === 'PURCHASE_RETURN' || h.type === 'REFUND' || h.entity_name?.toLowerCase().includes('return') || h.notes?.toLowerCase().includes('refund') || h.notes?.toLowerCase().includes('return');
+                          const isPurchaseReturn = h.type === 'PURCHASE_RETURN' || 
+                                                   h.type === 'REFUND' || 
+                                                   h.type === 'REFUNDED' || 
+                                                   h.entity_name?.toLowerCase().includes('return') || 
+                                                   h.notes?.toLowerCase().includes('purchase return') || 
+                                                   h.notes?.toLowerCase().includes('refund') ||
+                                                   h.payment_method?.toLowerCase() === 'adjusted' ||
+                                                   h.payment_method?.toLowerCase() === 'refunded' ||
+                                                   h.payment_method?.toLowerCase() === 'refund';
+
+                          const returnType = isPurchaseReturn ? getReturnTypeLabel(h) : null;
+                          const isAdjusted = returnType === "ADJUSTED";
                           
                           let displayAmount = Number(h.cleared_amount ?? h.amount ?? 0);
-                          if (displayAmount === 0 && isRefund && h.notes) {
+                          if (displayAmount === 0 && isPurchaseReturn && h.notes) {
                             const match = h.notes.match(/Refund amount:\s*([0-9.]+)/i);
                             if (match && match[1]) {
                               displayAmount = parseFloat(match[1]) || 0;
                             }
                           }
 
-                          let displayNotes = h.notes || (isRefund ? 'Supplier refund' : '—');
+                          let displayNotes = h.notes || (isPurchaseReturn ? (isAdjusted ? 'Adjusted against outstanding' : 'Supplier refund') : '—');
                           if (displayNotes) {
                             displayNotes = displayNotes.replace(/([0-9]+\.[0-9]+)/g, (match: string) => {
                               const parsed = parseFloat(match);
@@ -754,7 +811,7 @@ export default function SupplierDetail() {
                                 {h.reference_no || h.invoice_no || h.ref_no || h.entity_id || "—"}
                               </td>
                               <td className="px-4 py-3 text-sm font-black whitespace-nowrap">
-                                <span className={isRefund ? 'text-emerald-600' : 'text-rose-600'}>
+                                <span className={isPurchaseReturn ? 'text-emerald-600' : 'text-rose-600'}>
                                   ₹{displayAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </span>
                               </td>
@@ -762,9 +819,17 @@ export default function SupplierDetail() {
                                 ₹{Number(h.outstanding_amount ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </td>
                               <td className="px-4 py-3 whitespace-nowrap">
-                                <span className={`text-[11px] font-black px-2.5 py-1 rounded-md uppercase tracking-wider flex items-center w-fit ${isRefund ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
-                                  {String(h.payment_method || h.method || "CASH").replace(/_REFUND$/i, "").replace(/REFUND/i, "").replace(/_/g, " ").trim() || "CASH"}
-                                </span>
+                                {isPurchaseReturn ? (
+                                  <span className={`text-[11px] font-black px-2.5 py-1 rounded-md uppercase tracking-wider flex items-center w-fit ${
+                                    isAdjusted ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                  }`}>
+                                    {returnType}
+                                  </span>
+                                ) : (
+                                  <span className="text-[11px] font-black px-2.5 py-1 rounded-md uppercase tracking-wider flex items-center w-fit bg-rose-50 text-rose-700">
+                                    {String(h.payment_method || h.method || "CASH").replace(/_/g, " ").trim() || "CASH"}
+                                  </span>
+                                )}
                               </td>
                               <td className="px-4 py-3 text-xs font-medium text-slate-500 whitespace-normal break-words" title={displayNotes}>
                                 {displayNotes}

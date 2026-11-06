@@ -5,7 +5,7 @@ import {
 import OrdersHeader from "../components/OrdersHeader";
 import OrdersCard from "../components/OrdersCard";
 import Drawer from "@/components/common/Drawer";
-import OrderDetailView, { type OrderDetailType, type OrderItem } from "../components/OrdersDetailView";
+import OrderDetailView, { type OrderDetailType, type OrderItem, cleanVariantText } from "../components/OrdersDetailView";
 import { DateFilter } from "../components/DateFilter";
 import SkeletonLoader from "@/components/common/SkeletonLoader";
 import { useApi } from "@/context/ApiContext";
@@ -99,13 +99,16 @@ const parseOrderForDetail = (
       i.additional_infos?.name ||
       (i.product_id ? `Item ${String(i.product_id).slice(-4)}` : `Item ${index + 1}`);
 
-    const varName =
+    const rawVar =
       i.variant_infos?.variant_name ||
       i.variant_info?.variant_name ||
       i.variant_name ||
       calcItem?.variant_name;
-    if (varName) {
-      itemName += ` (${varName})`;
+    const cleanVar = cleanVariantText(
+      typeof rawVar === "object" ? (rawVar?.variant_name || rawVar?.name) : rawVar
+    );
+    if (cleanVar && !itemName.toLowerCase().includes(cleanVar.toLowerCase())) {
+      itemName += ` (${cleanVar})`;
     }
 
     const qty = Number(i.quantity ?? i.qty ?? calcItem?.qty ?? i.entered_qty ?? 1) || 1;
@@ -152,7 +155,8 @@ const parseOrderForDetail = (
       : (gstAmount > 0 ? Math.max(0, (lineTotal - gstAmount) / qty) : price);
 
     return {
-      name: itemName,
+      name: cleanVariantText(itemName),
+      variant: cleanVar || undefined,
       qty,
       price: Number(baseItemPrice.toFixed(2)),
       inclusivePrice: Number(price.toFixed(2)),

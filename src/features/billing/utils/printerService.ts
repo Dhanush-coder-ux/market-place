@@ -1105,11 +1105,6 @@ export function buildEscPosBuffer(data: ReceiptData, config: PrinterConfig): Uin
   const qrMessage = data.digitalStoreQrMessage || config.digitalStoreQrMessage || DEFAULT_DIGITAL_STORE_QR_MESSAGE;
 
   if (shouldPrintDigitalQr && digitalStoreUrl) {
-
-    addCenter("YOUR SHOP IS ONLINE!", true);
-
-    addCenter(qrMessage);
-
     const moduleSize = config.paperWidth === "58mm" ? 5 : 7;
     const qrBytes = new TextEncoder().encode(digitalStoreUrl);
     const len = qrBytes.length + 3;
@@ -1129,11 +1124,6 @@ export function buildEscPosBuffer(data: ReceiptData, config: PrinterConfig): Uin
     bytes.push(0x0a);
 
     addCenter("Scan to visit our online store");
-    addDivider();
-
-    addCenter("ShopQ", true);
-
-    addCenter("Discover and shop local stores on ShopQ");
     addDivider();
   }
 
@@ -1414,17 +1404,12 @@ export function printViaSystemDriver(
         ${shouldPrintDigitalQr && digitalStoreUrl ? `
         <div class="divider"></div>
         <div class="center" style="margin: 10px 0 6px 0;">
-          <div style="font-size: 13px; font-weight: 900; color: #e11d48; text-transform: uppercase; letter-spacing: 0.5px;">YOUR SHOP IS ONLINE!</div>
-          <div style="font-size: 10px; color: #1e293b; margin-top: 2px; font-weight: 600;">${qrMessage}</div>
           <div style="display: flex; justify-content: center; align-items: center; margin: 8px 0;">
             <div style="padding: 6px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center;">
               ${qrSvgHtml}
             </div>
           </div>
           <div style="font-size: 9.5px; color: #475569; font-weight: 500;">Scan to visit our online store</div>
-          <div class="divider" style="margin: 8px 0;"></div>
-          <div style="font-size: 11px; font-weight: 800; color: #e11d48; letter-spacing: 0.3px;">ShopQ</div>
-          <div style="font-size: 8.5px; color: #64748b; margin-top: 1px;">Discover and shop local stores on ShopQ</div>
         </div>
         ` : ""}
 

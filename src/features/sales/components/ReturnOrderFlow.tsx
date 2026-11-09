@@ -71,13 +71,47 @@ const generateItems = (sale: SaleRecord, productMap: Record<string, string> = {}
       (ci.name && (ci.name === (item as any).name || ci.name === (item as any).product_name || ci.name === productName))
     );
 
-    const qty = Number(calcItem?.qty ?? item.quantity ?? (item as any).entered_qty ?? 1);
+    const unitInfos = (item as any).unit_infos || (item as any).unit_info || null;
+    const baseUnit = unitInfos?.name || (item as any).unit_name || item.unit || "UNIT";
+    let enteredUnit = (item as any).entered_unit || calcItem?.entered_unit || calcItem?.unit || "";
+
+    const subUnits = unitInfos?.sub_units || [];
+    const matchedSub = subUnits.find((su: any) => 
+      (enteredUnit && (su.name?.toLowerCase() === enteredUnit.toLowerCase() || su.short_name?.toLowerCase() === enteredUnit.toLowerCase()))
+    );
+    if (matchedSub) {
+      enteredUnit = matchedSub.name;
+    } else if (!enteredUnit) {
+      enteredUnit = baseUnit;
+    }
+
+    const enteredFactor = (matchedSub && Number(matchedSub.factor) > 0) ? Number(matchedSub.factor) : 1.0;
+
+    let enteredQty = (item as any).entered_qty !== undefined && (item as any).entered_qty !== null ? Number((item as any).entered_qty) : undefined;
+    if (enteredQty === undefined && calcItem?.entered_qty !== undefined && calcItem?.entered_qty !== null) {
+      enteredQty = Number(calcItem.entered_qty);
+    }
+    if (enteredQty === undefined && calcItem?.qty !== undefined && calcItem?.qty !== null && Number(calcItem.qty) > 0) {
+      enteredQty = Number(calcItem.qty);
+    }
+
+    let baseQty = item.quantity !== undefined && item.quantity !== null ? Number(item.quantity) : undefined;
+    if (baseQty === undefined || baseQty <= 0) {
+      baseQty = enteredQty !== undefined ? (enteredQty * enteredFactor) : 1;
+    } else if (enteredQty !== undefined && baseQty > enteredQty * enteredFactor + 0.0001) {
+      baseQty = enteredQty * enteredFactor;
+    }
+
+    if (enteredQty === undefined || enteredQty <= 0) {
+      enteredQty = enteredFactor < 1 ? Math.round(baseQty / enteredFactor) : (enteredFactor > 1 ? Math.round(baseQty * enteredFactor) : baseQty);
+    }
+
     const mrp = Number(calcItem?.mrp ?? (item as any).mrp ?? (item as any).datas?.mrp ?? 0);
 
     // Original unit selling price before discount
     let originalPrice = calcItem?.price ?? item.sell_price ?? (item as any).datas?.sell_price;
     if (originalPrice === undefined || originalPrice === null) {
-      originalPrice = ((item as any).total_amount && qty > 0) ? (Number((item as any).total_amount) / qty) : 0;
+      originalPrice = ((item as any).total_amount && baseQty > 0) ? (Number((item as any).total_amount) / baseQty) : 0;
     }
     const originalUnitPrice = Number(originalPrice);
 
@@ -94,20 +128,14 @@ const generateItems = (sale: SaleRecord, productMap: Record<string, string> = {}
     } else if ((item as any).total_amount !== undefined && (item as any).total_amount !== null && !isNaN(Number((item as any).total_amount)) && Number((item as any).total_amount) > 0) {
       lineBilledTotal = Number((item as any).total_amount);
     } else {
-      lineBilledTotal = Math.max(0, (originalUnitPrice * qty) - totalDiscountAmount);
+      lineBilledTotal = Math.max(0, (originalUnitPrice * (enteredQty || baseQty)) - totalDiscountAmount);
     }
 
-    // Actual billed price per unit (what customer actually paid per unit)
-    const effectiveUnitPrice = qty > 0 ? (lineBilledTotal / qty) : originalUnitPrice;
-
-    const enteredUnit = (item as any).entered_unit;
-    const subUnits = (item as any).unit_infos?.sub_units || [];
-    const matchedSub = subUnits.find((su: any) => su.name === enteredUnit || su.short_name === enteredUnit);
-    let finalUnitPrice = effectiveUnitPrice;
+    // Price per BASE unit (what customer actually paid per base unit, e.g. per KG)
+    let finalUnitPrice = baseQty > 0 ? (lineBilledTotal / baseQty) : originalUnitPrice;
     let finalOrigUnitPrice = originalUnitPrice;
-    if (matchedSub && Number(matchedSub.factor) > 0) {
-      finalUnitPrice = finalUnitPrice / Number(matchedSub.factor);
-      finalOrigUnitPrice = finalOrigUnitPrice / Number(matchedSub.factor);
+    if (enteredFactor > 0 && enteredFactor < 1 && originalUnitPrice < finalUnitPrice) {
+      finalOrigUnitPrice = originalUnitPrice / enteredFactor;
     }
 
     if (isExclusive) {
@@ -124,7 +152,7 @@ const generateItems = (sale: SaleRecord, productMap: Record<string, string> = {}
       name: item.status === "REFUNDED" ? `(Refunded) ${productName}` : item.status === "EXCHANGED" ? `(Exchanged) ${productName}` : productName,
       sku: item.barcode?.trim() || (item.inventory_id || (item as any).product_id || "").slice(-6),
       category: (item as any).category || (item as any).category_name || (item as any).category_infos?.name || "General",
-      quantity: qty,
+      quantity: baseQty,
       returned_quantity: Number((item as any).returned_quantity ?? 0),
       unitPrice: finalUnitPrice,
       originalUnitPrice: finalOrigUnitPrice,
@@ -139,10 +167,10 @@ const generateItems = (sale: SaleRecord, productMap: Record<string, string> = {}
       serialno_id: item.serialno_id,
       serial_numbers: Array.isArray((item as any).serialno_infos) && (item as any).serialno_infos.length > 0 ? (item as any).serialno_infos : (item.serial_numbers || []),
       stocks_before: (item as any).stocks_before,
-      unit: (item as any).unit_infos?.name || (item as any).unit_name || (item.unit !== undefined ? item.unit : ((item as any).entered_unit !== undefined ? (item as any).entered_unit : "")),
-      entered_unit: (item as any).entered_unit !== undefined ? (item as any).entered_unit : ((item as any).unit_name || item.unit || ""),
-      entered_qty: Number((item as any).entered_qty ?? qty),
-      unit_infos: (item as any).unit_infos || null
+      unit: baseUnit,
+      entered_unit: enteredUnit,
+      entered_qty: enteredQty,
+      unit_infos: unitInfos
     } as any;
   });
 };
@@ -150,10 +178,20 @@ const generateItems = (sale: SaleRecord, productMap: Record<string, string> = {}
 const fmt = (n: number) => `₹${n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export const getUnitConversionFactor = (item: any, selectedUnit: string): number => {
-  if (!item || !selectedUnit || !item.unit_infos?.sub_units) return 1.0;
-  if (selectedUnit === item.unit_infos.name) return 1.0;
-  const su = item.unit_infos.sub_units.find((s: any) => s.name === selectedUnit || s.short_name === selectedUnit);
-  return su && su.factor && Number(su.factor) > 0 ? Number(su.factor) : 1.0;
+  if (!item || !selectedUnit) return 1.0;
+  const unitInfos = item.unit_infos || (item as any).unit_info;
+  if (!unitInfos) return 1.0;
+  const baseName = unitInfos.name || item.unit || "";
+  if (selectedUnit.trim().toLowerCase() === baseName.trim().toLowerCase()) return 1.0;
+  if (!unitInfos.sub_units || !Array.isArray(unitInfos.sub_units)) return 1.0;
+  
+  const su = unitInfos.sub_units.find((s: any) => 
+    (s.name && s.name.trim().toLowerCase() === selectedUnit.trim().toLowerCase()) || 
+    (s.short_name && s.short_name.trim().toLowerCase() === selectedUnit.trim().toLowerCase())
+  );
+  if (!su || su.factor === undefined || su.factor === null) return 1.0;
+  const numFactor = Number(su.factor);
+  return numFactor > 0 ? numFactor : 1.0;
 };
 
 /* ═══════════════════════════════════════════════════════════════
@@ -546,6 +584,23 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
   }, [sale?.customer_id, sale?.customer?.customer_id, getData]);
 
   const saleItems = useMemo<SaleItem[]>(() => (sale ? generateItems(sale, localProductMap) : []), [sale, localProductMap]);
+
+  useEffect(() => {
+    if (saleItems.length > 0) {
+      setState(s => {
+        const nextUnits = { ...s.itemUnits };
+        let changed = false;
+        saleItems.forEach(item => {
+          if (!nextUnits[item.id]) {
+            nextUnits[item.id] = item.entered_unit || item.unit;
+            changed = true;
+          }
+        });
+        return changed ? { ...s, itemUnits: nextUnits } : s;
+      });
+    }
+  }, [saleItems]);
+
   const reset = useCallback(() => setState(initialState()), []);
   const setStep = (step: ReturnStep) => setState(s => ({ ...s, step }));
   const setMode = (mode: ReturnMode) => setState(s => ({ ...s, mode, payments: [{ mode: "Cash", amount: 0 }] }));
@@ -598,11 +653,20 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
         if (!item) return s;
         const selectedUnit = s.itemUnits[item.id] || item.entered_unit || item.unit;
         const factor = getUnitConversionFactor(item, selectedUnit);
-        const maxReturnable = Math.max(0, (item?.quantity ?? 1) - (item?.returned_quantity ?? 0));
-        const maxReturnableInSelectedUnit = factor > 0 ? maxReturnable / factor : maxReturnable;
-        if (maxReturnableInSelectedUnit <= 0) return s; // already fully returned — ignore
-        next[itemId] = maxReturnableInSelectedUnit;
+        const baseMaxReturnable = Math.max(0, (item?.quantity ?? 1) - (item?.returned_quantity ?? 0));
+        const maxReturnableInSelectedUnit = factor > 0 ? (baseMaxReturnable / factor) : baseMaxReturnable;
+        const roundedMax = maxReturnableInSelectedUnit >= 1 ? Math.round(maxReturnableInSelectedUnit) : Number(maxReturnableInSelectedUnit.toFixed(3));
+        if (roundedMax <= 0) return s; // already fully returned — ignore
+        next[itemId] = roundedMax;
         if (item?.serial_numbers?.length) nextSer[itemId] = [...item.serial_numbers];
+        return {
+          ...s,
+          returnItems: next,
+          itemUnits: { ...s.itemUnits, [itemId]: selectedUnit },
+          exchangeMap: nextEx,
+          serialReturnMap: nextSer,
+          errors: { ...s.errors, items: undefined }
+        };
       }
       return { ...s, returnItems: next, exchangeMap: nextEx, serialReturnMap: nextSer, errors: { ...s.errors, items: undefined } };
     });
@@ -613,17 +677,21 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
     if (!item) return;
     setState(s => {
       const prevUnit = s.itemUnits[itemId] || item.entered_unit || item.unit;
+      if (prevUnit.trim().toLowerCase() === unit.trim().toLowerCase()) return s;
+
       const prevFactor = getUnitConversionFactor(item, prevUnit);
       const nextFactor = getUnitConversionFactor(item, unit);
       
       const baseMaxReturnable = Math.max(0, item.quantity - item.returned_quantity);
-      const maxReturnableInSelectedUnit = nextFactor > 0 ? baseMaxReturnable / nextFactor : baseMaxReturnable;
+      const maxReturnableInSelectedUnit = nextFactor > 0 ? (baseMaxReturnable / nextFactor) : baseMaxReturnable;
       
       const nextReturnItems = { ...s.returnItems };
       if (nextReturnItems[itemId] !== undefined) {
         const currentVal = nextReturnItems[itemId];
-        const converted = Math.round((currentVal * prevFactor) / nextFactor);
-        nextReturnItems[itemId] = Math.min(Math.max(1, converted), maxReturnableInSelectedUnit);
+        const converted = (currentVal * prevFactor) / nextFactor;
+        const roundedConverted = converted >= 1 ? Math.round(converted) : Number(converted.toFixed(3));
+        const clamped = Math.min(Math.max(converted > 0 ? (converted < 1 ? converted : 1) : 0, roundedConverted), maxReturnableInSelectedUnit);
+        nextReturnItems[itemId] = clamped;
       }
       return { ...s, itemUnits: { ...s.itemUnits, [itemId]: unit }, returnItems: nextReturnItems };
     });
@@ -634,16 +702,19 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
     setState(s => {
       if (!all) return { ...s, returnItems: {}, exchangeMap: {} };
       const next: Record<string, number> = {};
+      const nextUnits: Record<string, string> = { ...s.itemUnits };
       saleItems.forEach(i => {
         if (i.status !== "REFUNDED" && i.status !== "EXCHANGED") {
           const selectedUnit = s.itemUnits[i.id] || i.entered_unit || i.unit;
+          nextUnits[i.id] = selectedUnit;
           const factor = getUnitConversionFactor(i, selectedUnit);
-          const maxReturnable = Math.max(0, i.quantity - i.returned_quantity);
-          const maxReturnableInSelectedUnit = factor > 0 ? maxReturnable / factor : maxReturnable;
-          if (maxReturnableInSelectedUnit > 0) next[i.id] = maxReturnableInSelectedUnit;
+          const baseMaxReturnable = Math.max(0, i.quantity - i.returned_quantity);
+          const maxReturnableInSelectedUnit = factor > 0 ? (baseMaxReturnable / factor) : baseMaxReturnable;
+          const roundedMax = maxReturnableInSelectedUnit >= 1 ? Math.round(maxReturnableInSelectedUnit) : Number(maxReturnableInSelectedUnit.toFixed(3));
+          if (roundedMax > 0) next[i.id] = roundedMax;
         }
       });
-      return { ...s, returnItems: next, errors: { ...s.errors, items: undefined } };
+      return { ...s, returnItems: next, itemUnits: nextUnits, errors: { ...s.errors, items: undefined } };
     });
   }, [saleItems]);
 
@@ -656,9 +727,10 @@ const useReturnModalLogic = (sale: SaleRecord | null, productMap: Record<string,
       const factor = getUnitConversionFactor(item, selectedUnit);
       // Calculate max allowed quantity in the selected unit
       const baseMaxReturnable = Math.max(0, item.quantity - item.returned_quantity);
-      const maxReturnableInSelectedUnit = factor > 0 ? baseMaxReturnable / factor : baseMaxReturnable;
+      const maxReturnableInSelectedUnit = factor > 0 ? (baseMaxReturnable / factor) : baseMaxReturnable;
+      const minVal = maxReturnableInSelectedUnit < 1 ? 0.001 : 1;
 
-      return { ...s, returnItems: { ...s.returnItems, [itemId]: Math.min(Math.max(1, v), maxReturnableInSelectedUnit) } };
+      return { ...s, returnItems: { ...s.returnItems, [itemId]: Math.min(Math.max(minVal, v), maxReturnableInSelectedUnit) } };
     });
   }, [saleItems]);
 

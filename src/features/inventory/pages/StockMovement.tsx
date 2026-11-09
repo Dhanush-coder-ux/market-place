@@ -800,8 +800,14 @@ export default function StockMovementPage() {
 
     result.sort((a, b) => {
       if (sortField === "date") {
-        const diff = new Date(b.date).getTime() - new Date(a.date).getTime();
-        return sortDir === "desc" ? diff : -diff;
+        const timeB = parseMovementDate(b.date).getTime();
+        const timeA = parseMovementDate(a.date).getTime();
+        if (timeB !== timeA) {
+          return sortDir === "desc" ? timeB - timeA : timeA - timeB;
+        }
+        const idB = String(b.fullId || b.id || "");
+        const idA = String(a.fullId || a.id || "");
+        return sortDir === "desc" ? idB.localeCompare(idA) : idA.localeCompare(idB);
       } else {
         const diff = Math.abs(b.qty) - Math.abs(a.qty);
         return sortDir === "desc" ? diff : -diff;

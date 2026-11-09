@@ -37,7 +37,25 @@ export function extractSaleCustomerInfo(
   const addObj = sale.additional_infos || {};
   const dataObj = sale.datas || {};
 
-  const custEntry = sale.customer_id && customerMap ? customerMap[sale.customer_id] : null;
+  const cid = sale.customer_id || custObj.customer_id || custObj.id;
+  const directName = sale.customer_name || sale.customer_display_name || custObj.name || custObj.customer_name || onlineDetails.name || onlineDetails.customer_name;
+
+  let custEntry = cid && customerMap ? (customerMap[cid] || customerMap[String(cid).toLowerCase()]) : null;
+  if (!custEntry && directName && customerMap) {
+    const key = String(directName).trim().toLowerCase();
+    custEntry = customerMap[key] || customerMap[String(directName).trim()];
+    if (!custEntry) {
+      const foundVal = Object.values(customerMap).find((c: any) =>
+        c && typeof c === 'object' && (
+          (c.name && String(c.name).trim().toLowerCase() === key) ||
+          (c.customer_name && String(c.customer_name).trim().toLowerCase() === key) ||
+          (c.id && String(c.id) === String(cid))
+        )
+      );
+      if (foundVal) custEntry = foundVal;
+    }
+  }
+
   const custMapName = typeof custEntry === "string" ? custEntry : custEntry?.name || custEntry?.customer_name;
   const custMapPhone = typeof custEntry === "object" ? custEntry?.mobile_number || custEntry?.phone || custEntry?.customer_mobile_number : undefined;
   const custMapEmail = typeof custEntry === "object" ? custEntry?.email : undefined;
@@ -53,12 +71,12 @@ export function extractSaleCustomerInfo(
     Boolean(sale.online_details);
 
   const rawName =
+    sale.customer_name ||
     sale.customer_display_name ||
+    custObj.name ||
+    custObj.customer_name ||
     onlineDetails.name ||
     onlineDetails.customer_name ||
-    custObj.customer_name ||
-    custObj.name ||
-    sale.customer_name ||
     sale.user_name ||
     addObj.customer_name ||
     addObj.name ||

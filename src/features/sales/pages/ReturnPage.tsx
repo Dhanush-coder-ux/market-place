@@ -11,7 +11,7 @@ import { useApi } from "@/context/ApiContext";
 import { useToast } from "@/context/ToastContext";
 import { inventoryApi } from "@/services/api/inventory";
 import {
-  useReturnModalLogic, SaleRecord, ReturnStep, ReturnReason
+  useReturnModalLogic, SaleRecord, ReturnStep, ReturnReason, getUnitConversionFactor
 } from "../components/ReturnOrderFlow";
 import ProductSelectionModal from "../../billing/components/ProductSelectionModel";
 import { InventoryItem, ProductVariant } from "../../billing/types";
@@ -368,9 +368,13 @@ const ReturnPageContent: React.FC<{ sale: SaleRecord; productMap: Record<string,
               {saleItems.map((item, idx) => {
                 const checked = state.returnItems[item.id] !== undefined;
                 const isProcessed = item.status === "REFUNDED" || item.status === "EXCHANGED";
-                const maxReturnable = Math.max(0, item.quantity - item.returned_quantity);
-                const isDisabled = isProcessed || maxReturnable <= 0;
-                const qty = state.returnItems[item.id] ?? 1;
+                const selectedUnit = state.itemUnits[item.id] || item.entered_unit || item.unit;
+                const factor = getUnitConversionFactor(item, selectedUnit);
+                const baseMax = Math.max(0, item.quantity - item.returned_quantity);
+                const maxReturnable = factor > 0 ? (baseMax / factor) : baseMax;
+                const roundedMax = maxReturnable >= 1 ? Math.round(maxReturnable) : Number(maxReturnable.toFixed(3));
+                const isDisabled = isProcessed || roundedMax <= 0;
+                const qty = state.returnItems[item.id] ?? (roundedMax > 0 ? roundedMax : 1);
                 const reason = state.itemReasons[item.id] ?? "";
                 return (
                   <div key={item.id} onClick={() => !isDisabled && m.toggleItem(item.id)}
@@ -395,24 +399,39 @@ const ReturnPageContent: React.FC<{ sale: SaleRecord; productMap: Record<string,
                             </span>
                           )}
                         </div>
-                        <p className="font-mono text-[10px] text-slate-400">{item.sku} · Qty {item.quantity}</p>
+                        <p className="font-mono text-[10px] text-slate-400">{item.sku} · Qty {item.entered_qty || item.quantity} {item.entered_unit || item.unit}</p>
                       </div>
                       <div className="text-right flex-shrink-0">
                         {(item.discountAmount || 0) > 0 && item.originalUnitPrice && item.originalUnitPrice > item.unitPrice && (
                           <span className="font-mono text-[9px] text-slate-400 line-through block">
-                            {fmt(item.originalUnitPrice)}
+                            {fmt(item.originalUnitPrice * factor)}
                           </span>
                         )}
-                        <p className="font-mono text-[11px] font-bold text-slate-800">{fmt(item.unitPrice)}</p>
+                        <p className="font-mono text-[11px] font-bold text-slate-800">{fmt(item.unitPrice * factor)}</p>
                       </div>
                     </div>
                     {checked && (
                       <div className="mt-3 pt-3 border-t border-blue-100 space-y-2" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] text-slate-400 w-12 shrink-0">Qty</span>
-                          <QuantityStepper value={qty} max={maxReturnable} onChange={v => m.updateQty(item.id, v)} />
-                          <span className="text-[10px] text-slate-400">of {maxReturnable}</span>
+                          <QuantityStepper value={qty} max={roundedMax} onChange={v => m.updateQty(item.id, v)} />
+                          <span className="text-[10px] text-slate-400">of {roundedMax} {selectedUnit}</span>
                         </div>
+                        {item.unit_infos?.sub_units?.length > 0 && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-slate-400 w-12 shrink-0">Unit</span>
+                            <select
+                              value={state.itemUnits[item.id] || item.entered_unit || item.unit}
+                              onChange={e => m.setUnit(item.id, e.target.value)}
+                              className="h-8 px-2 text-[11px] border border-slate-200 rounded-lg bg-white text-slate-700 outline-none focus:border-blue-500 font-semibold"
+                            >
+                              <option value={item.unit}>{item.unit}</option>
+                              {item.unit_infos.sub_units.map((su: any) => (
+                                <option key={su.name} value={su.name}>{su.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] text-slate-400 w-12 shrink-0">Reason</span>
                           <div className="flex-1">
@@ -606,9 +625,13 @@ const ReturnPageContent: React.FC<{ sale: SaleRecord; productMap: Record<string,
             {state.step === 2 && state.mode === "refund" && saleItems.map((item, idx) => {
               const checked = state.returnItems[item.id] !== undefined;
               const isProcessed = item.status === "REFUNDED" || item.status === "EXCHANGED";
-              const maxReturnable = Math.max(0, item.quantity - item.returned_quantity);
-              const isDisabled = isProcessed || maxReturnable <= 0;
-              const qty = state.returnItems[item.id] ?? 1;
+              const selectedUnit = state.itemUnits[item.id] || item.entered_unit || item.unit;
+              const factor = getUnitConversionFactor(item, selectedUnit);
+              const baseMax = Math.max(0, item.quantity - item.returned_quantity);
+              const maxReturnable = factor > 0 ? (baseMax / factor) : baseMax;
+              const roundedMax = maxReturnable >= 1 ? Math.round(maxReturnable) : Number(maxReturnable.toFixed(3));
+              const isDisabled = isProcessed || roundedMax <= 0;
+              const qty = state.returnItems[item.id] ?? (roundedMax > 0 ? roundedMax : 1);
               const reason = state.itemReasons[item.id] ?? "";
               return (
                 <div key={item.id} onClick={() => !isDisabled && m.toggleItem(item.id)}
@@ -633,24 +656,39 @@ const ReturnPageContent: React.FC<{ sale: SaleRecord; productMap: Record<string,
                           </span>
                         )}
                       </div>
-                      <p className="font-mono text-[10px] text-slate-400">{item.sku} · Qty {item.quantity}</p>
+                      <p className="font-mono text-[10px] text-slate-400">{item.sku} · Qty {item.entered_qty || item.quantity} {item.entered_unit || item.unit}</p>
                     </div>
                     <div className="text-right flex-shrink-0">
                       {(item.discountAmount || 0) > 0 && item.originalUnitPrice && item.originalUnitPrice > item.unitPrice && (
                         <span className="font-mono text-[9px] text-slate-400 line-through block">
-                          {fmt(item.originalUnitPrice)}
+                          {fmt(item.originalUnitPrice * factor)}
                         </span>
                       )}
-                      <p className="font-mono text-[13px] font-bold text-slate-800">{fmt(item.unitPrice)}</p>
+                      <p className="font-mono text-[13px] font-bold text-slate-800">{fmt(item.unitPrice * factor)}</p>
                     </div>
                   </div>
                   {checked && (
                     <div className="mt-3 pt-3 border-t border-slate-100 space-y-2" onClick={e => e.stopPropagation()}>
                       <div className="flex items-center gap-2">
                         <span className="text-[10px] text-slate-400 w-12">Qty</span>
-                        <QuantityStepper value={qty} max={maxReturnable} onChange={v => m.updateQty(item.id, v)} />
-                        <span className="text-[10px] text-slate-400">of {maxReturnable}</span>
+                        <QuantityStepper value={qty} max={roundedMax} onChange={v => m.updateQty(item.id, v)} />
+                        <span className="text-[10px] text-slate-400">of {roundedMax} {selectedUnit}</span>
                       </div>
+                      {item.unit_infos?.sub_units?.length > 0 && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-slate-400 w-12">Unit</span>
+                          <select
+                            value={state.itemUnits[item.id] || item.entered_unit || item.unit}
+                            onChange={e => m.setUnit(item.id, e.target.value)}
+                            className="h-8 px-2 text-[11px] border border-slate-200 rounded-lg bg-white text-slate-700 outline-none focus:border-blue-500 font-semibold"
+                          >
+                            <option value={item.unit}>{item.unit}</option>
+                            {item.unit_infos.sub_units.map((su: any) => (
+                              <option key={su.name} value={su.name}>{su.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
                       <div className="flex items-center gap-2">
                         <span className="text-[10px] text-slate-400 w-12">Reason</span>
                         <div className="flex-1">

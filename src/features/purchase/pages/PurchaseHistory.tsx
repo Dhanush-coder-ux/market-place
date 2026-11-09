@@ -554,7 +554,21 @@ const GridCard = ({ po, selected, onClick }: { po: DirectPurchaseData; selected?
 
 const AmountWithReturnHover = ({ total, returns, refundAmount }: { total: number; returns?: any[]; refundAmount?: number }) => {
   const totalReturn = (returns?.reduce((sum, r) => {
-    return sum + Number(r.total_refund_amount || r.refund_amount || r.return_value || r.totalAmount || r.amount || r.total_cost || r.return_cost || 0);
+    let rGst = Number(r.total_gst_amount || r.gst_amount || r.payment_infos?.gst_amount || 0);
+    let rVal = Number(r.payment_infos?.return_value || r.total_refund_amount || r.refund_amount || r.return_value || r.totalAmount || r.amount || r.total_cost || r.return_cost || 0);
+    if (rGst === 0 && Array.isArray(r.items)) {
+      rGst = r.items.reduce((s: number, itm: any) => {
+        const q = Number(itm.entered_qty || itm.quantity || 0);
+        const p = Number(itm.buy_price || itm.price || 0);
+        const g = parseGst(itm.gst || itm.gst_rate || 0);
+        return s + (q * p * (g / 100));
+      }, 0);
+    }
+    const itemsBase = Array.isArray(r.items) ? r.items.reduce((s: number, itm: any) => s + (Number(itm.entered_qty || itm.quantity || 0) * Number(itm.buy_price || itm.price || 0)), 0) : 0;
+    if (rGst > 0 && (rVal <= itemsBase || rVal === 0)) {
+      rVal = (itemsBase || rVal) + rGst;
+    }
+    return sum + rVal;
   }, 0) || 0) + Number(refundAmount || 0);
 
   if (totalReturn === 0) {

@@ -77,6 +77,7 @@ export interface BillTotals {
   totalMrp: number;
   totalSavings: number;            // Savings against MRP
   hasMrpSavings: boolean;
+  deliveryFee?: number;
 }
 
 export function isShopGstRegistered(): boolean {

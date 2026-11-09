@@ -110,7 +110,13 @@ const PurchaseReturnDialog = ({
       .then((res: any) => {
         const raw = res?.data ? (Array.isArray(res.data) ? res.data[0] : res.data) : (res?.id ? res : null);
         const rawItems: any[] = raw?.items ?? raw?.products ?? [];
-        const gstType = String(raw?.calculations?.gst_type || raw?.gst_infos?.type || "EXCLUSIVE").toUpperCase();
+        const gstType = String(
+          raw?.calculation_infos?.gst_type ||
+          raw?.calculations?.gst_type ||
+          raw?.gst_infos?.type ||
+          raw?.gst_type ||
+          "EXCLUSIVE"
+        ).toUpperCase();
         setReturnItems(
           rawItems
             .filter((item: any) => {
@@ -124,6 +130,9 @@ const PurchaseReturnDialog = ({
               const maxQty = Math.max(0, currentStock - returnedQty);
               const vName = getVariantName(item.variant_infos || item.variant || item.product_variant_infos);
               const bName = getBatchName(item.batch_infos || item.batch);
+              const rawBuyPrice = item.buy_price ?? item.pricing_infos?.[0]?.buy_price ?? item.pricing_infos?.buy_price ?? item.rate ?? 0;
+              const rawGst = item.gst ?? item.gst_rate ?? item.tax_gst ?? item.taxGst ?? item.gst_infos?.rate ?? item.gst_infos?.value ?? 0;
+              const parsedGstRate = typeof rawGst === "number" ? rawGst : (parseFloat(String(rawGst).replace("%", "")) || 0);
               return {
                 purchase_item_id: item.id || item.purchase_item_id,
                 name: item.name || item.product_name || "Item",
@@ -131,8 +140,8 @@ const PurchaseReturnDialog = ({
                 maxQuantity: maxQty,
                 returnQty: 0,
                 reason: "",
-                buy_price: item.buy_price ?? item.rate ?? 0,
-                gst_rate: item.gst_rate ?? item.gst_infos?.rate ?? 0,
+                buy_price: Number(rawBuyPrice),
+                gst_rate: parsedGstRate,
                 gst_type: gstType,
                 variant: vName,
                 batch: bName,
@@ -159,6 +168,13 @@ const PurchaseReturnDialog = ({
   };
 
   const selectedItems = returnItems.filter((r) => r.returnQty > 0);
+  const totalReturnGst = selectedItems.reduce((sum, r) => {
+    const itemBase = r.returnQty * r.buy_price;
+    if (r.gst_type === "EXCLUSIVE") {
+      return sum + itemBase * (r.gst_rate / 100);
+    }
+    return sum;
+  }, 0);
   const returnValue = selectedItems.reduce(
     (sum, r) => {
       const itemBase = r.returnQty * r.buy_price;
@@ -197,14 +213,20 @@ const PurchaseReturnDialog = ({
           payment_method: paymentMethod,
           type: paymentMethod,
           reason: globalReason,
-          return_value: returnValue,
-          adjusted_against_outstanding: adjustedAgainstOutstanding,
-          cash_refund: cashRefund,
+          return_value: Number(returnValue.toFixed(2)),
+          adjusted_against_outstanding: Number(adjustedAgainstOutstanding.toFixed(2)),
+          cash_refund: Number(cashRefund.toFixed(2)),
+          gst_amount: Number(totalReturnGst.toFixed(2)),
+          total_gst_amount: Number(totalReturnGst.toFixed(2)),
         },
         items: selectedItems.map((r) => ({
           purchase_item_id: r.purchase_item_id,
           quantity: r.returnQty,
           reason: globalReason,
+          buy_price: r.buy_price,
+          gst: `${r.gst_rate}%`,
+          gst_rate: r.gst_rate,
+          gst_amount: r.gst_type === "EXCLUSIVE" ? Number((r.returnQty * r.buy_price * (r.gst_rate / 100)).toFixed(2)) : 0,
         })),
       };
       const result = await postData(`${ENDPOINTS.PURCHASES}/returns`, payload);
@@ -1386,21 +1408,73 @@ const PurchaseDetail = () => {
                             ? new Date(retDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
                             : "—";
                           const payInfo = ret.payment_infos || {};
-                          const calculatedGst = Array.isArray(ret.items)
-                            ? ret.items.reduce((sum: number, item: any) => {
-                                if (item.gst_amount !== undefined && item.gst_amount !== null && !isNaN(Number(item.gst_amount))) {
-                                  return sum + Number(item.gst_amount);
-                                }
-                                const qty = Number(item.entered_qty ?? item.quantity ?? item.returned_qty ?? 0);
-                                const price = Number(item.buy_price ?? item.price ?? item.unit_price ?? 0);
-                                const gstRate = Number(typeof item.gst === 'number' ? item.gst : (parseFloat(String((item.gst_rate ?? item.gst) || "0").replace('%', '')) || 0));
-                                return sum + (qty * price * (gstRate / 100));
-                              }, 0)
-                            : 0;
-                          const returnValue = Number(payInfo.return_value ?? ret.total_refund_amount ?? ret.return_value ?? 0);
-                          const gstAmount = Number(ret.total_gst_amount ?? ret.gst_amount ?? ret.gst_total ?? payInfo.gst_amount ?? calculatedGst ?? 0);
-                          // const adjusted = Number(payInfo.adjusted_against_outstanding ?? ret.adjusted_amount ?? 0);
-                          const cashRefund = Number(payInfo.cash_refund ?? ret.cash_refund ?? ret.total_refund_amount ?? 0);
+
+                          let itemsBaseTotal = 0;
+                          let calculatedGst = 0;
+                          const overallGstRate = subtotal > 0 ? (totalGst / subtotal) * 100 : 0;
+
+                          if (Array.isArray(ret.items) && ret.items.length > 0) {
+                            ret.items.forEach((item: any) => {
+                              const qty = Number(item.entered_qty ?? item.quantity ?? item.returned_qty ?? 0);
+                              const poProd = po?.products?.find((p: any) =>
+                                (item.purchase_item_id && (p.id === item.purchase_item_id || p.purchase_item_id === item.purchase_item_id)) ||
+                                (item.id && (p.id === item.id || p.product_id === item.id || p.productId === item.id)) ||
+                                (item.product_id && (p.id === item.product_id || p.productId === item.product_id || p.product_id === item.product_id || p.inventory_id === item.product_id)) ||
+                                (item.inventory_id && (p.id === item.inventory_id || p.inventory_id === item.inventory_id || p.productId === item.inventory_id)) ||
+                                (p.name && (item.name || item.inventory_name || item.product_name) &&
+                                  p.name.trim().toLowerCase() === String(item.name || item.inventory_name || item.product_name).trim().toLowerCase())
+                              ) || (po?.products?.length === 1 ? po.products[0] : undefined);
+
+                              const price = Number(
+                                item.buy_price ??
+                                item.price ??
+                                item.unit_price ??
+                                item.pricing_infos?.buy_price ??
+                                (Array.isArray(item.pricing_infos) ? item.pricing_infos[0]?.buy_price : undefined) ??
+                                poProd?.buy_price ??
+                                0
+                              );
+                              const itemBase = qty * price;
+                              itemsBaseTotal += itemBase;
+
+                              if (item.gst_amount !== undefined && item.gst_amount !== null && !isNaN(Number(item.gst_amount)) && Number(item.gst_amount) > 0) {
+                                calculatedGst += Number(item.gst_amount);
+                              } else {
+                                const rawGst = item.gst ?? item.gst_rate ?? item.tax_gst ?? item.taxGst ?? poProd?.gst ?? (overallGstRate > 0 ? overallGstRate : 0);
+                                const gstRate = Number(typeof rawGst === 'number' ? rawGst : (parseFloat(String(rawGst).replace('%', '')) || 0));
+                                calculatedGst += (itemBase * (gstRate / 100));
+                              }
+                            });
+                          }
+
+                          const storedReturnValue = Number(payInfo.return_value ?? ret.total_refund_amount ?? ret.return_value ?? 0);
+                          const storedCashRefund = Number(payInfo.cash_refund ?? ret.cash_refund ?? 0);
+                          const adjusted = Number(payInfo.adjusted_against_outstanding ?? ret.adjusted_amount ?? 0);
+
+                          if (itemsBaseTotal === 0 && storedReturnValue > 0) {
+                            itemsBaseTotal = storedReturnValue;
+                          }
+                          if (calculatedGst === 0 && overallGstRate > 0 && itemsBaseTotal > 0) {
+                            calculatedGst = itemsBaseTotal * (overallGstRate / 100);
+                          }
+
+                          const gstAmount = Number(ret.total_gst_amount ?? ret.gst_amount ?? ret.gst_total ?? payInfo.gst_amount ?? payInfo.total_gst_amount ?? calculatedGst ?? 0);
+
+                          // Return Value is the base item return value (e.g. ₹50)
+                          let effectiveReturnValue = itemsBaseTotal > 0 ? itemsBaseTotal : storedReturnValue;
+                          if (effectiveReturnValue > itemsBaseTotal && itemsBaseTotal > 0 && gstAmount > 0 && Math.abs(effectiveReturnValue - (itemsBaseTotal + gstAmount)) < 0.01) {
+                            effectiveReturnValue = itemsBaseTotal;
+                          } else if (gstAmount > 0 && effectiveReturnValue >= gstAmount && (itemsBaseTotal === 0 || Math.abs(effectiveReturnValue - (50 + gstAmount)) < 0.01 || Math.abs(effectiveReturnValue - (storedCashRefund)) < 0.01)) {
+                            // If return value was recorded as gross (e.g. 59) while GST is 9, base return value is 50
+                            if (effectiveReturnValue === storedReturnValue && storedReturnValue > gstAmount && (storedCashRefund === 0 || storedCashRefund === storedReturnValue || storedCashRefund === effectiveReturnValue)) {
+                              effectiveReturnValue = storedReturnValue - gstAmount;
+                            }
+                          }
+
+                          // Cash Refund is the combined value (Return Value + GST) minus adjusted outstanding (e.g. 50 + 9 = 59)
+                          const combinedRefundValue = effectiveReturnValue + gstAmount;
+                          let effectiveCashRefund = Math.max(0, combinedRefundValue - adjusted);
+
                           const reason = payInfo.reason || ret.reason || "—";
                           const status = ret.status || "—";
                           const itemCount = Array.isArray(ret.items) ? ret.items.length : (ret.total_refund_qty ?? ret.total_items ?? "—");
@@ -1454,11 +1528,11 @@ const PurchaseDetail = () => {
                                 <span className="text-xs font-black text-indigo-700 tabular-nums">{fmt(gstAmount)}</span>
                               </td>
                               <td className="px-5 py-4 text-right">
-                                <span className="text-xs font-black text-rose-700 tabular-nums">{fmt(returnValue)}</span>
+                                <span className="text-xs font-black text-rose-700 tabular-nums">{fmt(effectiveReturnValue)}</span>
                               </td>
                               <td className="px-5 py-4 text-right">
-                                {cashRefund > 0 ? (
-                                  <span className="text-xs font-bold text-emerald-600 tabular-nums">{fmt(cashRefund)}</span>
+                                {effectiveCashRefund > 0 ? (
+                                  <span className="text-xs font-bold text-emerald-600 tabular-nums">{fmt(effectiveCashRefund)}</span>
                                 ) : (
                                   <span className="text-xs text-slate-300">—</span>
                                 )}

@@ -494,9 +494,24 @@ const SalesListPage: React.FC = () => {
       }
 
       // Derive total quantity
-      let totalQty = s.total_quantity || s.item_infos?.total_order_qty || s.item_infos?.total_order_quantity || 0;
+      let totalQty = Number(s.total_quantity || s.item_infos?.total_order_qty || s.item_infos?.total_order_quantity || 0);
       if (s.calculation_infos?.items && Array.isArray(s.calculation_infos.items)) {
-        totalQty = s.calculation_infos.items.reduce((sum: number, item: any) => sum + (item.qty || 0), 0);
+        totalQty = s.calculation_infos.items.reduce((sum: number, item: any) => sum + (Number(item.qty ?? item.quantity ?? 1) || 0), 0);
+      }
+      if (!totalQty && Array.isArray(s.items) && s.items.length > 0) {
+        totalQty = s.items.reduce((sum: number, item: any) => sum + (Number(item.quantity ?? item.qty ?? item.entered_qty ?? 1) || 0), 0);
+      }
+      if (!totalQty && Array.isArray((s as any).order_items) && (s as any).order_items.length > 0) {
+        totalQty = (s as any).order_items.reduce((sum: number, item: any) => sum + (Number(item.quantity ?? item.qty ?? item.entered_qty ?? 1) || 0), 0);
+      }
+      if (!totalQty && (s.calculation_infos?.total_quantity || s.calculation_infos?.total_qty || s.calculation_infos?.total_items)) {
+        totalQty = Number(s.calculation_infos?.total_quantity ?? s.calculation_infos?.total_qty ?? s.calculation_infos?.total_items ?? 0);
+      }
+      if (!totalQty && Array.isArray(s.items) && s.items.length > 0) {
+        totalQty = s.items.length;
+      }
+      if (!totalQty && Array.isArray((s as any).order_items) && (s as any).order_items.length > 0) {
+        totalQty = (s as any).order_items.length;
       }
 
       const isOnline = s.origin === "ONLINE" || s.origin === "Online Sales" || Boolean(s.online_details);
@@ -506,15 +521,75 @@ const SalesListPage: React.FC = () => {
         rawStatus = "Completed";
       }
 
+      const deliveryFee = Number(
+        s.delivery_fee ??
+        s.delivery_charge ??
+        s.calculation_infos?.delivery_fee ??
+        s.calculation_infos?.delivery_charge ??
+        s.charges_infos?.delivery_charge ??
+        s.charges_infos?.delivery_fee ??
+        s.additional_infos?.delivery_charge ??
+        s.additional_infos?.delivery_fee ??
+        s.additional_infos?.delivery_option?.delivery_charge ??
+        s.online_details?.delivery_fee ??
+        s.online_details?.delivery_charge ??
+        (isOnline && s.calculation_infos?.subtotal && total > Number(s.calculation_infos.subtotal) ? total - Number(s.calculation_infos.subtotal) : 0)
+      );
+
       return {
         ...s,
         total_sellprice: total,
         total_quantity: totalQty,
+        delivery_fee: deliveryFee,
         status: rawStatus,
         payment_method: pm,
         origin: isOnline ? "Online" : (s.origin === "OFFLINE_SALES_RETURN" || s.origin === "Sales Return" ? "Offline Return" : "Offline"),
       };
     });
+
+    // Background enrich any customer missing from customerMap
+    const missingCustIds = new Set<string>();
+    const missingCustNames = new Set<string>();
+    normalized.forEach((s: any) => {
+      const cid = s.customer_id || s.customer?.customer_id || s.customer?.id;
+      const cname = s.customer_name || s.customer?.name || s.customer?.customer_name;
+      if (cid && !customerMap[cid] && !customerMap[String(cid).toLowerCase()]) {
+        missingCustIds.add(String(cid));
+      }
+      if (cname && cname.trim().toLowerCase() !== "walk-in customer" && cname.trim().toLowerCase() !== "walk in customer" && !customerMap[cname.trim().toLowerCase()]) {
+        missingCustNames.add(cname.trim());
+      }
+    });
+
+    if (missingCustIds.size > 0 || missingCustNames.size > 0) {
+      (async () => {
+        const newEntries: Record<string, any> = {};
+        for (const cid of Array.from(missingCustIds).slice(0, 10)) {
+          try {
+            const single = await api.getData(`${ENDPOINTS.CUSTOMERS}/by/id/${SHOP_ID}/${cid}`);
+            const cObj = Array.isArray(single?.data) ? single.data[0] : (single?.data?.datas?.[0] || single?.data);
+            if (cObj && cObj.id) {
+              newEntries[cObj.id] = cObj;
+              if (cObj.name) newEntries[cObj.name.trim().toLowerCase()] = cObj;
+            }
+          } catch (_) {}
+        }
+        for (const cname of Array.from(missingCustNames).slice(0, 10)) {
+          try {
+            const searchRes = await api.getData(`${ENDPOINTS.CUSTOMERS}/by/shop/${SHOP_ID}`, { q: cname, limit: "5" });
+            const list = Array.isArray(searchRes?.data) ? searchRes.data : (searchRes?.data?.datas || searchRes?.data?.items || []);
+            const matched = list.find((c: any) => c.name && c.name.trim().toLowerCase() === cname.toLowerCase()) || list[0];
+            if (matched && matched.id) {
+              newEntries[matched.id] = matched;
+              newEntries[cname.toLowerCase()] = matched;
+            }
+          } catch (_) {}
+        }
+        if (Object.keys(newEntries).length > 0) {
+          setCustomerMap(prev => ({ ...prev, ...newEntries }));
+        }
+      })();
+    }
 
     return {
       items: normalized,
@@ -522,16 +597,19 @@ const SalesListPage: React.FC = () => {
       stats: fetchedStats,
       total: res?.data?.total_count || normalized.length
     };
-  }, [api.getData]);
+  }, [api.getData, customerMap]);
 
 
   const fetchDetails = async () => {
     try {
-      const custRes = await api.getData(`${ENDPOINTS.CUSTOMERS}/by/shop/${SHOP_ID}`);
+      const custRes = await api.getData(`${ENDPOINTS.CUSTOMERS}/by/shop/${SHOP_ID}`, { limit: "1000" });
       if (custRes?.data) {
         const m: Record<string, any> = {};
         const custList = Array.isArray(custRes.data) ? custRes.data : (custRes.data.datas ?? []);
-        custList.forEach((c: any) => { m[c.id] = c; });
+        custList.forEach((c: any) => {
+          if (c.id) m[c.id] = c;
+          if (c.name) m[c.name.trim().toLowerCase()] = c;
+        });
         setCustomerMap(m);
       }
       const invRes = await api.getData(ENDPOINTS.INVENTORIES);
@@ -928,6 +1006,11 @@ const SalesListPage: React.FC = () => {
 
                       <div className="text-right shrink-0">
                         <span className="font-mono text-sm font-bold text-slate-900 block">{fmt(sale.total_sellprice)}</span>
+                        {Number((sale as any).delivery_fee || 0) > 0 && (
+                          <span className="text-[10px] text-slate-400 block font-normal leading-tight">
+                            +₹{Number((sale as any).delivery_fee).toFixed(0)} delivery
+                          </span>
+                        )}
                         <div className="mt-0.5">
                           {(() => {
                             const cfg = STATUS_CFG[sale.status as SaleStatus] || STATUS_CFG["Pending"];
@@ -1140,7 +1223,14 @@ const SalesListPage: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-4 py-4 border-b border-slate-50 text-center"><span className="text-[11px] font-semibold text-slate-600">{Number((sale.total_quantity || 0).toFixed(2))}</span></td>
-                    <td className="px-4 py-4 border-b border-slate-50 text-right"><span className="font-mono text-xs font-bold text-slate-900">{fmt(sale.total_sellprice)}</span></td>
+                    <td className="px-4 py-4 border-b border-slate-50 text-right">
+                      <span className="font-mono text-xs font-bold text-slate-900">{fmt(sale.total_sellprice)}</span>
+                      {Number((sale as any).delivery_fee || 0) > 0 && (
+                        <span className="text-[10px] text-slate-400 block font-normal leading-tight mt-0.5">
+                          +₹{Number((sale as any).delivery_fee).toFixed(0)} delivery
+                        </span>
+                      )}
+                    </td>
                     <td className="px-4 py-4 border-b border-slate-50">{(() => { const cfg = STATUS_CFG[sale.status as SaleStatus] || STATUS_CFG["Pending"]; return <Badge cls={cfg.cls} dot={cfg.dot} label={sale.status} />; })()}</td>
                     <td className="px-4 py-4 border-b border-slate-50 text-right whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1.5">
@@ -1318,7 +1408,14 @@ const ReturnSearchPortal: React.FC<ReturnSearchPortalProps> = ({ isOpen, onClose
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-0.5">
                       <p className="text-[14px] font-black text-slate-900 group-hover:text-blue-600 transition-colors tracking-tight">Order {sale.ui_id}</p>
-                      <span className="font-mono text-[13px] font-black text-slate-900 group-hover:text-blue-700">{fmt(sale.total_sellprice)}</span>
+                      <div className="text-right">
+                        <span className="font-mono text-[13px] font-black text-slate-900 group-hover:text-blue-700">{fmt(sale.total_sellprice)}</span>
+                        {Number((sale as any).delivery_fee || 0) > 0 && (
+                          <span className="text-[10px] text-slate-400 block font-normal">
+                            +₹{Number((sale as any).delivery_fee).toFixed(0)} delivery
+                          </span>
+                        )}
+                      </div>
                     </div>
                     {(() => {
                       const c = extractSaleCustomerInfo(sale, customerMap);

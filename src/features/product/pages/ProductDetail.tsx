@@ -852,6 +852,8 @@ const ProductDetail = () => {
                         baseSellPrice={sellingPrice} 
                         baseBuyPrice={buyingPrice}
                         parentGst={gstValue}
+                        parentMrp={datas.mrp}
+                        parentDiscountPercent={datas.discount_percent}
                       />
                     </div>
                   </SectionCard>

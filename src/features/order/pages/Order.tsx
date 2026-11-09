@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import {
-  LayoutGrid, List, X, Inbox
+  LayoutGrid, List, X, Inbox, RotateCcw
 } from "lucide-react";
 import OrdersHeader from "../components/OrdersHeader";
 import OrdersCard from "../components/OrdersCard";
@@ -14,6 +14,9 @@ import { orderApi } from "@/services/api/order";
 import { customerApi } from "@/services/api/customer";
 import type { OrderRecord } from "@/types/api";
 import { VerifyDeliveryModal } from "../components/VerifyDeliveryModal";
+import { ReturnRequestCard } from "../components/ReturnRequestCard";
+import { CreateReturnRequestModal } from "../components/CreateReturnRequestModal";
+import type { ReturnRequestRecord } from "../types";
 
 const toCardShape = (o: OrderRecord, customerMap?: Record<string, { name: string, phone: string }>) => {
   const c = o.customer_id && customerMap ? customerMap[o.customer_id] : null;
@@ -266,6 +269,12 @@ const Order = () => {
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [selectedOrder, setSelectedOrder] = useState<OrderDetailType | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // Return Requests state
+  const [returnRequests, setReturnRequests] = useState<ReturnRequestRecord[]>([]);
+  const [returnRequestsLoading, setReturnRequestsLoading] = useState(false);
+  const [requestReturnModalOrder, setRequestReturnModalOrder] = useState<any | null>(null);
+
   const [statusCounts, setStatusCounts] = useState<{
     ALL: number;
     PENDING: number;
@@ -273,6 +282,7 @@ const Order = () => {
     OUT_FOR_DELIVERY: number;
     DELIVERED: number;
     CANCELED: number;
+    RETURN_REQUESTS?: number;
   }>({
     ALL: 0,
     PENDING: 0,
@@ -280,6 +290,7 @@ const Order = () => {
     OUT_FOR_DELIVERY: 0,
     DELIVERED: 0,
     CANCELED: 0,
+    RETURN_REQUESTS: 0,
   });
 
   // Verify delivery state
@@ -341,21 +352,72 @@ const Order = () => {
 
         const isCanceled = (s: string) => s === "CANCELED" || s === "CANCELLED";
 
-        setStatusCounts({
+        setStatusCounts(prev => ({
           ALL: online.length,
           PENDING: online.filter((o) => (o.status || "").toUpperCase() === "PENDING").length,
           ACCEPTED: online.filter((o) => (o.status || "").toUpperCase() === "ACCEPTED").length,
           OUT_FOR_DELIVERY: online.filter((o) => (o.status || "").toUpperCase() === "OUT_FOR_DELIVERY").length,
           DELIVERED: online.filter((o) => (o.status || "").toUpperCase() === "DELIVERED").length,
           CANCELED: online.filter((o) => isCanceled((o.status || "").toUpperCase())).length,
-        });
+          RETURN_REQUESTS: prev.RETURN_REQUESTS ?? 0,
+        }));
       }
     }).catch(console.error);
   }, [refreshKey, dateRange, currentShopId]);
 
+  // Fetch return requests
+  useEffect(() => {
+    if (!currentShopId || currentShopId === "string") return;
+    setReturnRequestsLoading(true);
+    orderApi.getReturnRequests(currentShopId, { status: "ALL" })
+      .then((res: any) => {
+        const list = Array.isArray(res?.data) ? res.data : (Array.isArray(res?.data?.datas) ? res.data.datas : []);
+        setReturnRequests(list);
+        const pendingCount = list.filter((r: any) => (r.status || "").toUpperCase() === "PENDING").length;
+        setStatusCounts(prev => ({
+          ...prev,
+          RETURN_REQUESTS: pendingCount
+        }));
+      })
+      .catch((err) => {
+        console.error("Failed to fetch return requests", err);
+      })
+      .finally(() => {
+        setReturnRequestsLoading(false);
+      });
+  }, [refreshKey, currentShopId]);
+
+  const handleReturnRequestStatusChange = async (requestId: string, newStatus: "ACCEPTED" | "REJECTED", notes?: string) => {
+    try {
+      await orderApi.updateReturnRequestStatus(requestId, { status: newStatus, admin_notes: notes });
+      setReturnRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: newStatus, admin_notes: notes } : r));
+      setRefreshKey(k => k + 1);
+    } catch (e) {
+      console.error("Failed to update return request status", e);
+    }
+  };
+
+  const handleOpenDetailsById = async (orderId: string) => {
+    try {
+      const res = await orderApi.getOrderById(currentShopId, orderId);
+      if (res?.data) {
+        const fullOrder = Array.isArray(res.data) 
+            ? res.data[0] 
+            : (Array.isArray(res.data.datas) ? res.data.datas[0] : res.data);
+
+        setSelectedOrder(parseOrderForDetail(fullOrder, fullOrder, customerMap));
+        setIsOpen(true);
+        return;
+      }
+    } catch (e) {
+      console.error("Failed to open order details for id", orderId, e);
+    }
+  };
+
   // Fetch orders according to the currently active status tab & filters
   useEffect(() => {
     if (!currentShopId || currentShopId === "string") return;
+    if (status === "RETURN_REQUESTS") return;
     const params: any = {
       limit: "50",
       offset: "1",
@@ -470,7 +532,11 @@ const Order = () => {
 
         <div className="flex items-center justify-between pt-2">
           <p className="text-sm text-slate-500 font-medium">
-            Showing <span className="font-bold text-slate-800">{filteredOrders.length}</span> orders
+            Showing{" "}
+            <span className="font-bold text-slate-800">
+              {status === "RETURN_REQUESTS" ? returnRequests.length : filteredOrders.length}
+            </span>{" "}
+            {status === "RETURN_REQUESTS" ? "return requests" : "orders"}
             {dateRange?.startDate && dateRange?.endDate && (
               <span className="ml-2 text-xs text-blue-600 font-normal">
                 (Filtered by Date)
@@ -500,7 +566,32 @@ const Order = () => {
           </div>
         </div>
 
-        {loading ? (
+        {status === "RETURN_REQUESTS" ? (
+          returnRequestsLoading ? (
+            <div className="p-3">
+              <SkeletonLoader variant="card" rows={4} />
+            </div>
+          ) : returnRequests.length > 0 ? (
+            <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" : "flex flex-col gap-3"}>
+              {returnRequests.map((req) => (
+                <ReturnRequestCard
+                  key={req.id}
+                  request={req}
+                  onStatusChange={handleReturnRequestStatusChange}
+                  onViewOrder={handleOpenDetailsById}
+                  viewMode={viewMode}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center bg-white rounded-lg border border-slate-200 shadow-sm py-20 gap-3">
+              <div className="w-14 h-14 rounded-lg bg-slate-50 flex items-center justify-center text-slate-300">
+                <RotateCcw size={28} strokeWidth={2} />
+              </div>
+              <p className="text-sm font-bold text-slate-600">No return requests found</p>
+            </div>
+          )
+        ) : loading ? (
           <div className="p-3">
             <SkeletonLoader variant="card" rows={6} />
           </div>
@@ -515,6 +606,7 @@ const Order = () => {
                   setIsOpen={() => handleOpenDetails(order)}
                   viewMode={viewMode}
                   onStatusChange={(newStatus) => handleStatusChange(newStatus, order)}
+                  onRequestReturn={() => setRequestReturnModalOrder(order)}
                   onVerifyDelivery={() => setVerifyingOrder({ id: order.id, shopId: (order as any).shop_id || currentShopId, billNo: cardData.billNo, customerName: cardData.customerName })}
                 />
               );
@@ -531,7 +623,16 @@ const Order = () => {
       </div>
 
       <Drawer isOpen={isOpen} onClose={() => setIsOpen(false)} title="Order Details">
-        {selectedOrder && <OrderDetailView order={selectedOrder} />}
+        {selectedOrder && (
+          <OrderDetailView
+            order={selectedOrder}
+            onRequestReturn={() => {
+              const orig = orders.find(o => o.id === selectedOrder.id) || selectedOrder;
+              setRequestReturnModalOrder(orig);
+            }}
+            onUpdateReturnStatus={handleReturnRequestStatusChange}
+          />
+        )}
       </Drawer>
 
       <DateFilter
@@ -555,6 +656,17 @@ const Order = () => {
           // Update order status in local state to DELIVERED
           setOrders(prev => prev.map(o => o.id === verifyingOrder?.id ? { ...o, status: "DELIVERED" } : o));
           setVerifyingOrder(null);
+          setRefreshKey(k => k + 1);
+        }}
+      />
+
+      {/* Create Return Request Modal */}
+      <CreateReturnRequestModal
+        isOpen={!!requestReturnModalOrder}
+        onClose={() => setRequestReturnModalOrder(null)}
+        order={requestReturnModalOrder}
+        shopId={currentShopId}
+        onSubmitted={() => {
           setRefreshKey(k => k + 1);
         }}
       />

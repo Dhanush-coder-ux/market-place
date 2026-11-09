@@ -681,9 +681,25 @@ export default function CustomerDetail() {
                 const rawId = String(o.id || '').trim().toUpperCase();
                 const invNo = String(o.invoice_no || '').trim().toUpperCase();
 
-                const payInfos = typeof o.payment_infos === 'object' && o.payment_infos ? o.payment_infos : {};
-                const onCredit = Number(payInfos.ON_CREDIT ?? payInfos.on_credit ?? 0);
-                const nonCreditPaid = Object.entries(payInfos).reduce((s, [k, v]) => (!['ON_CREDIT', 'on_credit'].includes(k) ? s + Number(v || 0) : s), 0);
+                const payInfos = o.payment_infos;
+                let onCredit = 0;
+                let nonCreditPaid = 0;
+
+                if (Array.isArray(payInfos)) {
+                  payInfos.forEach((p: any) => {
+                    const m = String(p.mode || p.method || '').toUpperCase();
+                    const a = Number(p.amount ?? p.value ?? 0);
+                    if (m.includes('CREDIT')) onCredit += a;
+                    else nonCreditPaid += a;
+                  });
+                } else if (typeof payInfos === 'object' && payInfos !== null) {
+                  Object.entries(payInfos).forEach(([k, v]) => {
+                    const m = String(k).toUpperCase();
+                    const a = Number(typeof v === 'object' && v !== null ? (v as any).amount : v) || 0;
+                    if (m.includes('CREDIT')) onCredit += a;
+                    else nonCreditPaid += a;
+                  });
+                }
                 const orderTotal = Number(o.calculation_infos?.total ?? o.total_sellprice ?? o.grand_total ?? o.total_amount ?? 0);
 
                 const initialDue = onCredit > 0 ? onCredit : (orderTotal > 0 ? Math.max(0, orderTotal - nonCreditPaid) : Number(o.pending_amount || 0));
@@ -746,30 +762,45 @@ export default function CustomerDetail() {
 
                 if (invKey) {
                   let initialCreditForOrder = orderInitMap.get(invKey);
-                  if (initialCreditForOrder === undefined) {
-                    if (addInfos.invoice_outstanding !== undefined && addInfos.invoice_outstanding !== null) {
-                      initialCreditForOrder = Number(addInfos.invoice_outstanding);
-                    } else if (addInfos.total_amount && Number(addInfos.total_amount) > 0) {
-                      initialCreditForOrder = Math.max(0, Number(addInfos.total_amount) - Number(addInfos.paid_amount || 0));
-                    } else {
-                      initialCreditForOrder = isCreditAddition ? Number(h.cleared_infos?.outstanding_after ?? h.outstanding_amount ?? 0) : displayAmount;
-                    }
-                  }
+                  const orderTotal = Number(addInfos.total_amount ?? 0);
+                  const paidUpfront = Number(addInfos.paid_amount ?? addInfos.cleared_amount ?? displayAmount ?? 0);
+                  const isFullyPaidUpfront = (orderTotal > 0 && paidUpfront >= orderTotal) || (orderInitMap.has(invKey) && orderInitMap.get(invKey) === 0);
 
-                  if (isCreditAddition) {
-                    runningInvBalance.set(invKey, initialCreditForOrder);
-                    rowInvOutstanding = initialCreditForOrder;
+                  if (isFullyPaidUpfront) {
+                    rowInvOutstanding = 0;
+                    runningInvBalance.set(invKey, 0);
                   } else {
-                    const currentBal = runningInvBalance.has(invKey) ? runningInvBalance.get(invKey)! : initialCreditForOrder;
-                    const newBal = Math.max(0, currentBal - displayAmount);
-                    runningInvBalance.set(invKey, newBal);
-                    rowInvOutstanding = newBal;
+                    if (initialCreditForOrder === undefined || isNaN(initialCreditForOrder)) {
+                      if (addInfos.invoice_outstanding !== undefined && addInfos.invoice_outstanding !== null) {
+                        initialCreditForOrder = Number(addInfos.invoice_outstanding);
+                      } else if (orderTotal > 0) {
+                        initialCreditForOrder = Math.max(0, orderTotal - paidUpfront);
+                      } else {
+                        initialCreditForOrder = isCreditAddition ? Number(h.cleared_infos?.outstanding_after ?? h.outstanding_amount ?? 0) : displayAmount;
+                      }
+                    }
+
+                    if (isCreditAddition) {
+                      const effectiveCredit = (orderTotal > 0 && paidUpfront > 0) ? Math.max(0, orderTotal - paidUpfront) : initialCreditForOrder;
+                      runningInvBalance.set(invKey, effectiveCredit);
+                      rowInvOutstanding = effectiveCredit;
+                    } else {
+                      const currentBal = runningInvBalance.has(invKey) ? runningInvBalance.get(invKey)! : initialCreditForOrder;
+                      const newBal = Math.max(0, currentBal - displayAmount);
+                      runningInvBalance.set(invKey, newBal);
+                      rowInvOutstanding = newBal;
+                    }
                   }
                 } else {
                   rowInvOutstanding = Number((outAfter || h.outstanding_amount) ?? 0);
                 }
 
+                // Key by object reference so order/filtering never causes index mismatch
+                entryBalanceMap.set(h, rowInvOutstanding);
                 if (h.id) entryBalanceMap.set(h.id, rowInvOutstanding);
+                if (h._id) entryBalanceMap.set(h._id, rowInvOutstanding);
+                if (h.id) entryBalanceMap.set(String(h.id), rowInvOutstanding);
+                if (h._id) entryBalanceMap.set(String(h._id), rowInvOutstanding);
                 entryBalanceMap.set(idx, rowInvOutstanding);
               });
 
@@ -912,7 +943,7 @@ export default function CustomerDetail() {
                                     </span>
                                   </td>
                                   <td className="px-4 py-3 text-sm text-slate-700 font-bold whitespace-nowrap">
-                                    ₹{Number(((h.id && entryBalanceMap.has(h.id)) ? entryBalanceMap.get(h.id) : (entryBalanceMap.has(i) ? entryBalanceMap.get(i) : (outAfter || h.outstanding_amount))) ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    ₹{Number((entryBalanceMap.has(h) ? entryBalanceMap.get(h) : ((h.id && entryBalanceMap.has(h.id)) ? entryBalanceMap.get(h.id) : ((h._id && entryBalanceMap.has(h._id)) ? entryBalanceMap.get(h._id) : (outAfter || h.outstanding_amount)))) ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </td>
                                   <td className="px-4 py-3 whitespace-nowrap">
                                     <span className={`text-[11px] font-black px-2.5 py-1 rounded-md uppercase tracking-wider flex items-center w-fit ${badgeColorClass}`}>

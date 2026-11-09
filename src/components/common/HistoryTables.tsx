@@ -905,7 +905,6 @@ export function CustomerPurchasesTable({ rows, loading, onNavigateToSale }: Cust
                   <th className="px-5 py-3.5">Order Date</th>
                   <th className="px-5 py-3.5">Qty</th>
                   <th className="px-5 py-3.5">Financials</th>
-                  <th className="px-5 py-3.5">Payment Summary</th>
                   <th className="px-5 py-3.5 text-right">Status</th>
                   <th className="px-5 py-3.5 w-12"></th>
                 </tr>
@@ -1025,29 +1024,6 @@ export function CustomerPurchasesTable({ rows, loading, onNavigateToSale }: Cust
                       </td>
                       <td className="px-5 py-4 whitespace-nowrap font-black text-sm text-slate-800 tabular-nums">
                         ₹{total.toLocaleString('en-IN')}
-                      </td>
-                      <td className="px-5 py-4 whitespace-nowrap">
-                        <div className="flex flex-wrap gap-1.5">
-                          {order.payments && Object.entries(order.payments).map(([mode, amount]) => {
-                            const uMode = mode.toUpperCase();
-                            const isCredit = uMode === 'CREDIT' || uMode === 'ON_CREDIT';
-                            const isCash = uMode === 'CASH';
-                            return (
-                              <div key={mode} className={`px-2 py-0.5 rounded text-[9px] font-black border flex items-center gap-1.5 ${isCredit ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                                  isCash ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                                    'bg-violet-50 text-violet-600 border-violet-100'
-                                }`}>
-                                <div className={`w-1 h-1 rounded-full ${isCredit ? 'bg-blue-400' :
-                                    isCash ? 'bg-emerald-400' :
-                                      'bg-violet-400'
-                                  }`} />
-                                {uMode === 'ON_CREDIT' ? 'CREDIT' : uMode}
-                                <span className="ml-0.5">₹{Number(amount).toLocaleString('en-IN')}</span>
-                              </div>
-                            );
-                          })}
-                          {!order.payments && <span className="text-[9px] font-bold text-slate-300 italic">No payment record</span>}
-                        </div>
                       </td>
                       <td className="px-5 py-4 whitespace-nowrap text-right">
                         <LocalStatusBadge status={order.status || "Pending"} />

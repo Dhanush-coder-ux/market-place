@@ -149,4 +149,55 @@ export const orderApi = {
   getExchanges: async (params?: Record<string, any>) => {
     return await apiClient.get(ENDPOINTS.EXCHANGE, params);
   },
+
+  // ─── RETURN REQUESTS ─────────────────────────────────────────────────────
+
+  /**
+   * Customer / staff creates a return request for an order
+   */
+  createReturnRequest: async (data: {
+    order_id: string;
+    shop_id?: string;
+    items: Array<{
+      order_item_id?: string;
+      product_id?: string;
+      quantity?: number;
+      unit?: string;
+      reason?: string;
+    }>;
+    description: string;
+    customer_name?: string;
+    customer_phone?: string;
+    customer_email?: string;
+    customer_id?: string;
+  }) => {
+    return await apiClient.post(`${ENDPOINTS.RETURN}/request`, data);
+  },
+
+  /**
+   * Get return requests for a specific shop
+   */
+  getReturnRequests: async (shopId: string, params?: Record<string, any>) => {
+    if (!shopId) throw new Error("Shop ID is required.");
+    return await apiClient.get(`${ENDPOINTS.RETURN}/requests/${shopId}`, params);
+  },
+
+  /**
+   * Get return requests for a specific order
+   */
+  getReturnRequestsByOrder: async (orderId: string) => {
+    if (!orderId) throw new Error("Order ID is required.");
+    return await apiClient.get(`${ENDPOINTS.RETURN}/requests/order/${orderId}`);
+  },
+
+  /**
+   * Update return request status (ACCEPTED or REJECTED)
+   */
+  updateReturnRequestStatus: async (
+    requestId: string,
+    data: { status: "ACCEPTED" | "REJECTED" | string; admin_notes?: string }
+  ) => {
+    if (!requestId) throw new Error("Request ID is required.");
+    return await apiClient.put(`${ENDPOINTS.RETURN}/requests/${requestId}/status`, data);
+  },
 };

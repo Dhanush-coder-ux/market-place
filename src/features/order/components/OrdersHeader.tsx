@@ -7,7 +7,8 @@ import {
   CheckCircle,
   Truck,
   PackageCheck,
-  XCircle
+  XCircle,
+  RotateCcw
 } from "lucide-react";
 
 // Define the pipeline stages with corresponding icons
@@ -18,6 +19,7 @@ const pipelineTabs = [
   { label: "Out For Delivery", value: "OUT_FOR_DELIVERY", icon: Truck },
   { label: "Delivered", value: "DELIVERED", icon: PackageCheck },
   { label: "Canceled", value: "CANCELED", icon: XCircle },
+  { label: "Return Requests", value: "RETURN_REQUESTS", icon: RotateCcw },
 ];
 
 const OrdersHeader: React.FC<OrdersHeaderProps> = ({

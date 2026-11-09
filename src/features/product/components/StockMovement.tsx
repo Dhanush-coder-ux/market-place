@@ -237,7 +237,22 @@ const StockMovementTab = ({ inventoryId, product }: StockMovementTabProps) => {
 
 
 
-        rows.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        const parseDate = (d?: any): number => {
+          if (!d) return 0;
+          if (d instanceof Date) return d.getTime();
+          const str = String(d).trim().replace(" ", "T");
+          const t = new Date(str.includes("T") ? (str.endsWith("Z") || str.includes("+") ? str : str + "Z") : str + "T00:00:00Z").getTime();
+          return isNaN(t) ? new Date(str).getTime() || 0 : t;
+        };
+
+        rows.sort((a, b) => {
+          const tB = parseDate(b.date);
+          const tA = parseDate(a.date);
+          if (tB !== tA) return tB - tA;
+          const idB = String(b.id || b.uiId || "");
+          const idA = String(a.id || a.uiId || "");
+          return idB.localeCompare(idA);
+        });
         setMovements(rows);
       })
       .catch(() => {

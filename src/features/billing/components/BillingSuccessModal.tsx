@@ -201,7 +201,7 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
           (printersList.find((p) => p.id === selectedPrinterId) ||
             printersList.find((p) => p.isDefault) ||
             printersList[0] ||
-            getPrinterConfig()).includeDigitalStoreQr && (shopData?.visible_online !== false)
+            getPrinterConfig()).includeDigitalStoreQr !== false
         ),
         digitalStoreQrMessage: (
           printersList.find((p) => p.id === selectedPrinterId) ||
@@ -888,7 +888,7 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
                 <hr className="receipt-separator" />
 
                 {/* ── Digital Store QR on Receipt (Visible when enabled) ── */}
-                {Boolean(selectedPrinter?.includeDigitalStoreQr && (shopData?.visible_online !== false)) && (
+                {Boolean(selectedPrinter?.includeDigitalStoreQr !== false) && (
                   <div className="text-center my-2.5 pt-2 border-t border-dashed border-[#DDD7CD]">
                     <div className="flex justify-center my-2">
                       <div className="p-2 bg-white rounded-lg border border-[#e2e8f0] shadow-xs inline-flex items-center justify-center">

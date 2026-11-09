@@ -1,5 +1,5 @@
 import React from "react";
-import { Phone, User, ShoppingBag, IndianRupee, Percent, Truck, Tag } from "lucide-react";
+import { Phone, User, ShoppingBag, IndianRupee, Percent, Truck, Tag, RotateCcw } from "lucide-react";
 import { AntBadge } from "@/components/ui/AntBadge";
 
 export type OrderItem = {
@@ -44,6 +44,7 @@ export const cleanVariantText = (text?: string | null): string => {
 };
 
 export type OrderDetailType = {
+  id?: string;
   billNo: string;
   customerName: string;
   phone: string;
@@ -62,9 +63,14 @@ export type OrderDetailType = {
   online_details?: any;
   status_updated_by?: string;
   additional_infos?: any;
+  return_requests?: any[];
 };
 
-const OrderDetailView: React.FC<{ order: OrderDetailType }> = ({ order }) => {
+const OrderDetailView: React.FC<{
+  order: OrderDetailType;
+  onRequestReturn?: () => void;
+  onUpdateReturnStatus?: (requestId: string, status: "ACCEPTED" | "REJECTED") => void;
+}> = ({ order, onRequestReturn, onUpdateReturnStatus }) => {
   const gstAmt = Number(order.gstAmount || 0);
   const hasGst = gstAmt > 0;
   const cgstVal = order.cgst !== undefined ? order.cgst : Number((gstAmt / 2).toFixed(2));
@@ -340,6 +346,82 @@ const OrderDetailView: React.FC<{ order: OrderDetailType }> = ({ order }) => {
           </span>
         </div>
       </div>
+
+      {/* Return Requests Associated With This Order */}
+      {Array.isArray(order.return_requests) && order.return_requests.length > 0 && (
+        <div className="bg-amber-50/50 rounded-xl border border-amber-200/80 p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-amber-800 flex items-center gap-1.5">
+              <RotateCcw size={14} />
+              Return Requests ({order.return_requests.length})
+            </h4>
+          </div>
+
+          <div className="space-y-2.5">
+            {order.return_requests.map((rr: any, idx: number) => {
+              const rrStatus = (rr.status || "PENDING").toUpperCase();
+              return (
+                <div key={rr.id || idx} className="bg-white rounded-lg border border-amber-200/60 p-3 space-y-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-800">Request #{String(rr.id).slice(-6)}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      rrStatus === "ACCEPTED" ? "bg-emerald-100 text-emerald-700" :
+                      rrStatus === "REJECTED" ? "bg-red-100 text-red-700" :
+                      "bg-amber-100 text-amber-700"
+                    }`}>
+                      {rrStatus}
+                    </span>
+                  </div>
+
+                  <p className="text-slate-600 italic bg-slate-50 p-2 rounded border border-slate-100">
+                    "{rr.description}"
+                  </p>
+
+                  {Array.isArray(rr.items) && rr.items.length > 0 && (
+                    <div className="text-[11px] text-slate-500">
+                      <span className="font-semibold text-slate-700">Items:</span>{" "}
+                      {rr.items.map((i: any) => `${i.product_name} (Qty: ${i.quantity})`).join(", ")}
+                    </div>
+                  )}
+
+                  {rrStatus === "PENDING" && onUpdateReturnStatus && (
+                    <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-100">
+                      <button
+                        type="button"
+                        onClick={() => onUpdateReturnStatus(rr.id, "REJECTED")}
+                        className="px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-red-600 bg-red-50 hover:bg-red-600 hover:text-white rounded border border-red-200 transition-colors"
+                      >
+                        Reject
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onUpdateReturnStatus(rr.id, "ACCEPTED")}
+                        className="px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 hover:bg-emerald-600 hover:text-white rounded border border-emerald-200 transition-colors"
+                      >
+                        Accept
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Action Footer: Request Return Button */}
+      {onRequestReturn && (
+        <div className="pt-2">
+          <button
+            type="button"
+            onClick={onRequestReturn}
+            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-500 hover:text-white transition-all shadow-xs"
+          >
+            <RotateCcw size={14} strokeWidth={2.5} />
+            Submit Return Request for This Order
+          </button>
+        </div>
+      )}
     </div>
   );
 };

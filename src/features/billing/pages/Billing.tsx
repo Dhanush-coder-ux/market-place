@@ -431,25 +431,32 @@ const Billing = () => {
         include_gst: includeGst,
         billing_type: isInvoice ? "INVOICE" : "BILL",
         is_invoice: isInvoice,
-        items: billTotals.lines.map(l => ({
-          product_id: l.inventoryId,
-          name: l.name,
-          qty: l.qty,
-          price: l.sellingPrice,
-          mrp: l.mrp || null,
-          product_discount_amount: l.productDiscountAmount,
-          line_discount_mode: l.lineDiscountMode || '₹',
-          line_discount_value: l.lineDiscountValue || 0,
-          line_discount_amount: l.lineDiscountAmount,
-          bill_discount_share: l.billDiscountShare,
-          final_inclusive: l.finalInclusive,
-          taxable_value: l.taxableValue,
-          gst_rate: l.gstRate,
-          gst_amount: l.gstAmount,
-          cgst: l.cgst,
-          sgst: l.sgst,
-          cost_at_sale: l.costPrice || 0,
-        })),
+        items: billTotals.lines.map(l => {
+          const orig = filledItems.find(fi => fi.inventoryId === l.inventoryId || fi.id === l.id);
+          const selUnit = orig?.selectedUnit || (orig as any)?.unit || null;
+          return {
+            product_id: l.inventoryId,
+            name: l.name,
+            qty: l.qty,
+            unit: selUnit,
+            entered_unit: selUnit,
+            entered_qty: orig?.qty ?? l.qty,
+            price: l.sellingPrice,
+            mrp: l.mrp || null,
+            product_discount_amount: l.productDiscountAmount,
+            line_discount_mode: l.lineDiscountMode || '₹',
+            line_discount_value: l.lineDiscountValue || 0,
+            line_discount_amount: l.lineDiscountAmount,
+            bill_discount_share: l.billDiscountShare,
+            final_inclusive: l.finalInclusive,
+            taxable_value: l.taxableValue,
+            gst_rate: l.gstRate,
+            gst_amount: l.gstAmount,
+            cgst: l.cgst,
+            sgst: l.sgst,
+            cost_at_sale: l.costPrice || 0,
+          };
+        }),
       };
 
       // ── Step 4: POST /orders to confirm the order ───────────────────────────

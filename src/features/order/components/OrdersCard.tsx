@@ -1,6 +1,6 @@
 import { 
   Phone, User, IndianRupee, Wifi, ArrowRight, 
-  Truck
+  Truck, RotateCcw
 } from "lucide-react";
 import { AntBadge } from "@/components/ui/AntBadge";
 
@@ -22,6 +22,7 @@ interface OrdersCardProps {
   viewMode?: "grid" | "list";
   onStatusChange?: (newStatus: string) => void;
   onVerifyDelivery?: () => void;
+  onRequestReturn?: () => void;
 }
 
 const DeliveryBadge = ({ onClick }: { onClick?: () => void }) => (
@@ -36,7 +37,7 @@ const DeliveryBadge = ({ onClick }: { onClick?: () => void }) => (
   </button>
 );
 
-const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "grid", onStatusChange, onVerifyDelivery }) => {
+const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "grid", onStatusChange, onVerifyDelivery, onRequestReturn }) => {
   const variant = statusConfig[order.status] ?? "ps-draft";
   const showDeliveryVerify = order.origin === "ONLINE" && !["COMPLETED", "CANCELED", "REFUNDED", "DELIVERED"].includes(order.status);
 
@@ -63,6 +64,22 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
       return (
         <div className={`flex gap-2 ${isGrid ? 'w-full' : ''}`}>
           <button onClick={() => onStatusChange?.("DELIVERED")} className={`${btnBase} bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-500 hover:text-white`}>Delivered</button>
+        </div>
+      );
+    }
+    if (order.status === "DELIVERED" || order.status === "COMPLETED") {
+      return (
+        <div className={`flex gap-2 ${isGrid ? 'w-full' : ''}`}>
+          {onRequestReturn && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onRequestReturn(); }}
+              className={`${btnBase} bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-500 hover:text-white`}
+            >
+              <RotateCcw size={12} strokeWidth={2.5} />
+              Return
+            </button>
+          )}
         </div>
       );
     }

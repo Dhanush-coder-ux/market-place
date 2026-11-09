@@ -178,7 +178,7 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
     setIsTesting(true);
     setStatusMessage(null);
     try {
-      const res = await printTestReceipt(config, shopData);
+      const res = await printTestReceipt(config, activeShop);
       if (res.success) {
         setStatusMessage({ type: "success", text: res.message });
         showToast("Test receipt sent to printer!", "success");

@@ -291,6 +291,12 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
                   <span className={config.summary.value}>₹{formatINR(billTotals.totalGst)}</span>
                </div>
              )}
+             {Number(billTotals.deliveryFee || 0) > 0 && (
+               <div className={config.summary.row}>
+                  <span>Delivery Fee</span>
+                  <span className={config.summary.value}>+₹{formatINR(Number(billTotals.deliveryFee))}</span>
+               </div>
+             )}
              {billTotals.roundOff !== 0 && (
                <div className={config.summary.row}>
                   <span>Round Off</span>

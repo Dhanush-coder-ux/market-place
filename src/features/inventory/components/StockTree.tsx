@@ -466,7 +466,9 @@ export const VariantRows = ({
   parentGst,
   parentStorageLocation,
   parentReorderPoint,
-  hideReorderPoint = false
+  hideReorderPoint = false,
+  parentMrp,
+  parentDiscountPercent,
 }: {
   combinations: any[];
   baseSellPrice: any;
@@ -475,6 +477,8 @@ export const VariantRows = ({
   parentStorageLocation?: string | null;
   parentReorderPoint?: number | null;
   hideReorderPoint?: boolean;
+  parentMrp?: any;
+  parentDiscountPercent?: any;
 }) => {
   const [expandedVariant, setExpandedVariant] = useState<string | null>(null);
   const isGstReg = isShopGstRegistered();
@@ -496,6 +500,7 @@ export const VariantRows = ({
               <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Stock</th>
               <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Buy Price</th>
               <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Sell Price</th>
+              <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Discount</th>
               <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-left">Batch Count</th>
 
               {!hideReorderPoint && (
@@ -562,6 +567,46 @@ export const VariantRows = ({
                 buyGstAmt = Math.round((displayBuyPrice * (gstRate / 100)) * 100) / 100;
                 displayBuyPrice = Math.round((displayBuyPrice + buyGstAmt) * 100) / 100;
               }
+
+              const varMrp = Number(
+                comb.pricing_infos?.mrp ??
+                comb.mrp ??
+                combDatas.mrp ??
+                comb.additional_infos?.mrp ??
+                combDatas.additional_infos?.mrp ??
+                (parentMrp ? Number(parentMrp) : 0)
+              );
+
+              const varDiscPct = Number(
+                comb.pricing_infos?.discount_percent ??
+                comb.discount_percent ??
+                combDatas.discount_percent ??
+                comb.additional_infos?.discount_percent ??
+                combDatas.additional_infos?.discount_percent ??
+                (parentDiscountPercent ? Number(parentDiscountPercent) : 0)
+              );
+
+              const varDiscVal = Number(
+                comb.pricing_infos?.discount_value ??
+                comb.discount_value ??
+                comb.discount ??
+                combDatas.discount_value ??
+                comb.additional_infos?.discount_value ??
+                combDatas.additional_infos?.discount_value ??
+                0
+              );
+
+              const offerExpiry = comb.pricing_infos?.offer_valid_until || comb.offer_valid_until || combDatas.offer_valid_until;
+              let isExpired = false;
+              if (offerExpiry) {
+                const d = new Date(offerExpiry);
+                d.setHours(23, 59, 59, 999);
+                if (d < new Date()) isExpired = true;
+              }
+
+              const computedDiffPct = (varMrp > 0 && displaySellPrice > 0 && varMrp > displaySellPrice)
+                ? ((varMrp - displaySellPrice) / varMrp) * 100
+                : 0;
 
               return (
                 <Fragment key={variantId}>
@@ -645,15 +690,49 @@ export const VariantRows = ({
                     {/* Sell Price */}
                     <td className="px-4 py-2 align-middle text-right">
                       <div className="flex flex-col items-end">
-                        <span className="text-[13px] font-bold text-slate-800 tabular-nums flex items-baseline gap-1 justify-end">
-                          {formatCurrency(displaySellPrice)}
-                        </span>
+                        <div className="flex items-baseline gap-1.5 justify-end flex-wrap">
+                          <span className="text-[13px] font-bold text-slate-800 tabular-nums">
+                            {formatCurrency(displaySellPrice)}
+                          </span>
+                          {varMrp > 0 && varMrp > displaySellPrice && (
+                            <span className="text-[10px] text-slate-400 line-through tabular-nums font-normal" title={`MRP: ${formatCurrency(varMrp)}`}>
+                              MRP {formatCurrency(varMrp)}
+                            </span>
+                          )}
+                        </div>
                         {isGstReg && sellGstAmt > 0 && (
                           <span className="text-[9px] text-slate-500 font-medium">
                             {formatCurrency(sellTaxable)} + {formatCurrency(sellGstAmt)} GST {gstRate}%
                           </span>
                         )}
                       </div>
+                    </td>
+
+                    {/* Discount */}
+                    <td className="px-4 py-2 align-middle text-center">
+                      {!isExpired && (varDiscPct > 0 || varDiscVal > 0 || computedDiffPct > 0) ? (
+                        <div className="inline-flex flex-col items-center gap-0.5">
+                          {varDiscPct > 0 ? (
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              {varDiscPct}% OFF
+                            </span>
+                          ) : varDiscVal > 0 ? (
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              ₹{varDiscVal} OFF
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              {Math.round(computedDiffPct)}% OFF
+                            </span>
+                          )}
+                        </div>
+                      ) : isExpired ? (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-400">
+                          Expired
+                        </span>
+                      ) : (
+                        <span className="text-[12px] text-slate-400 font-medium">—</span>
+                      )}
                     </td>
 
                     {/* Batch Count */}
@@ -698,7 +777,7 @@ export const VariantRows = ({
                   {/* Serials Area */}
                   {hasSerials && (
                     <tr className="bg-indigo-50/10">
-                      <td colSpan={hideReorderPoint ? 9 : 10} className="p-0 border-t border-slate-50/50">
+                      <td colSpan={hideReorderPoint ? 10 : 11} className="p-0 border-t border-slate-50/50">
                         <div className="px-4 pb-2 pt-1.5 flex flex-col">
                           <p className="text-[10px] font-bold text-slate-500 mb-1 flex items-center gap-1 uppercase">
                             <Hash size={10} className="text-indigo-400" /> Serial Numbers ({serials.length})
@@ -712,7 +791,7 @@ export const VariantRows = ({
                   {/* Nested Batches Area */}
                   {isVarExpanded && hasBatches && (
                     <tr className="bg-slate-50/50">
-                      <td colSpan={hideReorderPoint ? 9 : 10} className="p-0 border-t border-slate-100">
+                      <td colSpan={hideReorderPoint ? 10 : 11} className="p-0 border-t border-slate-100">
                         <div className="p-3 md:pl-10 pl-6 border-l-2 border-slate-200 ml-4 my-2">
                           <BatchCards batches={batches} parentGst={gstValue} parentBuyPrice={buyPrice} parentSellPrice={sellPrice} />
                         </div>

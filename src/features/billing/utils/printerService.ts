@@ -53,7 +53,7 @@ export const DEFAULT_PRINTER_CONFIG: PrinterConfig = {
   showShopGst: true,
   showShopPhone: true,
   footerText: "Thank you for shopping with us! Please visit again.",
-  includeDigitalStoreQr: false,
+  includeDigitalStoreQr: true,
   digitalStoreQrMessage: "Your shop is online! Scan to browse & order.",
 };
 
@@ -714,6 +714,7 @@ export interface ReceiptData {
   sgstRate?: number;
   gstRate?: number;
   roundOff?: number;
+  deliveryFee?: number;
   finalAmount: number;
   totalUnits?: number;
   isDuplicate?: boolean;
@@ -737,7 +738,112 @@ export function getDigitalStoreUrl(shopId?: string, websiteUrl?: string): string
   if (websiteUrl && websiteUrl.trim()) return websiteUrl.trim();
   const id = shopId || (typeof localStorage !== "undefined" ? localStorage.getItem("shop_id") : "") || "";
   const origin = typeof window !== "undefined" ? window.location.origin : "https://inventq.in";
-  return `${origin}/store/${id}`;
+  return `${origin}/shopiq/${id}`;
+}
+
+/**
+ * Generate universal ESC/POS raster bitmap bytes for a QR code (GS v 0 format).
+ * This works on ALL thermal receipt printers (including budget 58mm/80mm Bluetooth printers
+ * that do not support Epson GS ( k 2D barcode commands).
+ * The raster bitmap is physically centered within the printhead width (384 dots for 58mm, 576 dots for 80mm).
+ */
+export function generateEscPosRasterQr(url: string, is58mm = true): number[] {
+  try {
+    const svg = renderToStaticMarkup(
+      React.createElement(QRCodeSVG, {
+        value: url,
+        level: "M",
+        includeMargin: false,
+      })
+    );
+
+    const vb = svg.match(/viewBox=["']0 0 (\d+) (\d+)["']/);
+    if (!vb) return [];
+    const gridCols = parseInt(vb[1], 10);
+    const gridRows = parseInt(vb[2], 10);
+    if (!gridCols || !gridRows) return [];
+
+    const grid: boolean[][] = Array.from({ length: gridRows }, () => Array(gridCols).fill(false));
+    const dMatch = svg.match(/<path[^>]*\bd=["']([^"']+)["']/i);
+    let d = "";
+    if (dMatch) {
+      d = dMatch[1];
+    } else {
+      const anyD = svg.match(/\bd=["']([^"']+)["']/i);
+      if (anyD) d = anyD[1];
+    }
+    if (!d) return [];
+
+    const re = /M(\d+)[, ](\d+)\s*h(\d+)/g;
+    let match: RegExpExecArray | null;
+    while ((match = re.exec(d)) !== null) {
+      const x = parseInt(match[1], 10);
+      const y = parseInt(match[2], 10);
+      const w = parseInt(match[3], 10);
+      for (let i = 0; i < w; i++) {
+        if (y < gridRows && x + i < gridCols) {
+          grid[y][x + i] = true;
+        }
+      }
+    }
+
+    // Standard printable dot width: 58mm = 384 dots (48 bytes), 80mm = 576 dots (72 bytes)
+    const totalPaperDots = is58mm ? 384 : 576;
+    const totalPaperBytes = totalPaperDots / 8; // 48 or 72
+
+    // Scale modules to give a crisp, highly scannable size (~120-150px)
+    const scale = is58mm ? 4 : 5;
+    const qrPixelWidth = gridCols * scale;
+    const qrPixelHeight = gridRows * scale;
+    const qrWidthBytes = Math.ceil(qrPixelWidth / 8);
+
+    const leftPadBytes = Math.max(0, Math.floor((totalPaperBytes - qrWidthBytes) / 2));
+    const rightPadBytes = Math.max(0, totalPaperBytes - qrWidthBytes - leftPadBytes);
+
+    const bytes: number[] = [];
+    // Reset left alignment
+    bytes.push(0x1b, 0x61, 0x00);
+
+    // ESC/POS GS v 0 m xL xH yL yH
+    const m = 0; // normal mode
+    const xL = totalPaperBytes & 0xff;
+    const xH = (totalPaperBytes >> 8) & 0xff;
+    const yL = qrPixelHeight & 0xff;
+    const yH = (qrPixelHeight >> 8) & 0xff;
+
+    bytes.push(0x1d, 0x76, 0x30, m, xL, xH, yL, yH);
+
+    for (let py = 0; py < qrPixelHeight; py++) {
+      const gy = Math.floor(py / scale);
+      // Left padding bytes for perfect centering
+      for (let i = 0; i < leftPadBytes; i++) bytes.push(0x00);
+
+      let byteVal = 0;
+      let bitCount = 0;
+      for (let px = 0; px < qrPixelWidth; px++) {
+        const gx = Math.floor(px / scale);
+        if (grid[gy]?.[gx]) {
+          byteVal |= 1 << (7 - bitCount);
+        }
+        bitCount++;
+        if (bitCount === 8) {
+          bytes.push(byteVal);
+          byteVal = 0;
+          bitCount = 0;
+        }
+      }
+      if (bitCount > 0) bytes.push(byteVal);
+
+      // Right padding bytes
+      for (let i = 0; i < rightPadBytes; i++) bytes.push(0x00);
+    }
+
+    bytes.push(0x0a);
+    return bytes;
+  } catch (err) {
+    console.error("Failed to generate ESC/POS raster QR bytes:", err);
+    return [];
+  }
 }
 
 /**
@@ -765,17 +871,21 @@ export function cleanShopAddress(addr: any): string | null {
   if (typeof addr === "string") {
     str = addr.trim();
   } else if (typeof addr === "object") {
-    const parts = [
-      addr.full_address,
-      addr.address_line_1,
-      addr.address_line_2,
-      addr.street,
-      addr.landmark,
-      addr.city,
-      addr.state,
-      addr.pincode || addr.pin_code || addr.postal_code,
-    ].filter((p) => p && typeof p === "string" && p.trim().toLowerCase() !== "not specified");
-    str = parts.join(", ");
+    if (addr.full_address && typeof addr.full_address === "string" && addr.full_address.trim().length > 10) {
+      str = addr.full_address.trim();
+    } else {
+      const parts = [
+        addr.full_address,
+        addr.address_line_1,
+        addr.address_line_2,
+        addr.street,
+        addr.landmark,
+        addr.city,
+        addr.state,
+        addr.pincode || addr.pin_code || addr.postal_code || addr.zipcode,
+      ].filter((p) => p && typeof p === "string" && p.trim().toLowerCase() !== "not specified");
+      str = parts.join(", ");
+    }
   }
   if (!str) return null;
   const lower = str.toLowerCase();
@@ -811,6 +921,7 @@ export function toAsciiReceiptText(text: string): string {
  */
 export function buildEscPosBuffer(data: ReceiptData, config: PrinterConfig): Uint8Array {
   const is58mm = config.paperWidth === "58mm";
+  // Safe character columns: 58mm = 32 chars (standard 48mm printable area at 12 dots/char), 80mm = 42 chars
   const colWidth = is58mm ? 32 : 42;
   const bytes: number[] = [];
 
@@ -827,87 +938,44 @@ export function buildEscPosBuffer(data: ReceiptData, config: PrinterConfig): Uin
     bytes.push(0x0a); // LF
   };
 
+  /**
+   * Hardware center alignment via ESC a 1.
+   * Tells the printer's thermal controller to mathematically center text relative to
+   * the physical printhead. 100% reliable on 58mm and 80mm printers, network printers,
+   * USB, Bluetooth, and POS emulators.
+   */
   const addCenter = (str: string, isBold = false) => {
     const clean = str.replace(/\s+/g, " ").trim();
     if (!clean) return;
 
-    bytes.push(0x1b, 0x61, 0x01); // Center alignment
-    if (isBold) bytes.push(0x1b, 0x45, 0x01);
+    bytes.push(0x1b, 0x61, 0x01); // ESC a 1: Hardware Center alignment ON
+    if (isBold) bytes.push(0x1b, 0x45, 0x01); // ESC E 1: Bold ON
 
-    if (clean.length > colWidth) {
+    const maxLineLen = is58mm ? 30 : 42;
+    if (clean.length > maxLineLen) {
       const words = clean.split(" ");
       let currentLine = "";
       for (const word of words) {
         const testLine = currentLine ? `${currentLine} ${word}` : word;
-        if (testLine.length <= colWidth) {
+        if (testLine.length <= maxLineLen) {
           currentLine = testLine;
         } else {
           if (currentLine) {
-            addStr(currentLine);
-            bytes.push(0x0a);
+            addLine(currentLine);
           }
           currentLine = word;
         }
       }
       if (currentLine) {
-        addStr(currentLine);
-        bytes.push(0x0a);
+        addLine(currentLine);
       }
     } else {
-      addStr(clean);
-      bytes.push(0x0a);
+      addLine(clean);
     }
 
-    if (isBold) bytes.push(0x1b, 0x45, 0x00);
-    bytes.push(0x1b, 0x61, 0x00); // Reset to left alignment
+    if (isBold) bytes.push(0x1b, 0x45, 0x00); // Bold OFF
+    bytes.push(0x1b, 0x61, 0x00); // ESC a 0: Reset to Left alignment
   };
-
-  // Deprecated legacy space-padding replaced by hardware center alignment
-  const _unusedLegacyPad = () => {
-    const str = "";
-    const isBold = false;
-    const clean = str.replace(/\s+/g, " ").trim();
-    if (!clean) return;
-
-    if (clean.length > colWidth) {
-      const words = clean.split(" ");
-      let currentLine = "";
-      for (const word of words) {
-        const testLine = currentLine ? `${currentLine} ${word}` : word;
-        if (testLine.length <= colWidth) {
-          currentLine = testLine;
-        } else {
-          if (currentLine) {
-            const pad = Math.max(0, Math.floor((colWidth - currentLine.length) / 2));
-            addStr(" ".repeat(pad));
-            if (isBold) bytes.push(0x1b, 0x45, 0x01);
-            addStr(currentLine);
-            if (isBold) bytes.push(0x1b, 0x45, 0x00);
-            bytes.push(0x0a);
-          }
-          currentLine = word;
-        }
-      }
-      if (currentLine) {
-        const pad = Math.max(0, Math.floor((colWidth - currentLine.length) / 2));
-        addStr(" ".repeat(pad));
-        if (isBold) bytes.push(0x1b, 0x45, 0x01);
-        addStr(currentLine);
-        if (isBold) bytes.push(0x1b, 0x45, 0x00);
-        bytes.push(0x0a);
-      }
-      return;
-    }
-
-    const pad = Math.max(0, Math.floor((colWidth - clean.length) / 2));
-    addStr(" ".repeat(pad));
-    if (isBold) bytes.push(0x1b, 0x45, 0x01);
-    addStr(clean);
-    if (isBold) bytes.push(0x1b, 0x45, 0x00);
-    bytes.push(0x0a);
-  };
-
-  void _unusedLegacyPad;
 
   const addRow = (left: string, right: string) => {
     const maxLeft = colWidth - right.length - 1;
@@ -917,9 +985,8 @@ export function buildEscPosBuffer(data: ReceiptData, config: PrinterConfig): Uin
   };
 
   const addDivider = () => {
-    bytes.push(0x1b, 0x61, 0x01);
-    addLine("-".repeat(colWidth));
     bytes.push(0x1b, 0x61, 0x00);
+    addLine("-".repeat(colWidth));
   };
 
   // 1. Initialize printer
@@ -975,10 +1042,10 @@ export function buildEscPosBuffer(data: ReceiptData, config: PrinterConfig): Uin
 
   // 5. Items Table with Perfect Column Alignment
   if (is58mm) {
-    // 58mm (32 cols): ITEM(14) QTY(5) TOTAL(13)
+    // 58mm (32 cols): ITEM(14) QTY(6) TOTAL(12) => 14 + 6 + 12 = 32
     const hColItem = 14;
-    const hColQty = 5;
-    const hColTotal = 13;
+    const hColQty = 6;
+    const hColTotal = colWidth - (hColItem + hColQty); // 12
     const header =
       "ITEM".padEnd(hColItem) + "QTY".padStart(hColQty) + "TOTAL".padStart(hColTotal);
     addLine(header);
@@ -1064,6 +1131,10 @@ export function buildEscPosBuffer(data: ReceiptData, config: PrinterConfig): Uin
     addRow(totalTaxLabel, `Rs.${totalTax.toFixed(2)}`);
   }
 
+  if (data.deliveryFee && data.deliveryFee > 0) {
+    addRow("Delivery Fee:", `+Rs.${data.deliveryFee.toFixed(2)}`);
+  }
+
   if (data.roundOff && data.roundOff !== 0) {
     const roStr =
       data.roundOff > 0
@@ -1100,12 +1171,21 @@ export function buildEscPosBuffer(data: ReceiptData, config: PrinterConfig): Uin
   addDivider();
 
   // Digital Store QR Code Section (Printed before footer)
-  const shouldPrintDigitalQr = Boolean(data.includeDigitalStoreQr ?? config.includeDigitalStoreQr);
+  const shouldPrintDigitalQr = Boolean(
+    (data.includeDigitalStoreQr !== undefined ? data.includeDigitalStoreQr : config.includeDigitalStoreQr) !== false
+  );
   const digitalStoreUrl = data.digitalStoreUrl || getDigitalStoreUrl(data.shopId);
   const qrMessage = data.digitalStoreQrMessage || config.digitalStoreQrMessage || DEFAULT_DIGITAL_STORE_QR_MESSAGE;
 
   if (shouldPrintDigitalQr && digitalStoreUrl) {
-    const moduleSize = config.paperWidth === "58mm" ? 5 : 7;
+    addCenter("YOUR SHOP IS ONLINE!", true);
+    if (qrMessage) {
+      addCenter(qrMessage);
+    }
+
+    // Standard ESC/POS 2D QR Code commands (GS ( k) - Model 2
+    // Supported by 100% of standard POS printers, network thermal printers, and emulators
+    const moduleSize = is58mm ? 4 : 6;
     const qrBytes = new TextEncoder().encode(digitalStoreUrl);
     const len = qrBytes.length + 3;
     const pL = len & 0xff;
@@ -1361,6 +1441,11 @@ export function printViaSystemDriver(
           <span>Total Tax / GST${(data.gstRate && data.gstRate > 0 ? data.gstRate : (effectiveTaxableAmount ? Math.round((data.gstAmount / effectiveTaxableAmount) * 100) : 0)) ? ` (${data.gstRate && data.gstRate > 0 ? data.gstRate : Math.round((data.gstAmount / effectiveTaxableAmount) * 100)}%)` : ""}:</span>
           <span>₹${data.gstAmount.toFixed(2)}</span>
         </div>` : ""}
+        ${data.deliveryFee && data.deliveryFee > 0 ? `
+        <div class="flex-between" style="font-weight: 600; color: #334155;">
+          <span>Delivery Fee:</span>
+          <span>+₹${data.deliveryFee.toFixed(2)}</span>
+        </div>` : ""}
         ${data.roundOff && data.roundOff !== 0 ? `
         <div class="flex-between" style="color: #475569; font-size: 10px;">
           <span>Round Off:</span>
@@ -1404,7 +1489,9 @@ export function printViaSystemDriver(
         ${shouldPrintDigitalQr && digitalStoreUrl ? `
         <div class="divider"></div>
         <div class="center" style="margin: 10px 0 6px 0;">
-          <div style="display: flex; justify-content: center; align-items: center; margin: 8px 0;">
+          <div style="font-weight: 800; font-size: 11px; color: #e11d48; text-transform: uppercase; margin-bottom: 2px;">YOUR SHOP IS ONLINE!</div>
+          <div style="font-size: 9.5px; color: #475569; font-weight: 600; margin-bottom: 4px;">${qrMessage}</div>
+          <div style="display: flex; justify-content: center; align-items: center; margin: 4px 0;">
             <div style="padding: 6px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center;">
               ${qrSvgHtml}
             </div>

@@ -14,7 +14,8 @@ import {
   Globe,
   Store,
   Printer,
-  FileText
+  FileText,
+  Truck
 } from "lucide-react";
 
 import { useApi } from "@/context/ApiContext";
@@ -181,14 +182,69 @@ const formatStockValue = (val: number | null | undefined) => {
 };
 
 const getItemDisplayQty = (item: any) => {
-  if (item.entered_qty !== undefined && item.entered_qty !== null && !isNaN(Number(item.entered_qty))) {
-    return formatStockValue(item.entered_qty);
+  const enteredQty = item.entered_qty !== undefined && item.entered_qty !== null ? Number(item.entered_qty) : NaN;
+  let baseQty = Number(item.quantity ?? item.qty ?? 0);
+  
+  // If baseQty is <= 1 or missing, but totalAmount and unitPrice indicate a higher billed quantity (e.g. 500 / 100 = 5)
+  const uPrice = Number(item.unitPrice || item.price || item.sell_price || 0);
+  const tAmount = Number(item.totalAmount || item.finalInclusive || item.total_amount || 0);
+  if (baseQty <= 1 && uPrice > 0 && tAmount > uPrice) {
+    const derived = Math.round((tAmount / uPrice) * 100) / 100;
+    if (derived > 1) {
+      baseQty = derived;
+    }
   }
-  const u = String(item.entered_unit || item.unit || "").toLowerCase();
-  if ((u === 'gm' || u === 'g' || u === 'ml' || u === 'm') && item.quantity > 0 && item.quantity < 10) {
-    return formatStockValue(item.quantity * 1000);
+
+  const enteredUnit = String(item.entered_unit || "").trim();
+  const baseUnit = String(item.unit || item.unit_infos?.name || "").trim();
+  const isSubUnit = Boolean(enteredUnit && baseUnit && enteredUnit.toLowerCase() !== baseUnit.toLowerCase());
+
+  const unitInfos = item.unit_infos || (item as any).unit_info;
+  if (isSubUnit && unitInfos?.sub_units && Array.isArray(unitInfos.sub_units)) {
+    const su = unitInfos.sub_units.find((s: any) => 
+      s.name?.trim().toLowerCase() === enteredUnit.toLowerCase() || 
+      s.short_name?.trim().toLowerCase() === enteredUnit.toLowerCase()
+    );
+    if (su && su.factor) {
+      const factor = Number(su.factor);
+      if (factor > 0) {
+        const calculatedQty = factor < 1 ? Math.round(baseQty / factor) : Math.round(baseQty * factor);
+        if (!isNaN(enteredQty) && enteredQty > 0) {
+          if (enteredQty >= calculatedQty * 0.99) return formatStockValue(enteredQty);
+        }
+        if (calculatedQty > 0) return formatStockValue(calculatedQty);
+      }
+    }
   }
-  return formatStockValue(item.quantity || 0);
+
+  if (isSubUnit) {
+    const u = enteredUnit.toLowerCase();
+    const isGramOrMl = ['gm', 'g', 'gram', 'grams', 'ml', 'milli', 'milliliter', 'millilitre', 'milliliters', 'mg', 'milligram', 'milligrams'].includes(u);
+    if (!isNaN(enteredQty) && enteredQty > 0) {
+      if (isGramOrMl && enteredQty <= 5 && baseQty > 0 && baseQty <= 5) {
+        return formatStockValue(baseQty * 1000);
+      }
+      return formatStockValue(enteredQty);
+    }
+    if (isGramOrMl && baseQty > 0 && baseQty < 100) {
+      return formatStockValue(baseQty * 1000);
+    }
+  }
+
+  // When not a subunit (or standard units like PIECE, BOTTLE, BOX, KG):
+  if (baseQty > 0) {
+    // Only use enteredQty if it's strictly greater than baseQty and not a default '1' when baseQty > 1
+    if (!isNaN(enteredQty) && enteredQty > baseQty && Math.abs(enteredQty - baseQty) > 0.001) {
+      return formatStockValue(enteredQty);
+    }
+    return formatStockValue(baseQty);
+  }
+
+  if (!isNaN(enteredQty) && enteredQty > 0) {
+    return formatStockValue(enteredQty);
+  }
+
+  return "1";
 };
 
 type SaleItem = {
@@ -218,28 +274,38 @@ type SaleItem = {
   image?: string;
   entered_qty?: number;
   entered_unit?: string;
+  unit_infos?: any;
 };
 
 const generateItems = (sale: OrderResponse, productMap: Record<string, string> = {}): SaleItem[] => {
   const calcInfos = (sale as any)?.calculation_infos || (sale as any)?.calculations || {};
   const calcItems = calcInfos.items || [];
+  const rawItemList = (sale?.items && sale.items.length > 0)
+    ? sale.items
+    : ((sale as any)?.order_items && (sale as any).order_items.length > 0)
+      ? (sale as any).order_items
+      : calcItems;
 
-  return (sale?.items || []).map((i: any) => {
+  return rawItemList.map((i: any) => {
     // Attempt to find matching calc item for subunit pricing/qty/discount details
     const calc = calcItems.find((ci: any) =>
       (ci.product_id && (ci.product_id === i.product_id || ci.product_id === i.inventory_id || ci.product_id === i.id)) ||
       (ci.name && (ci.name === i.name || ci.name === i.product_name))
     );
 
-    const qty = Number(calc?.qty ?? i.quantity ?? i.entered_qty ?? 1);
-    const mrp = Number(calc?.mrp ?? i.mrp ?? i.datas?.mrp ?? 0);
-
-    // Original unit selling price (inclusive of GST before discounts)
+    const rawTotalAmount = Number(i.total_amount ?? i.totalAmount ?? 0);
     let rawPrice = calc?.price ?? i.sell_price ?? i.datas?.sell_price;
+    let rawQty = Number(calc?.qty ?? i.quantity ?? i.qty ?? i.entered_qty ?? 1);
     if (rawPrice === undefined || rawPrice === null) {
-      rawPrice = (i.total_amount && qty > 0) ? (Number(i.total_amount) / qty) : 0;
+      rawPrice = (rawTotalAmount && rawQty > 0) ? (rawTotalAmount / rawQty) : 0;
     }
     const unitPrice = Number(rawPrice);
+    if (rawQty <= 1 && unitPrice > 0 && rawTotalAmount > unitPrice) {
+      const derived = Math.round((rawTotalAmount / unitPrice) * 100) / 100;
+      if (derived > 1) rawQty = derived;
+    }
+    const qty = rawQty;
+    const mrp = Number(calc?.mrp ?? i.mrp ?? i.datas?.mrp ?? 0);
 
     const rawGst = i.gst || i.datas?.gst || calc?.gst_rate || calc?.gst || 0;
     const gstRate = typeof rawGst === "number" ? rawGst : (parseFloat(String(rawGst).replace("%", "")) || 0);
@@ -262,18 +328,18 @@ const generateItems = (sale: OrderResponse, productMap: Record<string, string> =
 
     const effectiveUnitPrice = qty > 0 ? (finalInclusive / qty) : unitPrice;
 
-    // Taxable value and GST amount
+    // Taxable value and GST amount (selling price is inclusive of GST)
     let taxableValue = 0;
     let gstAmount = 0;
-    if (calc?.taxable_value !== undefined && calc?.taxable_value !== null) {
+    if (gstRate > 0) {
+      taxableValue = Math.round((finalInclusive / (1 + gstRate / 100)) * 100) / 100;
+      gstAmount = Math.round((finalInclusive - taxableValue) * 100) / 100;
+    } else if (calc?.taxable_value !== undefined && calc?.taxable_value !== null) {
       taxableValue = Number(calc.taxable_value);
       gstAmount = Number(calc?.gst_amount ?? (finalInclusive - taxableValue));
     } else if (calc?.gst_amount !== undefined && calc?.gst_amount !== null) {
       gstAmount = Number(calc.gst_amount);
       taxableValue = Math.max(0, finalInclusive - gstAmount);
-    } else if (gstRate > 0) {
-      taxableValue = finalInclusive / (1 + gstRate / 100);
-      gstAmount = finalInclusive - taxableValue;
     } else {
       taxableValue = finalInclusive;
       gstAmount = 0;
@@ -319,8 +385,11 @@ const generateItems = (sale: OrderResponse, productMap: Record<string, string> =
       stockBefore: i.stock_before,
       stockAfter: i.stock_after,
       image: i.image_url || i.image || i.product?.image_url || i.product?.image || i.datas?.image_url || i.datas?.image || i.inventory_infos?.image_url || i.inventory_infos?.image || i.inventory_info?.image_url || i.inventory_info?.image || "",
-      entered_qty: i.entered_qty,
-      entered_unit: i.entered_unit,
+      entered_qty: (i.entered_unit && (i.unit_infos?.name || i.unit) && String(i.entered_unit).toLowerCase() !== String(i.unit_infos?.name || i.unit).toLowerCase() && i.entered_qty !== undefined && Number(i.entered_qty) > 0)
+        ? Number(i.entered_qty)
+        : (calc?.entered_qty !== undefined ? Number(calc.entered_qty) : (i.entered_qty !== undefined && Number(i.entered_qty) > qty ? Number(i.entered_qty) : (qty > 1 ? qty : (i.entered_qty ?? undefined)))),
+      entered_unit: i.entered_unit || calc?.entered_unit || calc?.unit || i.unit_infos?.sub_units?.find((su: any) => su.name === i.unit || su.name === calc?.unit)?.name || undefined,
+      unit_infos: i.unit_infos || i.unit_info || i.product?.unit_infos || null,
     };
   });
 };
@@ -396,6 +465,14 @@ const SaleDetailPage: React.FC = () => {
           setSale({
             ...found,
             total_sellprice: Number(found.total_sellprice ?? found.calculation_infos?.total ?? found.calculation_infos?.grand_total ?? found.item_infos?.total_order_amount ?? found.total_amount ?? (Array.isArray(found.items) ? found.items.reduce((s: number, item: any) => s + (Number(item.total_amount) || ((Number(item.sell_price) || 0) * (Number(item.quantity) || 1))), 0) : 0) ?? found.total ?? 0),
+            total_quantity: Number(
+              found.total_quantity ||
+              found.item_infos?.total_order_qty ||
+              found.item_infos?.total_order_quantity ||
+              (found.calculation_infos?.items && Array.isArray(found.calculation_infos.items) ? found.calculation_infos.items.reduce((sum: number, item: any) => sum + (Number(item.qty ?? item.quantity ?? 1) || 0), 0) : 0) ||
+              (Array.isArray(found.items) && found.items.length > 0 ? found.items.reduce((s: number, item: any) => s + (Number(item.quantity ?? item.qty ?? item.entered_qty ?? 1) || 0), 0) : 0) ||
+              0
+            ),
             status: found.status ? found.status.charAt(0).toUpperCase() + found.status.slice(1).toLowerCase() : "Completed",
             origin: found.origin === "OFFLINE" ? "Sales" : found.origin || "Sales",
           });
@@ -413,6 +490,44 @@ const SaleDetailPage: React.FC = () => {
             } catch (err) {
               console.warn("Could not load clearing history:", err);
             }
+
+            // On-demand fetch customer details by customer_id
+            try {
+              const singleCustRes = await api.getData(`${ENDPOINTS.CUSTOMERS}/by/id/${SHOP_ID}/${found.customer_id}`);
+              if (singleCustRes?.data) {
+                const singleCust = Array.isArray(singleCustRes.data) ? singleCustRes.data[0] : (singleCustRes.data.datas?.[0] || singleCustRes.data);
+                if (singleCust && singleCust.id) {
+                  setCustomerMap(prev => ({
+                    ...prev,
+                    [singleCust.id]: singleCust,
+                    ...(singleCust.name ? { [singleCust.name.trim().toLowerCase()]: singleCust } : {})
+                  }));
+                }
+              }
+            } catch (err) {
+              console.warn("Could not load single customer by id:", err);
+            }
+          }
+
+          // Also on-demand fetch customer details using customer_name if available
+          const rawCustName = found.customer_name || found.customer?.name || found.customer?.customer_name;
+          if (rawCustName && rawCustName.trim().toLowerCase() !== "walk-in customer" && rawCustName.trim().toLowerCase() !== "walk in customer") {
+            try {
+              const nameCustRes = await api.getData(`${ENDPOINTS.CUSTOMERS}/by/shop/${SHOP_ID}`, { q: rawCustName.trim(), limit: "10" });
+              if (nameCustRes?.data) {
+                const list = Array.isArray(nameCustRes.data) ? nameCustRes.data : (nameCustRes.data.datas || nameCustRes.data.items || []);
+                const matched = list.find((c: any) => c.name && c.name.trim().toLowerCase() === rawCustName.trim().toLowerCase()) || list[0];
+                if (matched && matched.id) {
+                  setCustomerMap(prev => ({
+                    ...prev,
+                    [matched.id]: matched,
+                    [rawCustName.trim().toLowerCase()]: matched
+                  }));
+                }
+              }
+            } catch (err) {
+              console.warn("Could not load customer by name:", err);
+            }
           }
         }
       }
@@ -424,12 +539,15 @@ const SaleDetailPage: React.FC = () => {
 
     // Fetch supporting data independently — failures here won't break the order view
     try {
-      const custRes = await api.getData(`${ENDPOINTS.CUSTOMERS}/by/shop/${SHOP_ID}`);
+      const custRes = await api.getData(`${ENDPOINTS.CUSTOMERS}/by/shop/${SHOP_ID}`, { limit: "1000" });
       if (custRes?.data) {
         const m: Record<string, any> = {};
         const custList = Array.isArray(custRes.data) ? custRes.data : (custRes.data.datas || custRes.data.items || []);
-        custList.forEach((c: any) => { m[c.id] = c; });
-        setCustomerMap(m);
+        custList.forEach((c: any) => {
+          if (c.id) m[c.id] = c;
+          if (c.name) m[c.name.trim().toLowerCase()] = c;
+        });
+        setCustomerMap(prev => ({ ...prev, ...m }));
       }
     } catch (err) {
       console.warn("Could not load customer map:", err);
@@ -614,8 +732,68 @@ const SaleDetailPage: React.FC = () => {
     return sum + (amt || 0);
   }, 0);
 
-  const totalPaid = initialNonCreditPaid + exchangeNonCreditPaid + clearedPaymentsForThisOrder;
-  const outstanding = Math.max(0, totalDueForOrder - clearedPaymentsForThisOrder);
+  // Online orders handling:
+  const isOnlineOrder = customerInfo.isOnline || 
+    sale.origin === "Online" || 
+    sale.origin === "ONLINE" || 
+    sale.origin === "DIGITAL_STORE" || 
+    Boolean((sale as any).online_details);
+
+  const orderStatus = String(sale.status || '').trim().toUpperCase();
+  const isDelivered = orderStatus === "DELIVERED" || orderStatus === "COMPLETED";
+
+  const isCOD = paymentsDetail.some(p => {
+    const lbl = String(p.label || '').toUpperCase();
+    return lbl.includes("COD") || lbl.includes("CASH ON DELIVERY");
+  }) || String(sale.payment_method || '').toUpperCase().includes("COD");
+
+  const effectiveOrderTotal = adjustedGrandTotal > 0 ? adjustedGrandTotal : baseOrderTotal;
+
+  let totalPaid = 0;
+  let outstanding = 0;
+
+  if (isOnlineOrder) {
+    const isPaymentSettled = (sale as any).payment_status === "PAID" || 
+                             (sale as any).pending_amount === 0 || 
+                             isDelivered || 
+                             (!isCOD && initialNonCreditPaid > 0);
+
+    if (isPaymentSettled) {
+      totalPaid = effectiveOrderTotal;
+      outstanding = 0;
+    } else {
+      totalPaid = initialNonCreditPaid > 0 && !isCOD ? initialNonCreditPaid : 0;
+      outstanding = Math.max(0, effectiveOrderTotal - totalPaid);
+    }
+  } else {
+    totalPaid = initialNonCreditPaid + exchangeNonCreditPaid + clearedPaymentsForThisOrder;
+    outstanding = Math.max(0, totalDueForOrder - clearedPaymentsForThisOrder);
+  }
+
+  // Financial & Delivery breakdown
+  const calcInfos = (sale as any)?.calculation_infos || (sale as any)?.calculations || {};
+  const baseGrossSubtotal = Number(calcInfos.base_subtotal ?? calcInfos.gross ?? items.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0));
+  const productDiscountTotal = Number(calcInfos.product_discount_total ?? items.reduce((sum, item) => sum + (item.productDiscountAmount || 0), 0));
+  const lineDiscountTotal = Number(calcInfos.line_discount_total ?? items.reduce((sum, item) => sum + (item.lineDiscountAmount || 0), 0));
+  const billDiscountTotal = Number(calcInfos.bill_discount_total ?? items.reduce((sum, item) => sum + (item.billDiscountShare || 0), 0));
+  const totalDiscountGiven = Number(calcInfos.total_discount_given ?? (productDiscountTotal + lineDiscountTotal + billDiscountTotal));
+  const billedSubtotal = Number(calcInfos.subtotal ?? (baseGrossSubtotal - totalDiscountGiven));
+  const orderBilledTotal = Number(calcInfos.total ?? sale.total_sellprice ?? billedSubtotal);
+
+  const deliveryFee = Number(
+    calcInfos.delivery_fee ??
+    calcInfos.delivery_charge ??
+    (sale as any)?.charges_infos?.delivery_charge ??
+    (sale as any)?.charges_infos?.delivery_fee ??
+    (sale as any)?.additional_infos?.delivery_charge ??
+    (sale as any)?.additional_infos?.delivery_fee ??
+    (sale as any)?.additional_infos?.delivery_option?.delivery_charge ??
+    (sale as any)?.online_details?.delivery_fee ??
+    (sale as any)?.online_details?.delivery_charge ??
+    (sale as any)?.delivery_fee ??
+    (sale as any)?.delivery_charge ??
+    (isOnlineOrder && orderBilledTotal > billedSubtotal ? Math.max(0, orderBilledTotal - billedSubtotal) : 0)
+  );
 
   const returnsCount = Array.isArray((sale as any)?.returns) ? (sale as any).returns.length : 0;
   const exchangesCount = Array.isArray((sale as any)?.exchanges) ? (sale as any).exchanges.length : 0;
@@ -784,10 +962,10 @@ const SaleDetailPage: React.FC = () => {
                         <DetailItem icon={Mail} label="Email Address" value={customerInfo.email} />
                       ) : null}
 
-                      {customerInfo.userId ? (
+                      {customerInfo.userId && !customerInfo.isOnline ? (
                         <DetailItem 
                           icon={Fingerprint} 
-                          label={customerInfo.isOnline ? "Customer User ID" : "Customer ID"} 
+                          label="Customer ID" 
                           value={customerInfo.userId} 
                         />
                       ) : null}
@@ -799,6 +977,14 @@ const SaleDetailPage: React.FC = () => {
                         label="Order Origin" 
                         value={customerInfo.isOnline ? "Online Store" : (sale.origin || "In-Store")} 
                       />
+
+                      {deliveryFee > 0 ? (
+                        <DetailItem 
+                          icon={Truck} 
+                          label="Delivery Fee" 
+                          value={fmt(deliveryFee)} 
+                        />
+                      ) : null}
 
                       {(customerInfo.fullAddress || customerInfo.city || customerInfo.state || customerInfo.pincode) ? (
                         <div className="sm:col-span-2 lg:col-span-3 flex items-start gap-3 p-3 rounded-lg bg-slate-50 border border-slate-200/70 mt-1">
@@ -832,8 +1018,10 @@ const SaleDetailPage: React.FC = () => {
                         const totalDiscountGiven = Number(calcInfos.total_discount_given ?? (productDiscountTotal + lineDiscountTotal + billDiscountTotal));
 
                         const billedSubtotal = Number(calcInfos.subtotal ?? (baseGrossSubtotal - totalDiscountGiven));
-                        const taxableAmount = Number(calcInfos.taxable_amount ?? items.reduce((sum, item) => sum + (item.taxableValue || 0), 0));
-                        const gstAmount = Number(calcInfos.gst_amount ?? calcInfos.total_gst_amount ?? items.reduce((sum, item) => sum + (item.gstAmount || 0), 0));
+                        const itemsTaxableSum = items.reduce((sum, item) => sum + (item.taxableValue || 0), 0);
+                        const itemsGstSum = items.reduce((sum, item) => sum + (item.gstAmount || 0), 0);
+                        const taxableAmount = itemsTaxableSum > 0 ? itemsTaxableSum : Number(calcInfos.taxable_amount ?? 0);
+                        const gstAmount = itemsGstSum > 0 ? itemsGstSum : Number(calcInfos.gst_amount ?? calcInfos.total_gst_amount ?? 0);
                         const roundOff = Number(calcInfos.round_off ?? 0);
 
                         const totalMrp = Number(calcInfos.total_mrp ?? items.reduce((sum, item) => sum + ((item.mrp || item.unitPrice) * item.quantity), 0));
@@ -895,6 +1083,13 @@ const SaleDetailPage: React.FC = () => {
                               />
                             )}
 
+                            {deliveryFee > 0 && (
+                              <InfoRow
+                                label="Delivery Fee"
+                                value={<span className="font-semibold text-slate-800">+{fmt(deliveryFee)}</span>}
+                              />
+                            )}
+
                             {roundOff !== 0 && (
                               <InfoRow
                                 label="Round Off"
@@ -953,6 +1148,12 @@ const SaleDetailPage: React.FC = () => {
                         <span className="text-[11px] font-medium text-slate-400 uppercase tracking-tight">Origin</span>
                         <span className="text-xs font-bold text-slate-700">{sale.origin}</span>
                       </div>
+                      {deliveryFee > 0 && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-[11px] font-medium text-slate-400 uppercase tracking-tight">Delivery Fee</span>
+                          <span className="text-xs font-bold text-slate-700">{fmt(deliveryFee)}</span>
+                        </div>
+                      )}
                       <div className="flex justify-between items-center">
                         <span className="text-[11px] font-medium text-slate-400 uppercase tracking-tight">Payment</span>
                         <span className="text-xs font-bold text-slate-700">{paymentsDetail.map(p => p.label).join(', ') || "—"}</span>
@@ -1105,7 +1306,7 @@ const SaleDetailPage: React.FC = () => {
                                     <div className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md text-[10px] text-slate-650 shadow-sm">
                                       <div className="flex justify-between items-center font-bold">
                                         <span className="text-slate-800">Batch: {item.batchName || "Default"}</span>
-                                        <span className="text-indigo-600">Qty: {item.quantity}</span>
+                                        <span className="text-indigo-600">Qty: {getItemDisplayQty(item)} {(item as any).entered_unit || item.unit}</span>
                                       </div>
                                       {(item.mfgDate || item.expDate) && (
                                         <div className="flex gap-3 text-[9px] text-slate-400 mt-1 font-medium">

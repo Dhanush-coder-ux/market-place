@@ -85,3 +85,38 @@ export interface OrderResponse {
   created_at: string;
   updated_at: string;
 }
+
+export interface ReturnRequestItem {
+  order_item_id: string;
+  product_id: string;
+  product_name: string;
+  variant_name?: string;
+  quantity: number;
+  price: number;
+  total_amount: number;
+  unit?: string;
+  reason?: string;
+}
+
+export interface ReturnRequestRecord {
+  id: string;
+  order_id: string;
+  order_ui_id: string;
+  shop_id: string;
+  customer_id?: string;
+  customer_name: string;
+  customer_phone: string;
+  customer_email?: string;
+  items: ReturnRequestItem[];
+  description: string;
+  status: "PENDING" | "ACCEPTED" | "REJECTED" | string;
+  admin_notes?: string;
+  status_history?: {
+    status: string;
+    updated_by: string;
+    timestamp: string;
+    notes?: string;
+  }[];
+  created_at: string;
+  updated_at: string;
+}

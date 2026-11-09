@@ -330,34 +330,22 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
   const handleMrpChange = (combo: VariantCombination, val: string) => {
     const clean = val.replace(/[^0-9.]/g, "");
     const numMrp = parseFloat(clean) || 0;
+    const sp = parseFloat(combo.price) || 0;
     const discType = combo.discount_type || "price";
     const numDisc = parseFloat(combo.discount_value || "0") || 0;
 
-    let newPrice = combo.price;
     let newDiscPercent = combo.discount_percent || "0";
-
-    if (numMrp > 0 && numDisc > 0) {
-      if (discType === "price") {
-        const sp = Math.max(0, numMrp - numDisc);
-        newPrice = sp % 1 === 0 ? String(sp) : sp.toFixed(2);
-        newDiscPercent = ((numDisc / numMrp) * 100).toFixed(2);
-      } else {
-        const discAmt = (numMrp * numDisc) / 100;
-        const sp = Math.max(0, numMrp - discAmt);
-        newPrice = sp % 1 === 0 ? String(sp) : sp.toFixed(2);
+    if (numDisc > 0) {
+      if (discType === "percent") {
         newDiscPercent = String(numDisc);
-      }
-    } else if (numMrp > 0 && combo.price) {
-      const sp = parseFloat(combo.price) || 0;
-      if (numMrp >= sp && sp > 0) {
-        const diff = numMrp - sp;
-        newDiscPercent = ((diff / numMrp) * 100).toFixed(2);
+      } else {
+        const base = sp > 0 ? sp : numMrp;
+        newDiscPercent = base > 0 ? ((numDisc / base) * 100).toFixed(2) : "0";
       }
     }
 
     update(combo.id, {
       mrp: clean,
-      price: newPrice,
       discount_percent: newDiscPercent,
     });
   };
@@ -365,22 +353,16 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
   const handleDiscountChange = (combo: VariantCombination, val: string, discType: "price" | "percent") => {
     const clean = val.replace(/[^0-9.]/g, "");
     const numVal = parseFloat(clean) || 0;
+    const sp = parseFloat(combo.price) || 0;
     const effectiveMrp = parseFloat(combo.mrp) || baseMrp || 0;
+    const base = sp > 0 ? sp : effectiveMrp;
 
-    let newPrice = combo.price;
     let newDiscPercent = "0";
-
-    if (effectiveMrp > 0) {
-      if (discType === "price") {
-        const sp = Math.max(0, effectiveMrp - numVal);
-        newPrice = clean === "" ? String(effectiveMrp) : (sp % 1 === 0 ? String(sp) : sp.toFixed(2));
-        newDiscPercent = numVal > 0 ? ((numVal / effectiveMrp) * 100).toFixed(2) : "0";
+    if (clean !== "" && numVal > 0) {
+      if (discType === "percent") {
+        newDiscPercent = String(Math.min(99.99, numVal));
       } else {
-        const pct = Math.min(99.99, numVal);
-        const discAmt = (effectiveMrp * pct) / 100;
-        const sp = Math.max(0, effectiveMrp - discAmt);
-        newPrice = clean === "" ? String(effectiveMrp) : (sp % 1 === 0 ? String(sp) : sp.toFixed(2));
-        newDiscPercent = String(pct);
+        newDiscPercent = base > 0 ? Math.min(100, (numVal / base) * 100).toFixed(2) : "0";
       }
     }
 
@@ -388,28 +370,33 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
       discount_value: clean,
       discount_type: discType,
       discount_percent: newDiscPercent,
-      price: newPrice,
     });
   };
 
   const handleDiscountTypeChange = (combo: VariantCombination, nextType: "price" | "percent") => {
-    const effectiveMrp = parseFloat(combo.mrp) || baseMrp || 0;
     const sp = parseFloat(combo.price) || 0;
+    const effectiveMrp = parseFloat(combo.mrp) || baseMrp || 0;
+    const base = sp > 0 ? sp : effectiveMrp;
+    const currentVal = parseFloat(combo.discount_value || "0") || 0;
     let newDiscVal = combo.discount_value || "";
+    let newDiscPercent = combo.discount_percent || "0";
 
-    if (effectiveMrp > 0 && sp > 0 && effectiveMrp >= sp) {
-      const diff = effectiveMrp - sp;
+    if (currentVal > 0 && base > 0) {
       if (nextType === "price") {
-        newDiscVal = diff % 1 === 0 ? String(diff) : diff.toFixed(2);
+        const amt = (base * currentVal) / 100;
+        newDiscVal = amt % 1 === 0 ? String(amt) : amt.toFixed(2);
+        newDiscPercent = String(currentVal);
       } else {
-        const pct = (diff / effectiveMrp) * 100;
+        const pct = Math.min(99.99, (currentVal / base) * 100);
         newDiscVal = pct % 1 === 0 ? String(pct) : pct.toFixed(2);
+        newDiscPercent = String(pct);
       }
     }
 
     update(combo.id, {
       discount_type: nextType,
       discount_value: newDiscVal,
+      discount_percent: newDiscPercent,
     });
   };
 
@@ -418,27 +405,20 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
     const sp = parseFloat(clean) || 0;
     const effectiveMrp = parseFloat(combo.mrp) || baseMrp || 0;
     const discType = combo.discount_type || "price";
+    const numDisc = parseFloat(combo.discount_value || "0") || 0;
 
-    let newDiscVal = combo.discount_value || "";
     let newDiscPercent = combo.discount_percent || "0";
-
-    if (effectiveMrp > 0 && sp > 0 && effectiveMrp >= sp) {
-      const diff = effectiveMrp - sp;
-      if (discType === "price") {
-        newDiscVal = diff % 1 === 0 ? String(diff) : diff.toFixed(2);
+    if (numDisc > 0) {
+      if (discType === "percent") {
+        newDiscPercent = String(numDisc);
       } else {
-        const pct = (diff / effectiveMrp) * 100;
-        newDiscVal = pct % 1 === 0 ? String(pct) : pct.toFixed(2);
+        const base = sp > 0 ? sp : effectiveMrp;
+        newDiscPercent = base > 0 ? ((numDisc / base) * 100).toFixed(2) : "0";
       }
-      newDiscPercent = ((diff / effectiveMrp) * 100).toFixed(2);
-    } else if (clean === "" || sp === 0) {
-      newDiscVal = "";
-      newDiscPercent = "0";
     }
 
     update(combo.id, {
       price: clean,
-      discount_value: newDiscVal,
       discount_percent: newDiscPercent,
     });
   };
@@ -510,8 +490,24 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                 const effectiveMrp = combo.mrp && !isNaN(Number(combo.mrp)) && Number(combo.mrp) > 0 ? Number(combo.mrp) : (baseMrp || 0);
                 const comboSp = combo.price && !isNaN(Number(combo.price)) ? Number(combo.price) : 0;
                 const isOverMrp = effectiveMrp > 0 && comboSp > 0 && comboSp > effectiveMrp;
-                const diffAmount = effectiveMrp > 0 && comboSp > 0 && effectiveMrp > comboSp ? effectiveMrp - comboSp : 0;
-                const diffPct = effectiveMrp > 0 && diffAmount > 0 ? (diffAmount / effectiveMrp) * 100 : 0;
+
+                const discVal = parseFloat(combo.discount_value || "0") || 0;
+                const discType = combo.discount_type || "price";
+                const baseForDisc = comboSp > 0 ? comboSp : effectiveMrp;
+
+                let directDiscAmt = 0;
+                if (discVal > 0 && baseForDisc > 0) {
+                  if (discType === "percent") {
+                    directDiscAmt = (baseForDisc * discVal) / 100;
+                  } else {
+                    directDiscAmt = Math.min(baseForDisc, discVal);
+                  }
+                }
+
+                const mrpDiff = effectiveMrp > 0 && comboSp > 0 && effectiveMrp > comboSp ? (effectiveMrp - comboSp) : 0;
+                const totalSavings = mrpDiff + directDiscAmt;
+                const referencePrice = effectiveMrp > 0 ? effectiveMrp : comboSp;
+                const savingPercent = referencePrice > 0 && totalSavings > 0 ? Math.min(100, (totalSavings / referencePrice) * 100) : 0;
 
                 return (
                   <React.Fragment key={combo.id}>
@@ -603,9 +599,9 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                               onChange={e => handleSellPriceChange(combo, e.target.value)}
                             />
                           </div>
-                          {diffAmount > 0 && effectiveMrp > 0 && !isOverMrp && (
+                          {totalSavings > 0 && !isOverMrp && (
                             <span className="text-[10px] text-emerald-600 font-bold mt-0.5 whitespace-nowrap">
-                              Save ₹{diffAmount % 1 === 0 ? diffAmount : diffAmount.toFixed(2)} ({diffPct.toFixed(0)}%)
+                              Save ₹{totalSavings % 1 === 0 ? totalSavings : totalSavings.toFixed(2)} ({savingPercent.toFixed(0)}%)
                             </span>
                           )}
                           {isOverMrp && (

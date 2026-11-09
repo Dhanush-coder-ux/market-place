@@ -176,6 +176,24 @@ export const SaleInvoiceModal: React.FC<SaleInvoiceModalProps> = ({
     const calc = activeSale.calculation_infos;
     if (!calc) return undefined;
 
+    const deliveryFee = Number(
+      calc.delivery_fee ??
+      calc.delivery_charge ??
+      (activeSale as any)?.charges_infos?.delivery_charge ??
+      (activeSale as any)?.charges_infos?.delivery_fee ??
+      (activeSale as any)?.additional_infos?.delivery_charge ??
+      (activeSale as any)?.additional_infos?.delivery_fee ??
+      (activeSale as any)?.additional_infos?.delivery_option?.delivery_charge ??
+      (activeSale as any)?.online_details?.delivery_fee ??
+      (activeSale as any)?.online_details?.delivery_charge ??
+      (activeSale as any)?.delivery_fee ??
+      (activeSale as any)?.delivery_charge ??
+      (Number(calc.total ?? calc.grand_total ?? activeSale.total_sellprice ?? 0) > Number(calc.subtotal ?? 0) &&
+       (activeSale.origin === 'ONLINE' || Boolean((activeSale as any)?.online_details))
+        ? Number(calc.total ?? calc.grand_total ?? activeSale.total_sellprice ?? 0) - Number(calc.subtotal ?? 0)
+        : 0)
+    );
+
     return {
       baseSubtotal: Number(calc.base_subtotal ?? calc.subtotal ?? 0),
       subtotal: Number(calc.subtotal ?? 0),
@@ -192,6 +210,7 @@ export const SaleInvoiceModal: React.FC<SaleInvoiceModalProps> = ({
       hasMrpSavings: Number(calc.customer_savings ?? 0) > 0,
       totalMrp: Number(calc.total_mrp ?? 0),
       totalSavings: Number(calc.customer_savings ?? 0),
+      deliveryFee,
       taxGroups: calc.tax_groups || [],
       lines: Array.isArray(calc.items)
         ? calc.items.map((l: any) => ({

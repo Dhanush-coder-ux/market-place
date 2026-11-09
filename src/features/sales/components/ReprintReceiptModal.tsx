@@ -175,7 +175,7 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
       subtotal = grandTotal + discountTotal - gst;
     }
 
-    const effectiveTaxable = taxable > 0 
+    let effectiveTaxable = taxable > 0 
       ? taxable 
       : (gst > 0 ? (grandTotal - gst - roundOff) : (subtotal - discountTotal));
 
@@ -195,10 +195,36 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
       gstRate = Math.round((gst / effectiveTaxable) * 100);
     }
 
+    // Ensure GST inclusive math is accurate (selling price is inclusive of GST)
+    if (gstRate > 0 && grandTotal > 0) {
+      const expectedTaxable = Math.round((grandTotal / (1 + gstRate / 100)) * 100) / 100;
+      if (Math.abs(effectiveTaxable - expectedTaxable) > 0.05 || gst === 0) {
+        effectiveTaxable = expectedTaxable;
+        gst = Math.round((grandTotal - effectiveTaxable) * 100) / 100;
+      }
+    }
+
     const cgstRate = gstRate > 0 ? gstRate / 2 : 0;
     const sgstRate = gstRate > 0 ? gstRate / 2 : 0;
-    const cgstAmount = calc.cgst !== undefined ? Number(calc.cgst) : Math.round((gst / 2) * 100) / 100;
-    const sgstAmount = calc.sgst !== undefined ? Number(calc.sgst) : Math.round((gst - cgstAmount) * 100) / 100;
+    const cgstAmount = Math.round((gst / 2) * 100) / 100;
+    const sgstAmount = Math.round((gst - cgstAmount) * 100) / 100;
+
+    const deliveryFee = Number(
+      calc.delivery_fee ??
+      calc.delivery_charge ??
+      s.charges_infos?.delivery_charge ??
+      s.charges_infos?.delivery_fee ??
+      s.additional_infos?.delivery_charge ??
+      s.additional_infos?.delivery_fee ??
+      s.additional_infos?.delivery_option?.delivery_charge ??
+      s.online_details?.delivery_fee ??
+      s.online_details?.delivery_charge ??
+      s.delivery_fee ??
+      s.delivery_charge ??
+      (grandTotal > subtotal && (s.origin === 'ONLINE' || s.origin === 'Online Sales' || Boolean(s.online_details))
+        ? grandTotal - subtotal
+        : 0)
+    );
 
     return {
       subtotal,
@@ -210,6 +236,7 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
       sgstRate,
       cgstAmount,
       sgstAmount,
+      deliveryFee,
       roundOff,
       grandTotal,
       itemsCount: itemsRaw.length,
@@ -344,6 +371,7 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
         cgstRate: totals.cgstRate,
         sgstRate: totals.sgstRate,
         gstRate: totals.gstRate,
+        deliveryFee: totals.deliveryFee,
         roundOff: totals.roundOff,
         finalAmount: totals.grandTotal,
         totalUnits: totals.totalUnits,
@@ -355,7 +383,7 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
         digitalStoreUrl: shopData?.additional_infos?.website || getDigitalStoreUrl((sale as any)?.shop_id || shopData?.id),
         includeDigitalStoreQr: Boolean(
           (printersList.find((p) => p.id === targetPrinterId) || getPrinterConfig())
-            ?.includeDigitalStoreQr && (shopData?.visible_online !== false)
+            ?.includeDigitalStoreQr !== false
         ),
         digitalStoreQrMessage: (
           printersList.find((p) => p.id === targetPrinterId) || getPrinterConfig()
@@ -576,6 +604,12 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
                   </div>
                 </>
               )}
+              {totals.deliveryFee > 0 && (
+                <div className="flex justify-between text-slate-700 font-medium">
+                  <span>Delivery Fee:</span>
+                  <span>+₹{totals.deliveryFee.toFixed(2)}</span>
+                </div>
+              )}
               {totals.roundOff !== 0 && (
                 <div className="flex justify-between text-slate-500 text-[10px]">
                   <span>Round Off:</span>
@@ -609,7 +643,7 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
             {/* Digital Store QR Section (Visible when enabled) */}
             {Boolean(
               (printersList.find((p) => p.id === targetPrinterId) || getPrinterConfig())
-                ?.includeDigitalStoreQr && (shopData?.visible_online !== false)
+                ?.includeDigitalStoreQr !== false && (shopData?.visible_online !== false)
             ) && (
               <div className="pt-3 pb-2 text-center border-t border-dashed border-slate-200">
                 <div className="flex justify-center my-2">

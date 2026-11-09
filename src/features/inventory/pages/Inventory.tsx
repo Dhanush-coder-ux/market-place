@@ -773,6 +773,8 @@ const ProductRow = React.memo(
                       parentGst={item.gst ?? (datas as any).gst}
                       parentStorageLocation={(item as any).storage_location_infos?.storage_location ?? (item as any).storage_location_infos?.name ?? (item as any).storage_location ?? (item as any).location ?? (datas as any).storage_location ?? null}
                       parentReorderPoint={(item as any).reorder_point_infos?.reorder_point ?? (item as any).reorder_point ?? datas.reorder_point ?? null}
+                      parentMrp={(datas as any).mrp || (item as any).mrp || (item as any).additional_infos?.mrp}
+                      parentDiscountPercent={(datas as any).discount_percent || (item as any).discount_percent || (item as any).additional_infos?.discount_percent || 0}
                     />
                   )}
                   {!hasVariants && hasBatches && (

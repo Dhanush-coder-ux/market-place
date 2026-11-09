@@ -203,6 +203,7 @@ const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
     Employees: "EMPLOYEES",
     "Digital Store": "DIGITAL_STORE",
     "Online Orders": "ONLINE_ORDERS",
+    Orders: "ONLINE_ORDERS",
   };
 
   const isCurrentShopConfigured = useMemo(() => {

@@ -1,4 +1,4 @@
-import { History, IndianRupee, Plus, UserCircle, Wallet, Bookmark, Receipt, Truck, Store } from "lucide-react";
+import { History, IndianRupee, Plus, UserCircle, Wallet, Bookmark, Receipt, Truck, Store, RotateCcw } from "lucide-react";
 import {
   Database,
   LayoutDashboard,
@@ -164,7 +164,14 @@ export const sidebarLinks: SidebarLink[] = [
     path: "/profile",
   },
 
-  { name: "Online Orders", icon: ShoppingCart, path: "/orders" },
+  {
+    name: "Orders",
+    icon: ShoppingCart,
+    subLinks: [
+      { name: "All Orders", path: "/orders", icon: ClipboardList },
+      { name: "Return Requests", path: "/orders/returns", icon: RotateCcw },
+    ],
+  },
 ];
 
 

@@ -159,6 +159,7 @@ const SaleDetailPage = lazyRetry(() => import("@/features/sales/pages/SaleDetail
 const SaleSearch = lazyRetry(() => import("@/features/sales/pages/SaleSearch"));
 const ReturnPage = lazyRetry(() => import("@/features/sales/pages/ReturnPage"));
 const Order = lazyRetry(() => import("../features/order/pages/Order"));
+const ReturnRequestsPage = lazyRetry(() => import("../features/order/pages/ReturnRequestsPage"));
 const DeliveryVerifyPage = lazyRetry(() => import("../features/order/pages/DeliveryVerifyPage"));
 const Billing = lazyRetry(() => import("../features/billing/pages/Billing"));
 
@@ -243,6 +244,7 @@ export const router = createBrowserRouter([
       // Orders & Billing
       { path: '/billing', element: <Page><Billing /></Page> },
       { path: '/orders', element: <Page><Order /></Page> },
+      { path: '/orders/returns', element: <Page><ReturnRequestsPage /></Page> },
 
       // Settings
       { path: '/settings', element: <Page><ProfileSettingsPage /></Page> },

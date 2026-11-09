@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   LayoutGrid, List, X, Inbox, RotateCcw
 } from "lucide-react";
@@ -256,6 +257,7 @@ const parseOrderForDetail = (
 };
 
 const Order = () => {
+  const navigate = useNavigate();
   const { loading, error, clearError } = useApi();
   const rawId = getShopId() || localStorage.getItem("shop_id") || SHOP_ID || "";
   const currentShopId = rawId && rawId !== "string" ? rawId : "";
@@ -567,30 +569,45 @@ const Order = () => {
         </div>
 
         {status === "RETURN_REQUESTS" ? (
-          returnRequestsLoading ? (
-            <div className="p-3">
-              <SkeletonLoader variant="card" rows={4} />
-            </div>
-          ) : returnRequests.length > 0 ? (
-            <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" : "flex flex-col gap-3"}>
-              {returnRequests.map((req) => (
-                <ReturnRequestCard
-                  key={req.id}
-                  request={req}
-                  onStatusChange={handleReturnRequestStatusChange}
-                  onViewOrder={handleOpenDetailsById}
-                  viewMode={viewMode}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center bg-white rounded-lg border border-slate-200 shadow-sm py-20 gap-3">
-              <div className="w-14 h-14 rounded-lg bg-slate-50 flex items-center justify-center text-slate-300">
-                <RotateCcw size={28} strokeWidth={2} />
+          <div>
+            <div className="mb-4 p-3.5 bg-amber-50/80 border border-amber-200 rounded-xl flex items-center justify-between">
+              <div className="flex items-center gap-2.5 text-xs font-bold text-amber-900">
+                <RotateCcw size={16} className="text-amber-700 shrink-0" />
+                <span>Customer Return Requests</span>
               </div>
-              <p className="text-sm font-bold text-slate-600">No return requests found</p>
+              <button
+                type="button"
+                onClick={() => navigate("/orders/returns")}
+                className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs"
+              >
+                Open Return Management Dashboard →
+              </button>
             </div>
-          )
+            {returnRequestsLoading ? (
+              <div className="p-3">
+                <SkeletonLoader variant="card" rows={4} />
+              </div>
+            ) : returnRequests.length > 0 ? (
+              <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" : "flex flex-col gap-3"}>
+                {returnRequests.map((req) => (
+                  <ReturnRequestCard
+                    key={req.id}
+                    request={req}
+                    onStatusChange={handleReturnRequestStatusChange}
+                    onViewOrder={handleOpenDetailsById}
+                    viewMode={viewMode}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center bg-white rounded-lg border border-slate-200 shadow-sm py-20 gap-3">
+                <div className="w-14 h-14 rounded-lg bg-slate-50 flex items-center justify-center text-slate-300">
+                  <RotateCcw size={28} strokeWidth={2} />
+                </div>
+                <p className="text-sm font-bold text-slate-600">No return requests found</p>
+              </div>
+            )}
+          </div>
         ) : loading ? (
           <div className="p-3">
             <SkeletonLoader variant="card" rows={6} />

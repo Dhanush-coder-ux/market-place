@@ -25,6 +25,24 @@ import { RecordPaymentModal } from "@/features/customer/components/RecordPayment
 import { customerCustomFieldsApi } from "@/services/api/customer";
 import type { CustomerCustomFieldDefinition, CustomerCustomFieldValue } from "../type";
 
+const isBoolTrue = (val: any): boolean => {
+  if (val === true || val === 1) return true;
+  if (typeof val === 'string') {
+    const s = val.trim().toLowerCase();
+    return s === 'true' || s === '1' || s === 'yes';
+  }
+  return false;
+};
+
+const isBoolFalse = (val: any): boolean => {
+  if (val === false || val === 0) return true;
+  if (typeof val === 'string') {
+    const s = val.trim().toLowerCase();
+    return s === 'false' || s === '0' || s === 'no';
+  }
+  return false;
+};
+
 // ── Search bar ──────────────────────────────────────────────────────────────
 const CustomerSearch = () => {
   const navigate = useNavigate();
@@ -558,18 +576,27 @@ export default function CustomerDetail() {
 
                                 {isEditing ? (
                                   <div className="flex items-center gap-1.5 mt-1">
-                                    {(field.type?.toLowerCase() === 'boolean' || field.type?.toLowerCase() === 'bool' || field.type?.toLowerCase() === 'checkbox' || String(currentVal?.value).toLowerCase() === 'true' || String(currentVal?.value).toLowerCase() === 'false') ? (
-                                      <label className="flex items-center gap-2 cursor-pointer flex-1 py-1">
-                                        <input
-                                          type="checkbox"
-                                          checked={editingValue === 'true'}
-                                          onChange={(e) => setEditingValue(String(e.target.checked))}
-                                          className="w-4 h-4 rounded accent-indigo-600 cursor-pointer"
-                                        />
-                                        <span className="text-xs font-semibold text-slate-700">
-                                          {editingValue === 'true' ? 'Yes' : 'No'}
-                                        </span>
-                                      </label>
+                                    {(field.type?.toLowerCase() === 'boolean' || field.type?.toLowerCase() === 'bool' || field.type?.toLowerCase() === 'checkbox' || isBoolTrue(currentVal?.value) || isBoolFalse(currentVal?.value)) ? (
+                                      <div className="flex items-center gap-4 flex-1 py-1">
+                                        <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                                          <input
+                                            type="checkbox"
+                                            checked={isBoolTrue(editingValue)}
+                                            onChange={(e) => setEditingValue(e.target.checked ? 'true' : 'false')}
+                                            className="w-4 h-4 rounded text-indigo-600 accent-indigo-600 cursor-pointer"
+                                          />
+                                          <span className="text-xs font-semibold text-slate-700">Yes</span>
+                                        </label>
+                                        <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                                          <input
+                                            type="checkbox"
+                                            checked={isBoolFalse(editingValue) || (!isBoolTrue(editingValue) && editingValue !== '')}
+                                            onChange={(e) => setEditingValue(e.target.checked ? 'false' : 'true')}
+                                            className="w-4 h-4 rounded text-indigo-600 accent-indigo-600 cursor-pointer"
+                                          />
+                                          <span className="text-xs font-semibold text-slate-700">No</span>
+                                        </label>
+                                      </div>
                                     ) : (
                                       <input
                                         autoFocus
@@ -598,17 +625,15 @@ export default function CustomerDetail() {
                                     className="flex items-center justify-between mt-1 cursor-pointer"
                                     onClick={() => {
                                       setEditingFieldId(field.id);
-                                      setEditingValue(currentVal?.value ?? ((field.type?.toLowerCase() === 'boolean' || field.type?.toLowerCase() === 'bool' || field.type?.toLowerCase() === 'checkbox' || String(currentVal?.value).toLowerCase() === 'true' || String(currentVal?.value).toLowerCase() === 'false') ? 'false' : ''));
+                                      setEditingValue(currentVal?.value ?? ((field.type?.toLowerCase() === 'boolean' || field.type?.toLowerCase() === 'bool' || field.type?.toLowerCase() === 'checkbox' || isBoolTrue(currentVal?.value) || isBoolFalse(currentVal?.value)) ? 'false' : ''));
                                     }}
                                   >
                                     <p className="text-sm font-bold text-slate-700 truncate">
-                                      {(field.type?.toLowerCase() === 'boolean' || field.type?.toLowerCase() === 'bool' || field.type?.toLowerCase() === 'checkbox' || String(currentVal?.value).toLowerCase() === 'true' || String(currentVal?.value).toLowerCase() === 'false') ? (
-                                        (String(currentVal?.value).toLowerCase() === 'true' || String(currentVal?.value).toLowerCase() === 'yes') ? (
+                                      {(field.type?.toLowerCase() === 'boolean' || field.type?.toLowerCase() === 'bool' || field.type?.toLowerCase() === 'checkbox' || isBoolTrue(currentVal?.value) || isBoolFalse(currentVal?.value)) ? (
+                                        isBoolTrue(currentVal?.value) ? (
                                           <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">Yes</span>
-                                        ) : (String(currentVal?.value).toLowerCase() === 'false' || String(currentVal?.value).toLowerCase() === 'no') ? (
-                                          <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-100 text-slate-500 border border-slate-200">No</span>
                                         ) : (
-                                          <span className="text-slate-300 font-medium italic">Click to set value</span>
+                                          <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-100 text-slate-500 border border-slate-200">No</span>
                                         )
                                       ) : (
                                         currentVal?.value || <span className="text-slate-300 font-medium italic">Click to set value</span>

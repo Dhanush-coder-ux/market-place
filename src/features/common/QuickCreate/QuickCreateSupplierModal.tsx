@@ -16,6 +16,24 @@ import { useToast } from "@/context/ToastContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { supplierCustomFieldsApi } from "@/services/api/supplierCustomFields";
 
+const isBoolTrue = (val: any): boolean => {
+  if (val === true || val === 1) return true;
+  if (typeof val === 'string') {
+    const s = val.trim().toLowerCase();
+    return s === 'true' || s === '1' || s === 'yes';
+  }
+  return false;
+};
+
+const isBoolFalse = (val: any): boolean => {
+  if (val === false || val === 0) return true;
+  if (typeof val === 'string') {
+    const s = val.trim().toLowerCase();
+    return s === 'false' || s === '0' || s === 'no';
+  }
+  return false;
+};
+
 interface QuickCreateSupplierModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -265,18 +283,36 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
                     {field.required && <span className="text-rose-500 ml-0.5">*</span>}
                   </label>
                   {field.type === 'boolean' ? (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        id={`cf_${field.id}`}
-                        checked={customFieldValues[field.id] === 'true'}
-                        onChange={(e) =>
-                          setCustomFieldValues((prev) => ({ ...prev, [field.id]: String(e.target.checked) }))
-                        }
-                        className="w-4 h-4 rounded accent-indigo-600"
-                      />
-                      <label htmlFor={`cf_${field.id}`} className="text-xs font-semibold text-slate-600">
-                        {field.label_name}
+                    <div className="flex items-center gap-6 h-9 px-3 rounded-lg border border-slate-200 bg-slate-50/30">
+                      <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          name={`cf_${field.id}_yes`}
+                          checked={isBoolTrue(customFieldValues[field.id])}
+                          onChange={(e) => {
+                            setCustomFieldValues((prev) => ({
+                              ...prev,
+                              [field.id]: e.target.checked ? 'true' : 'false',
+                            }));
+                          }}
+                          className="w-4 h-4 rounded text-indigo-600 accent-indigo-600 cursor-pointer"
+                        />
+                        <span className="text-xs font-semibold text-slate-700">Yes</span>
+                      </label>
+                      <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          name={`cf_${field.id}_no`}
+                          checked={isBoolFalse(customFieldValues[field.id]) || (!isBoolTrue(customFieldValues[field.id]) && customFieldValues[field.id] !== undefined)}
+                          onChange={(e) => {
+                            setCustomFieldValues((prev) => ({
+                              ...prev,
+                              [field.id]: e.target.checked ? 'false' : 'true',
+                            }));
+                          }}
+                          className="w-4 h-4 rounded text-indigo-600 accent-indigo-600 cursor-pointer"
+                        />
+                        <span className="text-xs font-semibold text-slate-700">No</span>
                       </label>
                     </div>
                   ) : (
@@ -412,7 +448,13 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
           country: form.country || "India",
           zipcode: form.zipcode || ""
         },
+        additional_infos: {
+          type: form.type,
+          city: form.city,
+          internal_notes: form.notes,
+        },
         datas: {
+          type: form.type,
           internal_notes: form.notes,
         },
         custom_fields: customFieldsPayload

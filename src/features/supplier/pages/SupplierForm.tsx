@@ -27,6 +27,24 @@ import { Switch } from "@/components/ui/switch";
 import { Plus } from "lucide-react";
 import { NavigationBlocker } from "@/components/common/NavigationBlocker";
 
+const isBoolTrue = (val: any): boolean => {
+  if (val === true || val === 1) return true;
+  if (typeof val === 'string') {
+    const s = val.trim().toLowerCase();
+    return s === 'true' || s === '1' || s === 'yes';
+  }
+  return false;
+};
+
+const isBoolFalse = (val: any): boolean => {
+  if (val === false || val === 0) return true;
+  if (typeof val === 'string') {
+    const s = val.trim().toLowerCase();
+    return s === 'false' || s === '0' || s === 'no';
+  }
+  return false;
+};
+
 export interface SupplierData {
   supplier_name: string;
   contact_name: string; 
@@ -172,8 +190,19 @@ const SupplierForm = () => {
           const contact = sup.contact_info || {};
           const additional = sup.additional_infos || d || {};
           const loc = sup.location_infos || d.address || {};
-          const bizContact = sup.contact_infos || sup || {};
+          const bizContact = sup.contact_infos || sup.contact_info || sup || {};
           const personContact = sup.contact_person_infos || contact || {};
+
+          const rawType = additional.type || bizContact.type || personContact.type || contact.type || sup.type || "";
+          let resolvedType = "Vendor";
+          if (rawType) {
+            const low = String(rawType).trim().toLowerCase();
+            if (low === "vendor") resolvedType = "Vendor";
+            else if (low === "manufacturer") resolvedType = "Manufacturer";
+            else if (low === "distributor") resolvedType = "Distributor";
+            else if (low === "service provider" || low === "service_provider" || low === "serviceprovider") resolvedType = "Service Provider";
+            else resolvedType = String(rawType).trim();
+          }
 
           setFormData({
             supplier_name: sup.name || d.supplier_name || "",
@@ -187,7 +216,7 @@ const SupplierForm = () => {
             state: loc.state || "",
             country: loc.country || "India",
             zipcode: loc.zipcode || "",
-            type: additional.type || contact.type || "Vendor",
+            type: resolvedType,
             gst_number: sup.gst_no || "",
             notes: additional.internal_notes || d.internal_notes || ""
           });
@@ -247,6 +276,7 @@ const SupplierForm = () => {
       contact_infos: {
         email: formData.email || undefined,
         mobile_number: formData.phone || undefined,
+        type: formData.type,
       },
       location_infos: {
         zipcode: formData.zipcode,
@@ -639,18 +669,36 @@ const SupplierForm = () => {
                       </div>
                     </div>
                     {field.type === 'boolean' ? (
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          id={`cf_${field.id}`}
-                          checked={customFieldValues[field.id] === 'true'}
-                          onChange={(e) =>
-                            setCustomFieldValues((prev) => ({ ...prev, [field.id]: String(e.target.checked) }))
-                          }
-                          className="w-4 h-4 rounded accent-[#286038]"
-                        />
-                        <label htmlFor={`cf_${field.id}`} className="text-xs font-semibold text-slate-600 cursor-pointer">
-                          {customFieldValues[field.id] === 'true' ? 'Yes' : 'No'}
+                      <div className="flex items-center gap-8 h-10 px-4 rounded-lg border border-slate-200 bg-slate-50/30">
+                        <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            name={`cf_${field.id}_yes`}
+                            checked={isBoolTrue(customFieldValues[field.id])}
+                            onChange={(e) => {
+                              setCustomFieldValues((prev) => ({
+                                ...prev,
+                                [field.id]: e.target.checked ? 'true' : 'false',
+                              }));
+                            }}
+                            className="w-4 h-4 rounded text-[#286038] accent-[#286038] cursor-pointer"
+                          />
+                          <span className="text-xs font-semibold text-slate-700">Yes</span>
+                        </label>
+                        <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            name={`cf_${field.id}_no`}
+                            checked={isBoolFalse(customFieldValues[field.id]) || (!isBoolTrue(customFieldValues[field.id]) && customFieldValues[field.id] !== undefined)}
+                            onChange={(e) => {
+                              setCustomFieldValues((prev) => ({
+                                ...prev,
+                                [field.id]: e.target.checked ? 'false' : 'true',
+                              }));
+                            }}
+                            className="w-4 h-4 rounded text-[#286038] accent-[#286038] cursor-pointer"
+                          />
+                          <span className="text-xs font-semibold text-slate-700">No</span>
                         </label>
                       </div>
                     ) : (

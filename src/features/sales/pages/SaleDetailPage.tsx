@@ -30,6 +30,7 @@ import { extractSaleCustomerInfo } from "../type";
 import { ReprintReceiptModal } from "../components/ReprintReceiptModal";
 import { SaleInvoiceModal } from "../components/SaleInvoiceModal";
 import { BiLogoWhatsapp } from "react-icons/bi";
+import { calculateTaxSplit } from "@/utils/pricing";
 
 /* ── helpers ── */
 const fmt = (n?: number) => {
@@ -79,7 +80,25 @@ export function extractPaymentList(paymentInfos: any, fallback?: any): ParsedPay
       source.forEach((p: any) => {
         if (typeof p === "string") add(p);
         else if (p && typeof p === "object") {
-          add(p.method || p.mode || p.type || p.payment_method || p.payment_mode || "Other", p.amount ?? p.value);
+          const directMethod = p.method || p.mode || p.type || p.payment_method || p.payment_mode;
+          if (directMethod) {
+            add(directMethod, p.amount ?? p.value);
+          } else {
+            const entries = Object.entries(p);
+            if (entries.length > 0) {
+              entries.forEach(([k, v]) => {
+                if (typeof v === "number" || (typeof v === "string" && !isNaN(Number(v)))) {
+                  add(k, Number(v));
+                } else if (v && typeof v === "object" && ("amount" in (v as any) || "value" in (v as any))) {
+                  add(k, (v as any).amount ?? (v as any).value);
+                } else {
+                  add(k);
+                }
+              });
+            } else {
+              add("Other", p.amount ?? p.value);
+            }
+          }
         }
       });
       return result.length > 0;
@@ -277,7 +296,11 @@ type SaleItem = {
   unit_infos?: any;
 };
 
-const generateItems = (sale: OrderResponse, productMap: Record<string, string> = {}): SaleItem[] => {
+const generateItems = (
+  sale: OrderResponse,
+  productMap: Record<string, string> = {},
+  fullProductMap: Record<string, any> = {}
+): SaleItem[] => {
   const calcInfos = (sale as any)?.calculation_infos || (sale as any)?.calculations || {};
   const calcItems = calcInfos.items || [];
   const rawItemList = (sale?.items && sale.items.length > 0)
@@ -287,11 +310,24 @@ const generateItems = (sale: OrderResponse, productMap: Record<string, string> =
       : calcItems;
 
   return rawItemList.map((i: any) => {
+    const itemProdId = i.product_id || i.inventory_id || i.id || i.datas?.product_id || i.datas?.inventory_id;
+    const itemName = (i.name || i.product_name || i.datas?.product_name || i.datas?.name || "").trim().toLowerCase();
+
     // Attempt to find matching calc item for subunit pricing/qty/discount details
-    const calc = calcItems.find((ci: any) =>
-      (ci.product_id && (ci.product_id === i.product_id || ci.product_id === i.inventory_id || ci.product_id === i.id)) ||
-      (ci.name && (ci.name === i.name || ci.name === i.product_name))
-    );
+    const calc = calcItems.find((ci: any) => {
+      const ciPid = ci.product_id || ci.inventory_id || ci.id;
+      if (ciPid && itemProdId && (ciPid === itemProdId || ciPid === i.product_id || ciPid === i.inventory_id || ciPid === i.id)) return true;
+      const ciName = (ci.name || ci.product_name || "").trim().toLowerCase();
+      if (ciName && itemName && ciName === itemName) return true;
+      return false;
+    });
+
+    const matchedProd =
+      (itemProdId ? fullProductMap[itemProdId] : null) ||
+      (i.product_id ? fullProductMap[i.product_id] : null) ||
+      (i.inventory_id ? fullProductMap[i.inventory_id] : null) ||
+      (i.id ? fullProductMap[i.id] : null) ||
+      (itemName ? fullProductMap[itemName] : null);
 
     const rawTotalAmount = Number(i.total_amount ?? i.totalAmount ?? 0);
     let rawPrice = calc?.price ?? i.sell_price ?? i.datas?.sell_price;
@@ -305,10 +341,52 @@ const generateItems = (sale: OrderResponse, productMap: Record<string, string> =
       if (derived > 1) rawQty = derived;
     }
     const qty = rawQty;
-    const mrp = Number(calc?.mrp ?? i.mrp ?? i.datas?.mrp ?? 0);
+    const mrp = Number(calc?.mrp ?? i.mrp ?? i.datas?.mrp ?? matchedProd?.mrp ?? matchedProd?.pricing_infos?.mrp ?? 0);
 
-    const rawGst = i.gst || i.datas?.gst || calc?.gst_rate || calc?.gst || 0;
-    const gstRate = typeof rawGst === "number" ? rawGst : (parseFloat(String(rawGst).replace("%", "")) || 0);
+    // Extract non-zero GST rate from all possible candidates
+    const candidateGstVals = [
+      calc?.gst_rate,
+      calc?.gst,
+      calc?.tax_rate,
+      calc?.tax_gst,
+      i.gst_rate,
+      i.tax_gst,
+      i.tax_rate,
+      i.pricing_infos?.gst_rate,
+      i.pricing_infos?.gst,
+      i.pricing_infos?.tax_gst,
+      i.datas?.gst_rate,
+      i.datas?.tax_gst,
+      i.datas?.gst,
+      i.gst,
+      i.product?.gst_rate,
+      i.product?.gst,
+      i.inventory_infos?.gst_rate,
+      i.inventory_infos?.gst,
+      matchedProd?.gst_rate,
+      matchedProd?.gst,
+      matchedProd?.tax_rate,
+      matchedProd?.tax_gst,
+      matchedProd?.pricing_infos?.gst_rate,
+      matchedProd?.pricing_infos?.gst,
+      matchedProd?.classification?.gst,
+      matchedProd?.datas?.gst,
+      matchedProd?.datas?.gst_rate,
+    ];
+
+    let gstRate = 0;
+    let rawGst: any = 0;
+
+    for (const val of candidateGstVals) {
+      if (val !== undefined && val !== null && val !== "") {
+        const parsed = typeof val === "number" ? val : parseFloat(String(val).replace(/[^0-9.]/g, ""));
+        if (!isNaN(parsed) && parsed > 0) {
+          gstRate = parsed;
+          rawGst = val;
+          break;
+        }
+      }
+    }
 
     // Item-level discounts
     const productDiscountAmount = Number(calc?.product_discount_amount ?? i.product_discount_amount ?? 0);
@@ -328,21 +406,71 @@ const generateItems = (sale: OrderResponse, productMap: Record<string, string> =
 
     const effectiveUnitPrice = qty > 0 ? (finalInclusive / qty) : unitPrice;
 
+    // Check if GST amount & taxable value already exist from calc / order item
+    const knownGstAmt = Number(calc?.gst_amount ?? i.gst_amount ?? 0);
+    const knownTaxable = Number(calc?.taxable_value ?? i.taxable_value ?? 0);
+
+    // If GST rate is not explicitly set, derive it from known GST amount & billed amount
+    if (gstRate === 0 && knownGstAmt > 0) {
+      if (finalInclusive > 0) {
+        // Selling price is inclusive of GST: gstAmount = finalInclusive * (gstRate / 100)
+        const derived = Math.round((knownGstAmt * 100) / finalInclusive);
+        if (derived > 0) {
+          gstRate = derived;
+          rawGst = `${derived}%`;
+        }
+      } else if (knownTaxable > 0) {
+        const derived = Math.round((knownGstAmt * 100) / knownTaxable);
+        if (derived > 0) {
+          gstRate = derived;
+          rawGst = `${derived}%`;
+        }
+      }
+    }
+
+    // Also check overall calculation_infos if still 0
+    if (gstRate === 0 && calcInfos) {
+      const overallGstAmt = Number(calcInfos.gst_amount ?? calcInfos.total_gst_amount ?? 0);
+      const overallTotal = Number(calcInfos.total ?? calcInfos.total_sellprice ?? calcInfos.grand_total ?? 0);
+      const overallTaxable = Number(calcInfos.taxable_amount ?? calcInfos.subtotal ?? 0);
+      if (overallGstAmt > 0) {
+        if (overallTotal > 0) {
+          const derived = Math.round((overallGstAmt * 100) / overallTotal);
+          if (derived > 0) {
+            gstRate = derived;
+            rawGst = `${derived}%`;
+          }
+        } else if (overallTaxable > 0) {
+          const derived = Math.round((overallGstAmt * 100) / overallTaxable);
+          if (derived > 0) {
+            gstRate = derived;
+            rawGst = `${derived}%`;
+          }
+        }
+      }
+    }
+
     // Taxable value and GST amount (selling price is inclusive of GST)
     let taxableValue = 0;
     let gstAmount = 0;
     if (gstRate > 0) {
-      taxableValue = Math.round((finalInclusive / (1 + gstRate / 100)) * 100) / 100;
-      gstAmount = Math.round((finalInclusive - taxableValue) * 100) / 100;
-    } else if (calc?.taxable_value !== undefined && calc?.taxable_value !== null) {
-      taxableValue = Number(calc.taxable_value);
-      gstAmount = Number(calc?.gst_amount ?? (finalInclusive - taxableValue));
-    } else if (calc?.gst_amount !== undefined && calc?.gst_amount !== null) {
-      gstAmount = Number(calc.gst_amount);
+      const split = calculateTaxSplit(finalInclusive, gstRate);
+      taxableValue = split.taxableValue;
+      gstAmount = split.gstAmount;
+    } else if (knownTaxable > 0) {
+      taxableValue = knownTaxable;
+      gstAmount = knownGstAmt > 0 ? knownGstAmt : Math.max(0, finalInclusive - taxableValue);
+    } else if (knownGstAmt > 0) {
+      gstAmount = knownGstAmt;
       taxableValue = Math.max(0, finalInclusive - gstAmount);
     } else {
       taxableValue = finalInclusive;
       gstAmount = 0;
+    }
+
+    // Safety check: if gstRate was still 0 but we have a non-zero gstAmount, update gstRate
+    if (gstRate === 0 && gstAmount > 0 && finalInclusive > 0) {
+      gstRate = Math.round((gstAmount * 100) / finalInclusive);
     }
 
     const basePrice = taxableValue / (qty || 1);
@@ -350,14 +478,20 @@ const generateItems = (sale: OrderResponse, productMap: Record<string, string> =
     const sgst = calc?.sgst !== undefined ? Number(calc.sgst) : gstAmount / 2;
     const totalAmount = finalInclusive;
 
+    const displayGstBadge = gstRate > 0 
+      ? `${gstRate}%` 
+      : (rawGst !== 0 && rawGst !== "0%" && rawGst !== undefined && rawGst !== null 
+          ? (String(rawGst).includes("%") ? String(rawGst) : `${rawGst}%`) 
+          : "0%");
+
     return {
       id: i.id,
-      name: i.name || i.product_name || i.datas?.product_name || i.datas?.name || productMap[i.inventory_id] || "Unknown Item",
-      sku: i.barcode?.trim() || i.inventory_id?.slice(-6) || "N/A",
+      name: i.name || i.product_name || i.datas?.product_name || i.datas?.name || productMap[i.inventory_id] || matchedProd?.name || "Unknown Item",
+      sku: i.barcode?.trim() || matchedProd?.barcode?.trim() || i.inventory_id?.slice(-6) || "N/A",
       quantity: qty,
       returnedQty: i.returned_quantity || 0,
       unitPrice,
-      buyPrice: i.buy_price || 0,
+      buyPrice: i.buy_price || matchedProd?.buy_price || matchedProd?.pricing_infos?.buy_price || 0,
       basePrice,
       mrp,
       productDiscountAmount,
@@ -375,21 +509,21 @@ const generateItems = (sale: OrderResponse, productMap: Record<string, string> =
       status: i.status || "COMPLETED",
       reason: i.reason,
       serial_numbers: Array.isArray(i.serialno_infos) ? i.serialno_infos.map((sn: any) => sn.name || sn) : (i.serialno_info?.serial_numbers || i.serial_info?.serial_numbers || i.serial_numbers || []),
-      unit: i.unit_infos?.name || i.unit_info?.name || i.product?.unit || i.unit || i.datas?.unit || "UNIT",
+      unit: i.unit_infos?.name || i.unit_info?.name || i.product?.unit || i.unit || i.datas?.unit || matchedProd?.unit || matchedProd?.unit_infos?.name || "UNIT",
       variantName: i.variant_infos?.variant_name || i.variant_info?.variant_name || i.variant?.variant_name,
       batchName: i.batch_infos?.batch_name || i.batch_infos?.name || i.batch_info?.batch_name || i.batch?.batch_name,
       mfgDate: i.batch_infos?.mfg_date || i.batch_infos?.manufacturing_date || i.batch_info?.mfg_date || i.batch?.mfg_date,
       expDate: i.batch_infos?.exp_date || i.batch_infos?.expiry_date || i.batch_info?.exp_date || i.batch?.exp_date,
-      gst: i.gst || i.datas?.gst || gstRate,
-      categoryName: i.category_infos?.name || i.category_info?.name || i.category || i.datas?.category_name,
+      gst: displayGstBadge,
+      categoryName: i.category_infos?.name || i.category_info?.name || i.category || i.datas?.category_name || matchedProd?.category || matchedProd?.category_infos?.name,
       stockBefore: i.stock_before,
       stockAfter: i.stock_after,
-      image: i.image_url || i.image || i.product?.image_url || i.product?.image || i.datas?.image_url || i.datas?.image || i.inventory_infos?.image_url || i.inventory_infos?.image || i.inventory_info?.image_url || i.inventory_info?.image || "",
+      image: i.image_url || i.image || i.product?.image_url || i.product?.image || i.datas?.image_url || i.datas?.image || i.inventory_infos?.image_url || i.inventory_infos?.image || i.inventory_info?.image_url || i.inventory_info?.image || matchedProd?.image_url || matchedProd?.image || "",
       entered_qty: (i.entered_unit && (i.unit_infos?.name || i.unit) && String(i.entered_unit).toLowerCase() !== String(i.unit_infos?.name || i.unit).toLowerCase() && i.entered_qty !== undefined && Number(i.entered_qty) > 0)
         ? Number(i.entered_qty)
         : (calc?.entered_qty !== undefined ? Number(calc.entered_qty) : (i.entered_qty !== undefined && Number(i.entered_qty) > qty ? Number(i.entered_qty) : (qty > 1 ? qty : (i.entered_qty ?? undefined)))),
       entered_unit: i.entered_unit || calc?.entered_unit || calc?.unit || i.unit_infos?.sub_units?.find((su: any) => su.name === i.unit || su.name === calc?.unit)?.name || undefined,
-      unit_infos: i.unit_infos || i.unit_info || i.product?.unit_infos || null,
+      unit_infos: i.unit_infos || i.unit_info || i.product?.unit_infos || matchedProd?.unit_infos || null,
     };
   });
 };
@@ -409,6 +543,7 @@ const SaleDetailPage: React.FC = () => {
   const [sale, setSale] = useState<OrderResponse | null>(location.state?.sale || null);
   const [customerMap, setCustomerMap] = useState<Record<string, any>>(location.state?.customerMap || {});
   const [productMap, setProductMap] = useState<Record<string, string>>(location.state?.productMap || {});
+  const [fullProductMap, setFullProductMap] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(!sale);
   const [activeTab, setActiveTab] = useState(0);
   const [isReturnOpen, setIsReturnOpen] = useState(false);
@@ -455,7 +590,7 @@ const SaleDetailPage: React.FC = () => {
   const [clearingHistories, setClearingHistories] = useState<any[]>([]);
 
   const fetchSaleDetail = async () => {
-    setLoading(true);
+    setLoading(!sale);
     try {
       // Fetch the specific order directly by ID
       const ordRes = await api.getData(`${ENDPOINTS.ORDERS}/${SHOP_ID}/${id}`);
@@ -477,9 +612,10 @@ const SaleDetailPage: React.FC = () => {
             origin: found.origin === "OFFLINE" ? "Sales" : found.origin || "Sales",
           });
 
-          if (found.customer_id) {
+          const custId = found.customer_id || found.customer?.id || found.customer?.customer_id || found.user_id || found.contact_infos?.customer_id || found.additional_infos?.customer_id;
+          if (custId) {
             try {
-              const clrRes = await api.getData(`${ENDPOINTS.CUSTOMERS}/cleared-histories/by/id/${SHOP_ID}/${found.customer_id}`);
+              const clrRes = await api.getData(`${ENDPOINTS.CUSTOMERS}/cleared-histories/by/id/${SHOP_ID}/${custId}`);
               if (clrRes?.data) {
                 let actualClr = clrRes.data;
                 if (typeof actualClr === 'object' && !Array.isArray(actualClr) && 'datas' in actualClr) {
@@ -493,7 +629,7 @@ const SaleDetailPage: React.FC = () => {
 
             // On-demand fetch customer details by customer_id
             try {
-              const singleCustRes = await api.getData(`${ENDPOINTS.CUSTOMERS}/by/id/${SHOP_ID}/${found.customer_id}`);
+              const singleCustRes = await api.getData(`${ENDPOINTS.CUSTOMERS}/by/id/${SHOP_ID}/${custId}`);
               if (singleCustRes?.data) {
                 const singleCust = Array.isArray(singleCustRes.data) ? singleCustRes.data[0] : (singleCustRes.data.datas?.[0] || singleCustRes.data);
                 if (singleCust && singleCust.id) {
@@ -523,11 +659,50 @@ const SaleDetailPage: React.FC = () => {
                     [matched.id]: matched,
                     [rawCustName.trim().toLowerCase()]: matched
                   }));
+                  if (!custId) {
+                    try {
+                      const clrRes = await api.getData(`${ENDPOINTS.CUSTOMERS}/cleared-histories/by/id/${SHOP_ID}/${matched.id}`);
+                      if (clrRes?.data) {
+                        let actualClr = clrRes.data;
+                        if (typeof actualClr === 'object' && !Array.isArray(actualClr) && 'datas' in actualClr) {
+                          actualClr = actualClr.datas;
+                        }
+                        setClearingHistories(Array.isArray(actualClr) ? actualClr : [actualClr]);
+                      }
+                    } catch (e) {}
+                  }
                 }
               }
             } catch (err) {
               console.warn("Could not load customer by name:", err);
             }
+          }
+
+          // Fetch product records for order items to recover GST rate, barcode, category etc. if missing
+          const rawItems = (found.items || (found as any).order_items || found.calculation_infos?.items || []) as any[];
+          const pids = rawItems.map((it: any) => it.product_id || it.inventory_id || it.id).filter(Boolean);
+          if (pids.length > 0) {
+            Promise.allSettled(
+              pids.map((pid: string) =>
+                api.getData(`${ENDPOINTS.INVENTORIES}/by/id/${SHOP_ID}/${pid}`)
+                  .then((pRes: any) => Array.isArray(pRes?.data) ? pRes.data[0] : (pRes?.data?.datas?.[0] || pRes?.data))
+              )
+            ).then((results) => {
+              const extraM: Record<string, any> = {};
+              results.forEach((r) => {
+                if (r.status === "fulfilled" && r.value && (r.value.id || r.value.product_id)) {
+                  const p = r.value;
+                  const pid = p.id || p.product_id;
+                  extraM[pid] = p;
+                  if (p.product_id) extraM[p.product_id] = p;
+                  if (p.inventory_id) extraM[p.inventory_id] = p;
+                  if (p.name) extraM[p.name.trim().toLowerCase()] = p;
+                }
+              });
+              if (Object.keys(extraM).length > 0) {
+                setFullProductMap(prev => ({ ...prev, ...extraM }));
+              }
+            }).catch(() => {});
           }
         }
       }
@@ -554,11 +729,23 @@ const SaleDetailPage: React.FC = () => {
     }
 
     try {
-      const invRes = await api.getData(ENDPOINTS.INVENTORIES);
+      const invRes = await api.getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}`, { limit: "500" })
+        .catch(() => api.getData(ENDPOINTS.INVENTORIES));
       if (invRes?.data) {
+        const list = Array.isArray(invRes.data) ? invRes.data : (invRes.data.datas || invRes.data.items || []);
         const m: Record<string, string> = {};
-        invRes.data.forEach((p: any) => { m[p.id] = p.name; });
-        setProductMap(m);
+        const fullM: Record<string, any> = {};
+        list.forEach((p: any) => {
+          if (p.id) {
+            m[p.id] = p.name;
+            fullM[p.id] = p;
+          }
+          if (p.product_id) fullM[p.product_id] = p;
+          if (p.inventory_id) fullM[p.inventory_id] = p;
+          if (p.name) fullM[p.name.trim().toLowerCase()] = p;
+        });
+        setProductMap(prev => ({ ...prev, ...m }));
+        setFullProductMap(prev => ({ ...prev, ...fullM }));
       }
     } catch (err) {
       console.warn("Could not load product map:", err);
@@ -571,9 +758,37 @@ const SaleDetailPage: React.FC = () => {
   }, [setBottomActions, navigate, id, api]);
 
   useEffect(() => {
-    if (!sale || !sale.items) fetchSaleDetail();
+    fetchSaleDetail();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  useEffect(() => {
+    const rawCustName = (sale as any)?.customer_name || (sale as any)?.customer?.name || (sale as any)?.customer?.customer_name;
+    const custId =
+      sale?.customer_id ||
+      (sale as any)?.customer?.id ||
+      (sale as any)?.customer?.customer_id ||
+      (sale as any)?.user_id ||
+      (sale as any)?.contact_infos?.customer_id ||
+      (sale as any)?.additional_infos?.customer_id ||
+      (customerMap && rawCustName && customerMap[rawCustName.trim().toLowerCase()]?.id);
+
+    if (!custId || String(custId).toLowerCase().includes("walk-in")) return;
+
+    api.getData(`${ENDPOINTS.CUSTOMERS}/cleared-histories/by/id/${SHOP_ID}/${custId}`)
+      .then((clrRes: any) => {
+        if (clrRes?.data) {
+          let actualClr = clrRes.data;
+          if (typeof actualClr === 'object' && !Array.isArray(actualClr) && 'datas' in actualClr) {
+            actualClr = actualClr.datas;
+          }
+          setClearingHistories(Array.isArray(actualClr) ? actualClr : [actualClr]);
+        }
+      })
+      .catch((err) => {
+        console.warn("Could not load clearing history in effect:", err);
+      });
+  }, [id, sale?.customer_id, (sale as any)?.customer?.id, (sale as any)?.customer_name, (sale as any)?.customer?.name]);
 
   if (loading) {
     return (
@@ -596,7 +811,7 @@ const SaleDetailPage: React.FC = () => {
     </div>
   );
 
-  const items = generateItems(sale, productMap);
+  const items = generateItems(sale, productMap, fullProductMap);
   const canReturn = sale.status === "Completed" && sale.origin !== "Sales Return";
   const customerInfo = extractSaleCustomerInfo(sale, customerMap);
   const customerName = customerInfo.name;
@@ -690,37 +905,80 @@ const SaleDetailPage: React.FC = () => {
     .filter(p => isCreditPayment(p.label))
     .reduce((sum, p) => sum + (p.amount || 0), 0);
 
-  const isBilledCredit = initialCreditAmount > 0 || isCreditPayment(sale.payment_method) || paymentsDetail.some(p => isCreditPayment(p.label));
-
-  const baseDue = isBilledCredit
-    ? (initialCreditAmount > 0 ? initialCreditAmount : Math.max(0, baseOrderTotal - initialNonCreditPaid))
-    : Math.max(0, baseOrderTotal - initialNonCreditPaid);
-
-  const totalDueForOrder = baseDue + exchangeCreditAdded;
-
   const orderUiId = String(sale.ui_id || '').trim().toUpperCase();
   const orderId = String(sale.id || '').trim().toUpperCase();
 
+  const hasOnCreditLedger = clearingHistories.some(h => {
+    let addInfos = h.additional_infos || {};
+    if (typeof addInfos === 'string') {
+      try { addInfos = JSON.parse(addInfos); } catch (e) { addInfos = {}; }
+    }
+    const noteStr = String(addInfos.notes || h.notes || '').toLowerCase();
+    const inv = String(h.invoice_no || addInfos.invoice_no || h.reference_no || addInfos.reference_no || addInfos.ref_no || h.ref_no || '').trim().toUpperCase();
+    const entityId = String(h.entity_id || addInfos.entity_id || '').trim().toUpperCase();
+    const matches = (orderUiId && (inv === orderUiId || entityId === orderUiId || noteStr.includes(orderUiId.toLowerCase()))) ||
+                    (orderId && (inv === orderId || entityId === orderId || noteStr.includes(orderId.toLowerCase())));
+    if (!matches) return false;
+    const mode = String((h.payment_infos && h.payment_infos[0]?.method) || addInfos.payment_method || h.payment_method || '').toUpperCase();
+    return mode.includes('CREDIT') || noteStr.includes('billed (on credit)') || noteStr.includes('on credit');
+  });
+
+  const isBilledCredit = initialCreditAmount > 0 || 
+                         isCreditPayment(sale.payment_method) || 
+                         paymentsDetail.some(p => isCreditPayment(p.label)) ||
+                         hasOnCreditLedger ||
+                         (sale as any).payment_status === "NOT-PAID" ||
+                         (sale as any).payment_status === "PARTIALY-PAID" ||
+                         Number((sale as any).pending_amount) > 0;
+
+  const effectiveInitialCredit = (initialCreditAmount > 0)
+    ? initialCreditAmount
+    : isBilledCredit
+      ? Math.max(0, baseOrderTotal - (paymentsDetail.filter(p => !isCreditPayment(p.label) && p.label !== "Other").reduce((s, p) => s + (p.amount || 0), 0)))
+      : 0;
+
+  const effectiveInitialNonCreditPaid = isBilledCredit
+    ? Math.max(0, baseOrderTotal - effectiveInitialCredit)
+    : initialNonCreditPaid;
+
+  const baseDue = isBilledCredit
+    ? (effectiveInitialCredit > 0 ? effectiveInitialCredit : Math.max(0, baseOrderTotal - effectiveInitialNonCreditPaid))
+    : Math.max(0, baseOrderTotal - effectiveInitialNonCreditPaid);
+
+  const totalDueForOrder = baseDue + exchangeCreditAdded;
+
+  if (isBilledCredit && paymentsDetail.every(p => p.label === "Other" || !p.label)) {
+    paymentsDetail.length = 0;
+    paymentsDetail.push({ label: "On Credit", amount: effectiveInitialCredit });
+  }
+
+  const clearedPaymentsList: { mode: string; amount: number; date?: string; notes?: string }[] = [];
+
   const clearedPaymentsForThisOrder = clearingHistories.reduce((sum: number, h: any) => {
-    const noteStr = String(h.additional_infos?.notes || h.notes || '').toLowerCase();
+    let addInfos = h.additional_infos || {};
+    if (typeof addInfos === 'string') {
+      try { addInfos = JSON.parse(addInfos); } catch (e) { addInfos = {}; }
+    }
+
+    const noteStr = String(addInfos.notes || h.notes || '').toLowerCase();
     const isInitialBilled = noteStr.includes('billed (on credit)') || 
                             noteStr.includes('billed on credit') || 
                             noteStr.includes('initial payment') ||
-                            h.additional_infos?.is_initial === true ||
-                            h.additional_infos?.type === 'INCREMENT';
+                            addInfos.is_initial === true ||
+                            addInfos.type === 'INCREMENT';
     const isCreditAdd = noteStr.includes('added to credit') || h.type === 'INCREMENT';
     
     // Credit additions and initial billing records are NOT subsequent debt clearing payments
     if (isInitialBilled || isCreditAdd) return sum;
 
-    const inv = String(h.invoice_no || h.additional_infos?.invoice_no || '').trim().toUpperCase();
-    const entityId = String(h.entity_id || h.additional_infos?.entity_id || '').trim().toUpperCase();
+    const inv = String(h.invoice_no || addInfos.invoice_no || h.reference_no || addInfos.reference_no || addInfos.ref_no || h.ref_no || '').trim().toUpperCase();
+    const entityId = String(h.entity_id || addInfos.entity_id || '').trim().toUpperCase();
 
-    const matches = (orderUiId && (inv === orderUiId || entityId === orderUiId)) ||
-                    (orderId && (inv === orderId || entityId === orderId));
+    const matches = (orderUiId && (inv === orderUiId || entityId === orderUiId || noteStr.includes(orderUiId.toLowerCase()))) ||
+                    (orderId && (inv === orderId || entityId === orderId || noteStr.includes(orderId.toLowerCase())));
     if (!matches) return sum;
 
-    let amt = Number(h.additional_infos?.cleared_amount ?? 0);
+    let amt = Number(addInfos.cleared_amount ?? addInfos.paid_amount ?? h.cleared_amount ?? h.amount ?? 0);
     if (!amt && h.payment_infos && Array.isArray(h.payment_infos)) {
       amt = h.payment_infos.filter((p: any) => !isCreditPayment(p.method || p.mode)).reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
     }
@@ -729,6 +987,17 @@ const SaleDetailPage: React.FC = () => {
       const after = Number(h.cleared_infos.outstanding_after || 0);
       if (before > after) amt = before - after;
     }
+
+    if (amt > 0) {
+      const pMode = (h.payment_infos && h.payment_infos[0]?.method) || addInfos.payment_method || h.payment_method || "BANK";
+      clearedPaymentsList.push({
+        mode: formatPaymentMethodName(pMode),
+        amount: amt,
+        date: h.created_at || h.date,
+        notes: h.notes || addInfos.notes
+      });
+    }
+
     return sum + (amt || 0);
   }, 0);
 
@@ -766,7 +1035,7 @@ const SaleDetailPage: React.FC = () => {
       outstanding = Math.max(0, effectiveOrderTotal - totalPaid);
     }
   } else {
-    totalPaid = initialNonCreditPaid + exchangeNonCreditPaid + clearedPaymentsForThisOrder;
+    totalPaid = effectiveInitialNonCreditPaid + exchangeNonCreditPaid + clearedPaymentsForThisOrder;
     outstanding = Math.max(0, totalDueForOrder - clearedPaymentsForThisOrder);
   }
 
@@ -828,7 +1097,7 @@ const SaleDetailPage: React.FC = () => {
             { icon: Calendar, text: timeStr ? `${dateStr} at ${timeStr}` : dateStr },
             { 
               icon: customerInfo.isOnline ? Globe : User, 
-              text: `${customerName}${customerInfo.isOnline && !customerInfo.isWalkIn ? ' (Online)' : ''}` 
+              text: `${customerName}${customerInfo.uiId ? ` (${customerInfo.uiId})` : ''}${customerInfo.isOnline && !customerInfo.isWalkIn ? ' (Online)' : ''}` 
             },
             ...(customerInfo.phone ? [{ icon: Smartphone, text: customerInfo.phone }] : []),
             ...(customerInfo.city ? [{ icon: MapPin, text: `${customerInfo.city}${customerInfo.pincode ? ` (${customerInfo.pincode})` : ''}` }] : [])
@@ -962,11 +1231,11 @@ const SaleDetailPage: React.FC = () => {
                         <DetailItem icon={Mail} label="Email Address" value={customerInfo.email} />
                       ) : null}
 
-                      {customerInfo.userId && !customerInfo.isOnline ? (
+                      {customerInfo.uiId && !customerInfo.isOnline ? (
                         <DetailItem 
                           icon={Fingerprint} 
                           label="Customer ID" 
-                          value={customerInfo.userId} 
+                          value={customerInfo.uiId} 
                         />
                       ) : null}
 
@@ -1156,7 +1425,15 @@ const SaleDetailPage: React.FC = () => {
                       )}
                       <div className="flex justify-between items-center">
                         <span className="text-[11px] font-medium text-slate-400 uppercase tracking-tight">Payment</span>
-                        <span className="text-xs font-bold text-slate-700">{paymentsDetail.map(p => p.label).join(', ') || "—"}</span>
+                        <span className="text-xs font-bold text-slate-700">
+                          {isBilledCredit
+                            ? (clearedPaymentsList.length > 0 && outstanding === 0
+                                ? `On Credit (Cleared: ${Array.from(new Set(clearedPaymentsList.map(cp => cp.mode))).join(', ')})`
+                                : "On Credit")
+                            : (clearedPaymentsList.length > 0 && outstanding === 0
+                                ? `${paymentsDetail.map(p => p.label).join(', ')} (Cleared: ${Array.from(new Set(clearedPaymentsList.map(cp => cp.mode))).join(', ')})`
+                                : paymentsDetail.map(p => p.label).join(', ') || "—")}
+                        </span>
                       </div>
                       {(refunded > 0 || exchanged > 0 || exchangesCount > 0 || returnsCount > 0) && (
                         <div className="pt-2.5 border-t border-slate-100/50 space-y-2">
@@ -1223,6 +1500,21 @@ const SaleDetailPage: React.FC = () => {
                           {fmt(outstanding)}
                         </span>
                       </div>
+
+                      {clearedPaymentsList.length > 0 && (
+                        <div className="pt-2.5 border-t border-slate-100/60 space-y-1.5">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">Settlement Details</span>
+                          {clearedPaymentsList.map((cp, idx) => (
+                            <div key={idx} className="flex justify-between items-center text-xs">
+                              <span className="flex items-center gap-1.5 text-slate-600 font-medium">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                {cp.mode}
+                              </span>
+                              <span className="font-bold tabular-nums text-emerald-600">{fmt(cp.amount)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </SectionCard>
                 </div>
@@ -1275,7 +1567,7 @@ const SaleDetailPage: React.FC = () => {
                                     </span>
                                   ) : null}
                                   {item.gst !== undefined && item.gst !== null && (
-                                    <AntBadge variant="lb-gst" type="tag">GST {typeof item.gst === "number" ? `${item.gst}%` : item.gst}</AntBadge>
+                                    <AntBadge variant="lb-gst" type="tag">GST {typeof item.gst === "number" ? `${item.gst}%` : (String(item.gst).includes("%") ? item.gst : `${item.gst}%`)}</AntBadge>
                                   )}
                                   {(item.totalDiscountAmount || 0) > 0 && (
                                     <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono">
@@ -1418,13 +1710,16 @@ const SaleDetailPage: React.FC = () => {
                             if (item.total_amount && item.quantity && basePrice === 0) {
                                 basePrice = item.total_amount / item.quantity;
                             }
-                            const rawGst = item.gst || item.datas?.gst || 0;
-                            const gstRate = typeof rawGst === "number" ? rawGst : (parseFloat(String(rawGst).replace("%", "")) || 0);
+                            const rawGst = item.gst || item.gst_rate || item.tax_gst || item.tax_rate || item.pricing_infos?.gst || item.datas?.gst || 0;
+                            let gstRate = typeof rawGst === "number" ? rawGst : (parseFloat(String(rawGst).replace("%", "")) || 0);
+                            let repGst = Number(item.gst_amount || item.total_gst_amount || 0);
+                            if (gstRate === 0 && repGst > 0 && item.total_amount) {
+                              gstRate = Math.round((repGst * 100) / Number(item.total_amount));
+                            }
                             const calcInfos = (sale as any)?.calculation_infos || (sale as any)?.calculations || {};
                             const includeGst = calcInfos.include_gst === true || calcInfos.gst_type === "INCLUSIVE" || sale.gst_infos?.type === "INCLUSIVE";
                             
-                            let repGst = item.gst_amount || item.total_gst_amount || 0;
-                            if (!item.gst_amount && !item.total_gst_amount && gstRate > 0) {
+                            if (repGst === 0 && gstRate > 0) {
                                 if (includeGst) {
                                     const baseWithoutGst = basePrice / (1 + gstRate / 100);
                                     repGst = (basePrice - baseWithoutGst) * displayQty;
@@ -1491,7 +1786,7 @@ const SaleDetailPage: React.FC = () => {
                 );
               })}
               {sale.exchanged_items?.map((exch, idx) => {
-                const replacementItems = generateItems(exch.replacement_order, productMap);
+                const replacementItems = generateItems(exch.replacement_order, productMap, fullProductMap);
                 return (
                   <SectionCard key={idx} title={`Replacement Order ${exch.replacement_order.ui_id}`} className="p-0 overflow-hidden border-blue-100">
                     <div className="overflow-x-auto">
@@ -1529,7 +1824,7 @@ const SaleDetailPage: React.FC = () => {
                                         </span>
                                       )}
                                       {item.gst !== undefined && item.gst !== null && (
-                                        <AntBadge variant="lb-gst" type="tag">GST {typeof item.gst === "number" ? `${item.gst}%` : item.gst}</AntBadge>
+                                        <AntBadge variant="lb-gst" type="tag">GST {typeof item.gst === "number" ? `${item.gst}%` : (String(item.gst).includes("%") ? item.gst : `${item.gst}%`)}</AntBadge>
                                       )}
                                       {item.status && (
                                         <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wide ${item.status === "REFUNDED" ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"}`}>
@@ -1785,13 +2080,16 @@ const SaleDetailPage: React.FC = () => {
                                   if (repItem.total_amount && repItem.quantity && basePrice === 0) {
                                       basePrice = repItem.total_amount / repItem.quantity;
                                   }
-                                  const rawGst = repItem.gst || repItem.datas?.gst || 0;
-                                  const gstRate = typeof rawGst === "number" ? rawGst : (parseFloat(String(rawGst).replace("%", "")) || 0);
+                                  const rawGst = repItem.gst || repItem.gst_rate || repItem.tax_gst || repItem.tax_rate || repItem.pricing_infos?.gst || repItem.datas?.gst || 0;
+                                  let gstRate = typeof rawGst === "number" ? rawGst : (parseFloat(String(rawGst).replace("%", "")) || 0);
+                                  let repGst = Number(repItem.gst_amount || repItem.total_gst_amount || 0);
+                                  if (gstRate === 0 && repGst > 0 && repItem.total_amount) {
+                                    gstRate = Math.round((repGst * 100) / Number(repItem.total_amount));
+                                  }
                                   const calcInfos = (sale as any)?.calculation_infos || (sale as any)?.calculations || {};
                                   const includeGst = calcInfos.include_gst === true || calcInfos.gst_type === "INCLUSIVE" || sale.gst_infos?.type === "INCLUSIVE";
                                   
-                                  let repGst = repItem.gst_amount || repItem.total_gst_amount || 0;
-                                  if (!repItem.gst_amount && !repItem.total_gst_amount && gstRate > 0) {
+                                  if (repGst === 0 && gstRate > 0) {
                                       if (includeGst) {
                                           const baseWithoutGst = basePrice / (1 + gstRate / 100);
                                           repGst = (basePrice - baseWithoutGst) * displayQty;

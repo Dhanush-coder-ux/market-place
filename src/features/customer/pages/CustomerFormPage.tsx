@@ -23,6 +23,24 @@ import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
 import { Layers, Plus } from "lucide-react";
 import { NavigationBlocker } from "@/components/common/NavigationBlocker";
 
+const isBoolTrue = (val: any): boolean => {
+  if (val === true || val === 1) return true;
+  if (typeof val === 'string') {
+    const s = val.trim().toLowerCase();
+    return s === 'true' || s === '1' || s === 'yes';
+  }
+  return false;
+};
+
+const isBoolFalse = (val: any): boolean => {
+  if (val === false || val === 0) return true;
+  if (typeof val === 'string') {
+    const s = val.trim().toLowerCase();
+    return s === 'false' || s === '0' || s === 'no';
+  }
+  return false;
+};
+
 const CustomerFormPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -579,18 +597,36 @@ const CustomerFormPage = () => {
                         </div>
                       </div>
                       {field.type === 'boolean' ? (
-                        <div className="flex items-center gap-2 h-10 px-4 rounded-lg border border-slate-200 bg-slate-50/30">
-                          <input
-                            type="checkbox"
-                            id={`cf_${field.id}`}
-                            checked={customFieldValues[field.id] === 'true'}
-                            onChange={(e) =>
-                              setCustomFieldValues((prev) => ({ ...prev, [field.id]: String(e.target.checked) }))
-                            }
-                            className="w-4 h-4 rounded accent-[#286038] cursor-pointer"
-                          />
-                          <label htmlFor={`cf_${field.id}`} className="text-xs font-semibold text-slate-600 cursor-pointer">
-                            {customFieldValues[field.id] === 'true' ? 'Yes' : 'No'}
+                        <div className="flex items-center gap-8 h-10 px-4 rounded-lg border border-slate-200 bg-slate-50/30">
+                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              name={`cf_${field.id}_yes`}
+                              checked={isBoolTrue(customFieldValues[field.id])}
+                              onChange={(e) => {
+                                setCustomFieldValues((prev) => ({
+                                  ...prev,
+                                  [field.id]: e.target.checked ? 'true' : 'false',
+                                }));
+                              }}
+                              className="w-4 h-4 rounded text-[#286038] accent-[#286038] cursor-pointer"
+                            />
+                            <span className="text-xs font-semibold text-slate-700">Yes</span>
+                          </label>
+                          <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              name={`cf_${field.id}_no`}
+                              checked={isBoolFalse(customFieldValues[field.id]) || (!isBoolTrue(customFieldValues[field.id]) && customFieldValues[field.id] !== undefined)}
+                              onChange={(e) => {
+                                setCustomFieldValues((prev) => ({
+                                  ...prev,
+                                  [field.id]: e.target.checked ? 'false' : 'true',
+                                }));
+                              }}
+                              className="w-4 h-4 rounded text-[#286038] accent-[#286038] cursor-pointer"
+                            />
+                            <span className="text-xs font-semibold text-slate-700">No</span>
                           </label>
                         </div>
                       ) : (

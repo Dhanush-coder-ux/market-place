@@ -823,7 +823,8 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                           <PaymentStatusBadge
                             status={r.paymentStatus || r.payment_status}
                             outstanding={currentOutstanding}
-                            grandTotal={r.totalCost}
+                            grandTotal={r.grandTotal ?? ((Number(r.totalCost || 0) + Number(r.gstAmount || 0) + Number(r.deliveryCharge || 0) + Number(r.otherCharge || 0)) || undefined)}
+                            amountPaid={r.amountPaid}
                           />
                         </td>
                         <td className="px-5 py-4 text-xs text-slate-500 font-medium whitespace-nowrap">

@@ -134,14 +134,14 @@ const startOfDay = (d: Date) => {
 };
 
 
-const normalizePaymentMethod = (val: string): "Cash" | "UPI" | "Card" | "Bank Transfer" | "Credit" => {
+const normalizePaymentMethod = (val: string): "Cash" | "UPI" | "Card" | "Bank Transfer" | "On Credit" => {
   if (!val) return "Cash";
   const u = String(val).trim().toUpperCase();
   if (u === "CASH") return "Cash";
   if (u === "CARD" || u.includes("DEBIT") || u.includes("CREDIT_CARD") || u.includes("POS")) return "Card";
   if (u === "UPI" || u === "GPAY" || u === "G-PAY" || u === "PHONEPE" || u === "PAYTM" || u === "QR") return "UPI";
   if (u.includes("BANK") || u === "NEFT" || u === "RTGS" || u === "IMPS" || u.includes("NETBANKING")) return "Bank Transfer";
-  if (u === "CREDIT" || u === "ON_CREDIT" || u === "ON CREDIT") return "Credit";
+  if (u === "CREDIT" || u === "ON_CREDIT" || u === "ON CREDIT" || u.includes("CREDIT")) return "On Credit";
   return "Cash";
 };
 
@@ -330,8 +330,10 @@ const AnalyticsDashboard = () => {
   const customerOverall = stats?.overview?.customer ?? stats?.dashboard?.customer?.overall ?? stats?.dashboard?.customer ?? (stats as any)?.customer?.overall ?? (stats as any)?.customer ?? {};
   const supplierOverall = stats?.overview?.supplier ?? stats?.dashboard?.supplier?.overall ?? stats?.dashboard?.supplier ?? (stats as any)?.supplier?.overall ?? (stats as any)?.supplier ?? {};
 
-  const topProductsRaw = stats?.top?.top_products || stats?.dashboard?.inventory?.top_products || (stats as any)?.inventory?.top_products || (stats as any)?.top_products || [];
-  const topSuppliersRaw = stats?.top?.top_suppliers || stats?.dashboard?.supplier?.top_suppliers || (stats as any)?.supplier?.top_suppliers || (stats as any)?.top_suppliers || [];
+  const topProductsRaw = (stats?.top?.top_products || stats?.dashboard?.inventory?.top_products || (stats as any)?.inventory?.top_products || (stats as any)?.top_products || [])
+    .filter((p: any) => Number(p.total_sales_amounts || p.total_revenue || 0) > 0 || Number(p.total_sales_stocks || 0) > 0);
+  const topSuppliersRaw = (stats?.top?.top_suppliers || stats?.dashboard?.supplier?.top_suppliers || (stats as any)?.supplier?.top_suppliers || (stats as any)?.top_suppliers || [])
+    .filter((s: any) => Number(s.total_purchase_amounts || s.total_purchases || 0) > 0);
 
   const topProductsTotalSales = topProductsRaw.reduce((sum: number, p: any) => sum + Number(p.total_sales_amounts || p.total_offline_sales_amount || p.total_revenue || 0), 0);
   const topProductsTotalOrders = topProductsRaw.reduce((sum: number, p: any) => sum + Number(p.total_offline_sales || 0) + Number(p.total_online_sales || 0) || (Number(p.total_sales_stocks || 0) > 0 ? 1 : 0), 0);
@@ -361,7 +363,7 @@ const AnalyticsDashboard = () => {
   const totalPurchaseStocks = purchaseOverall.total_purchase_stocks ?? 0;
   const totalPurchaseOutstanding = purchaseOverall.total_outstanding_amounts || supplierOverall.total_outstandings || 0;
 
-  const totalProfit = salesOverall.total_profit !== undefined ? Number(salesOverall.total_profit) : Math.max(0, netRevenue - totalCost);
+  const totalProfit = salesOverall.total_profit !== undefined ? Number(salesOverall.total_profit) : (netRevenue - totalCost);
   const aov = totalOrders > 0 ? netRevenue / totalOrders : 0;
   const grossMargin = netRevenue > 0 ? (totalProfit / netRevenue) * 100 : 0;
   
@@ -397,7 +399,7 @@ const AnalyticsDashboard = () => {
         if (typeof pInfos === "object" && !Array.isArray(pInfos) && Object.keys(pInfos).length > 0) {
           Object.entries(pInfos).forEach(([k, v]) => {
             const amt = Number(typeof v === "object" ? (v as any)?.amount : v) || 0;
-            if (normalizePaymentMethod(k) !== "Credit") {
+            if (normalizePaymentMethod(k) !== "On Credit") {
               orderReceived += amt;
             } else {
               isCredit = true;
@@ -407,14 +409,14 @@ const AnalyticsDashboard = () => {
           pInfos.forEach((p: any) => {
             const m = typeof p === "string" ? p : (p.method || p.payment_method || p.mode || "");
             const amt = Number(p.amount) || total;
-            if (normalizePaymentMethod(m) !== "Credit") {
+            if (normalizePaymentMethod(m) !== "On Credit") {
               orderReceived += amt;
             } else {
               isCredit = true;
             }
           });
         } else if (o.payment_method || o.payment_mode) {
-          if (normalizePaymentMethod(o.payment_method || o.payment_mode) !== "Credit") {
+          if (normalizePaymentMethod(o.payment_method || o.payment_mode) !== "On Credit") {
             orderReceived = total;
           } else {
             isCredit = true;
@@ -536,7 +538,7 @@ const AnalyticsDashboard = () => {
       UPI: { name: "UPI", value: 0, count: 0, color: "#3b82f6" },
       Card: { name: "Card", value: 0, count: 0, color: "#6366f1" },
       "Bank Transfer": { name: "Bank Transfer", value: 0, count: 0, color: "#06b6d4" },
-      Credit: { name: "Credit", value: 0, count: 0, color: "#f59e0b" },
+      "On Credit": { name: "On Credit", value: 0, count: 0, color: "#f59e0b" },
     };
 
     if (ordersList.length > 0) {
@@ -628,8 +630,11 @@ const AnalyticsDashboard = () => {
           const name = productNameMap[pid] || item.name || "Product";
           const qty = Number(item.quantity ?? item.stocks ?? 1);
           const rev = Number(item.total_amount ?? (Number(item.sell_price || 0) * qty));
-          const cost = Number(item.buy_price || 0) * qty;
-          const profit = Math.max(0, rev - cost);
+          const rawBuyPrice = Number(item.cost_at_sale ?? item.costPrice ?? item.buy_price ?? 0);
+          const rawGst = Number(String(item.gst ?? item.gst_rate ?? "0").replace(/[^0-9.]/g, "")) || 0;
+          const buyPriceWithGst = rawGst > 0 && rawBuyPrice > 0 ? (rawBuyPrice + Math.round((rawBuyPrice * (rawGst / 100)) * 100) / 100) : rawBuyPrice;
+          const cost = item.cost_amounts !== undefined ? Number(item.cost_amounts) : (buyPriceWithGst * qty);
+          const profit = item.profit_amounts !== undefined ? Number(item.profit_amounts) : (rev - cost);
 
           if (!prodMap[pid]) {
             prodMap[pid] = { product_id: pid, name, total_qty: 0, total_revenue: 0, total_profit: 0 };
@@ -640,25 +645,40 @@ const AnalyticsDashboard = () => {
         });
       });
 
-      const list = Object.values(prodMap).sort((a, b) => b.total_revenue - a.total_revenue);
+      const list = Object.values(prodMap)
+        .filter((p) => p.total_qty > 0 || p.total_revenue > 0)
+        .sort((a, b) => {
+          if (b.total_qty !== a.total_qty) {
+            return b.total_qty - a.total_qty;
+          }
+          return b.total_revenue - a.total_revenue;
+        });
       if (list.length > 0) return list;
     }
 
     const raw = stats?.top?.top_products || stats?.dashboard?.inventory?.top_products || [];
-    return raw.map((p: any) => {
-      const pName = productNameMap[p.product_id] || p.product_name || p.name || p.product_id || "Product";
-      const totalQty = p.total_sales_stocks ?? p.stocks ?? 0;
-      const totalRev = p.total_sales_amounts ?? p.total_revenue ?? 0;
-      const totalCostVal = p.total_purchase_amounts ?? 0;
-      const totalProfitVal = totalRev > 0 ? Math.max(0, totalRev - totalCostVal) : 0;
-      return {
-        ...p,
-        name: pName,
-        total_qty: totalQty,
-        total_revenue: totalRev,
-        total_profit: totalProfitVal,
-      };
-    });
+    return raw
+      .map((p: any) => {
+        const pName = productNameMap[p.product_id] || p.product_name || p.name || p.product_id || "Product";
+        const totalQty = Number(p.total_sales_stocks ?? (p.total_sales_amounts ? 1 : 0));
+        const totalRev = Number(p.total_sales_amounts ?? p.total_revenue ?? 0);
+        const totalCostVal = Number(p.total_purchase_amounts ?? 0);
+        const totalProfitVal = totalRev > 0 ? (totalRev - totalCostVal) : 0;
+        return {
+          ...p,
+          name: pName,
+          total_qty: totalQty,
+          total_revenue: totalRev,
+          total_profit: totalProfitVal,
+        };
+      })
+      .filter((p: any) => p.total_qty > 0 || p.total_revenue > 0)
+      .sort((a: any, b: any) => {
+        if (b.total_qty !== a.total_qty) {
+          return b.total_qty - a.total_qty;
+        }
+        return b.total_revenue - a.total_revenue;
+      });
   }, [ordersList, dateRange, stats, productNameMap]);
 
   // Sales by Category
@@ -679,16 +699,18 @@ const AnalyticsDashboard = () => {
   // Top Suppliers
   const topSuppliers = useMemo(() => {
     const raw = stats?.top?.top_suppliers || stats?.dashboard?.supplier?.top_suppliers || [];
-    return raw.map((s: any) => {
-      const sName = supplierNameMap[s.supplier_id] || s.supplier_name || s.name || s.supplier_id || "Supplier";
-      return {
-        ...s,
-        name: sName,
-        total_revenue: s.total_purchase_amounts ?? 0,
-        total_qty: s.total_purchases ?? 0,
-        total_profit: s.total_outstandings ?? 0,
-      };
-    });
+    return raw
+      .map((s: any) => {
+        const sName = supplierNameMap[s.supplier_id] || s.supplier_name || s.name || s.supplier_id || "Supplier";
+        return {
+          ...s,
+          name: sName,
+          total_revenue: s.total_purchase_amounts ?? 0,
+          total_qty: s.total_purchases ?? 0,
+          total_profit: s.total_outstandings ?? 0,
+        };
+      })
+      .filter((s: any) => (s.total_revenue > 0 || s.total_qty > 0));
   }, [stats, supplierNameMap]);
 
   return (
@@ -1043,15 +1065,15 @@ const AnalyticsDashboard = () => {
                 </div>
                 <p className="text-xs text-slate-400 font-medium">Gross Margin</p>
                 <div className="flex items-baseline gap-2 mt-1 mb-3">
-                  <span className="text-2xl font-semibold text-slate-700">{grossMargin.toFixed(2)}%</span>
-                  <span className="text-xs font-medium text-emerald-500">Profitable</span>
+                  <span className={`text-2xl font-semibold ${grossMargin >= 0 ? "text-slate-700" : "text-rose-600"}`}>{grossMargin.toFixed(2)}%</span>
+                  <span className={`text-xs font-medium ${grossMargin >= 0 ? "text-emerald-500" : "text-rose-500"}`}>{grossMargin >= 0 ? "Profitable" : "Loss"}</span>
                 </div>
 
                 {/* Progress bar */}
                 <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden mb-2">
                   <div
-                    className="bg-emerald-400 h-full rounded-full transition-all duration-500"
-                    style={{ width: `${Math.min(100, Math.max(0, grossMargin))}%` }}
+                    className={`${grossMargin >= 0 ? "bg-emerald-400" : "bg-rose-400"} h-full rounded-full transition-all duration-500`}
+                    style={{ width: `${Math.min(100, Math.max(0, Math.abs(grossMargin)))}%` }}
                   />
                 </div>
                 <div className="flex justify-between text-[10px] font-medium text-slate-400">
@@ -1069,9 +1091,9 @@ const AnalyticsDashboard = () => {
                     <p className="text-lg font-semibold text-slate-700">{totalOrders}</p>
                     <p className="text-[11px] font-semibold text-slate-500">Orders</p>
                   </div>
-                  <div className="bg-emerald-50/50 border border-emerald-100/60 rounded-xl p-3 text-center">
-                    <p className="text-lg font-semibold text-emerald-500">{fmt(totalProfit)}</p>
-                    <p className="text-[11px] font-semibold text-slate-500">Profit</p>
+                  <div className={`${totalProfit >= 0 ? "bg-emerald-50/50 border-emerald-100/60" : "bg-rose-50/50 border-rose-100/60"} border rounded-xl p-3 text-center`}>
+                    <p className={`text-lg font-semibold ${totalProfit >= 0 ? "text-emerald-500" : "text-rose-500"}`}>{fmt(totalProfit)}</p>
+                    <p className="text-[11px] font-semibold text-slate-500">{totalProfit >= 0 ? "Profit" : "Loss"}</p>
                   </div>
                   <div className="bg-amber-50/50 border border-amber-100/60 rounded-xl p-3 text-center">
                     <p className="text-lg font-semibold text-amber-600">{fmtShort(aov)}</p>
@@ -1172,8 +1194,10 @@ const AnalyticsDashboard = () => {
                     })}
                   </div>
                 ) : (
-                  <div className="flex items-center justify-center h-[160px] text-xs font-semibold text-slate-400">
-                    No product data for this period
+                  <div className="flex flex-col items-center justify-center h-[160px] text-xs font-semibold text-slate-400 gap-1.5">
+                    <Package className="w-6 h-6 text-slate-300 mb-0.5" />
+                    <span>No sales recorded yet</span>
+                    <span className="text-[11px] font-normal text-slate-400">Products will appear here once they are sold</span>
                   </div>
                 )}
 

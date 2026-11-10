@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import ExcelImportModal from "@/components/common/ExcelImportModal";
 import ActionMenu, { ActionMenuItem } from "@/components/common/ActionMenu";
-import { VariantRows, BatchCards, SerialBadgeList } from "../components/StockTree";
+import { VariantRows, BatchCards, SerialBadgeList, analyzeProductStock, calculateProductStock } from "../components/StockTree";
 import { Modal } from "@/components/common/SuperUI";
 import { useApi } from "@/context/ApiContext";
 import { PriceCell } from "@/components/common/PriceCell";
@@ -40,6 +40,7 @@ import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { AntBadge } from "@/components/ui/AntBadge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 // --- Types (unchanged) ---
 export interface VariantAttribute {
   [key: string]: string;
@@ -160,90 +161,9 @@ const parseSerials = (val: any): string[] => {
   return [];
 };
 
-const calculateProductStock = (item: any) => {
-  const datas = item.datas || {};
 
-  const combinations = (() => {
-    const raw = parseObjects(item.variants || item.variant_infos || datas.combinations || datas.variants);
-    return raw.filter((v: any) => v && typeof v === "object");
-  })();
 
-  const batches = (() => {
-    let raw: any[] = [];
-    if (
-      !(datas.has_variants || datas.has_varients || item.variants?.length || item.variant_infos?.length) &&
-      ((item.variants?.length ?? 0) > 0 || (item.variant_infos?.length ?? 0) > 0)
-    ) {
-      const firstVar = item.variants?.[0] || item.variant_infos?.[0];
-      raw = parseObjects(firstVar?.batches || firstVar?.batch_infos);
-    } else {
-      raw = parseObjects(item.batches || item.batch_infos || datas.batches || item.type_infos?.batch_infos);
-    }
-    return raw.filter((b: any) => b && typeof b === "object");
-  })();
 
-  const hasVariants =
-    (datas.has_variants ||
-      datas.has_varients ||
-      item.has_variant ||
-      item.type_infos?.has_variant) &&
-    combinations.length > 0;
-  const hasBatches = batches.length > 0 || item.has_batch || item.type_infos?.has_batch;
-
-  const calculateVariantStock = (comb: any) => {
-    const vBatches = parseObjects(comb.batch_infos ?? comb.batches ?? []);
-    const vHasBatches = vBatches.length > 0;
-    let vStock = Number(comb.stock_infos?.available_stocks ?? comb.stock_infos?.physical_stocks ?? comb.stocks ?? comb.stock ?? comb.datas?.stocks ?? comb.datas?.datas?.stocks ?? 0);
-    if (vHasBatches || vStock === 0) {
-      const bSum = vBatches.reduce((acc: number, b: any) => acc + Number(b.stock_infos?.available_stocks ?? b.stock_infos?.physical_stocks ?? b.stocks ?? b.stock ?? b.quantity ?? b.qty ?? b.available_stocks ?? 0), 0);
-      if (bSum > 0) vStock = bSum;
-    }
-    return vStock;
-  };
-
-  let stockNumber = Number(item.stock_infos?.available_stocks ?? item.stock_infos?.physical_stocks ?? item.stocks ?? item.quantity ?? 0);
-  if (hasVariants) {
-    stockNumber = combinations.reduce((acc: number, comb: any) => acc + calculateVariantStock(comb), 0);
-  } else if (hasBatches) {
-    const bSum = batches.reduce((acc: number, b: any) => {
-      const bStock = Number(b.stock_infos?.available_stocks ?? b.stock_infos?.physical_stocks ?? b.stocks ?? b.stock ?? b.quantity ?? b.qty ?? b.available_stocks ?? 0);
-      return acc + bStock;
-    }, 0);
-    if (bSum > 0 || stockNumber === 0) {
-      stockNumber = bSum;
-    }
-  }
-  return stockNumber;
-};
-
-const getStockStatus = (stock: number, reorderPoint?: number, haveTracking: boolean = true) => {
-  if (haveTracking === false) {
-    return {
-      label: "Stock Not Tracked",
-      variant: "stk-in-stock",
-      icon: Package,
-    };
-  }
-  const s = Number(stock) || 0;
-  const rp = Number(reorderPoint) || 10;
-  if (s <= 0)
-    return {
-      label: "Out of stock",
-      variant: "stk-out-of-stock",
-      icon: AlertCircle,
-    };
-  if (s <= rp)
-    return {
-      label: "Low stock",
-      variant: "stk-low-stock",
-      icon: AlertTriangle,
-    };
-  return {
-    label: "In stock",
-    variant: "stk-in-stock",
-    icon: Package,
-  };
-};
 
 // --- Copy SKU Button with Micro-Animation ---
 const CopySKUButton = ({ val }: { val: string }) => {
@@ -270,6 +190,269 @@ const CopySKUButton = ({ val }: { val: string }) => {
         <Copy size={10} className="transition-transform duration-200 active:scale-75" />
       )}
     </button>
+  );
+};
+
+const formatCurrency = (amount?: any) => {
+  if (amount === undefined || amount === null || amount === "—") return "—";
+  const num = Number(amount);
+  if (isNaN(num)) return amount;
+  return `₹${num.toLocaleString("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+};
+
+// --- Dropdown for Variant / Batch Product Columns (replaces "—") ---
+interface VariantColumnDropdownProps {
+  columnKey: "buy_price" | "sell_price" | "price" | "mrp" | "barcode" | "sku" | "hsn" | "reorder_point" | "storage_location";
+  columnLabel: string;
+  items: any[];
+  isVariant: boolean;
+  gstRate: number | string;
+  isExpanded: boolean;
+  onToggleExpand: () => void;
+}
+
+const VariantColumnDropdown: React.FC<VariantColumnDropdownProps> = ({
+  columnKey,
+  columnLabel,
+  items,
+  isVariant,
+  gstRate,
+  isExpanded,
+  onToggleExpand,
+}) => {
+  const cleanGstRate = typeof gstRate === "string"
+    ? parseFloat(gstRate.replace(/[^0-9.]/g, "")) || 0
+    : Number(gstRate) || 0;
+
+  const details = useMemo(() => {
+    return items.map((it, idx) => {
+      const name =
+        it.variant_name ||
+        it.name ||
+        it.batch_number ||
+        it.batch_name ||
+        it.batch ||
+        (it.combination ? Object.values(it.combination).join(" / ") : null) ||
+        `${isVariant ? "Variant" : "Batch"} ${idx + 1}`;
+
+      const pInfo = it.pricing_infos || it;
+
+      if (columnKey === "buy_price") {
+        const rawBuy = pInfo.buy_price ?? it.buy_price ?? it.cost_price;
+        const numBuy = rawBuy !== undefined && rawBuy !== null && !isNaN(Number(rawBuy)) && Number(rawBuy) > 0 ? Number(rawBuy) : null;
+        if (numBuy !== null) {
+          const gstAmt = cleanGstRate > 0 ? Math.round((numBuy * (cleanGstRate / 100)) * 100) / 100 : 0;
+          const totalBuy = Math.round((numBuy + gstAmt) * 100) / 100;
+          return {
+            name,
+            numVal: totalBuy,
+            display: formatCurrency(totalBuy),
+            subDisplay: gstAmt > 0 ? `${formatCurrency(numBuy)} + ${formatCurrency(gstAmt)} GST` : null,
+            hasValue: true,
+          };
+        }
+        return { name, numVal: null, display: "Set on purchase", subDisplay: null, hasValue: false };
+      }
+
+      if (columnKey === "sell_price" || columnKey === "price") {
+        const rawSell = pInfo.sell_price ?? it.sell_price ?? it.price;
+        const numSell = rawSell !== undefined && rawSell !== null && !isNaN(Number(rawSell)) && Number(rawSell) > 0 ? Number(rawSell) : null;
+        if (numSell !== null) {
+          return {
+            name,
+            numVal: numSell,
+            display: formatCurrency(numSell),
+            subDisplay: null,
+            hasValue: true,
+          };
+        }
+        return { name, numVal: null, display: "Set on purchase", subDisplay: null, hasValue: false };
+      }
+
+      if (columnKey === "mrp") {
+        const rawMrp = pInfo.mrp ?? it.mrp ?? it.additional_infos?.mrp;
+        const numMrp = rawMrp !== undefined && rawMrp !== null && !isNaN(Number(rawMrp)) && Number(rawMrp) > 0 ? Number(rawMrp) : null;
+        if (numMrp !== null) {
+          return {
+            name,
+            numVal: numMrp,
+            display: formatCurrency(numMrp),
+            subDisplay: null,
+            hasValue: true,
+          };
+        }
+        return { name, numVal: null, display: "—", subDisplay: null, hasValue: false };
+      }
+
+      if (columnKey === "hsn") {
+        const hsnVal = it.hsn || it.hsn_code || it.additional_infos?.hsn || it.additional_infos?.hsn_code || "";
+        if (hsnVal) {
+          return {
+            name,
+            numVal: null,
+            display: String(hsnVal),
+            subDisplay: null,
+            hasValue: true,
+          };
+        }
+        return { name, numVal: null, display: "—", subDisplay: null, hasValue: false };
+      }
+
+      if (columnKey === "barcode") {
+        const bc = it.barcode || it.additional_infos?.barcode || "";
+        if (bc) {
+          return {
+            name,
+            numVal: null,
+            display: String(bc),
+            subDisplay: null,
+            hasValue: true,
+          };
+        }
+        return { name, numVal: null, display: "—", subDisplay: null, hasValue: false };
+      }
+
+      if (columnKey === "sku") {
+        const skuVal = it.sku || it.additional_infos?.sku || "";
+        if (skuVal) {
+          return {
+            name,
+            numVal: null,
+            display: String(skuVal),
+            subDisplay: null,
+            hasValue: true,
+          };
+        }
+        return { name, numVal: null, display: "—", subDisplay: null, hasValue: false };
+      }
+
+      if (columnKey === "reorder_point") {
+        const rp = it.reorder_point_infos?.reorder_point ?? it.reorder_point ?? it.additional_infos?.reorder_point;
+        if (rp !== undefined && rp !== null) {
+          return {
+            name,
+            numVal: null,
+            display: String(rp),
+            subDisplay: null,
+            hasValue: true,
+          };
+        }
+        return { name, numVal: null, display: "—", subDisplay: null, hasValue: false };
+      }
+
+      if (columnKey === "storage_location") {
+        const sl = it.storage_location_infos?.storage_location ?? it.storage_location ?? it.additional_infos?.storage_location;
+        if (sl) {
+          return {
+            name,
+            numVal: null,
+            display: String(sl),
+            subDisplay: null,
+            hasValue: true,
+          };
+        }
+        return { name, numVal: null, display: "—", subDisplay: null, hasValue: false };
+      }
+
+      return { name, numVal: null, display: "—", subDisplay: null, hasValue: false };
+    });
+  }, [items, columnKey, isVariant, cleanGstRate]);
+
+  // Compute summary for button
+  const validNumbers = details.map((d) => d.numVal).filter((v): v is number => v !== null && v > 0);
+  let summaryText = "";
+
+  if (validNumbers.length > 0) {
+    const min = Math.min(...validNumbers);
+    const max = Math.max(...validNumbers);
+    if (min === max) {
+      summaryText = formatCurrency(min);
+    } else {
+      summaryText = `${formatCurrency(min)} – ${formatCurrency(max)}`;
+    }
+  }
+
+  const defaultBadgeText = isVariant ? "Available in variant tab" : "Available in batch tab";
+  const buttonLabel = (summaryText && (columnKey === "buy_price" || columnKey === "sell_price")) ? summaryText : defaultBadgeText;
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          onClick={(e) => e.stopPropagation()}
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 rounded-lg text-indigo-600 transition-colors cursor-pointer group shadow-2xs"
+          title={`Available in ${isVariant ? "variant" : "batch"} tab - click to view ${columnLabel}`}
+        >
+          <Layers size={11} className="text-indigo-500 shrink-0" />
+          <span className="text-[11px] font-bold text-indigo-600 truncate max-w-[155px]">
+            {buttonLabel}
+          </span>
+          <ChevronDown
+            size={11}
+            className="text-indigo-400 group-hover:text-indigo-600 transition-transform group-data-[state=open]:rotate-180 shrink-0"
+          />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        className="w-72 p-0 rounded-xl bg-white shadow-xl border border-slate-200 overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-150"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="bg-slate-50 px-3 py-2 border-b border-slate-100 flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <Layers size={13} className="text-blue-600" />
+            <span className="text-[11px] font-bold text-slate-700">
+              {columnLabel} · {isVariant ? `${items.length} Variants` : `${items.length} Batches`}
+            </span>
+          </div>
+          <span className="text-[10px] text-slate-400 font-medium">Breakdown</span>
+        </div>
+
+        <div className="max-h-56 overflow-y-auto divide-y divide-slate-100 p-1">
+          {details.map((it, idx) => (
+            <div
+              key={idx}
+              className="flex items-center justify-between px-2.5 py-1.5 hover:bg-slate-50 rounded-lg transition-colors text-[11px]"
+            >
+              <span className="font-medium text-slate-700 truncate mr-2" title={it.name}>
+                {it.name}
+              </span>
+              <div className="flex flex-col items-end shrink-0">
+                <span
+                  className={`tabular-nums ${
+                    it.hasValue ? "font-bold text-slate-800" : "font-medium text-slate-400 text-[10.5px]"
+                  }`}
+                >
+                  {it.display}
+                </span>
+                {it.subDisplay && (
+                  <span className="text-[9.5px] text-slate-400 font-medium">
+                    {it.subDisplay}
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="p-1.5 bg-slate-50 border-t border-slate-100">
+          <button
+            type="button"
+            onClick={() => {
+              onToggleExpand();
+            }}
+            className="w-full flex items-center justify-center gap-1.5 py-1 px-2 rounded-lg text-[11px] font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-100/50 transition-colors"
+          >
+            <Layers size={12} />
+            {isExpanded ? "Collapse in table" : "Expand all in table"}
+          </button>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 };
 
@@ -346,8 +529,8 @@ const ProductRow = React.memo(
     const reorderPoint = Number(
       (item as any).reorder_point_infos?.reorder_point ?? (item as any).reorder_point ?? datas.reorder_point ?? 0
     );
-    const haveTracking = (item as any).have_tracking !== false && (datas as any).have_tracking !== false;
-    const status = getStockStatus(stockNumber, reorderPoint, haveTracking);
+    const stockAnalysis = analyzeProductStock(item);
+    const status = stockAnalysis.status;
 
 
     const { totalSerials, totalBatches } = useMemo(() => {
@@ -546,6 +729,19 @@ const ProductRow = React.memo(
           <td className="px-4 py-4 whitespace-nowrap">
             {(() => {
               const actualSku = (item as any).sku || datas.sku || "";
+              if (!actualSku && hasVariants) {
+                return (
+                  <VariantColumnDropdown
+                    columnKey="sku"
+                    columnLabel="SKU"
+                    items={combinations}
+                    isVariant={true}
+                    gstRate={0}
+                    isExpanded={isExpanded}
+                    onToggleExpand={() => toggleExpand(item.id)}
+                  />
+                );
+              }
               if (!actualSku) return <span className="text-[12px] font-medium text-slate-400">—</span>;
               return (
                 <div className="flex items-center gap-1.5">
@@ -562,6 +758,19 @@ const ProductRow = React.memo(
           <td className="px-4 py-4 whitespace-nowrap">
             {(() => {
               const barcode = item.barcode || datas.barcode || "";
+              if (!barcode && hasVariants) {
+                return (
+                  <VariantColumnDropdown
+                    columnKey="barcode"
+                    columnLabel="Barcode"
+                    items={combinations}
+                    isVariant={true}
+                    gstRate={0}
+                    isExpanded={isExpanded}
+                    onToggleExpand={() => toggleExpand(item.id)}
+                  />
+                );
+              }
               if (!barcode) return <span className="text-[12px] font-medium text-slate-400">—</span>;
               return (
                 <span className="text-[12px] font-medium text-slate-700 font-mono tabular-nums" title={barcode}>
@@ -617,7 +826,17 @@ const ProductRow = React.memo(
                 }
 
                 if (hasVariants) {
-                  return <span className="text-[13px] font-semibold text-slate-700 tabular-nums">—</span>;
+                  return (
+                    <VariantColumnDropdown
+                      columnKey="sell_price"
+                      columnLabel="Sell Price"
+                      items={combinations}
+                      isVariant={true}
+                      gstRate={item.gst || datas.gst || (item as any).gst || 0}
+                      isExpanded={isExpanded}
+                      onToggleExpand={() => toggleExpand(item.id)}
+                    />
+                  );
                 }
 
                 const mrpValue = (datas as any).mrp || (item as any).mrp || (item as any).additional_infos?.mrp;
@@ -658,9 +877,21 @@ const ProductRow = React.memo(
 
           {/* Reorder point */}
           <td className="px-4 py-4 text-center">
-            <span className="text-[13px] font-semibold text-slate-700 tabular-nums">
-              {hasVariants ? "—" : (reorderPoint ?? "—")}
-            </span>
+            {hasVariants ? (
+              <VariantColumnDropdown
+                columnKey="reorder_point"
+                columnLabel="Reorder Point"
+                items={combinations}
+                isVariant={true}
+                gstRate={0}
+                isExpanded={isExpanded}
+                onToggleExpand={() => toggleExpand(item.id)}
+              />
+            ) : (
+              <span className="text-[13px] font-semibold text-slate-700 tabular-nums">
+                {reorderPoint ?? "—"}
+              </span>
+            )}
           </td>
 
           {/* Storage Location */}
@@ -775,6 +1006,7 @@ const ProductRow = React.memo(
                       parentReorderPoint={(item as any).reorder_point_infos?.reorder_point ?? (item as any).reorder_point ?? datas.reorder_point ?? null}
                       parentMrp={(datas as any).mrp || (item as any).mrp || (item as any).additional_infos?.mrp}
                       parentDiscountPercent={(datas as any).discount_percent || (item as any).discount_percent || (item as any).additional_infos?.discount_percent || 0}
+                      parentHsn={(item as any).hsn_code || (datas as any).hsn_code || (item as any).hsn || (datas as any).hsn}
                     />
                   )}
                   {!hasVariants && hasBatches && (
@@ -936,17 +1168,13 @@ const InventoryPage = () => {
       if (res && res.data) {
         const itemsRaw: any[] = Array.isArray(res.data) ? res.data : (res.data.inventories || res.data.datas || []);
         const available = itemsRaw.length;
-        const low = itemsRaw.filter((p: InventoryItem) => {
-          const stock = calculateProductStock(p);
-          const rp = Number(
-            (p as any).reorder_point_infos?.reorder_point ?? (p as any).reorder_point ?? p.datas?.reorder_point ?? 10
-          );
-          return stock <= rp && stock > 0;
-        }).length;
-        const outOfStock = itemsRaw.filter((p: InventoryItem) => {
-          const ht = (p as any).have_tracking !== false && (p as any).datas?.have_tracking !== false;
-          return ht && calculateProductStock(p) <= 0;
-        }).length;
+        let low = 0;
+        let outOfStock = 0;
+        itemsRaw.forEach((p: InventoryItem) => {
+          const analysis = analyzeProductStock(p);
+          if (analysis.hasOutOfStock) outOfStock++;
+          if (analysis.hasLowStock) low++;
+        });
         setSummaryStats({ available, low, outOfStock });
       }
     }).catch(() => {});
@@ -1077,9 +1305,11 @@ const InventoryPage = () => {
     if (filters.toDate) params.to_date = filters.toDate;
     if (filters.stockStatus && filters.stockStatus !== "available") {
       if (filters.stockStatus === "low") {
+        params.stock_status = "low";
         params.exclude_outofstock = "true";
         params.exclude_stock = "true";
       } else if (filters.stockStatus === "out_of_stock") {
+        params.stock_status = "out_of_stock";
         params.exclude_lowstock = "true";
         params.exclude_stock = "true";
       }
@@ -1182,8 +1412,18 @@ const InventoryPage = () => {
       });
     }
 
+    if (stockStatus) {
+      if (stockStatus === "out_of_stock") {
+        result = result.filter((item: any) => analyzeProductStock(item).hasOutOfStock);
+      } else if (stockStatus === "low") {
+        result = result.filter((item: any) => analyzeProductStock(item).hasLowStock);
+      } else if (stockStatus === "available") {
+        result = result.filter((item: any) => analyzeProductStock(item).hasInStock);
+      }
+    }
+
     return result;
-  }, [inventory, filtersState]);
+  }, [inventory, filtersState, stockStatus]);
 
 
 

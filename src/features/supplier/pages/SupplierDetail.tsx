@@ -27,6 +27,24 @@ import { purchaseApi } from "@/services/api/purchase";
 import { getSupplierOutstanding } from "../type";
 import type { SupplierCustomFieldDefinition, SupplierCustomFieldValue } from "../type";
 
+const isBoolTrue = (val: any): boolean => {
+  if (val === true || val === 1) return true;
+  if (typeof val === 'string') {
+    const s = val.trim().toLowerCase();
+    return s === 'true' || s === '1' || s === 'yes';
+  }
+  return false;
+};
+
+const isBoolFalse = (val: any): boolean => {
+  if (val === false || val === 0) return true;
+  if (typeof val === 'string') {
+    const s = val.trim().toLowerCase();
+    return s === 'false' || s === '0' || s === 'no';
+  }
+  return false;
+};
+
 
 const SupplierSearch = () => {
   const navigate = useNavigate();
@@ -127,9 +145,24 @@ export default function SupplierDetail() {
 
   const handleClearOutstandingPayment = async () => {
     if (!selectedPurchase || !clearAmount || !id) return;
+    const balance = Number(selectedPurchase.outstanding_amount || 0);
+    const amountToPay = Number(clearAmount);
+
+    if (isNaN(amountToPay) || amountToPay <= 0) {
+      showToast("Please enter a valid payment amount greater than zero", "error");
+      return;
+    }
+    if (balance <= 0) {
+      showToast("This purchase has already been fully paid with ₹0.00 outstanding", "error");
+      return;
+    }
+    if (amountToPay > balance) {
+      showToast(`Payment amount cannot exceed purchase outstanding balance of ₹${balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, "error");
+      return;
+    }
+
     setClearSaving(true);
     try {
-      const amountToPay = Number(clearAmount);
       const purchaseId = selectedPurchase.purchase_id || selectedPurchase.id;
       const invoiceNo = selectedPurchase.invoice_no || selectedPurchase.ui_id;
       const notesStr = clearNotes.trim() || `Payment for purchase ${invoiceNo}`;
@@ -145,7 +178,8 @@ export default function SupplierDetail() {
         invoice_no: invoiceNo,
         payment_method: clearPaymentMethod,
         notes: notesStr,
-        cleared_amount: amountToPay
+        cleared_amount: amountToPay,
+        outstanding_amount: Math.max(0, balance - amountToPay)
       });
       
       showToast("Payment applied successfully", "success");
@@ -166,7 +200,8 @@ export default function SupplierDetail() {
       }
 
     } catch (e: any) {
-      showToast(e?.message || "Failed to apply payment", "error");
+      const errMsg = e?.response?.data?.detail?.description || e?.response?.data?.detail?.msg || e?.message || "Failed to apply payment";
+      showToast(errMsg, "error");
     } finally {
       setClearSaving(false);
     }
@@ -528,18 +563,27 @@ export default function SupplierDetail() {
                               </p>
                               {isEditing ? (
                                 <div className="flex items-center gap-1.5 mt-1">
-                                  {(field.type?.toLowerCase() === 'boolean' || field.type?.toLowerCase() === 'bool' || field.type?.toLowerCase() === 'checkbox' || String(currentVal?.value).toLowerCase() === 'true' || String(currentVal?.value).toLowerCase() === 'false') ? (
-                                    <label className="flex items-center gap-2 cursor-pointer flex-1 py-1">
-                                      <input
-                                        type="checkbox"
-                                        checked={editingValue === 'true'}
-                                        onChange={(e) => setEditingValue(String(e.target.checked))}
-                                        className="w-4 h-4 rounded accent-indigo-600 cursor-pointer"
-                                      />
-                                      <span className="text-xs font-semibold text-slate-700">
-                                        {editingValue === 'true' ? 'Yes' : 'No'}
-                                      </span>
-                                    </label>
+                                  {(field.type?.toLowerCase() === 'boolean' || field.type?.toLowerCase() === 'bool' || field.type?.toLowerCase() === 'checkbox' || isBoolTrue(currentVal?.value) || isBoolFalse(currentVal?.value)) ? (
+                                    <div className="flex items-center gap-4 flex-1 py-1">
+                                      <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                                        <input
+                                          type="checkbox"
+                                          checked={isBoolTrue(editingValue)}
+                                          onChange={(e) => setEditingValue(e.target.checked ? 'true' : 'false')}
+                                          className="w-4 h-4 rounded text-indigo-600 accent-indigo-600 cursor-pointer"
+                                        />
+                                        <span className="text-xs font-semibold text-slate-700">Yes</span>
+                                      </label>
+                                      <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                                        <input
+                                          type="checkbox"
+                                          checked={isBoolFalse(editingValue) || (!isBoolTrue(editingValue) && editingValue !== '')}
+                                          onChange={(e) => setEditingValue(e.target.checked ? 'false' : 'true')}
+                                          className="w-4 h-4 rounded text-indigo-600 accent-indigo-600 cursor-pointer"
+                                        />
+                                        <span className="text-xs font-semibold text-slate-700">No</span>
+                                      </label>
+                                    </div>
                                   ) : (
                                     <input
                                       autoFocus
@@ -560,15 +604,13 @@ export default function SupplierDetail() {
                                 </div>
                               ) : (
                                 <div className="flex items-center justify-between cursor-pointer"
-                                  onClick={() => { setEditingFieldId(field.id); setEditingValue(currentVal?.value ?? ((field.type?.toLowerCase() === 'boolean' || field.type?.toLowerCase() === 'bool' || field.type?.toLowerCase() === 'checkbox' || String(currentVal?.value).toLowerCase() === 'true' || String(currentVal?.value).toLowerCase() === 'false') ? 'false' : '')); }}>
+                                  onClick={() => { setEditingFieldId(field.id); setEditingValue(currentVal?.value ?? ((field.type?.toLowerCase() === 'boolean' || field.type?.toLowerCase() === 'bool' || field.type?.toLowerCase() === 'checkbox' || isBoolTrue(currentVal?.value) || isBoolFalse(currentVal?.value)) ? 'false' : '')); }}>
                                   <p className="text-xs font-bold text-slate-700 truncate">
-                                    {(field.type?.toLowerCase() === 'boolean' || field.type?.toLowerCase() === 'bool' || field.type?.toLowerCase() === 'checkbox' || String(currentVal?.value).toLowerCase() === 'true' || String(currentVal?.value).toLowerCase() === 'false') ? (
-                                      (String(currentVal?.value).toLowerCase() === 'true' || String(currentVal?.value).toLowerCase() === 'yes') ? (
+                                    {(field.type?.toLowerCase() === 'boolean' || field.type?.toLowerCase() === 'bool' || field.type?.toLowerCase() === 'checkbox' || isBoolTrue(currentVal?.value) || isBoolFalse(currentVal?.value)) ? (
+                                      isBoolTrue(currentVal?.value) ? (
                                         <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">Yes</span>
-                                      ) : (String(currentVal?.value).toLowerCase() === 'false' || String(currentVal?.value).toLowerCase() === 'no') ? (
-                                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-100 text-slate-500 border border-slate-200">No</span>
                                       ) : (
-                                        <span className="text-slate-300 font-medium italic">Click to set</span>
+                                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-100 text-slate-500 border border-slate-200">No</span>
                                       )
                                     ) : (
                                       currentVal?.value || <span className="text-slate-300 font-medium italic">Click to set</span>
@@ -644,7 +686,8 @@ export default function SupplierDetail() {
                   paymentMethod: p.payment_infos?.[0]?.method ?? ((p.payment_status && p.payment_status.toLowerCase() === "outstanding") ? "Outstanding" : (payment.method || p.payment_status || '—')),
                   paymentStatus: p.payment_status || pd.payment_status || pd.paymentStatus || p.datas?.payment_status,
                   amountPaid: p.paid_amount ?? p.payment_infos?.[0]?.amount ?? payment.amountPaid ?? 0,
-                  outstandingAmount: p.outstanding_amount ?? p.outstanding ?? Math.max(0, (p.total_cost ?? p.item_infos?.total_pur_cost ?? pd.totalAmount ?? 0) - (p.paid_amount ?? p.payment_infos?.[0]?.amount ?? payment.amountPaid ?? 0)),
+                  outstandingAmount: p.outstanding_amount ?? p.outstanding ?? Math.max(0, (Number(p.total_amount ?? p.grand_total ?? p.calculation_infos?.total ?? ((p.total_cost ?? p.item_infos?.total_pur_cost ?? pd.totalAmount ?? 0) + (p.item_infos?.total_gst_amount ?? pd.gstAmount ?? pd.taxAmount ?? p.tax_amount ?? charges.gst_amount ?? p.charges_infos?.gst_amount ?? 0) + (p.transport_charge ?? p.charges_infos?.transport_charge ?? charges.delivery_charge ?? 0) + (p.other_charges ?? p.charges_infos?.other_charge ?? charges.other_charge ?? 0)))) - (p.paid_amount ?? p.payment_infos?.[0]?.amount ?? payment.amountPaid ?? 0)),
+                  grandTotal: Number(p.total_amount ?? p.grand_total ?? p.calculation_infos?.total ?? ((p.total_cost ?? p.item_infos?.total_pur_cost ?? pd.totalAmount ?? 0) + (p.item_infos?.total_gst_amount ?? pd.gstAmount ?? pd.taxAmount ?? p.tax_amount ?? charges.gst_amount ?? p.charges_infos?.gst_amount ?? 0) + (p.transport_charge ?? p.charges_infos?.transport_charge ?? charges.delivery_charge ?? 0) + (p.other_charges ?? p.charges_infos?.other_charge ?? charges.other_charge ?? 0))),
                   totalCost: p.total_cost ?? p.item_infos?.total_pur_cost ?? pd.totalAmount ?? 0,
                   gstAmount: p.item_infos?.total_gst_amount ?? pd.gstAmount ?? pd.taxAmount ?? p.tax_amount ?? charges.gst_amount ?? p.charges_infos?.gst_amount ?? 0,
                   deliveryCharge: p.transport_charge ?? p.charges_infos?.transport_charge ?? charges.delivery_charge ?? 0,
@@ -709,6 +752,55 @@ export default function SupplierDetail() {
               const shouldShowAdjusted = (supplierHasOutstanding || purchaseHasOutstanding) && !isExplicitCashRefund;
               return shouldShowAdjusted ? "ADJUSTED" : "REFUNDED";
             };
+
+            const entryBalanceMap = (() => {
+              const sorted = [...clearedHistory].sort((a, b) => {
+                const tA = new Date(a.created_at || a.date || 0).getTime();
+                const tB = new Date(b.created_at || b.date || 0).getTime();
+                return tA - tB;
+              });
+
+              const runningInvBalance = new Map<string, number>();
+              const balanceMap = new Map<any, number>();
+
+              sorted.forEach((h) => {
+                const invKey = String(h.reference_no || h.invoice_no || h.ref_no || h.entity_id || '').trim().toLowerCase();
+                const isInitialCreated = h.type === 'INCREMENT' || 
+                                         String(h.notes || '').toLowerCase().includes('created') ||
+                                         Number(h.cleared_amount ?? h.amount ?? 0) === 0;
+
+                let displayAmount = Number(h.cleared_amount ?? h.amount ?? 0);
+                const isPurchaseReturn = h.type === 'PURCHASE_RETURN' || h.type === 'REFUND' || h.type === 'REFUNDED' || 
+                                         h.entity_name?.toLowerCase().includes('return') || h.notes?.toLowerCase().includes('refund');
+                if (displayAmount === 0 && isPurchaseReturn && h.notes) {
+                  const match = h.notes.match(/Refund amount:\s*([0-9.]+)/i);
+                  if (match && match[1]) displayAmount = parseFloat(match[1]) || 0;
+                }
+
+                let rowInvOutstanding = 0;
+                if (invKey) {
+                  let currentBalance = runningInvBalance.get(invKey);
+                  if (currentBalance === undefined) {
+                    currentBalance = Number(h.outstanding_amount ?? 0);
+                  }
+                  if (isInitialCreated) {
+                    rowInvOutstanding = currentBalance;
+                  } else {
+                    currentBalance = Math.max(0, currentBalance - displayAmount);
+                    rowInvOutstanding = currentBalance;
+                  }
+                  runningInvBalance.set(invKey, currentBalance);
+                } else {
+                  rowInvOutstanding = Number(h.outstanding_amount ?? 0);
+                }
+
+                balanceMap.set(h, rowInvOutstanding);
+                if (h.id) balanceMap.set(h.id, rowInvOutstanding);
+                if (h._id) balanceMap.set(h._id, rowInvOutstanding);
+              });
+
+              return balanceMap;
+            })();
 
             const filteredHistory = clearedHistory.filter((h) => {
               if (!ledgerSearch.trim()) return true;
@@ -816,7 +908,13 @@ export default function SupplierDetail() {
                                 </span>
                               </td>
                               <td className="px-4 py-3 text-sm text-slate-700 font-bold whitespace-nowrap">
-                                ₹{Number(h.outstanding_amount ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                ₹{Number(
+                                  (entryBalanceMap.has(h)
+                                    ? entryBalanceMap.get(h)
+                                    : h.id && entryBalanceMap.has(h.id)
+                                    ? entryBalanceMap.get(h.id)
+                                    : h.outstanding_amount) ?? 0
+                                ).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </td>
                               <td className="px-4 py-3 whitespace-nowrap">
                                 {isPurchaseReturn ? (
@@ -951,12 +1049,16 @@ export default function SupplierDetail() {
                   ) : clearPurchases.length === 0 ? (
                     <div className="p-4 text-center text-xs text-slate-500">No outstanding purchases found.</div>
                   ) : (
-                    clearPurchases.filter(p => 
-                      !clearSearch || 
-                      (p.invoice_no && p.invoice_no.toLowerCase().includes(clearSearch.toLowerCase())) || 
-                      (p.ui_id && p.ui_id.toLowerCase().includes(clearSearch.toLowerCase()))
-                    ).map(p => {
-                      const balance = p.outstanding_amount || 0;
+                    clearPurchases.filter(p => {
+                      const balance = Number(p.outstanding_amount ?? p.outstanding ?? 0);
+                      if (balance <= 0) return false;
+                      return (
+                        !clearSearch || 
+                        (p.invoice_no && p.invoice_no.toLowerCase().includes(clearSearch.toLowerCase())) || 
+                        (p.ui_id && p.ui_id.toLowerCase().includes(clearSearch.toLowerCase()))
+                      );
+                    }).map(p => {
+                      const balance = Number(p.outstanding_amount ?? p.outstanding ?? 0);
                       
                       return (
                         <div 
@@ -1019,25 +1121,50 @@ export default function SupplierDetail() {
                 </div>
 
                 {(() => {
-                   const balance = selectedPurchase.outstanding_amount || 0;
+                   const balance = Number(selectedPurchase.outstanding_amount || 0);
+                   const amountNum = parseFloat(clearAmount) || 0;
+                   const isExceeded = amountNum > balance;
+
                    return (
                      <div className="space-y-3">
                        <div>
                          <label className="block text-xs font-semibold text-slate-600 mb-1.5 flex justify-between items-end">
                            Payment Amount
-                           <span className="text-[10px] font-bold text-rose-600">Max: ₹{balance.toLocaleString('en-IN')}</span>
+                           <span className="text-[10px] font-bold text-rose-600">Max: ₹{balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                          </label>
                          <div className="relative">
-                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold">₹</span>
+                           <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold transition-colors ${isExceeded ? 'text-rose-500' : 'text-slate-400'}`}>₹</span>
                            <input
                              type="number"
                              value={clearAmount}
-                             onChange={(e) => setClearAmount(e.target.value)}
+                             onChange={(e) => {
+                               let val = e.target.value;
+                               if (val === "") {
+                                 setClearAmount("");
+                                 return;
+                               }
+                               let num = parseFloat(val);
+                               if (isNaN(num) || num < 0) return;
+                               if (num > balance) {
+                                 num = balance;
+                                 val = num.toString();
+                               }
+                               setClearAmount(val);
+                             }}
                              max={balance}
-                             className="w-full h-10 pl-7 pr-3 bg-white border border-slate-200 rounded-lg text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm"
+                             className={`w-full h-10 pl-7 pr-3 bg-white border rounded-lg text-sm font-bold focus:outline-none focus:ring-2 transition-all shadow-sm ${
+                               isExceeded
+                                 ? 'border-rose-400 text-rose-600 focus:ring-rose-400/20'
+                                 : 'border-slate-200 text-slate-800 focus:ring-blue-500 focus:border-transparent'
+                             }`}
                              placeholder="0.00"
                            />
                          </div>
+                         {isExceeded && (
+                           <p className="text-[11px] text-rose-500 font-semibold mt-1">
+                             Amount cannot exceed purchase outstanding balance of ₹{balance.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                           </p>
+                         )}
                        </div>
 
 
@@ -1066,7 +1193,14 @@ export default function SupplierDetail() {
                   </button>
                   <button
                     onClick={handleClearOutstandingPayment}
-                    disabled={clearSaving || !clearAmount || isNaN(Number(clearAmount)) || Number(clearAmount) <= 0}
+                    disabled={
+                      clearSaving ||
+                      !clearAmount ||
+                      isNaN(Number(clearAmount)) ||
+                      Number(clearAmount) <= 0 ||
+                      Number(selectedPurchase?.outstanding_amount || 0) <= 0 ||
+                      Number(clearAmount) > Number(selectedPurchase?.outstanding_amount || 0)
+                    }
                     className="h-9 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:text-slate-500 text-white text-xs font-bold rounded-lg transition-all shadow-sm"
                   >
                     {clearSaving ? "Processing..." : "Submit Payment"}

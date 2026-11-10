@@ -352,8 +352,9 @@ export const inventoryCustomFieldsApi = {
       shop_id: data.shop_id,
       product_id: data.product_id,
       value_infos: data.values,
+      values: data.values,
     };
-    return await apiClient.post(`${CF}/values`, payload);
+    return await apiClient.post(`${CF}/values/bulk`, payload);
   },
 
   /** GET /inventory-fields/values/{shop_id}/{product_id} — All values for a product */

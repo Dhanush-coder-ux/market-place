@@ -9,7 +9,7 @@ import {
 import SkeletonLoader from "@/components/common/SkeletonLoader";
 import {
   TrendingUp,
-  ExternalLink, Globe, Store, RotateCw, Percent
+  ExternalLink, Globe, Store, RotateCw, Percent, FileDown
 } from "lucide-react";
 import { useApi } from "@/context/ApiContext";
 import { useHeader } from "@/context/HeaderContext";
@@ -24,6 +24,7 @@ import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { extractSaleCustomerInfo } from "../type";
 import { ReprintReceiptModal } from "../components/ReprintReceiptModal";
 import { SaleInvoiceModal } from "../components/SaleInvoiceModal";
+import { SalesExportModal } from "../components/SalesExportModal";
 import { BiLogoWhatsapp } from "react-icons/bi";
 
 /* ═══════════════════════════════════════════════════════════════
@@ -169,6 +170,8 @@ const SalesListPage: React.FC = () => {
     window.open(`${window.location.pathname}?mode=clean`, "_blank", "noopener,noreferrer");
   };
 
+  const [isExportOpen, setIsExportOpen] = useState(false);
+
   useEffect(() => {
     setActions(
       <div className="flex items-center gap-2">
@@ -191,6 +194,14 @@ const SalesListPage: React.FC = () => {
             <ExternalLink size={13} />
           </button>
         )}
+        <button
+          onClick={() => setIsExportOpen(true)}
+          className="h-8 px-3 rounded-md border border-slate-200 text-slate-650 font-medium text-[12px] bg-white hover:bg-slate-50 transition-colors flex items-center gap-1.5 shadow-sm"
+          title="Export Sales"
+        >
+          <FileDown size={13} />
+          Export
+        </button>
       </div>
     );
     return () => setActions(null);
@@ -315,7 +326,7 @@ const SalesListPage: React.FC = () => {
                 const c = extractSaleCustomerInfo(selectedSale, customerMap);
                 return (
                   <p className="text-[10px] font-semibold text-slate-500 font-mono">
-                    {c.name}{c.phone ? ` • ${c.phone}` : ''}{c.city ? ` (${c.city})` : ''}
+                    {c.name}{c.uiId ? ` (${c.uiId})` : ''}{c.phone ? ` • ${c.phone}` : ''}{c.city ? ` (${c.city})` : ''}
                   </p>
                 );
               })()}
@@ -437,7 +448,11 @@ const SalesListPage: React.FC = () => {
         }).join(", ");
       } else if (Array.isArray(s.payment_infos) && s.payment_infos.length > 0) {
         pm = s.payment_infos.map((p: any) => {
-          const methodStr = typeof p === 'string' ? p : (p.method || "");
+          let methodStr = typeof p === 'string' ? p : (p.method || p.mode || "");
+          if (!methodStr && p && typeof p === 'object') {
+            const keys = Object.keys(p);
+            if (keys.length > 0) methodStr = keys[0];
+          }
           const u = methodStr.toUpperCase();
           if (u === "CASH") return "Cash";
           if (u === "CARD") return "Card";
@@ -451,6 +466,15 @@ const SalesListPage: React.FC = () => {
       } else if (s.payment_method) {
         const r = (s.payment_method || "Other").toUpperCase();
         pm = r === "CASH" ? "Cash" : r === "CARD" ? "Card" : r === "UPI" || r === "G-PAY" || r === "GPAY" ? "UPI" : r === "PHONEPE" ? "PhonePe" : r === "CREDIT" || r === "ON_CREDIT" || r === "ON CREDIT" ? "On Credit" : s.payment_method;
+      }
+
+      const isCreditDebt = s.payment_status === "NOT-PAID" || 
+                           s.payment_status === "PARTIALY-PAID" || 
+                           Number(s.pending_amount) > 0 ||
+                           String(s.payment_method || '').toUpperCase().includes('CREDIT') ||
+                           String((s as any).payment_status || '').toUpperCase().includes('CREDIT');
+      if (isCreditDebt && (pm === "Other" || !pm)) {
+        pm = "On Credit";
       }
 
       // Derive total from calculation_infos if present (new Order Service format)
@@ -723,11 +747,22 @@ const SalesListPage: React.FC = () => {
   }, [reload]);
 
   const filtered = useMemo<any[]>(() => {
+    let list = items as any[];
     if (activeKpi === "Discounted Sales") {
-      return (items as any[]).filter(s => checkSaleDiscount(s).hasDiscount);
+      list = list.filter(s => checkSaleDiscount(s).hasDiscount);
     }
-    return items as any[];
-  }, [items, activeKpi]);
+    if (filterPayment) {
+      const target = filterPayment.toUpperCase();
+      list = list.filter(s => {
+        const pm = (s.payment_method || "").toUpperCase();
+        if (target.includes("CREDIT")) {
+          return pm.includes("CREDIT") || s.payment_status === "NOT-PAID" || s.payment_status === "PARTIALY-PAID" || Number(s.pending_amount) > 0;
+        }
+        return pm.includes(target) || (target === "UPI" && (pm.includes("GPAY") || pm.includes("PHONEPE")));
+      });
+    }
+    return list;
+  }, [items, activeKpi, filterPayment]);
 
   const activeFilters = useMemo(() => {
     let count = 0;
@@ -840,6 +875,16 @@ const SalesListPage: React.FC = () => {
             )}
           </button>
 
+          <button
+            type="button"
+            onClick={() => setIsExportOpen(true)}
+            className="h-8 px-3 rounded-md border border-slate-200 text-slate-650 bg-white hover:bg-slate-50 text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm"
+            title="Export Sales"
+          >
+            <FileDown size={13} />
+            Export
+          </button>
+
           <button className="inline-flex items-center gap-1.5 h-8 px-3 sm:px-3.5 text-xs font-bold bg-blue-600 text-white border-none rounded-md cursor-pointer transition-all hover:bg-blue-700 hover:shadow-lg shadow-blue-500/20 active:scale-95 whitespace-nowrap" onClick={() => setIsReturnSearchOpen(true)}>
             <RotateCcw size={13} />
             <span className="hidden sm:inline">Process Return</span>
@@ -924,11 +969,10 @@ const SalesListPage: React.FC = () => {
           {/* Order Status */}
           <div className="space-y-1.5">
             <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Order Status</label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               {[
                 { label: "All Statuses", value: "" },
                 { label: "Completed", value: "Completed" },
-                { label: "Delivered", value: "Delivered" },
                 { label: "Cancelled", value: "Cancelled" }
               ].map(opt => (
                 <button
@@ -998,8 +1042,11 @@ const SalesListPage: React.FC = () => {
                         </div>
                         <p className={`text-xs mt-1 truncate ${rowCustomer.isWalkIn ? "text-slate-400 italic" : "text-slate-800 font-semibold"}`}>
                           {rowCustomer.name}
+                          {rowCustomer.uiId && !rowCustomer.isWalkIn && (
+                            <span className="font-mono text-slate-500 font-normal ml-1.5">({rowCustomer.uiId})</span>
+                          )}
                           {rowCustomer.phone && (
-                            <span className="font-mono text-slate-500 font-normal ml-1.5">({rowCustomer.phone})</span>
+                            <span className="font-mono text-slate-500 font-normal ml-1.5">• {rowCustomer.phone}</span>
                           )}
                         </p>
                       </div>
@@ -1187,11 +1234,14 @@ const SalesListPage: React.FC = () => {
                                 </span>
                               )}
                             </div>
-                            {c.phone && (
-                              <span className="text-[10px] text-slate-500 font-mono block mt-0.5 truncate">
-                                {c.phone}
-                              </span>
-                            )}
+                            <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-mono mt-0.5 truncate">
+                              {c.uiId && !c.isWalkIn && (
+                                <span className="font-semibold text-slate-600 bg-slate-100 px-1 py-0.5 rounded border border-slate-200">
+                                  {c.uiId}
+                                </span>
+                              )}
+                              {c.phone && <span>{c.phone}</span>}
+                            </div>
                             {(c.city || c.pincode) && (
                               <span className="text-[10px] text-slate-400 block mt-0.5 truncate">
                                 {[c.city, c.pincode].filter(Boolean).join(", ")}
@@ -1204,16 +1254,18 @@ const SalesListPage: React.FC = () => {
                     <td className="px-4 py-4 border-b border-slate-50"><Badge cls={oCfg.cls} dot={oCfg.dot} label={sale.origin} /></td>
                     <td className="px-4 py-4 border-b border-slate-50">
                       <div className="flex flex-wrap gap-1">
-                        {sale.payments && Object.keys(sale.payments).length > 0 ? (
-                          Object.keys(sale.payments).map(k => {
-                            const u = k.toUpperCase();
-                            const label = u === "CASH" ? "Cash" : u === "CARD" ? "Card" : u === "UPI" || u === "G-PAY" || u === "GPAY" ? "UPI" : u === "PHONEPE" ? "PhonePe" : u === "CREDIT" || u === "ON_CREDIT" || u === "ON CREDIT" ? "On Credit" : k;
-                            const cfg = PAYMENT_CFG[label] || PAYMENT_CFG["Other"];
-                            return <Badge key={k} cls={cfg.cls} dot={cfg.dot} label={label} />;
-                          })
-                        ) : (
-                          <Badge cls={(PAYMENT_CFG[sale.payment_method || ""] || PAYMENT_CFG["Other"]).cls} dot={(PAYMENT_CFG[sale.payment_method || ""] || PAYMENT_CFG["Other"]).dot} label={sale.payment_method || "Other"} />
-                        )}
+                        {(() => {
+                          const pm = sale.payment_method || "Other";
+                          const methods = pm.split(",").map((m: string) => m.trim()).filter(Boolean);
+                          if (methods.length > 0) {
+                            return methods.map((m: string) => {
+                              const cfg = PAYMENT_CFG[m] || PAYMENT_CFG["Other"];
+                              return <Badge key={m} cls={cfg.cls} dot={cfg.dot} label={m} />;
+                            });
+                          }
+                          const cfg = PAYMENT_CFG[pm] || PAYMENT_CFG["Other"];
+                          return <Badge cls={cfg.cls} dot={cfg.dot} label={pm} />;
+                        })()}
                       </div>
                     </td>
                     <td className="px-4 py-4 border-b border-slate-50">
@@ -1340,6 +1392,24 @@ const SalesListPage: React.FC = () => {
         results={searchSalesForReturn}
         onSelect={(sale) => { openReturn(sale); setIsReturnSearchOpen(false); setReturnSearchQuery(""); }}
         customerMap={customerMap}
+      />
+
+      {/* ── Sales Export Modal ── */}
+      <SalesExportModal
+        isOpen={isExportOpen}
+        onClose={() => setIsExportOpen(false)}
+        visibleSales={filtered}
+        customerMap={customerMap}
+        activeFilters={{
+          search,
+          origin: filterOrigin !== "All" ? filterOrigin : undefined,
+          payment: filterPayment || undefined,
+          status: filterStatus || undefined,
+          fromDate: fromDate || undefined,
+          toDate: toDate || undefined,
+          activeKpi: activeKpi !== "Total Orders" ? activeKpi : undefined,
+        }}
+        apiGetData={api.getData}
       />
     </div>
   );

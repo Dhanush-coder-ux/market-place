@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useMemo } from "react";
 import {
   Plus,
   Trash2,
@@ -255,6 +255,15 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
 
   const activeCount = combinations.filter(c => c.active).length;
 
+  const barcodeCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    combinations.forEach(c => {
+      const b = (c.barcode || "").trim().toUpperCase();
+      if (b) counts[b] = (counts[b] || 0) + 1;
+    });
+    return counts;
+  }, [combinations]);
+
   const handleToggle = async (combo: VariantCombination) => {
     if (combo.active) {
       if (activeCount <= 1) {
@@ -319,12 +328,34 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
     }
   };
 
-  const regenAllbarcodes = (basebarcode: string) => {
-    if (!basebarcode) return;
-    onChange(combinations.map((c, i) => ({
-      ...c,
-      barcode: `${basebarcode}-${Object.values(c.attributes).map(v => v.slice(0, 3).toUpperCase()).join("-")}-${String(i + 1).padStart(2, "0")}`,
-    })));
+  const regenAllbarcodes = (basebarcode?: string) => {
+    const base = (basebarcode && basebarcode.trim())
+      ? basebarcode.trim().toUpperCase()
+      : `BAR${Math.floor(1000 + Math.random() * 9000)}`;
+    if (!barcodeBase) {
+      setbarcodeBase(base);
+    }
+    const used = new Set<string>();
+    onChange(combinations.map((c, i) => {
+      const attrCode = Object.values(c.attributes)
+        .map(v => String(v).replace(/[^a-zA-Z0-9]/g, "").slice(0, 4).toUpperCase())
+        .filter(Boolean)
+        .join("-");
+      let seq = String(i + 1).padStart(2, "0");
+      let candidate = `${base}-${attrCode ? attrCode + "-" : ""}${seq}`;
+      let counter = i + 1;
+      while (used.has(candidate.toUpperCase())) {
+        counter++;
+        seq = String(counter).padStart(2, "0");
+        candidate = `${base}-${attrCode ? attrCode + "-" : ""}${seq}`;
+      }
+      used.add(candidate.toUpperCase());
+      return {
+        ...c,
+        barcode: candidate,
+        sku: c.sku || candidate,
+      };
+    }));
   };
 
   const handleMrpChange = (combo: VariantCombination, val: string) => {
@@ -447,8 +478,7 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
               onChange={e => setbarcodeBase(e.target.value)}
             />
             <button type="button" onClick={() => regenAllbarcodes(barcodeBase)}
-              disabled={!barcodeBase}
-              className="flex items-center gap-2 h-9 px-4 text-[10px] font-black uppercase tracking-wider text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all disabled:opacity-40">
+              className="flex items-center gap-2 h-9 px-4 text-[10px] font-black uppercase tracking-wider text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all">
               <RefreshCw size={12} /> Auto Generate
             </button>
           </div>
@@ -509,6 +539,8 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                 const referencePrice = effectiveMrp > 0 ? effectiveMrp : comboSp;
                 const savingPercent = referencePrice > 0 && totalSavings > 0 ? Math.min(100, (totalSavings / referencePrice) * 100) : 0;
 
+                const isDuplicateBarcode = Boolean(combo.barcode && (barcodeCounts[(combo.barcode || "").trim().toUpperCase()] || 0) > 1);
+
                 return (
                   <React.Fragment key={combo.id}>
                     <tr className={`hover:bg-slate-50/50 transition-all duration-150 ${!combo.active ? "opacity-40 grayscale-[0.5]" : ""}`}>
@@ -520,12 +552,23 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                         </td>
                       ))}
                       <td className="px-4 py-3.5">
-                        <input
-                          className="h-9 px-2.5 text-xs border border-slate-200 rounded-lg w-28 font-mono focus:ring-2 focus:ring-blue-100 outline-none"
-                          placeholder="SKU-001"
-                          value={combo.barcode}
-                          onChange={e => update(combo.id, { barcode: e.target.value })}
-                        />
+                        <div className="flex flex-col">
+                          <input
+                            className={`h-9 px-2.5 text-xs border rounded-lg w-28 font-mono focus:ring-2 outline-none ${
+                              isDuplicateBarcode
+                                ? "border-red-400 bg-red-50 text-red-700 focus:ring-red-200"
+                                : "border-slate-200 focus:ring-blue-100"
+                            }`}
+                            placeholder="SKU-001"
+                            value={combo.barcode}
+                            onChange={e => update(combo.id, { barcode: e.target.value })}
+                          />
+                          {isDuplicateBarcode && (
+                            <span className="text-[9px] text-red-500 font-bold mt-0.5 whitespace-nowrap">
+                              Duplicate barcode
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       {/* MRP Column */}
@@ -676,6 +719,7 @@ export const generateCombinations = (
     discount_type?: "price" | "percent";
     discount_value?: string;
     discount_percent?: string;
+    barcode_base?: string;
   }
 ): VariantCombination[] => {
   const validTypes = variantTypes.filter(t => t.values.length > 0);
@@ -690,7 +734,17 @@ export const generateCombinations = (
   const valueSets = validTypes.map(t => t.values);
   const combos = product(valueSets);
 
-  return combos.map(combo => {
+  // Collect existing barcodes to guarantee collision-free uniqueness
+  const usedBarcodes = new Set<string>();
+  existing.forEach(e => {
+    if (e.barcode?.trim()) usedBarcodes.add(e.barcode.trim().toUpperCase());
+  });
+
+  const base = (defaults.barcode_base && defaults.barcode_base.trim())
+    ? defaults.barcode_base.trim().toUpperCase()
+    : "VAR";
+
+  return combos.map((combo, idx) => {
     const attributes: Record<string, string> = {};
     validTypes.forEach((t, i) => { attributes[t.name] = combo[i]; });
 
@@ -700,13 +754,25 @@ export const generateCombinations = (
     );
 
     if (existing_) return existing_;
-    const barcodeSuffix = combo.map(v => v.slice(0, 3).toUpperCase()).join("-");
+
+    // Generate unique barcode for each variant
+    const attrCode = combo.map(v => v.replace(/[^a-zA-Z0-9]/g, "").slice(0, 4).toUpperCase()).filter(Boolean).join("-");
+    let seq = String(idx + 1).padStart(2, "0");
+    let candidate = `${base}-${attrCode ? attrCode + "-" : ""}${seq}`;
+
+    let counter = idx + 1;
+    while (usedBarcodes.has(candidate.toUpperCase())) {
+      counter++;
+      seq = String(counter).padStart(2, "0");
+      candidate = `${base}-${attrCode ? attrCode + "-" : ""}${seq}`;
+    }
+    usedBarcodes.add(candidate.toUpperCase());
 
     return {
       id: uid(),
       attributes,
-      barcode: barcodeSuffix,
-      sku: "",
+      barcode: candidate,
+      sku: candidate,
       price: defaults.sell_price,
       buy_price: defaults.buy_price,
       mrp: defaults.mrp,

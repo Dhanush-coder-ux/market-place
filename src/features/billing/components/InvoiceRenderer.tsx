@@ -10,7 +10,7 @@ import { QRCodeSVG } from "qrcode.react";
 const payMeta: Record<string, { label: string; icon: React.ReactNode }> = {
   cash:   { label: "Cash",       icon: <Banknote   size={12} strokeWidth={1.5} /> },
   upi:    { label: "UPI / Card", icon: <Smartphone size={12} strokeWidth={1.5} /> },
-  credit: { label: "Credit",     icon: <Wallet      size={12} strokeWidth={1.5} /> },
+  credit: { label: "On Credit", icon: <Wallet      size={12} strokeWidth={1.5} /> },
 };
 
 export interface InvoiceRendererProps {

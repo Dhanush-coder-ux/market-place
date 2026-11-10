@@ -8,7 +8,7 @@ import { ENDPOINTS, SHOP_ID, getShopId } from "@/services/endpoints";
 import { InvoiceRenderer } from "@/features/billing/components/InvoiceRenderer";
 import { extractSaleCustomerInfo } from "../type";
 import type { BillingItem } from "@/features/billing/types";
-import type { BillTotals } from "@/utils/pricing";
+import { type BillTotals, calculateTaxSplit } from "@/utils/pricing";
 
 interface SaleInvoiceModalProps {
   isOpen: boolean;
@@ -120,7 +120,12 @@ export const SaleInvoiceModal: React.FC<SaleInvoiceModalProps> = ({
       const qty = Number(it.quantity ?? it.qty ?? 1);
       const price = Number(it.sell_price ?? it.price ?? it.unit_price ?? 0);
       const mrp = Number(it.mrp ?? it.datas?.mrp ?? price);
-      const gstRate = Number(it.gst_rate ?? it.gst ?? it.tax_rate ?? 0);
+      const rawGst = it.gst_rate ?? it.gst ?? it.tax_rate ?? 0;
+      const gstRate = typeof rawGst === "number" ? rawGst : (parseFloat(String(rawGst).replace("%", "")) || 0);
+
+      const split = calculateTaxSplit(price, gstRate);
+      const taxableRate = Number(it.taxable_value ?? split.taxableValue);
+      const gstAmt = Number(it.gst_amount ?? split.gstAmount);
 
       return {
         id: it.id || it.product_id || it.inventory_id || String(idx),
@@ -133,8 +138,8 @@ export const SaleInvoiceModal: React.FC<SaleInvoiceModalProps> = ({
         productDiscountPercent: Number(it.product_discount_percent || 0),
         lineDiscountMode: (it.line_discount_mode === "%" ? "%" : "₹") as "%" | "₹",
         lineDiscountValue: Number(it.line_discount_value || 0),
-        taxable_rate: Number(it.taxable_value || 0),
-        gst_amount: Number(it.gst_amount || 0),
+        taxable_rate: taxableRate,
+        gst_amount: gstAmt,
         unit: it.unit || it.unit_infos?.name || "Units",
       };
     });
@@ -151,6 +156,24 @@ export const SaleInvoiceModal: React.FC<SaleInvoiceModalProps> = ({
           amount: Number(val) || 0,
         }));
       }
+    }
+    if (Array.isArray(s.payment_infos) && s.payment_infos.length > 0) {
+      const items: { mode: string; amount: number }[] = [];
+      s.payment_infos.forEach((p: any) => {
+        if (typeof p === "string") {
+          items.push({ mode: p.toLowerCase().replace(/_/g, " "), amount: 0 });
+        } else if (p && typeof p === "object") {
+          const direct = p.method || p.mode;
+          if (direct) {
+            items.push({ mode: String(direct).toLowerCase().replace(/_/g, " "), amount: Number(p.amount) || 0 });
+          } else {
+            Object.entries(p).forEach(([k, val]) => {
+              items.push({ mode: k.toLowerCase().replace(/_/g, " "), amount: Number(val) || 0 });
+            });
+          }
+        }
+      });
+      if (items.length > 0) return items;
     }
     if (s.payments && typeof s.payments === "object") {
       const entries = Object.entries(s.payments);

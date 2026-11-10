@@ -82,12 +82,6 @@ export interface BillTotals {
 
 export function isShopGstRegistered(): boolean {
   try {
-    const rawSetting = localStorage.getItem("purchaseSettings");
-    if (rawSetting) {
-      const parsed = JSON.parse(rawSetting);
-      if (parsed.gstType === "registered") return true;
-      if (parsed.gstType === "non-registered") return false;
-    }
     const shopGstFlag = localStorage.getItem("shop_gst_registered");
     if (shopGstFlag === "true") return true;
     if (shopGstFlag === "false") return false;
@@ -95,8 +89,12 @@ export function isShopGstRegistered(): boolean {
     const shopData = localStorage.getItem("shop_data");
     if (shopData) {
       const parsedShop = JSON.parse(shopData);
-      if (parsedShop?.business_infos?.gst_infos?.registered !== undefined) {
-        return !!parsedShop.business_infos.gst_infos.registered;
+      const bizGst = parsedShop?.business_infos?.gst_infos;
+      if (bizGst?.registered !== undefined) {
+        return !!bizGst.registered;
+      }
+      if (bizGst?.number || parsedShop?.business_infos?.gstin || parsedShop?.gst_number || parsedShop?.gstin) {
+        return true;
       }
     }
   } catch {

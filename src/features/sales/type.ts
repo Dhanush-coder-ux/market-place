@@ -7,6 +7,8 @@ export interface ExtractedCustomerInfo {
   state: string;
   pincode: string;
   userId: string;
+  uiId: string;
+  customerUiId: string;
   addressId: string;
   isOnline: boolean;
   isWalkIn: boolean;
@@ -26,6 +28,8 @@ export function extractSaleCustomerInfo(
       state: "",
       pincode: "",
       userId: "",
+      uiId: "",
+      customerUiId: "",
       addressId: "",
       isOnline: false,
       isWalkIn: true,
@@ -85,13 +89,30 @@ export function extractSaleCustomerInfo(
     custMapName ||
     "";
 
+  const isUuid = (val: any): boolean =>
+    typeof val === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val.trim());
+
+  const rawUiId =
+    (custEntry && typeof custEntry === "object" ? (custEntry.ui_id || custEntry.customer_ui_id) : "") ||
+    sale.customer_ui_id ||
+    custObj.ui_id ||
+    custObj.customer_ui_id ||
+    onlineDetails.customer_ui_id ||
+    onlineDetails.ui_id ||
+    addObj.customer_ui_id ||
+    dataObj.customer_ui_id ||
+    "";
+
+  // Only consider it a valid customer UI ID if non-empty and NOT a raw internal UUID
+  const cleanUiId = (rawUiId && !isUuid(rawUiId)) ? String(rawUiId).trim() : "";
+
   const isWalkIn =
     !rawName ||
     rawName.trim().toLowerCase() === "walk in customer" ||
     rawName.trim().toLowerCase() === "walk-in customer";
 
   const name = isWalkIn
-    ? (sale.customer_id ? (custMapName || sale.customer_id) : "Walk-in Customer")
+    ? (custMapName || (cleanUiId ? `Customer ${cleanUiId}` : "Walk-in Customer"))
     : rawName.trim();
 
   const phone =
@@ -133,7 +154,6 @@ export function extractSaleCustomerInfo(
   const state = onlineDetails.state || custObj.state || custMapState || "";
   const pincode = onlineDetails.pincode || custObj.pincode || custMapPincode || "";
 
-  const userId = onlineDetails.user_id || sale.user_id || sale.customer_id || "";
   const addressId = onlineDetails.address_id || "";
 
   return {
@@ -144,9 +164,11 @@ export function extractSaleCustomerInfo(
     city: String(city || "").trim(),
     state: String(state || "").trim(),
     pincode: String(pincode || "").trim(),
-    userId: String(userId || "").trim(),
+    userId: cleanUiId, // Only provide human-readable UI ID, never a raw internal UUID
+    uiId: cleanUiId,
+    customerUiId: cleanUiId,
     addressId: String(addressId || "").trim(),
     isOnline,
-    isWalkIn: name === "Walk-in Customer",
+    isWalkIn: name === "Walk-in Customer" || (!rawName && !cleanUiId),
   };
 }

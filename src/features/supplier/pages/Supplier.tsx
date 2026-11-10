@@ -153,12 +153,16 @@ const Supplier = () => {
   const [isImportOpen, setIsImportOpen] = useState(false);
   
   const availableTypes = useMemo(() => {
-    const set = new Set<string>();
+    const standard = ["Vendor", "Manufacturer", "Distributor", "Service Provider"];
+    const set = new Set<string>(standard);
     (suppliers || []).forEach((sup: any) => {
-      const type = sup.additional_infos?.type || sup.type || sup.datas?.type;
-      if (type && typeof type === 'string') set.add(type.trim());
+      const type = sup.additional_infos?.type || sup.contact_infos?.type || sup.contact_person_infos?.type || sup.type || sup.datas?.type;
+      if (type && typeof type === 'string') {
+        const trimmed = type.trim();
+        if (trimmed) set.add(trimmed);
+      }
     });
-    return Array.from(set).sort();
+    return Array.from(set);
   }, [suppliers]);
 
   const availableCities = useMemo(() => {
@@ -332,6 +336,9 @@ const Supplier = () => {
     if (toDate) params.to_date = toDate;
     if (filters.status === "Outstanding") params.exclude_non_outstanding = "true";
     if (filters.status === "Cleared") params.exclude_outstanding = "true";
+    if (filters.type && filters.type !== "All") params.type = filters.type;
+    if (filters.city && filters.city !== "All") params.city = filters.city;
+    if (filters.state && filters.state !== "All") params.state = filters.state;
 
     getData(`${ENDPOINTS.SUPPLIERS}/by/shop/${SHOP_ID}`, params).then((res) => {
       if (res) {
@@ -376,7 +383,7 @@ const Supplier = () => {
         setAvailableKeys(sortedKeys);
       }
     });
-  }, [refreshKey, debouncedSearch, fromDate, toDate, filters.status]);
+  }, [refreshKey, debouncedSearch, fromDate, toDate, filters.status, filters.type, filters.city, filters.state]);
 
   const filteredSuppliers = useMemo(() => {
     let result = suppliers;
@@ -415,8 +422,8 @@ const Supplier = () => {
 
     if (filters.type !== "All") {
       result = result.filter((sup: any) => {
-        const type = sup.additional_infos?.type || sup.datas?.type;
-        return type === filters.type;
+        const type = sup.additional_infos?.type || sup.contact_infos?.type || sup.contact_person_infos?.type || sup.type || sup.datas?.type;
+        return (type || "").toString().toLowerCase() === filters.type.toLowerCase();
       });
     }
 

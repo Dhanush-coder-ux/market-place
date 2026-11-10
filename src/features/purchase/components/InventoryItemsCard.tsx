@@ -8,7 +8,8 @@ import {
   CalendarDays,
   Clock,
   X,
-  Package
+  Package,
+  AlertCircle
 } from "lucide-react";
 import { useState, useEffect, Fragment, useRef } from "react";
 import { createPortal } from "react-dom";
@@ -807,7 +808,13 @@ export const InventoryItemsCard = ({
               {batchModal.allowNewBatch && (
                 <button
                   onClick={() => {
-                    updateProductFields(batchModal.rowIndex, { batch_id: undefined, batchNum: "", batchNumReadOnly: false });
+                    updateProductFields(batchModal.rowIndex, {
+                      batch_id: undefined,
+                      batchNum: "",
+                      batchNumReadOnly: false,
+                      manufacturingDate: "",
+                      expiryDate: ""
+                    });
                     setBatchModal({ isOpen: false, rowIndex: -1, batches: [], productName: "", variantName: "", existingSerials: [], allowNewBatch: true });
                   }}
                   className="w-full p-4 rounded-lg border-2 border-dashed border-slate-200 text-slate-500 hover:border-amber-400 hover:text-amber-600 hover:bg-amber-50 transition-all flex flex-col items-center gap-1 group"
@@ -979,7 +986,6 @@ export const InventoryItemsCard = ({
 
                 const allocTotal = stats?.allocations?.[index]?.alloc || 0;
                 const allocPerUnit = q > 0 ? allocTotal / q : 0;
-                const netCostPerUnit = stats?.allocations?.[index]?.netCostPerUnit ?? (rowBaseCost + allocPerUnit);
 
                 // 💡 Conditional Landed Cost:
                 // - Registered shop: GST is claimed via Input Tax Credit (ITC), so landed cost = baseCost + allocPerUnit
@@ -1395,9 +1401,14 @@ export const InventoryItemsCard = ({
                                       value={product.expiryDate}
                                       onChange={(e) => handleProductChange(index, "expiryDate", e.target.value)}
                                       disabled={product.batchNumReadOnly}
-                                      className="!h-7 !text-[11px] !py-1 !px-2"
+                                      className={`!h-7 !text-[11px] !py-1 !px-2 ${product.manufacturingDate && product.expiryDate && product.expiryDate < product.manufacturingDate ? '!border-rose-400 !bg-rose-50' : ''}`}
                                     />
                                   </div>
+                                  {product.manufacturingDate && product.expiryDate && product.expiryDate < product.manufacturingDate && (
+                                    <p className="text-[10px] text-rose-600 font-semibold mt-1 flex items-center gap-1 animate-in fade-in">
+                                      <AlertCircle size={11} className="text-rose-500 shrink-0" /> Expiry date cannot be earlier than manufacturing date
+                                    </p>
+                                  )}
                                 </div>
                               )}
 
@@ -1467,16 +1478,6 @@ export const InventoryItemsCard = ({
                                         <span className="text-blue-500">Allocated Cost</span>
                                         <span className="font-medium text-blue-600">₹{allocPerUnit.toFixed(2)}</span>
                                       </div>
-                                      <div className="flex justify-between text-xs pt-1.5 border-t border-slate-100">
-                                        <span className="font-medium text-slate-800">Net Cost / Unit</span>
-                                        <span className="font-medium text-emerald-600">₹{netCostPerUnit.toFixed(2)}</span>
-                                      </div>
-                                      {product.taxGst !== undefined && Number(product.taxGst) > 0 && (
-                                        <div className="flex justify-between text-[11px] pt-1 border-t border-slate-100/30">
-                                          <span className="font-medium text-slate-700">Net Cost / Unit (incl. GST)</span>
-                                          <span className="font-medium text-emerald-700">₹{(netCostPerUnit + (baseCost * Number(product.taxGst) / 100)).toFixed(2)}</span>
-                                        </div>
-                                      )}
                                     </div>
                                     <div className="space-y-1.5">
                                       <div className="flex justify-between text-[11px]">

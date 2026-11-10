@@ -19,7 +19,7 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 
 export function RecordPaymentModal({ show, onClose, customer, onSuccess }: RecordPaymentModalProps) {
   const { customer: customerApi } = useBusinessApi();
-  const { getData } = useApi();
+  const { getData, putData } = useApi();
   const { showToast } = useToast();
 
   const [isClearing, setIsClearing] = useState(false);
@@ -88,8 +88,28 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
 
     if (Array.isArray(source)) {
       source.forEach((p: any) => {
-        if (p && typeof p === "object") {
-          add(p.method || p.mode || p.type || p.payment_method || "Other", p.amount ?? p.value);
+        if (typeof p === "string") {
+          add(p);
+        } else if (p && typeof p === "object") {
+          const direct = p.method || p.mode || p.type || p.payment_method || p.payment_mode;
+          if (direct) {
+            add(direct, p.amount ?? p.value);
+          } else {
+            const entries = Object.entries(p);
+            if (entries.length > 0) {
+              entries.forEach(([k, val]) => {
+                if (typeof val === "number" || (typeof val === "string" && !isNaN(Number(val)))) {
+                  add(k, Number(val));
+                } else if (val && typeof val === "object" && ("amount" in (val as any) || "value" in (val as any))) {
+                  add(k, (val as any).amount ?? (val as any).value);
+                } else {
+                  add(k);
+                }
+              });
+            } else {
+              add("Other", p.amount ?? p.value);
+            }
+          }
         }
       });
     } else if (typeof source === "object") {
@@ -169,8 +189,32 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
       }
     });
 
-    if (o.payment_method && String(o.payment_method).toUpperCase().includes('CREDIT') && initialCreditAmount === 0 && initialNonCreditPaid === 0) {
-      initialCreditAmount = Number(o.total_sellprice ?? o.calculation_infos?.total ?? o.total_amount) || 0;
+    const hasOnCreditLedger = clearingHistories.some((h: any) => {
+      let addInfos = h.additional_infos || {};
+      if (typeof addInfos === 'string') {
+        try { addInfos = JSON.parse(addInfos); } catch (e) { addInfos = {}; }
+      }
+      const noteStr = String(addInfos.notes || h.notes || '').toLowerCase();
+      const inv = String(h.invoice_no || addInfos.invoice_no || h.reference_no || addInfos.reference_no || addInfos.ref_no || h.ref_no || addInfos.entity_id || h.entity_id || '').trim().toUpperCase();
+      const entityId = String(h.entity_id || addInfos.entity_id || '').trim().toUpperCase();
+      const matches = (orderUiId && (inv === orderUiId || entityId === orderUiId || noteStr.includes(orderUiId.toLowerCase()))) ||
+                      (orderId && (inv === orderId || entityId === orderId || noteStr.includes(orderId.toLowerCase())));
+      if (!matches) return false;
+      const mode = String((h.payment_infos && h.payment_infos[0]?.method) || addInfos.payment_method || h.payment_method || '').toUpperCase();
+      return mode.includes('CREDIT') || noteStr.includes('billed (on credit)') || noteStr.includes('on credit');
+    });
+
+    const isBilledCredit = initialCreditAmount > 0 || 
+                           String(o.payment_method || '').toUpperCase().includes('CREDIT') ||
+                           hasOnCreditLedger ||
+                           o.payment_status === "NOT-PAID" ||
+                           o.payment_status === "PARTIALY-PAID" ||
+                           Number(o.pending_amount) > 0;
+
+    const baseOrderTotal = Number(o.total_sellprice ?? o.calculation_infos?.total ?? o.total_amount) || 0;
+
+    if (isBilledCredit && initialCreditAmount === 0 && initialNonCreditPaid === 0) {
+      initialCreditAmount = baseOrderTotal;
     }
 
     // Exchanges
@@ -218,7 +262,6 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
       totalRefundsValue += (Number(ret.total_return_cost ?? ret.total_cost) || 0);
     });
 
-    const baseOrderTotal = Number(o.total_sellprice ?? o.calculation_infos?.total ?? o.total_amount) || 0;
     const netOrderTotal = Math.max(
       0,
       (totalReplacementsValue > 0 || totalExchangedReturnedValue > 0)
@@ -226,16 +269,59 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
         : (baseOrderTotal - totalRefundsValue)
     );
 
-    const isBilledCredit = initialCreditAmount > 0 || String(o.payment_method || '').toUpperCase().includes('CREDIT');
-    const totalDue = isBilledCredit
-      ? Math.max(0, netOrderTotal - initialNonCreditPaid - exchangeNonCreditPaid)
-      : Math.max(0, initialCreditAmount + exchangeCreditAdded);
+    const effectiveInitialCredit = (initialCreditAmount > 0)
+      ? initialCreditAmount
+      : isBilledCredit
+        ? Math.max(0, baseOrderTotal - initialNonCreditPaid)
+        : 0;
 
-    const clearedSoFar = (orderUiId ? (clearedMap[orderUiId] || 0) : 0) + (orderId && orderId !== orderUiId ? (clearedMap[orderId] || 0) : 0);
+    const effectiveInitialNonCreditPaid = isBilledCredit
+      ? Math.max(0, baseOrderTotal - effectiveInitialCredit)
+      : initialNonCreditPaid;
+
+    const baseDue = isBilledCredit
+      ? (effectiveInitialCredit > 0 ? effectiveInitialCredit : Math.max(0, netOrderTotal - effectiveInitialNonCreditPaid))
+      : Math.max(0, netOrderTotal - effectiveInitialNonCreditPaid);
+
+    const totalDue = baseDue + exchangeCreditAdded;
+
+    // Cleared payments so far for this order (calculated identically to SaleDetailPage)
+    const clearedSoFar = clearingHistories.reduce((sum: number, h: any) => {
+      let addInfos = h.additional_infos || {};
+      if (typeof addInfos === 'string') {
+        try { addInfos = JSON.parse(addInfos); } catch (e) { addInfos = {}; }
+      }
+      const noteStr = String(addInfos.notes || h.notes || '').toLowerCase();
+      const isInitialBilled = noteStr.includes('billed (on credit)') || 
+                              noteStr.includes('billed on credit') || 
+                              noteStr.includes('initial payment') ||
+                              addInfos.is_initial === true ||
+                              addInfos.type === 'INCREMENT';
+      const isCreditAdd = noteStr.includes('added to credit') || h.type === 'INCREMENT';
+      if (isInitialBilled || isCreditAdd) return sum;
+
+      const inv = String(h.invoice_no || addInfos.invoice_no || h.reference_no || addInfos.reference_no || addInfos.ref_no || h.ref_no || addInfos.entity_id || h.entity_id || '').trim().toUpperCase();
+      const entityId = String(h.entity_id || addInfos.entity_id || '').trim().toUpperCase();
+
+      const matches = (orderUiId && (inv === orderUiId || entityId === orderUiId || noteStr.includes(orderUiId.toLowerCase()))) ||
+                      (orderId && (inv === orderId || entityId === orderId || noteStr.includes(orderId.toLowerCase())));
+      if (!matches) return sum;
+
+      let amt = Number(addInfos.cleared_amount ?? addInfos.paid_amount ?? h.cleared_amount ?? h.amount ?? 0);
+      if (!amt && h.payment_infos && Array.isArray(h.payment_infos)) {
+        amt = h.payment_infos.filter((p: any) => !String(p.method || p.mode).toUpperCase().includes('CREDIT')).reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
+      }
+      if (!amt && h.cleared_infos) {
+        const before = Number(h.cleared_infos.outstanding_before || 0);
+        const after = Number(h.cleared_infos.outstanding_after || 0);
+        if (before > after) amt = before - after;
+      }
+      return sum + (amt || 0);
+    }, 0);
 
     const remaining = Math.max(0, (totalDue || 0) - (clearedSoFar || 0));
     const result = maxOutstanding > 0 ? Math.min(remaining, maxOutstanding) : remaining;
-    return isNaN(result) ? 0 : result;
+    return isNaN(result) ? 0 : round2(result);
   };
 
   const outstandingOrders = useMemo(() => {
@@ -253,7 +339,7 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
           (o.id && o.id.toLowerCase().includes(q))
         );
       });
-  }, [orders, clearSearch, clearedMap, maxOutstanding]);
+  }, [orders, clearSearch, clearedMap, maxOutstanding, clearingHistories]);
 
   const handleClose = () => {
     onClose();
@@ -265,6 +351,12 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
     const amount = parseFloat(clearAmount);
     if (isNaN(amount) || amount <= 0) {
       showToast("Please enter a valid payment amount", "error");
+      return;
+    }
+
+    const maxAllowed = round2(Math.max(0, Math.min(selectedOrder?._computedOutstanding ?? maxOutstanding, maxOutstanding)));
+    if (amount > maxAllowed) {
+      showToast(`Payment amount cannot exceed outstanding balance of ₹${maxAllowed.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`, "error");
       return;
     }
 
@@ -291,6 +383,26 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
       // 1. Record the payment to clearing history
       await customerApi.clearOutstanding(payload);
 
+      // 2. Also sync status to order if selectedOrder has an id
+      if (selectedOrder && selectedOrder.id) {
+        try {
+          const isFullySettled = (amount >= maxAllowed);
+          await putData(`${ENDPOINTS.ORDERS}/status`, {
+            id: selectedOrder.id,
+            shop_id: localStorage.getItem('shop_id') || SHOP_ID,
+            additional_infos: {
+              ...(selectedOrder.additional_infos || {}),
+              payment_cleared: isFullySettled,
+              cleared_status: isFullySettled ? "PAID" : "PARTIAL",
+              last_cleared_amount: amount,
+              last_cleared_method: paymentMethod,
+            }
+          });
+        } catch (e) {
+          console.warn("Could not sync payment info to order:", e);
+        }
+      }
+
       showToast(`₹${amount.toLocaleString()} collected successfully`, "success");
       onSuccess();
       handleClose();
@@ -303,7 +415,12 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
   };
 
   const amountNum = parseFloat(clearAmount) || 0;
-  const remainingBalance = round2(Math.max(0, maxOutstanding - amountNum));
+  const selectedOrderOutstanding = selectedOrder
+    ? (selectedOrder._computedOutstanding ?? getOrderOutstanding(selectedOrder))
+    : maxOutstanding;
+  const invoiceOutstanding = round2(Number(selectedOrderOutstanding));
+  const maxAllowed = round2(Math.max(0, Math.min(invoiceOutstanding, maxOutstanding > 0 ? maxOutstanding : invoiceOutstanding)));
+  const remainingBalance = round2(Math.max(0, invoiceOutstanding - amountNum));
 
   return (
     <Modal
@@ -320,7 +437,7 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
           </button>
           <button
             onClick={handleSavePayment}
-            disabled={isClearing || !selectedOrder || !clearAmount || parseFloat(clearAmount) <= 0}
+            disabled={isClearing || !selectedOrder || !clearAmount || parseFloat(clearAmount) <= 0 || parseFloat(clearAmount) > maxAllowed}
             className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-md shadow-blue-200 disabled:opacity-50 transition-all active:scale-95"
           >
             {isClearing ? (
@@ -402,7 +519,7 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
             <div className="flex gap-8 px-1">
               <div>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Outstanding Balance</p>
-                <p className="text-lg font-bold text-rose-500 tabular-nums">₹{maxOutstanding.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <p className="text-lg font-bold text-rose-500 tabular-nums">₹{invoiceOutstanding.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
               </div>
               <div>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Remaining Balance</p>
@@ -429,7 +546,7 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
               <div className="space-y-1.5">
                 <label className="text-[10px] font-semibold text-slate-400 ml-1">Amount to Clear</label>
                 <div className="relative group">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 group-focus-within:text-blue-500 transition-colors">₹</span>
+                  <span className={`absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold transition-colors ${amountNum > maxAllowed ? "text-rose-500" : "text-slate-400 group-focus-within:text-blue-500"}`}>₹</span>
                   <input
                     type="number"
                     value={clearAmount}
@@ -442,7 +559,6 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
                       let num = parseFloat(val);
                       if (isNaN(num) || num < 0) return;
 
-                      const maxAllowed = round2(Math.max(0, maxOutstanding));
                       if (num > maxAllowed) {
                         num = maxAllowed;
                         val = round2(num).toString();
@@ -450,9 +566,18 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
                       setClearAmount(val);
                     }}
                     placeholder="0.00"
-                    className="w-full h-10 pl-7 pr-4 bg-white border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/5 transition-all placeholder:text-slate-300"
+                    className={`w-full h-10 pl-7 pr-4 bg-white border rounded-lg text-sm font-semibold outline-none focus:ring-4 transition-all placeholder:text-slate-300 ${
+                      amountNum > maxAllowed
+                        ? "border-rose-400 text-rose-600 focus:border-rose-400 focus:ring-rose-400/10"
+                        : "border-slate-200 text-slate-700 focus:border-blue-400 focus:ring-blue-500/5"
+                    }`}
                   />
                 </div>
+                {amountNum > maxAllowed && (
+                  <p className="text-[11px] text-rose-500 font-semibold mt-1">
+                    Amount cannot exceed outstanding balance of ₹{maxAllowed.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                  </p>
+                )}
               </div>
             </div>
 

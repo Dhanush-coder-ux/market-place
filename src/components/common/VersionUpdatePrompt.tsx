@@ -15,6 +15,7 @@ export const VersionUpdatePrompt: React.FC = () => {
   } = useVersionManager();
 
   if (!isUpdateAvailable) return null;
+  if (!remoteVersion || remoteVersion === currentVersion) return null;
 
   return (
     <AnimatePresence>

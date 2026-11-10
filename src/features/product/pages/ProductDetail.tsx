@@ -5,6 +5,7 @@ import {
   Tag, Layers, Info, BarChart2,
   Hash, ShoppingCart, MapPin, FileText,
   Check, X as XIcon, Pencil, Image as ImageIcon,
+  TrendingUp,
 } from "lucide-react";
 import { useApi } from "@/context/ApiContext";
 import { useToast } from "@/context/ToastContext";
@@ -23,6 +24,122 @@ import StockMovementTab from "../components/StockMovement";
 import { inventoryCustomFieldsApi } from "@/services/api/inventory";
 import type { InventoryCustomFieldDefinition, InventoryCustomFieldValue } from "@/features/inventory/types";
 import { PriceCell } from "@/components/common/PriceCell";
+import { calculateTaxSplit } from "@/utils/pricing";
+
+const isBoolTrue = (val: any): boolean => {
+  if (val === true || val === 1) return true;
+  if (typeof val === 'string') {
+    const s = val.trim().toLowerCase();
+    return s === 'true' || s === '1' || s === 'yes';
+  }
+  return false;
+};
+
+const isBoolFalse = (val: any): boolean => {
+  if (val === false || val === 0) return true;
+  if (typeof val === 'string') {
+    const s = val.trim().toLowerCase();
+    return s === 'false' || s === '0' || s === 'no';
+  }
+  return false;
+};
+
+function extractProductLandedCost(
+  purchasesList: any[],
+  productId: string,
+  fallbackBuyPriceWithGst: number
+): {
+  landedCost: number;
+  allocatedPerUnit: number;
+  buyPriceIncGst: number;
+  hasPurchase: boolean;
+} {
+  if (!purchasesList || purchasesList.length === 0) {
+    return {
+      landedCost: fallbackBuyPriceWithGst,
+      allocatedPerUnit: 0,
+      buyPriceIncGst: fallbackBuyPriceWithGst,
+      hasPurchase: false,
+    };
+  }
+
+  for (const p of purchasesList) {
+    if (!p || typeof p !== "object") continue;
+    const status = String(p.status || "").toUpperCase();
+    if (status === "CANCELED" || status === "CANCELLED" || status === "DRAFT") continue;
+
+    const calcInfos = p.calculations || p.calculation_infos || {};
+    const distributeBy = String(calcInfos.distribute_by || "BY_VALUE").toUpperCase();
+    const charges = p.charges_infos || p.charges || {};
+    const totalCharges = Number(charges.transport_charge || 0) + Number(charges.other_charge || 0);
+    const gstInfos = p.gst_infos || {};
+    const gstType = String(gstInfos.type || calcInfos.gst_type || "EXCLUSIVE").toUpperCase();
+
+    const items: any[] = p.items || p.products || [];
+    let totalQty = 0;
+    let totalSubtotal = 0;
+    for (const it of items) {
+      if (!it) continue;
+      const q = Number(it.stocks_infos?.stocks ?? it.stocks ?? it.quantity ?? 0);
+      const bp = Number(it.pricing_infos?.buy_price ?? it.buy_price ?? 0);
+      totalQty += q;
+      totalSubtotal += q * bp;
+    }
+    const numItems = items.length || 1;
+
+    for (const it of items) {
+      if (!it) continue;
+      const itPid = it.product_id || it.inventory_id || it.id;
+      if (itPid !== productId) continue;
+
+      const grossQty = Number(it.stocks_infos?.stocks ?? it.stocks ?? it.quantity ?? 0);
+      let baseBuyPrice = Number(it.pricing_infos?.buy_price ?? it.buy_price ?? 0);
+      if (baseBuyPrice <= 0 && grossQty > 0) {
+        baseBuyPrice = Number(it.total_amount || 0) / grossQty;
+      }
+
+      let allocatedPerUnit = 0;
+      if (totalCharges > 0) {
+        if (distributeBy.includes("UNIT") && totalQty > 0) {
+          allocatedPerUnit = totalCharges / totalQty;
+        } else if (distributeBy.includes("EQUAL") && numItems > 0) {
+          allocatedPerUnit = (totalCharges / numItems) / (grossQty > 0 ? grossQty : 1);
+        } else if (totalSubtotal > 0) {
+          allocatedPerUnit = (baseBuyPrice / totalSubtotal) * totalCharges;
+        } else if (totalQty > 0) {
+          allocatedPerUnit = totalCharges / totalQty;
+        }
+      }
+
+      const itemGst = it.gst || "0%";
+      const gstRate = parseFloat(String(itemGst).replace(/[^0-9.]/g, "")) || 0;
+      let rowBase = baseBuyPrice;
+      let gstPerUnit = 0;
+      if (gstType === "INCLUSIVE") {
+        rowBase = gstRate > 0 ? baseBuyPrice / (1 + gstRate / 100) : baseBuyPrice;
+        gstPerUnit = baseBuyPrice - rowBase;
+      } else {
+        rowBase = baseBuyPrice;
+        gstPerUnit = baseBuyPrice * (gstRate / 100);
+      }
+
+      const landedCost = rowBase + gstPerUnit + allocatedPerUnit;
+      return {
+        landedCost: Math.round(landedCost * 100) / 100,
+        allocatedPerUnit: Math.round(allocatedPerUnit * 100) / 100,
+        buyPriceIncGst: Math.round((rowBase + gstPerUnit) * 100) / 100,
+        hasPurchase: true,
+      };
+    }
+  }
+
+  return {
+    landedCost: fallbackBuyPriceWithGst,
+    allocatedPerUnit: 0,
+    buyPriceIncGst: fallbackBuyPriceWithGst,
+    hasPurchase: false,
+  };
+}
 
 // ── Search bar ───────────────────────────────────────────────────────────────
 const ProductSearchSelect = () => {
@@ -131,26 +248,17 @@ const ProductDetail = () => {
     if (dynamicTabs[activeTab] !== MOV_TAB_LABEL) return;
   }, [activeTab, id, product]);
 
+  // Fetch purchases immediately on product load so Pricing & Compliance has landed cost
   useEffect(() => {
-    if (!id || !product) return;
-    if (purchases.length > 0) return; // Already loaded from movements tab
-
-    // We can't access TABS here because it's defined lower in the component,
-    // so we recalculate the tabs array to find the correct label
-    const hasVariants = !!product.type_infos?.has_variant || (product.variant_infos || product.variants ? Object.values(product.variant_infos || product.variants || {}).length > 0 : false);
-    const batches = Array.isArray(product.batch_infos) ? product.batch_infos : (product.batch_infos ? [product.batch_infos] : (product.batches || []));
-    const hasBatches = !!product.type_infos?.has_batch || batches.length > 0;
-    const isStockTracked = (product as any).have_tracking !== false && (product as any).is_stock_tracked !== false && (product as any).track_stock !== false && (product as any).type !== "service";
-    const dynamicTabs = ["General Info", ...((hasVariants || hasBatches) ? ["Batch & Variants"] : []), "Images", MOV_TAB_LABEL, ...(isStockTracked ? [PUR_TAB_LABEL] : [])];
-
-    if (dynamicTabs[activeTab] !== PUR_TAB_LABEL) return;
-
+    if (!id) return;
     setPurLoading(true);
-    getData(`${ENDPOINTS.PURCHASES}/by/product/${SHOP_ID}/${id}`, { exclude_cancel: "true", exclude_draft: "true" }).then((res: any) => {
-      setPurchases(res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : []);
-      setPurLoading(false);
-    }).catch(() => setPurLoading(false));
-  }, [activeTab, id, product]);
+    getData(`${ENDPOINTS.PURCHASES}/by/product/${SHOP_ID}/${id}`, { exclude_cancel: "true", exclude_draft: "true" })
+      .then((res: any) => {
+        setPurchases(res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : []);
+      })
+      .catch(() => {})
+      .finally(() => setPurLoading(false));
+  }, [id]);
 
   // Load custom field definitions + values when product is loaded (embedded in General Info sidebar)
   useEffect(() => {
@@ -161,7 +269,27 @@ const ProductDetail = () => {
       inventoryCustomFieldsApi.getValuesByProduct(SHOP_ID, id)
     ]).then(([defs, vals]) => {
       setCustomFieldDefs(defs);
-      setCustomFieldValues(vals);
+      const valList: any[] = Array.isArray(vals) ? [...vals] : [];
+      const prodCfs: Record<string, any> = {
+        ...((product as any)?.additional_infos || {}),
+        ...((product as any)?.additional_infos?.custom_fields || {}),
+        ...((product as any)?.custom_fields || {}),
+        ...((product as any)?.datas?.custom_fields || {}),
+      };
+      defs.forEach((fieldDef: any) => {
+        if (!valList.some((v) => v.field_id === fieldDef.id)) {
+          const fallbackVal = prodCfs[fieldDef.id] ?? prodCfs[fieldDef.field_name] ?? prodCfs[fieldDef.label_name] ?? prodCfs[fieldDef.field_name?.toLowerCase()];
+          if (fallbackVal !== undefined && fallbackVal !== null && fallbackVal !== '') {
+            valList.push({
+              shop_id: SHOP_ID,
+              product_id: id,
+              field_id: fieldDef.id,
+              value: String(fallbackVal),
+            });
+          }
+        }
+      });
+      setCustomFieldValues(valList);
     }).finally(() => setCfLoading(false));
   }, [id, product]);
 
@@ -397,7 +525,24 @@ const ProductDetail = () => {
                       <DetailItem icon={Info} label="Unit" value={unitName} onClick={click("Unit", unitName)} />
                       <DetailItem icon={Hash} label="SKU" value={skuValue} onClick={click("SKU", skuValue)} />
                       {uiId && uiId !== skuValue && <DetailItem icon={Hash} label="Product ID" value={uiId} onClick={click("Product ID", uiId)} />}
-                      <DetailItem icon={Hash} label="Barcode" value={barcode} onClick={click("Barcode", barcode)} />
+                      <div>
+                        <p className="text-[10px] font-medium text-slate-400 tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
+                          <Hash size={12} className="text-blue-400" /> Barcode
+                        </p>
+                        {hasVariants || hasBatches ? (
+                          <div
+                            className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
+                            onClick={() => setActiveTab(inventoryTabIdx)}
+                          >
+                            <Layers size={12} className="text-indigo-500" />
+                            <span className="text-[11px] font-bold text-indigo-600 truncate max-w-[140px]" title="Available in Batch & Variants tab">
+                              Available in Batch & Variants tab
+                            </span>
+                          </div>
+                        ) : (
+                          <p className="text-[13px] font-semibold text-slate-800">{barcode}</p>
+                        )}
+                      </div>
                       <div className="md:col-span-2">
                         <DetailItem icon={Info} label="Description" value={description} onClick={click("Description", description)} />
                       </div>
@@ -469,123 +614,202 @@ const ProductDetail = () => {
                     </div>
                     <h2 className="text-[10px] font-black text-slate-800  tracking-[0.15em]">Pricing & Compliance</h2>
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-y-6 gap-x-8">
-                    <div>
-                      <p className="text-[10px] font-medium text-slate-400 tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
-                        <Download size={12} className="text-blue-400" /> Buy Price
-                      </p>
-                      {hasVariants || hasBatches ? (
-                        <div
-                          className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
-                          onClick={() => setActiveTab(inventoryTabIdx)}
-                        >
-                          <Layers size={12} className="text-indigo-500" />
-                          <span className="text-[11px] font-bold text-indigo-600">Available in Batch & Variants tab</span>
-                        </div>
-                      ) : (buyingPrice !== null && buyingPrice !== undefined && Number(buyingPrice) > 0) ? (
-                        <div className="flex flex-col">
-                          {(() => {
-                             const gstRate = parseFloat(String(gstValue).replace(/[^0-9.]/g, '')) || 0;
-                             let gstAmt = 0;
-                             let displayPrice = Number(buyingPrice);
-                             let isGstApplied = false;
+                  {(() => {
+                    const gstRate = parseFloat(String(gstValue).replace(/[^0-9.]/g, '')) || 0;
+                    const numBuyingPrice = buyingPrice !== null && buyingPrice !== undefined ? Number(buyingPrice) : 0;
+                    let baseGstAmt = 0;
+                    let buyPriceWithGst = numBuyingPrice;
+                    let isBuyGstApplied = false;
+                    if (gstRate > 0 && !isNaN(numBuyingPrice) && numBuyingPrice > 0) {
+                      baseGstAmt = Math.round((numBuyingPrice * (gstRate / 100)) * 100) / 100;
+                      buyPriceWithGst = Math.round((numBuyingPrice + baseGstAmt) * 100) / 100;
+                      isBuyGstApplied = true;
+                    }
 
-                             if (gstRate > 0 && !isNaN(displayPrice)) {
-                               gstAmt = displayPrice * (gstRate / 100);
-                               displayPrice = displayPrice + gstAmt;
-                               isGstApplied = true;
-                             }
-                             return (
-                               <>
-                                 <p className="text-[13px] font-semibold text-slate-800 tabular-nums flex items-baseline gap-1">
-                                   {`₹${displayPrice.toFixed(2)}`}
-                                 </p>
-                                 {isGstApplied && (
-                                   <span className="text-[10px] text-slate-500 font-medium mt-0.5">
-                                     ₹{Number(buyingPrice).toFixed(2)} + ₹{gstAmt.toFixed(2)} GST
-                                   </span>
-                                 )}
-                               </>
-                             );
-                          })()}
-                        </div>
-                      ) : (
-                        <p className="text-[13px] font-semibold text-slate-400">—</p>
-                      )}
-                    </div>
+                    const costBreakdown = extractProductLandedCost(purchases, id || product.id, buyPriceWithGst);
+                    const costPerUnit = costBreakdown.landedCost > 0 ? costBreakdown.landedCost : buyPriceWithGst;
 
-                    <div>
-                      <p className="text-[10px] font-medium text-slate-400 tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
-                        <Upload size={12} className="text-blue-400" /> Sell Price
-                      </p>
-                      {hasVariants || hasBatches ? (
-                        <div
-                          className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
-                          onClick={() => setActiveTab(inventoryTabIdx)}
-                        >
-                          <Layers size={12} className="text-indigo-500" />
-                          <span className="text-[11px] font-bold text-indigo-600">Available in Batch & Variants tab</span>
+                    const numSellingPrice = sellingPrice !== null && sellingPrice !== undefined ? Number(sellingPrice) : 0;
+                    const spTax = calculateTaxSplit(numSellingPrice, gstRate);
+                    const spTaxableValue = spTax.taxableValue;
+                    const profitAmount = Math.round((spTaxableValue - costPerUnit) * 100) / 100;
+                    const marginPercent = spTaxableValue > 0 ? ((profitAmount / spTaxableValue) * 100) : 0;
+
+                    return (
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-y-6 gap-x-8">
+                        <div>
+                          <p className="text-[10px] font-medium text-slate-400 tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
+                            <Download size={12} className="text-blue-400" /> Buy Price
+                          </p>
+                          {hasVariants || hasBatches ? (
+                            <div
+                              className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
+                              onClick={() => setActiveTab(inventoryTabIdx)}
+                            >
+                              <Layers size={12} className="text-indigo-500" />
+                              <span className="text-[11px] font-bold text-indigo-600">Available in Batch & Variants tab</span>
+                            </div>
+                          ) : (buyingPrice !== null && buyingPrice !== undefined && Number(buyingPrice) > 0) ? (
+                            <div className="flex flex-col">
+                              <p className="text-[13px] font-semibold text-slate-800 tabular-nums flex items-baseline gap-1">
+                                {`₹${buyPriceWithGst.toFixed(2)}`}
+                              </p>
+                              {isBuyGstApplied && (
+                                <span className="text-[10px] text-slate-500 font-medium mt-0.5">
+                                  ₹{numBuyingPrice.toFixed(2)} + ₹{baseGstAmt.toFixed(2)} GST
+                                  {costBreakdown.allocatedPerUnit > 0 && (
+                                    <span className="text-slate-400 block text-[9.5px]">
+                                      Landed: ₹{costBreakdown.landedCost.toFixed(2)} (+₹{costBreakdown.allocatedPerUnit.toFixed(2)} charges)
+                                    </span>
+                                  )}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-[13px] font-semibold text-slate-400">—</p>
+                          )}
                         </div>
-                      ) : sellingPrice !== null ? (
-                        <PriceCell
-                          sellingPrice={sellingPrice}
-                          mrp={datas.mrp}
-                          gstRate={gstValue}
-                          discountPercent={datas.discount_percent || 0}
-                          offerValidUntil={datas.offer_valid_until}
-                          size="md"
-                        />
-                      ) : (
-                        <p className="text-[13px] font-semibold text-slate-400">—</p>
-                      )}
-                    </div>
-                    <DetailItem icon={Tag} label="MRP" value={datas.mrp ? `₹${Number(datas.mrp).toFixed(2)}` : "—"} onClick={click("MRP", datas.mrp ? `₹${datas.mrp}` : "—")} />
-                    <DetailItem icon={Hash} label="HSN Code" value={String(datas.hsn || "—")} onClick={click("HSN Code", String(datas.hsn || "—"))} />
-                    <DetailItem icon={BarChart2} label="GST Rate" value={gstValue} onClick={click("GST Rate", gstValue)} />
-                    {datas.discount_percent && Number(datas.discount_percent) > 0 ? (
-                      <DetailItem
-                        icon={Tag}
-                        label="Product Offer"
-                        value={`${datas.discount_percent}% Discount ${datas.offer_valid_until ? `(Valid until ${new Date(datas.offer_valid_until).toLocaleDateString()})` : ''}`}
-                      />
-                    ) : null}
-                    <div>
-                      <p className="text-[10px] font-medium text-slate-400  tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
-                        <Info size={12} className="text-blue-400" /> Reorder Point
-                      </p>
-                      {(hasVariants || hasBatches) ? (
-                        <div
-                          className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
-                          onClick={() => setActiveTab(inventoryTabIdx)}
-                        >
-                          <Layers size={12} className="text-indigo-500" />
-                          <span className="text-[11px] font-bold text-indigo-600">Available in Batch & Variants tab</span>
+
+                        <div>
+                          <p className="text-[10px] font-medium text-slate-400 tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
+                            <Upload size={12} className="text-blue-400" /> Sell Price
+                          </p>
+                          {hasVariants || hasBatches ? (
+                            <div
+                              className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
+                              onClick={() => setActiveTab(inventoryTabIdx)}
+                            >
+                              <Layers size={12} className="text-indigo-500" />
+                              <span className="text-[11px] font-bold text-indigo-600">Available in Batch & Variants tab</span>
+                            </div>
+                          ) : sellingPrice !== null ? (
+                            <div className="flex flex-col">
+                              <PriceCell
+                                sellingPrice={sellingPrice}
+                                mrp={datas.mrp}
+                                gstRate={gstValue}
+                                discountPercent={datas.discount_percent || 0}
+                                offerValidUntil={datas.offer_valid_until}
+                                size="md"
+                              />
+                              {numSellingPrice > 0 && (
+                                <span className="text-[9px] font-medium text-slate-500 leading-tight block mt-1">
+                                  Taxable: ₹{spTaxableValue.toFixed(2)}<br />
+                                  Margin: <span className={profitAmount >= 0 ? "text-emerald-600 font-semibold" : "text-rose-600 font-semibold"}>
+                                    {marginPercent.toFixed(1)}% ({profitAmount >= 0 ? "+" : ""}₹{profitAmount.toFixed(2)})
+                                  </span>
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-[13px] font-semibold text-slate-400">—</p>
+                          )}
                         </div>
-                      ) : reorderPoint !== null ? (
-                        <p className="text-[13px] font-semibold text-slate-800 tabular-nums">{String(reorderPoint)}</p>
-                      ) : (
-                        <p className="text-[13px] font-semibold text-slate-400">—</p>
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-medium text-slate-400 tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
-                        <MapPin size={12} className="text-blue-400" /> Storage Location
-                      </p>
-                      {storageLocation ? (
-                        <p className="text-[13px] font-semibold text-slate-800">{storageLocation}</p>
-                      ) : (hasVariants || hasBatches) ? (
-                        <div
-                          className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
-                          onClick={() => setActiveTab(inventoryTabIdx)}
-                        >
-                          <Layers size={12} className="text-indigo-500" />
-                          <span className="text-[11px] font-bold text-indigo-600">Available in Batch & Variants tab</span>
+                        <div>
+                          <p className="text-[10px] font-medium text-slate-400 tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
+                            <Tag size={12} className="text-blue-400" /> MRP
+                          </p>
+                          {hasVariants || hasBatches ? (
+                            <div
+                              className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
+                              onClick={() => setActiveTab(inventoryTabIdx)}
+                            >
+                              <Layers size={12} className="text-indigo-500" />
+                              <span className="text-[11px] font-bold text-indigo-600">Available in Batch & Variants tab</span>
+                            </div>
+                          ) : (
+                            <p className="text-[13px] font-semibold text-slate-800 tabular-nums">
+                              {datas.mrp ? `₹${Number(datas.mrp).toFixed(2)}` : "—"}
+                            </p>
+                          )}
                         </div>
-                      ) : (
-                        <p className="text-[13px] font-semibold text-slate-400">—</p>
-                      )}
-                    </div>
-                  </div>
+
+                        <div>
+                          <p className="text-[10px] font-medium text-slate-400 tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
+                            <Hash size={12} className="text-blue-400" /> HSN Code
+                          </p>
+                          {hasVariants || hasBatches ? (
+                            <div
+                              className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
+                              onClick={() => setActiveTab(inventoryTabIdx)}
+                            >
+                              <Layers size={12} className="text-indigo-500" />
+                              <span className="text-[11px] font-bold text-indigo-600">Available in Batch & Variants tab</span>
+                            </div>
+                          ) : (
+                            <p className="text-[13px] font-semibold text-slate-800">
+                              {String(datas.hsn || "—")}
+                            </p>
+                          )}
+                        </div>
+
+                        <DetailItem icon={BarChart2} label="GST Rate" value={gstValue} onClick={click("GST Rate", gstValue)} />
+
+                        {!hasVariants && !hasBatches && numSellingPrice > 0 && (
+                          <div>
+                            <p className="text-[10px] font-medium text-slate-400 tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
+                              <TrendingUp size={12} className={profitAmount >= 0 ? "text-emerald-500" : "text-rose-500"} /> Margin & Profit
+                            </p>
+                            <div className="flex flex-col">
+                              <p className={`text-[13px] font-bold tabular-nums flex items-baseline gap-1 ${profitAmount >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                                {marginPercent.toFixed(1)}%{" "}
+                                <span className="text-[11px] font-semibold text-slate-600">
+                                  ({profitAmount >= 0 ? "+" : ""}₹{profitAmount.toFixed(2)})
+                                </span>
+                              </p>
+                              <span className="text-[10px] text-slate-400 font-medium mt-0.5">
+                                Taxable: ₹{spTaxableValue.toFixed(2)} · Cost: ₹{costPerUnit.toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
+                        {datas.discount_percent && Number(datas.discount_percent) > 0 ? (
+                          <DetailItem
+                            icon={Tag}
+                            label="Product Offer"
+                            value={`${datas.discount_percent}% Discount ${datas.offer_valid_until ? `(Valid until ${new Date(datas.offer_valid_until).toLocaleDateString()})` : ''}`}
+                          />
+                        ) : null}
+                        <div>
+                          <p className="text-[10px] font-medium text-slate-400  tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
+                            <Info size={12} className="text-blue-400" /> Reorder Point
+                          </p>
+                          {(hasVariants || hasBatches) ? (
+                            <div
+                              className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
+                              onClick={() => setActiveTab(inventoryTabIdx)}
+                            >
+                              <Layers size={12} className="text-indigo-500" />
+                              <span className="text-[11px] font-bold text-indigo-600">Available in Batch & Variants tab</span>
+                            </div>
+                          ) : reorderPoint !== null ? (
+                            <p className="text-[13px] font-semibold text-slate-800 tabular-nums">{String(reorderPoint)}</p>
+                          ) : (
+                            <p className="text-[13px] font-semibold text-slate-400">—</p>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-medium text-slate-400 tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
+                            <MapPin size={12} className="text-blue-400" /> Storage Location
+                          </p>
+                          {storageLocation ? (
+                            <p className="text-[13px] font-semibold text-slate-800">{storageLocation}</p>
+                          ) : (hasVariants || hasBatches) ? (
+                            <div
+                              className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
+                              onClick={() => setActiveTab(inventoryTabIdx)}
+                            >
+                              <Layers size={12} className="text-indigo-500" />
+                              <span className="text-[11px] font-bold text-indigo-600">Available in Batch & Variants tab</span>
+                            </div>
+                          ) : (
+                            <p className="text-[13px] font-semibold text-slate-400">—</p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </SectionCard>
               </div>
 
@@ -659,18 +883,27 @@ const ProductDetail = () => {
                               </p>
                               {isEditing ? (
                                 <div className="flex items-center gap-1.5 mt-1">
-                                  {(field.type?.toLowerCase() === 'boolean' || field.type?.toLowerCase() === 'bool' || field.type?.toLowerCase() === 'checkbox' || String(currentVal?.value).toLowerCase() === 'true' || String(currentVal?.value).toLowerCase() === 'false') ? (
-                                    <label className="flex items-center gap-2 cursor-pointer flex-1 py-1">
-                                      <input
-                                        type="checkbox"
-                                        checked={editingValue === 'true'}
-                                        onChange={(e) => setEditingValue(String(e.target.checked))}
-                                        className="w-4 h-4 rounded accent-indigo-600 cursor-pointer"
-                                      />
-                                      <span className="text-xs font-semibold text-slate-700">
-                                        {editingValue === 'true' ? 'Yes (True)' : 'No (False)'}
-                                      </span>
-                                    </label>
+                                  {(field.type?.toLowerCase() === 'boolean' || field.type?.toLowerCase() === 'bool' || field.type?.toLowerCase() === 'checkbox' || isBoolTrue(currentVal?.value) || isBoolFalse(currentVal?.value)) ? (
+                                    <div className="flex items-center gap-4 flex-1 py-1">
+                                      <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                                        <input
+                                          type="checkbox"
+                                          checked={isBoolTrue(editingValue)}
+                                          onChange={(e) => setEditingValue(e.target.checked ? 'true' : 'false')}
+                                          className="w-4 h-4 rounded text-indigo-600 accent-indigo-600 cursor-pointer"
+                                        />
+                                        <span className="text-xs font-semibold text-slate-700">Yes</span>
+                                      </label>
+                                      <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                                        <input
+                                          type="checkbox"
+                                          checked={!isBoolTrue(editingValue)}
+                                          onChange={(e) => setEditingValue(e.target.checked ? 'false' : 'true')}
+                                          className="w-4 h-4 rounded text-indigo-600 accent-indigo-600 cursor-pointer"
+                                        />
+                                        <span className="text-xs font-semibold text-slate-700">No</span>
+                                      </label>
+                                    </div>
                                   ) : (
                                     <input
                                       autoFocus
@@ -691,10 +924,10 @@ const ProductDetail = () => {
                                 </div>
                               ) : (
                                 <div className="flex items-center justify-between cursor-pointer"
-                                  onClick={() => { setEditingFieldId(field.id); setEditingValue(currentVal?.value ?? ((field.type?.toLowerCase() === 'boolean' || field.type?.toLowerCase() === 'bool' || field.type?.toLowerCase() === 'checkbox' || String(currentVal?.value).toLowerCase() === 'true' || String(currentVal?.value).toLowerCase() === 'false') ? 'false' : '')); }}>
+                                  onClick={() => { setEditingFieldId(field.id); setEditingValue(currentVal?.value ?? ((field.type?.toLowerCase() === 'boolean' || field.type?.toLowerCase() === 'bool' || field.type?.toLowerCase() === 'checkbox' || isBoolTrue(currentVal?.value) || isBoolFalse(currentVal?.value)) ? 'false' : '')); }}>
                                   <p className="text-xs font-bold text-slate-700 truncate">
-                                    {(field.type?.toLowerCase() === 'boolean' || field.type?.toLowerCase() === 'bool' || field.type?.toLowerCase() === 'checkbox' || String(currentVal?.value).toLowerCase() === 'true' || String(currentVal?.value).toLowerCase() === 'false') ? (
-                                      (String(currentVal?.value).toLowerCase() === 'true' || String(currentVal?.value).toLowerCase() === 'yes') ? (
+                                    {(field.type?.toLowerCase() === 'boolean' || field.type?.toLowerCase() === 'bool' || field.type?.toLowerCase() === 'checkbox' || isBoolTrue(currentVal?.value) || isBoolFalse(currentVal?.value)) ? (
+                                      isBoolTrue(currentVal?.value) ? (
                                         <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">Yes</span>
                                       ) : (
                                         <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-100 text-slate-500 border border-slate-200">No</span>
@@ -854,6 +1087,7 @@ const ProductDetail = () => {
                         parentGst={gstValue}
                         parentMrp={datas.mrp}
                         parentDiscountPercent={datas.discount_percent}
+                        parentHsn={datas.hsn_code || (product as any).hsn_code || (product as any).hsn || (datas as any).hsn}
                       />
                     </div>
                   </SectionCard>

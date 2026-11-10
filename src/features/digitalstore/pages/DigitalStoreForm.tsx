@@ -1,8 +1,8 @@
 import { useToast } from "@/context/ToastContext";
 import { useEffect, useState } from "react";
 import { StoreFormData } from "@/features/digitalstore/type";
-import { Check, ChevronLeft, ChevronRight, Store, Clock, MapPin, Package, CheckCircle2, Rocket } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Check, ChevronLeft, ChevronRight, Store, Clock, MapPin, Package, CheckCircle2, Rocket, Save, Loader2 } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useBusinessApi } from "@/context/BusinessApiContext";
 import { employeeApi } from "@/services/api/employee";
 import { inventoryApi } from "@/services/api/inventory";
@@ -47,10 +47,8 @@ const INITIAL_STATE: StoreFormData = {
     { day: "SUNDAY", open_at: "09:00:00+00:00", close_at: "21:00:00+00:00" }
   ],
   deliveryOptions: {
-    instant: { enabled: true, speed: "Within 12 hours", freeThreshold: 50, radius: 5, minOrderAmount: 100, chargePerKm: 15, manageStore: true, partners: true },
-    standard: { enabled: false, speed: "1–2 Business Days", freeThreshold: 30, radius: 10, minOrderAmount: 150, chargePerKm: 10, manageStore: false, partners: true },
-    nationwide: { enabled: false, speed: "5–7 Business Days", freeThreshold: 100, radius: 100, minOrderAmount: 300, chargePerKm: 5, manageStore: false, partners: true },
-    pickuponly: { enabled: true, speed: "Same Day", freeThreshold: 0, radius: 5, minOrderAmount: 0, chargePerKm: 0, manageStore: true, partners: false }
+    pickuponly: { enabled: true, speed: "Same Day", freeThreshold: 0, radius: 5, minOrderAmount: 0, chargePerKm: 0, manageStore: true, partners: false },
+    delivery: { enabled: true, speed: "Same Day", freeThreshold: 500, radius: 10, minOrderAmount: 0, deliveryCharge: 40, chargePerKm: 10, baseDistance: 5, extraDistanceStep: 1, pricingModel: "FLAT", manageStore: true, partners: true }
   },
   selectedProducts: {}
 };
@@ -64,10 +62,12 @@ const STEPS = [
 ];
 
 export default function StoreSetupWizard({ existingData }: { existingData?: Partial<StoreFormData> }) {
+  const [searchParams] = useSearchParams();
   const [currentStep, setCurrentStep] = useState(1);
   const [form, setForm] = useState<StoreFormData>(INITIAL_STATE);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isExistingStore, setIsExistingStore] = useState<boolean>(false);
   const [isLaunchingModalOpen, setIsLaunchingModalOpen] = useState<boolean>(false);
   const [isLaunchComplete, setIsLaunchComplete] = useState<boolean>(false);
   const [launchError, setLaunchError] = useState<string | null>(null);
@@ -77,9 +77,12 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
   const { setBottomActions } = useHeader();
   const { showToast } = useToast();
 
+  const isEditMode = (isExistingStore || searchParams.get("mode") === "edit" || searchParams.get("edit") === "true") && searchParams.get("wizard") !== "true";
+
   useEffect(() => {
     if (existingData) {
       setForm((prev) => ({ ...prev, ...existingData }));
+      setIsExistingStore(true);
       return;
     }
 
@@ -89,32 +92,37 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
       shop.getShopById(currentShopId).then((res) => {
         if (res && res.data) {
           const s = res.data;
+          if (s.name || s.id) {
+            setIsExistingStore(true);
+          }
           setForm((prev) => {
             const loadedOperatingHours = s.operating_hours?.length > 0 ? s.operating_hours : prev.operatingHours;
             const loadedDeliveryOptions = JSON.parse(JSON.stringify(prev.deliveryOptions));
             
             if (s.delivery_options?.length > 0) {
               s.delivery_options.forEach((d: any) => {
-                let key: "instant" | "standard" | "nationwide" | "pickuponly" | null = null;
-                if (d.type === "INSTANT" || d.type === "EXPRESS") key = "instant";
-                else if (d.type === "STANDARD" || d.type === "NORMAL") key = "standard";
-                else if (d.type === "NATIONWIDE" || d.type === "SAME_DAY") key = "nationwide";
-                else if (d.type === "PICKUP_ONLY") key = "pickuponly";
+                let key: "delivery" | "pickuponly" | null = null;
+                const t = (d.type || "").toUpperCase();
+                if (t === "PICKUP_ONLY" || t === "PICKUP" || t === "STORE_PICKUP") {
+                  key = "pickuponly";
+                } else if (["DELIVERY", "STANDARD", "INSTANT", "EXPRESS", "NORMAL", "NATIONWIDE", "SAME_DAY"].includes(t)) {
+                  key = "delivery";
+                }
                 
                 if (key) {
                   loadedDeliveryOptions[key] = {
                     ...loadedDeliveryOptions[key],
                     id: d.id,
                     enabled: d.enabled !== false,
-                    speed: d.speed || loadedDeliveryOptions[key].speed,
-                    freeThreshold: d.free_shipping_amount ?? loadedDeliveryOptions[key].freeThreshold,
-                    radius: d.radius ?? loadedDeliveryOptions[key].radius,
-                    minOrderAmount: d.min_order_amount ?? loadedDeliveryOptions[key].minOrderAmount,
-                    deliveryCharge: d.delivery_charge ?? loadedDeliveryOptions[key].deliveryCharge,
-                    baseDistance: d.base_distance ?? loadedDeliveryOptions[key].baseDistance,
-                    extraDistanceStep: d.extra_distance_step ?? loadedDeliveryOptions[key].extraDistanceStep,
-                    pricingModel: d.pricing_model ?? loadedDeliveryOptions[key].pricingModel,
-                    chargePerKm: d.charge_per_km ?? loadedDeliveryOptions[key].chargePerKm,
+                    speed: d.speed || loadedDeliveryOptions[key]?.speed || "Same Day",
+                    freeThreshold: d.free_shipping_amount ?? loadedDeliveryOptions[key]?.freeThreshold ?? 0,
+                    radius: d.radius ?? loadedDeliveryOptions[key]?.radius ?? 10,
+                    minOrderAmount: d.min_order_amount ?? loadedDeliveryOptions[key]?.minOrderAmount ?? 0,
+                    deliveryCharge: d.delivery_charge ?? loadedDeliveryOptions[key]?.deliveryCharge ?? 40,
+                    baseDistance: d.base_distance ?? loadedDeliveryOptions[key]?.baseDistance ?? 5,
+                    extraDistanceStep: d.extra_distance_step ?? loadedDeliveryOptions[key]?.extraDistanceStep ?? 1,
+                    pricingModel: d.pricing_model ?? loadedDeliveryOptions[key]?.pricingModel ?? "FLAT",
+                    chargePerKm: d.charge_per_km ?? loadedDeliveryOptions[key]?.chargePerKm ?? 10,
                     partners: d.delivery_by !== "INHOUSE",
                     manageStore: d.delivery_by === "INHOUSE",
                   };
@@ -158,6 +166,76 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
     return Object.keys(stepErrors).length === 0;
   };
 
+  const handleSaveBasicDetails = async () => {
+    if (!validateStep1()) return;
+    setIsLoading(true);
+    try {
+      const currentShopId = localStorage.getItem("shop_id") || SHOP_ID;
+      if (!currentShopId || currentShopId === "string") {
+        showToast("No store found to update", "error");
+        setIsLoading(false);
+        return;
+      }
+
+      const updatePayload: any = {
+        id: currentShopId,
+        name: form.name.trim(),
+        tagline: form.tagline?.trim() || null,
+        description: form.description?.trim() || null,
+        categories: form.category ? [form.category] : [],
+        business_infos: {
+          type: "OTHERS",
+          gst_infos: {
+            registered: !!form.gstRegistered,
+            ...(form.gstRegistered && form.gstNumber ? { number: form.gstNumber.toUpperCase().trim() } : {})
+          },
+          currency: "INR"
+        },
+        address: {
+          full_address: form.address || "Not specified",
+          zip_code: "000000",
+          landmark: "",
+          latitude: Number(form.latitude) || 0,
+          longitude: Number(form.longitude) || 0
+        },
+        additional_infos: {
+          emails: form.contactEmail ? [form.contactEmail] : [],
+          mobile_numbers: form.contactPhone ? [form.contactPhone] : [],
+          website: form.website || null,
+          instagram: form.instagram || null,
+          facebook: form.twitter || null
+        }
+      };
+
+      await shop.updateShop(updatePayload);
+
+      // Upload Images if changed
+      if (form.logo instanceof File) {
+        try {
+          await shop.uploadShopImage(form.logo, "logo", currentShopId);
+        } catch (e) {
+          console.error("Logo upload error", e);
+        }
+      }
+      if (form.banner instanceof File) {
+        try {
+          await shop.uploadShopImage(form.banner, "banner", currentShopId);
+        } catch (e) {
+          console.error("Banner upload error", e);
+        }
+      }
+
+      showToast("Store basic details updated successfully!", "success");
+      navigate("/profile");
+    } catch (err: any) {
+      console.error("Failed to update store:", err);
+      const msg = err?.detail?.description || err?.detail?.msg || err?.message || "Failed to update store";
+      showToast(msg, "error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const saveDraft = async () => {
     try {
       const payload = {
@@ -195,20 +273,36 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
           open_at: hr.open_at.replace("+00:00", "").replace("Z", ""),
           close_at: hr.close_at.replace("+00:00", "").replace("Z", "")
         })),
-        delivery_options: Object.entries(form.deliveryOptions).map(([key, d]) => ({
-          type: key === "instant" ? "INSTANT" : key === "standard" ? "STANDARD" : key === "pickuponly" ? "PICKUP_ONLY" : "NATIONWIDE",
-          enabled: !!d.enabled,
-          speed: d.speed,
-          free_shipping_amount: d.freeThreshold || 0,
-          radius: d.radius || 0,
-          min_order_amount: d.minOrderAmount || 0,
-          delivery_charge: d.deliveryCharge || 0,
-          charge_per_km: d.chargePerKm || 0,
-          base_distance: d.baseDistance || 0,
-          extra_distance_step: d.extraDistanceStep || 1,
-          pricing_model: d.pricingModel || "FLAT",
-          delivery_by: d.partners ? "PARTNERS" : "INHOUSE"
-        }))
+        delivery_options: [
+          ...(form.deliveryOptions.pickuponly ? [{
+            type: "PICKUP_ONLY",
+            enabled: !!form.deliveryOptions.pickuponly.enabled,
+            speed: form.deliveryOptions.pickuponly.speed || "Same Day",
+            free_shipping_amount: 0,
+            radius: Number(form.deliveryOptions.pickuponly.radius) || 0,
+            min_order_amount: 0,
+            delivery_charge: 0,
+            charge_per_km: 0,
+            base_distance: 0,
+            extra_distance_step: 1,
+            pricing_model: "FLAT",
+            delivery_by: "INHOUSE"
+          }] : []),
+          ...(form.deliveryOptions.delivery ? [{
+            type: "DELIVERY",
+            enabled: !!form.deliveryOptions.delivery.enabled,
+            speed: form.deliveryOptions.delivery.speed || "Same Day",
+            free_shipping_amount: Number(form.deliveryOptions.delivery.freeThreshold) || 0,
+            radius: Number(form.deliveryOptions.delivery.radius) || 10,
+            min_order_amount: Number(form.deliveryOptions.delivery.minOrderAmount) || 0,
+            delivery_charge: Number(form.deliveryOptions.delivery.deliveryCharge) || 0,
+            charge_per_km: Number(form.deliveryOptions.delivery.chargePerKm) || 0,
+            base_distance: Number(form.deliveryOptions.delivery.baseDistance) || 0,
+            extra_distance_step: Number(form.deliveryOptions.delivery.extraDistanceStep) || 1,
+            pricing_model: form.deliveryOptions.delivery.pricingModel || "FLAT",
+            delivery_by: form.deliveryOptions.delivery.partners ? "PARTNERS" : "INHOUSE"
+          }] : [])
+        ]
       };
 
       const currentShopId = localStorage.getItem("shop_id") || SHOP_ID;
@@ -327,6 +421,37 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
   };
 
   useEffect(() => {
+    if (isEditMode) {
+      setBottomActions(
+        <div className="flex justify-between items-center w-full px-2 md:px-6">
+          <button
+            type="button"
+            onClick={() => navigate("/profile")}
+            disabled={isLoading}
+            className="flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl font-semibold text-sm bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 shadow-sm cursor-pointer transition-all"
+          >
+            <ChevronLeft size={16} strokeWidth={2.5} />
+            Back to Store
+          </button>
+
+          <button
+            type="button"
+            onClick={handleSaveBasicDetails}
+            disabled={isLoading}
+            className={`flex items-center justify-center gap-2 px-7 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-md active:scale-95 cursor-pointer ${
+              isLoading
+                ? "bg-slate-400 cursor-not-allowed text-white" 
+                : "bg-emerald-600 hover:bg-emerald-700 text-white"
+            }`}
+          >
+            {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} strokeWidth={2.5} />}
+            <span>Save Changes</span>
+          </button>
+        </div>
+      );
+      return () => setBottomActions(null);
+    }
+
     setBottomActions(
       <div className="flex justify-between items-center w-full px-2 md:px-6">
         <button
@@ -372,10 +497,49 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
     );
 
     return () => setBottomActions(null);
-  }, [currentStep, isLoading, isLaunchingModalOpen, form]);
+  }, [isEditMode, currentStep, isLoading, isLaunchingModalOpen, form]);
 
   const currentStepData = STEPS.find(s => s.id === currentStep)!;
   const progressPercent = ((currentStep - 1) / (STEPS.length - 1)) * 100;
+
+  if (isEditMode) {
+    return (
+      <div className="w-full min-h-screen bg-slate-50 p-3 md:p-6 lg:p-8 font-sans">
+        <div className="w-full mx-auto max-w-3xl space-y-5">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-black text-slate-900 tracking-tight">Edit Digital Store</h1>
+              <p className="text-xs text-slate-500 mt-0.5">Update your store branding, basic identity, and contact information.</p>
+            </div>
+            <button
+              onClick={() => navigate("/profile")}
+              className="text-xs font-bold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-3.5 py-2 rounded-xl shadow-xs cursor-pointer hover:bg-slate-50 transition-all"
+            >
+              Back to Store
+            </button>
+          </div>
+
+          {/* Form Card */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-24">
+            <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-100 bg-slate-50/60">
+              <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shrink-0">
+                <Store size={15} className="text-white" strokeWidth={2.5} />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-sm font-bold text-slate-800 leading-tight">Basic Details</h2>
+                <p className="text-[11px] text-slate-500 leading-tight mt-0.5">Set up your store identity, images, and GST info.</p>
+              </div>
+            </div>
+
+            <div className="p-5 md:p-6">
+              <Step1BasicDetails form={form} setForm={setForm} errors={errors} setErrors={setErrors} />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full min-h-screen bg-slate-50 p-3 md:p-6 lg:p-8 font-sans">

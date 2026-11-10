@@ -348,6 +348,15 @@ const QuickCreateDropdownModal: React.FC<QuickCreateDropdownModalProps> = ({ isO
   );
 };
 
+const isBoolTrue = (val: any): boolean => {
+  if (val === true || val === 1) return true;
+  if (typeof val === 'string') {
+    const s = val.trim().toLowerCase();
+    return s === 'true' || s === '1' || s === 'yes';
+  }
+  return false;
+};
+
 const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData = {}, isLoading: externalLoading = false }) => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -363,6 +372,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   // ── Custom Fields State ──
   const [customFieldDefs, setCustomFieldDefs] = useState<any[]>([]);
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
+  const customFieldValuesRef = useRef(customFieldValues);
+  customFieldValuesRef.current = customFieldValues;
+  const handleSubmitRef = useRef<any>(null);
 
   // Sidebar creation / editing form state
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -648,6 +660,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   const numSellingPrice = form.selling_price ? Number(form.selling_price) : 0;
   const numMrp = form.mrp ? Number(form.mrp) : 0;
   const numDiscount = form.discount_percent ? Number(form.discount_percent) : 0;
+  const numCostToMake = form.cost_to_make ? Number(form.cost_to_make) : 0;
+  const costToMakeGstAmt = (isGstReg && gstRateNum > 0 && numCostToMake > 0)
+    ? Math.round((numCostToMake * (gstRateNum / 100)) * 100) / 100
+    : 0;
+  const effectiveCostToMake = Math.round((numCostToMake + costToMakeGstAmt) * 100) / 100;
 
   const priceCalc = useMemo(() => {
     if (numSellingPrice > 0) {
@@ -658,11 +675,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         discountPercent: numDiscount,
         offerValidUntil: form.offer_valid_until || null,
         isGstRegistered: isGstReg,
-        costPrice: Number(form.cost_to_make || 0),
+        costPrice: effectiveCostToMake,
       });
     }
     return null;
-  }, [numSellingPrice, numMrp, gstRateNum, numDiscount, form.offer_valid_until, isGstReg, form.cost_to_make]);
+  }, [numSellingPrice, numMrp, gstRateNum, numDiscount, form.offer_valid_until, isGstReg, effectiveCostToMake]);
 
   const pricingHelperState = useMemo(() => {
     const hasMrp = numMrp > 0;
@@ -725,7 +742,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       <div className="flex items-center gap-3 animate-in fade-in slide-in-from-right-4 duration-300">
         <GradientButton
           icon={<Save size={15} />}
-          onClick={handleSubmit}
+          onClick={() => handleSubmitRef.current?.()}
           disabled={isLoading}
           className="rounded-lg shadow-md text-xs px-6 h-9 flex items-center"
         >
@@ -734,7 +751,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       </div>
     );
     return () => setBottomActions(null);
-  }, [setBottomActions, isLoading, id, form, variantTypes, combinations, baseSerials, supplierDetails, existingImages, selectedImageFiles]);
+  }, [setBottomActions, isLoading, id, form, variantTypes, combinations, baseSerials, supplierDetails, existingImages, selectedImageFiles, customFieldValues]);
 
   // Load custom field definitions
   useEffect(() => {
@@ -935,6 +952,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
               const baseSn = prod.serialno_infos.map((s: any) => typeof s === 'string' ? s : s.name);
               setBaseSerials(baseSn);
             }
+            fetchCustomFieldValues(prod);
           }
         } catch (err) {
           console.error("Failed to load product", err);
@@ -943,13 +961,47 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         }
       };
 
-      const fetchCustomFieldValues = async () => {
-        const vals = await inventoryCustomFields.getValuesByProduct(SHOP_ID, id);
-        const record: Record<string, string> = {};
-        vals.forEach((v) => {
-          record[v.field_id] = v.value;
-        });
-        setCustomFieldValues(record);
+      const fetchCustomFieldValues = async (loadedProd?: any) => {
+        try {
+          const vals = await inventoryCustomFields.getValuesByProduct(SHOP_ID, id);
+          const record: Record<string, string> = {};
+          let defs = customFieldDefs;
+          if (!defs || defs.length === 0) {
+            try {
+              defs = await inventoryCustomFields.getAllFields(SHOP_ID);
+              setCustomFieldDefs(defs);
+            } catch {}
+          }
+          if (Array.isArray(vals)) {
+            vals.forEach((v: any) => {
+              record[v.field_id] = String(v.value);
+              const matchingDef = (defs || []).find((d: any) => d.id === v.field_id);
+              if (matchingDef && matchingDef.field_name) {
+                record[matchingDef.field_name] = String(v.value);
+              }
+            });
+          }
+          if (loadedProd) {
+            const prodCfs: Record<string, any> = {
+              ...((loadedProd as any)?.additional_infos || {}),
+              ...((loadedProd as any)?.additional_infos?.custom_fields || {}),
+              ...((loadedProd as any)?.custom_fields || {}),
+              ...((loadedProd as any)?.datas?.custom_fields || {}),
+            };
+            (defs || []).forEach((f: any) => {
+              if (record[f.id] === undefined && (!f.field_name || record[f.field_name] === undefined)) {
+                const fb = prodCfs[f.id] ?? prodCfs[f.field_name] ?? prodCfs[f.label_name] ?? prodCfs[f.field_name?.toLowerCase()];
+                if (fb !== undefined && fb !== null && fb !== "") {
+                  record[f.id] = String(fb);
+                  if (f.field_name) record[f.field_name] = String(fb);
+                }
+              }
+            });
+          }
+          setCustomFieldValues((prev) => ({ ...prev, ...record }));
+        } catch (e) {
+          console.error("Failed to load custom field values", e);
+        }
       };
 
       fetchProduct();
@@ -978,9 +1030,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       if (!field.category_id || field.category_id === "" || String(field.category_id).toLowerCase() === "all") {
         return true;
       }
-      return field.category_id === form.category;
+      const catObj = categories.find(c => c.id === form.category || c.name === form.category);
+      return (
+        field.category_id === form.category ||
+        (catObj && (field.category_id === catObj.id || field.category_id === catObj.name))
+      );
     });
-  }, [customFieldDefs, form.category]);
+  }, [customFieldDefs, form.category, categories]);
 
   /* Regenerate variant combinations when types change.
    * SKIP if combinations were just loaded from the server — we don't want to
@@ -999,6 +1055,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       discount_value: discountType === "price" ? discountAmount : form.discount_percent,
       discount_percent: form.discount_percent || "0",
       reorder_point: form.reorder_point || "1",
+      barcode_base: form.sku ? form.sku.trim().toUpperCase() : (form.name ? form.name.replace(/[^a-zA-Z0-9]/g, "").slice(0, 4).toUpperCase() : "BAR"),
     });
     setCombinations(newCombos);
   }, [variantTypes, form.has_variants]);
@@ -1260,6 +1317,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       return {
         ...(id && !isNew ? { id: combo.id } : {}),   // only include id on update for existing variants
         name: variantName,
+        barcode: combo.barcode?.trim() || null,
+        sku: combo.sku?.trim() || combo.barcode?.trim() || null,
         storage_location: combo.location?.trim() || (combo as any).storage_location?.trim() || (form.location?.trim() ? form.location.trim() : null),
         reorder_point: Number(combo.reorder_point) || Number(form.reorder_point) || 1,
         buy_price: parsedBuyPrice,
@@ -1271,6 +1330,34 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         visible_online: form.visible_online,
       };
     });
+
+    // ── Dynamic custom fields keyed by field_name and id (scoped to this product category)
+    const fieldsToSave = applicableCustomFields.length > 0 ? applicableCustomFields : customFieldDefs;
+    const latestCfs = customFieldValuesRef.current;
+    const customFieldValuesList = fieldsToSave
+      .map((fieldDef: any) => {
+        let rawVal = latestCfs[fieldDef.id] ?? latestCfs[fieldDef.field_name];
+        let val: any = rawVal;
+        if (fieldDef.type === 'boolean') {
+          val = isBoolTrue(rawVal) ? 'true' : 'false';
+        }
+        return { field_id: fieldDef.id, value: val };
+      })
+      .filter(({ value }: { value: any }) => value !== undefined && value !== "")
+      .map(({ field_id, value }: { field_id: string; value: any }) => ({ field_id, value: String(value) }));
+
+    const dynamicFieldsMap = fieldsToSave.reduce((acc: Record<string, any>, fieldDef: any) => {
+      let rawVal = latestCfs[fieldDef.id] ?? latestCfs[fieldDef.field_name];
+      let val: any = rawVal;
+      if (fieldDef.type === 'boolean') {
+        val = isBoolTrue(rawVal) ? 'true' : 'false';
+      }
+      if (val !== undefined && val !== "") {
+        acc[fieldDef.field_name] = val;
+        acc[fieldDef.id] = val;
+      }
+      return acc;
+    }, {} as Record<string, any>);
 
     // ── Shared custom_fields blob (stored as extra metadata) ─────────────────
     const customFieldsBlob: Record<string, any> = {
@@ -1306,15 +1393,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
           return acc;
         }, {} as Record<string, any>)
         : undefined,
-      // Dynamic custom fields keyed by field_name (scoped to this product category)
-      ...applicableCustomFields.reduce((acc: Record<string, any>, fieldDef: any) => {
-        let val = customFieldValues[fieldDef.id];
-        if (fieldDef.type === 'boolean') {
-          val = val === 'true' ? 'true' : 'false';
-        }
-        if (val !== undefined && val !== "") acc[fieldDef.field_name] = val;
-        return acc;
-      }, {} as Record<string, any>),
+      ...dynamicFieldsMap,
+      values: customFieldValuesList,
     };
 
     // For non-variant products with serial tracking, embed serial numbers
@@ -1347,7 +1427,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         name: form.name,
         brand: form.brand || null,
         description: form.description || null,
-        barcode: form.barcode || null,
+        barcode: form.has_variants ? null : (form.barcode || null),
         category_id: form.category || null,
         unit_id: form.unit || null,
         type_infos: {
@@ -1390,7 +1470,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         name: form.name,
         brand: form.brand || null,
         description: form.description,
-        barcode: form.barcode || null,
+        barcode: form.has_variants ? null : (form.barcode || null),
         type_infos: {
           has_batch: form.batch_tracking,
           has_variant: form.has_variants,
@@ -1463,28 +1543,29 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       }
 
       // ── Upsert custom field values (only applicable for this category) ──
-      if (savedProductId) {
-        const valueInfos = applicableCustomFields
-          .map((fieldDef: any) => {
-            let val = customFieldValues[fieldDef.id];
-            if (fieldDef.type === 'boolean') {
-              val = val === 'true' ? 'true' : 'false';
-            }
-            return { field_id: fieldDef.id, value: val };
-          })
-          .filter(({ value }: { value: any }) => value !== undefined && value !== "")
-          .map(({ field_id, value }: { field_id: string; value: any }) => ({ field_id, value: String(value) }));
-
-        if (valueInfos.length > 0) {
-          try {
-            await inventoryCustomFields.bulkUpsertValues({
-              shop_id: SHOP_ID,
-              product_id: savedProductId,
-              values: valueInfos,
-            });
-          } catch (cfErr) {
-            console.error("Failed to save custom field values:", cfErr);
-          }
+      if (savedProductId && customFieldValuesList.length > 0) {
+        try {
+          await inventoryCustomFields.bulkUpsertValues({
+            shop_id: SHOP_ID,
+            product_id: savedProductId,
+            values: customFieldValuesList,
+          });
+        } catch (cfErr) {
+          console.error("Failed to save custom field values:", cfErr);
+        }
+        try {
+          await Promise.allSettled(
+            customFieldValuesList.map((cf: any) =>
+              inventoryCustomFields.upsertValue({
+                shop_id: SHOP_ID,
+                product_id: savedProductId,
+                field_id: cf.field_id,
+                value: cf.value,
+              })
+            )
+          );
+        } catch (indivErr) {
+          console.warn("Individual custom field upsert warning:", indivErr);
         }
       }
 
@@ -1514,6 +1595,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       setIsSubmitting(false);
     }
   };
+  handleSubmitRef.current = handleSubmit;
 
 
   const handleSaveCustomField = async () => {
@@ -1950,12 +2032,28 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
             <SectionCard
               icon={<BarChart3 size={17} className="text-blue-600" />}
               iconBg="bg-blue-50"
-              title="Pricing & stock"
-              subtitle={form.track_stock ? "Set product pricing, reorder point, and storage location" : "Set prices and recipe cost for made-to-order item"}
+              title={form.has_variants ? "Tax & GST" : "Pricing & stock"}
+              subtitle={
+                form.has_variants
+                  ? "Applicable GST tax rate across all variants (pricing, reorder point, storage location, and barcodes are configured in the Variant Matrix above)"
+                  : (form.track_stock ? "Set product pricing, reorder point, and storage location" : "Set prices and recipe cost for made-to-order item")
+              }
             >
               <div className="space-y-5">
-                {/* Conditional panel */}
-                {form.track_stock ? (
+                {form.has_variants ? (
+                  /* VARIANT MODE: Hide pricing fields, keep only GST Rate */
+                  <div className="pf-section-enter">
+                    <div className="max-w-xs">
+                      <Label text="GST rate" required tooltip="Applicable GST tax rate across all variants." />
+                      <ReusableSelect
+                        value={form.gst}
+                        onValueChange={(val) => setForm(p => ({ ...p, gst: val }))}
+                        options={GST_RATES.map(r => ({ value: r, label: `${r}%` }))}
+                        placeholder="18%"
+                      />
+                    </div>
+                  </div>
+                ) : form.track_stock ? (
                   /* STOCKED MODE */
                   <div className="pf-section-enter space-y-4">
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -2157,17 +2255,25 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         leftEl={<IndianRupee size={13} />}
                         tooltip="Maximum Retail Price (optional)."
                       />
-                      <InputField
-                        label="Cost to make (Buy price)"
-                        name="cost_to_make"
-                        hint="optional"
-                        type="number"
-                        value={form.cost_to_make}
-                        onChange={handleChange}
-                        placeholder="0.00"
-                        leftEl={<IndianRupee size={13} />}
-                        tooltip="Estimated recipe / production cost to make this untracked item (optional)."
-                      />
+                      <div>
+                        <InputField
+                          label="Cost to make (Buy price)"
+                          name="cost_to_make"
+                          hint="optional"
+                          type="number"
+                          value={form.cost_to_make}
+                          onChange={handleChange}
+                          placeholder="0.00"
+                          leftEl={<IndianRupee size={13} />}
+                          tooltip="Estimated recipe / production cost to make this untracked item (optional)."
+                        />
+                        {numCostToMake > 0 && isGstReg && gstRateNum > 0 && (
+                          <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-emerald-800 bg-emerald-50/70 border border-emerald-200/60 rounded-md px-2 py-0.5 w-fit">
+                            <span>₹{formatINR(numCostToMake)} + ₹{formatINR(costToMakeGstAmt)} GST ({gstRateNum}%) =</span>
+                            <span className="font-extrabold text-emerald-950">₹{formatINR(effectiveCostToMake)} total cost</span>
+                          </div>
+                        )}
+                      </div>
                       <InputField
                         label={isGstReg ? "Selling price (incl. GST)" : "Selling price"}
                         name="selling_price"
@@ -2256,10 +2362,16 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                             {isGstReg && gstRateNum > 0 ? (
                               <>
                                 <strong>Live GST split:</strong> ₹{formatINR(priceCalc.tax.taxableValue)} base + ₹{formatINR(priceCalc.tax.gstAmount)} GST {gstRateNum}% = ₹{formatINR(priceCalc.finalPrice)}
+                                {numCostToMake > 0 && (
+                                  <span className="text-slate-500 font-medium ml-1">· Cost: ₹{formatINR(effectiveCostToMake)}</span>
+                                )}
                               </>
                             ) : (
                               <>
                                 <strong>Selling price:</strong> ₹{formatINR(priceCalc.finalPrice)}
+                                {numCostToMake > 0 && (
+                                  <span className="text-slate-500 font-medium ml-1">· Cost: ₹{formatINR(effectiveCostToMake)}</span>
+                                )}
                               </>
                             )}
                           </span>
@@ -2315,67 +2427,69 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
               </div>
             </SectionCard>
 
-            {/* SECTION 5: TAX & IDENTIFIERS */}
-            <SectionCard
-              icon={<FileText size={17} className="text-amber-600" />}
-              iconBg="bg-amber-50"
-              title="Tax & identifiers"
-              subtitle="HSN code and product barcodes for compliant billing"
-            >
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* HSN code */}
-                <InputField
-                  label="HSN / SAC code"
-                  name="hsn"
-                  hint="optional"
-                  value={form.hsn}
-                  onChange={handleChange}
-                  placeholder="e.g. 1905"
-                  tooltip="Harmonized System of Nomenclature code for GST."
-                />
-                {/* Barcode — full width of remaining col, popup opens upward */}
-                <div className="relative">
-                  <Label text="UI_ID / Barcode" hint="optional" tooltip="Unique UI_ID or Barcode / EAN for this product." />
+            {/* SECTION 5: TAX & IDENTIFIERS - Hidden when variants are enabled since every variant has its own unique barcode */}
+            {!form.has_variants && (
+              <SectionCard
+                icon={<FileText size={17} className="text-amber-600" />}
+                iconBg="bg-amber-50"
+                title="Tax & identifiers"
+                subtitle="HSN code and product barcodes for compliant billing"
+              >
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* HSN code */}
+                  <InputField
+                    label="HSN / SAC code"
+                    name="hsn"
+                    hint="optional"
+                    value={form.hsn}
+                    onChange={handleChange}
+                    placeholder="e.g. 1905"
+                    tooltip="Harmonized System of Nomenclature code for GST."
+                  />
+                  {/* Barcode — full width of remaining col, popup opens upward */}
                   <div className="relative">
-                    <input
-                      name="barcode"
-                      value={form.barcode}
-                      onChange={handleChange}
-                      placeholder="Scan or type"
-                      className="pf-input w-full px-3 py-2.5 pr-10 text-sm border border-slate-200 rounded-lg bg-white text-slate-800 placeholder-slate-300"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowBarcodeGen(!showBarcodeGen)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#286038] transition-colors"
-                      title="Generate barcode"
-                    >
-                      <Barcode size={16} />
-                    </button>
-                  </div>
-                  {showBarcodeGen && (
-                    <div className="absolute bottom-full right-0 mb-2 w-60 p-3 bg-white border border-slate-200 shadow-2xl rounded-xl z-[100]">
-                      <h4 className="text-xs font-bold text-slate-800 mb-2 flex items-center gap-1.5"><Barcode size={12} className="text-[#286038]" />Generate Barcode</h4>
-                      <div className="space-y-2">
-                        <input
-                          type="text"
-                          placeholder="Prefix (Optional)"
-                          className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded-lg outline-none focus:border-[#286038] focus:ring-2 focus:ring-[#88B878]/30"
-                          value={barcodePrefix}
-                          onChange={e => setBarcodePrefix(e.target.value)}
-                        />
-                        <div className="flex gap-2">
-                          <button type="button" onClick={() => { setShowBarcodeGen(false); setBarcodePrefix(""); }} className="flex-1 py-1.5 text-[10px] font-bold text-slate-500 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors">Cancel</button>
-                          <button type="button" onClick={handleGenerateBarcode} disabled={generatingBarcode} className="flex-1 py-1.5 text-[10px] font-bold text-white bg-[#286038] rounded-lg hover:bg-[#103020] transition-colors disabled:opacity-50">{generatingBarcode ? "…" : "Generate"}</button>
-                        </div>
-                      </div>
-                      {/* Arrow pointing down */}
-                      <div className="absolute bottom-[-6px] right-4 w-3 h-3 bg-white border-r border-b border-slate-200 rotate-45" />
+                    <Label text="UI_ID / Barcode" hint="optional" tooltip="Unique UI_ID or Barcode / EAN for this product." />
+                    <div className="relative">
+                      <input
+                        name="barcode"
+                        value={form.barcode}
+                        onChange={handleChange}
+                        placeholder="Scan or type"
+                        className="pf-input w-full px-3 py-2.5 pr-10 text-sm border border-slate-200 rounded-lg bg-white text-slate-800 placeholder-slate-300"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowBarcodeGen(!showBarcodeGen)}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#286038] transition-colors"
+                        title="Generate barcode"
+                      >
+                        <Barcode size={16} />
+                      </button>
                     </div>
-                  )}
+                    {showBarcodeGen && (
+                      <div className="absolute bottom-full right-0 mb-2 w-60 p-3 bg-white border border-slate-200 shadow-2xl rounded-xl z-[100]">
+                        <h4 className="text-xs font-bold text-slate-800 mb-2 flex items-center gap-1.5"><Barcode size={12} className="text-[#286038]" />Generate Barcode</h4>
+                        <div className="space-y-2">
+                          <input
+                            type="text"
+                            placeholder="Prefix (Optional)"
+                            className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded-lg outline-none focus:border-[#286038] focus:ring-2 focus:ring-[#88B878]/30"
+                            value={barcodePrefix}
+                            onChange={e => setBarcodePrefix(e.target.value)}
+                          />
+                          <div className="flex gap-2">
+                            <button type="button" onClick={() => { setShowBarcodeGen(false); setBarcodePrefix(""); }} className="flex-1 py-1.5 text-[10px] font-bold text-slate-500 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors">Cancel</button>
+                            <button type="button" onClick={handleGenerateBarcode} disabled={generatingBarcode} className="flex-1 py-1.5 text-[10px] font-bold text-white bg-[#286038] rounded-lg hover:bg-[#103020] transition-colors disabled:opacity-50">{generatingBarcode ? "…" : "Generate"}</button>
+                          </div>
+                        </div>
+                        {/* Arrow pointing down */}
+                        <div className="absolute bottom-[-6px] right-4 w-3 h-3 bg-white border-r border-b border-slate-200 rotate-45" />
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </SectionCard>
+              </SectionCard>
+            )}
 
             {/* SECTION 6: CUSTOM FIELDS */}
             <SectionCard
@@ -2448,19 +2562,49 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         </div>
                       </div>
                       {field.type === 'boolean' ? (
-                        <div className="flex items-center gap-2 h-10 px-4 rounded-lg border border-slate-200 bg-slate-50/30">
-                          <input
-                            type="checkbox"
-                            id={`cf_${field.id}`}
-                            checked={customFieldValues[field.id] === 'true'}
-                            onChange={(e) =>
-                              setCustomFieldValues((prev) => ({ ...prev, [field.id]: String(e.target.checked) }))
-                            }
-                            className="w-4 h-4 rounded accent-[#286038] cursor-pointer"
-                          />
-                          <label htmlFor={`cf_${field.id}`} className="text-xs font-semibold text-slate-600 cursor-pointer">
-                            {customFieldValues[field.id] === 'true' ? 'Yes' : 'No'}
-                          </label>
+                        <div className="flex items-center gap-8 h-10 px-4 rounded-lg border border-slate-200 bg-slate-50/30">
+                          {(() => {
+                            const curVal = customFieldValues[field.id] ?? (field.field_name ? customFieldValues[field.field_name] : undefined);
+                            const boolVal = isBoolTrue(curVal);
+                            return (
+                              <>
+                                <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                                  <input
+                                    type="radio"
+                                    name={`cf_${field.id}`}
+                                    value="true"
+                                    checked={boolVal}
+                                    onChange={() => {
+                                      setCustomFieldValues((prev) => ({
+                                        ...prev,
+                                        [field.id]: 'true',
+                                        ...(field.field_name ? { [field.field_name]: 'true' } : {}),
+                                      }));
+                                    }}
+                                    className="w-4 h-4 rounded text-[#286038] accent-[#286038] cursor-pointer"
+                                  />
+                                  <span className="text-xs font-semibold text-slate-700">Yes</span>
+                                </label>
+                                <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                                  <input
+                                    type="radio"
+                                    name={`cf_${field.id}`}
+                                    value="false"
+                                    checked={!boolVal}
+                                    onChange={() => {
+                                      setCustomFieldValues((prev) => ({
+                                        ...prev,
+                                        [field.id]: 'false',
+                                        ...(field.field_name ? { [field.field_name]: 'false' } : {}),
+                                      }));
+                                    }}
+                                    className="w-4 h-4 rounded text-[#286038] accent-[#286038] cursor-pointer"
+                                  />
+                                  <span className="text-xs font-semibold text-slate-700">No</span>
+                                </label>
+                              </>
+                            );
+                          })()}
                         </div>
                       ) : (
                         <input

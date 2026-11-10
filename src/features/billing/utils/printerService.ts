@@ -54,16 +54,16 @@ export const DEFAULT_PRINTER_CONFIG: PrinterConfig = {
   showShopPhone: true,
   footerText: "Thank you for shopping with us! Please visit again.",
   includeDigitalStoreQr: true,
-  digitalStoreQrMessage: "Your shop is online! Scan to browse & order.",
+  digitalStoreQrMessage: "Our shop is online! Scan to browse & order.",
 };
 
 export const DIGITAL_STORE_QR_MESSAGES = [
-  "Your shop is online! Scan to browse & order.",
-  "Your favourite shop, now online! Scan here.",
+  "Our shop is online! Scan to browse & order.",
+  "Our favourite shop, now online! Scan here.",
   "We're online! Scan to shop.",
 ] as const;
 
-export const DEFAULT_DIGITAL_STORE_QR_MESSAGE = "Your shop is online! Scan to browse & order.";
+export const DEFAULT_DIGITAL_STORE_QR_MESSAGE = "Our shop is online! Scan to browse & order.";
 
 export type PrinterRole = "receipt" | "kitchen" | "label" | "backup";
 
@@ -847,6 +847,80 @@ export function generateEscPosRasterQr(url: string, is58mm = true): number[] {
 }
 
 /**
+ * Generate universal half-block monospace QR Code lines.
+ * Renders visual black-and-white scannable QR modules using monospace block characters:
+ * ▀ (top black), ▄ (bottom black), █ (both black), ' ' (white).
+ * 100% compatible across local virtual thermal printers (Menukit), online virtual printers,
+ * cloud printers, terminal previews, and POS systems without unhandled command artifacts.
+ */
+export function generateTextQrCodeLines(url: string, colWidth = 42): string[] {
+  try {
+    const svg = renderToStaticMarkup(
+      React.createElement(QRCodeSVG, {
+        value: url,
+        level: "M",
+        includeMargin: false,
+      })
+    );
+
+    const vb = svg.match(/viewBox=["']0 0 (\d+) (\d+)["']/);
+    if (!vb) return [];
+    const gridCols = parseInt(vb[1], 10);
+    const gridRows = parseInt(vb[2], 10);
+    if (!gridCols || !gridRows) return [];
+
+    const grid: boolean[][] = Array.from({ length: gridRows }, () => Array(gridCols).fill(false));
+    const dMatch = svg.match(/<path[^>]*\bd=["']([^"']+)["']/i) || svg.match(/\bd=["']([^"']+)["']/i);
+    const d = dMatch ? dMatch[1] : "";
+    if (!d) return [];
+
+    const re = /M(\d+)[, ](\d+)\s*h(\d+)/g;
+    let match: RegExpExecArray | null;
+    while ((match = re.exec(d)) !== null) {
+      const x = parseInt(match[1], 10);
+      const y = parseInt(match[2], 10);
+      const w = parseInt(match[3], 10);
+      for (let i = 0; i < w; i++) {
+        if (y < gridRows && x + i < gridCols) {
+          grid[y][x + i] = true;
+        }
+      }
+    }
+
+    // Add quiet zone border (1 module around)
+    const totalCols = gridCols + 2;
+    const totalRows = gridRows + 2;
+    const paddedGrid: boolean[][] = Array.from({ length: totalRows }, (_, r) => {
+      if (r === 0 || r === totalRows - 1) return Array(totalCols).fill(false);
+      return [false, ...grid[r - 1], false];
+    });
+
+    const lines: string[] = [];
+    const leftPad = Math.max(0, Math.floor((colWidth - totalCols) / 2));
+    const padStr = " ".repeat(leftPad);
+
+    for (let r = 0; r < totalRows; r += 2) {
+      const row1 = paddedGrid[r];
+      const row2 = r + 1 < totalRows ? paddedGrid[r + 1] : Array(totalCols).fill(false);
+      let line = "";
+      for (let c = 0; c < totalCols; c++) {
+        const top = row1[c];
+        const bot = row2[c];
+        if (top && bot) line += "█";
+        else if (top && !bot) line += "▀";
+        else if (!top && bot) line += "▄";
+        else line += " ";
+      }
+      lines.push(padStr + line);
+    }
+    return lines;
+  } catch (err) {
+    console.error("Failed to generate text QR lines:", err);
+    return [];
+  }
+}
+
+/**
  * Generate crisp, high-contrast QR SVG HTML markup for thermal receipt printing
  */
 export function generateQrSvgHtml(url: string, size = 135): string {
@@ -925,6 +999,18 @@ export function buildEscPosBuffer(data: ReceiptData, config: PrinterConfig): Uin
   const colWidth = is58mm ? 32 : 42;
   const bytes: number[] = [];
 
+  const addUtf8Str = (str: string) => {
+    const encoded = new TextEncoder().encode(str);
+    for (let i = 0; i < encoded.length; i++) {
+      bytes.push(encoded[i]);
+    }
+  };
+
+  const addUtf8Line = (str = "") => {
+    addUtf8Str(str);
+    bytes.push(0x0a); // LF
+  };
+
   const addStr = (str: string) => {
     const clean = toAsciiReceiptText(str);
     for (let i = 0; i < clean.length; i++) {
@@ -939,19 +1025,19 @@ export function buildEscPosBuffer(data: ReceiptData, config: PrinterConfig): Uin
   };
 
   /**
-   * Hardware center alignment via ESC a 1.
-   * Tells the printer's thermal controller to mathematically center text relative to
-   * the physical printhead. 100% reliable on 58mm and 80mm printers, network printers,
-   * USB, Bluetooth, and POS emulators.
+   * Universal center alignment:
+   * Uses mathematical leading space-padding so printers and emulators that do NOT support
+   * or ignore hardware ESC a commands (such as Menukit, local virtual printers, and budget printers)
+   * display perfectly centered text.
    */
   const addCenter = (str: string, isBold = false) => {
     const clean = str.replace(/\s+/g, " ").trim();
     if (!clean) return;
 
-    bytes.push(0x1b, 0x61, 0x01); // ESC a 1: Hardware Center alignment ON
     if (isBold) bytes.push(0x1b, 0x45, 0x01); // ESC E 1: Bold ON
 
     const maxLineLen = is58mm ? 30 : 42;
+    const rawLines: string[] = [];
     if (clean.length > maxLineLen) {
       const words = clean.split(" ");
       let currentLine = "";
@@ -960,21 +1046,22 @@ export function buildEscPosBuffer(data: ReceiptData, config: PrinterConfig): Uin
         if (testLine.length <= maxLineLen) {
           currentLine = testLine;
         } else {
-          if (currentLine) {
-            addLine(currentLine);
-          }
+          if (currentLine) rawLines.push(currentLine);
           currentLine = word;
         }
       }
-      if (currentLine) {
-        addLine(currentLine);
-      }
+      if (currentLine) rawLines.push(currentLine);
     } else {
-      addLine(clean);
+      rawLines.push(clean);
+    }
+
+    for (const l of rawLines) {
+      const pad = Math.max(0, Math.floor((colWidth - l.length) / 2));
+      const paddedLine = " ".repeat(pad) + l;
+      addLine(paddedLine);
     }
 
     if (isBold) bytes.push(0x1b, 0x45, 0x00); // Bold OFF
-    bytes.push(0x1b, 0x61, 0x00); // ESC a 0: Reset to Left alignment
   };
 
   const addRow = (left: string, right: string) => {
@@ -1178,30 +1265,21 @@ export function buildEscPosBuffer(data: ReceiptData, config: PrinterConfig): Uin
   const qrMessage = data.digitalStoreQrMessage || config.digitalStoreQrMessage || DEFAULT_DIGITAL_STORE_QR_MESSAGE;
 
   if (shouldPrintDigitalQr && digitalStoreUrl) {
-    addCenter("YOUR SHOP IS ONLINE!", true);
+    addCenter("OUR SHOP IS ONLINE!", true);
     if (qrMessage) {
       addCenter(qrMessage);
     }
+    addLine();
 
-    // Standard ESC/POS 2D QR Code commands (GS ( k) - Model 2
-    // Supported by 100% of standard POS printers, network thermal printers, and emulators
-    const moduleSize = is58mm ? 4 : 6;
-    const qrBytes = new TextEncoder().encode(digitalStoreUrl);
-    const len = qrBytes.length + 3;
-    const pL = len & 0xff;
-    const pH = (len >> 8) & 0xff;
-
-    bytes.push(0x1b, 0x61, 0x01); // Center align
-    bytes.push(0x1d, 0x28, 0x6b, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00); // Model 2
-    bytes.push(0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x43, moduleSize); // Module size
-    bytes.push(0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x45, 0x31); // Level M
-    bytes.push(0x1d, 0x28, 0x6b, pL, pH, 0x31, 0x50, 0x30); // Store
-    for (let i = 0; i < qrBytes.length; i++) {
-      bytes.push(qrBytes[i]);
+    // Universal Text-Block QR Code:
+    // Renders visual black-and-white scannable QR modules using monospace block characters.
+    // 100% compatible across local virtual thermal printers (Menukit), online virtual printers,
+    // cloud printers, and POS systems without unhandled command artifacts.
+    const qrLines = generateTextQrCodeLines(digitalStoreUrl, colWidth);
+    for (const qrLine of qrLines) {
+      addUtf8Line(qrLine);
     }
-    bytes.push(0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x51, 0x30); // Print
-    bytes.push(0x1b, 0x61, 0x00); // Reset Left
-    bytes.push(0x0a);
+    addLine();
 
     addCenter("Scan to visit our online store");
     addDivider();
@@ -1489,7 +1567,7 @@ export function printViaSystemDriver(
         ${shouldPrintDigitalQr && digitalStoreUrl ? `
         <div class="divider"></div>
         <div class="center" style="margin: 10px 0 6px 0;">
-          <div style="font-weight: 800; font-size: 11px; color: #e11d48; text-transform: uppercase; margin-bottom: 2px;">YOUR SHOP IS ONLINE!</div>
+          <div style="font-weight: 800; font-size: 11px; color: #e11d48; text-transform: uppercase; margin-bottom: 2px;">OUR SHOP IS ONLINE!</div>
           <div style="font-size: 9.5px; color: #475569; font-weight: 600; margin-bottom: 4px;">${qrMessage}</div>
           <div style="display: flex; justify-content: center; align-items: center; margin: 4px 0;">
             <div style="padding: 6px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center;">

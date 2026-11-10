@@ -5,8 +5,6 @@ import {
   MapPin,
   ShoppingBag,
   Truck,
-  Zap,
-  Globe,
   Timer,
   Check,
   Loader2,
@@ -33,8 +31,8 @@ export type DeliveryConfig = {
 };
 
 interface DeliveryCardMeta {
-  key: "normal" | "express" | "sameday" | "pickuponly";
-  backendType: "STANDARD" | "INSTANT" | "NATIONWIDE" | "PICKUP_ONLY";
+  key: "delivery" | "pickuponly";
+  backendType: "DELIVERY" | "PICKUP_ONLY";
   legacyBackendTypes: string[];
   title: string;
   subtitle: string;
@@ -51,7 +49,7 @@ export const DELIVERY_OPTIONS_CONFIG: DeliveryCardMeta[] = [
   {
     key: "pickuponly",
     backendType: "PICKUP_ONLY",
-    legacyBackendTypes: ["PICKUP_ONLY"],
+    legacyBackendTypes: ["PICKUP_ONLY", "STORE_PICKUP", "PICKUP"],
     title: "Store Pickup",
     subtitle: "Customers can pick up their orders directly from the store",
     badge: "Pickup",
@@ -63,46 +61,18 @@ export const DELIVERY_OPTIONS_CONFIG: DeliveryCardMeta[] = [
     defaultSpeed: "Same Day"
   },
   {
-    key: "normal",
-    backendType: "STANDARD",
-    legacyBackendTypes: ["NORMAL", "STANDARD"],
-    title: "Standard Delivery",
-    subtitle: "Standard shipping option for your regular orders",
-    badge: "Standard",
+    key: "delivery",
+    backendType: "DELIVERY",
+    legacyBackendTypes: ["DELIVERY", "STANDARD", "INSTANT", "EXPRESS", "NORMAL", "NATIONWIDE", "SAME_DAY"],
+    title: "Delivery",
+    subtitle: "Deliver orders directly to customer addresses within your service radius",
+    badge: "Delivery",
     icon: Truck,
     accentColor: "text-blue-600",
     activeBg: "bg-blue-50/40",
     activeBorder: "border-blue-400",
     badgeColor: "bg-blue-100 text-blue-700",
-    defaultSpeed: "2–3 Business Days"
-  },
-  {
-    key: "express",
-    backendType: "INSTANT",
-    legacyBackendTypes: ["EXPRESS", "INSTANT"],
-    title: "Instant Delivery",
-    subtitle: "Fast priority delivery for urgent customer orders",
-    badge: "Instant",
-    icon: Zap,
-    accentColor: "text-amber-600",
-    activeBg: "bg-amber-50/40",
-    activeBorder: "border-amber-400",
-    badgeColor: "bg-amber-100 text-amber-700",
-    defaultSpeed: "Within 12 Hours"
-  },
-  {
-    key: "sameday",
-    backendType: "NATIONWIDE",
-    legacyBackendTypes: ["SAME_DAY", "NATIONWIDE"],
-    title: "Nationwide Delivery",
-    subtitle: "Deliver orders across the country with our shipping partners",
-    badge: "Nationwide",
-    icon: Globe,
-    accentColor: "text-purple-600",
-    activeBg: "bg-purple-50/40",
-    activeBorder: "border-purple-400",
-    badgeColor: "bg-purple-100 text-purple-700",
-    defaultSpeed: "5-7 Business Days"
+    defaultSpeed: "Same Day"
   }
 ];
 
@@ -475,45 +445,6 @@ export default function DeliveryPreferences({ shopId, initialOptions, onStatusCh
   const currentShopId = shopId || localStorage.getItem("shop_id") || SHOP_ID;
 
   const [deliveryConfigs, setDeliveryConfigs] = useState<Record<string, DeliveryConfig>>({
-    normal: {
-      enabled: false,
-      pricingModel: "DISTANCE_TIERED",
-      speed: "2–3 Business Days",
-      minOrderAmount: 0,
-      deliveryCharge: 100,
-      baseDistance: 10,
-      extraDistanceStep: 1,
-      chargePerKm: 10,
-      freeThreshold: 500,
-      radius: 15,
-      deliveryBy: "PARTNERS",
-    },
-    express: {
-      enabled: false,
-      pricingModel: "DISTANCE_TIERED",
-      speed: "Within 12 Hours",
-      minOrderAmount: 100,
-      deliveryCharge: 150,
-      baseDistance: 5,
-      extraDistanceStep: 1,
-      chargePerKm: 15,
-      freeThreshold: 800,
-      radius: 10,
-      deliveryBy: "PARTNERS",
-    },
-    sameday: {
-      enabled: false,
-      pricingModel: "FLAT",
-      speed: "Within 3–4 Hours",
-      minOrderAmount: 200,
-      deliveryCharge: 120,
-      baseDistance: 0,
-      extraDistanceStep: 1,
-      chargePerKm: 0,
-      freeThreshold: 1200,
-      radius: 8,
-      deliveryBy: "INHOUSE",
-    },
     pickuponly: {
       enabled: false,
       pricingModel: "FLAT",
@@ -526,6 +457,19 @@ export default function DeliveryPreferences({ shopId, initialOptions, onStatusCh
       freeThreshold: 0,
       radius: 5,
       deliveryBy: "INHOUSE",
+    },
+    delivery: {
+      enabled: false,
+      pricingModel: "FLAT",
+      speed: "Same Day",
+      minOrderAmount: 0,
+      deliveryCharge: 40,
+      baseDistance: 5,
+      extraDistanceStep: 1,
+      chargePerKm: 10,
+      freeThreshold: 500,
+      radius: 10,
+      deliveryBy: "PARTNERS",
     }
   });
 
@@ -542,28 +486,31 @@ export default function DeliveryPreferences({ shopId, initialOptions, onStatusCh
       });
       dataList.forEach((item: any) => {
         const itemType = (item.type || "").toUpperCase();
-        const matchedMeta = DELIVERY_OPTIONS_CONFIG.find(
-          (m) =>
-            m.backendType === itemType ||
-            m.legacyBackendTypes?.map((t) => t.toUpperCase()).includes(itemType)
-        );
-        if (matchedMeta) {
+        let targetKey: "pickuponly" | "delivery" | null = null;
+        if (itemType === "PICKUP_ONLY" || itemType === "PICKUP" || itemType === "STORE_PICKUP") {
+          targetKey = "pickuponly";
+        } else if (["DELIVERY", "STANDARD", "INSTANT", "EXPRESS", "NORMAL", "NATIONWIDE", "SAME_DAY"].includes(itemType)) {
+          targetKey = "delivery";
+        }
+
+        if (targetKey && next[targetKey]) {
+          const matchedMeta = DELIVERY_OPTIONS_CONFIG.find((m) => m.key === targetKey);
           const isDistance =
             item.pricing_model === "DISTANCE_TIERED" ||
             Number(item.base_distance) > 0 ||
             (Number(item.charge_per_km) > 0 && item.base_distance !== undefined);
-          next[matchedMeta.key] = {
+          next[targetKey] = {
             id: item.id,
             enabled: item.enabled !== false && item.enabled !== 0 && item.enabled !== "false",
             pricingModel: isDistance ? "DISTANCE_TIERED" : "FLAT",
-            speed: item.speed || matchedMeta.defaultSpeed,
+            speed: item.speed || matchedMeta?.defaultSpeed || "Same Day",
             minOrderAmount: item.min_order_amount ?? 0,
-            deliveryCharge: item.delivery_charge ?? 0,
-            baseDistance: item.base_distance ?? 10,
+            deliveryCharge: item.delivery_charge ?? (targetKey === "delivery" ? 40 : 0),
+            baseDistance: item.base_distance ?? 5,
             extraDistanceStep: item.extra_distance_step ?? 1,
-            chargePerKm: item.charge_per_km ?? 0,
-            freeThreshold: item.free_shipping_amount ?? 0,
-            radius: item.radius ?? 0,
+            chargePerKm: item.charge_per_km ?? 10,
+            freeThreshold: item.free_shipping_amount ?? (targetKey === "delivery" ? 500 : 0),
+            radius: item.radius ?? (targetKey === "delivery" ? 10 : 5),
             deliveryBy: item.delivery_by === "INHOUSE" ? "INHOUSE" : "PARTNERS",
           };
         }

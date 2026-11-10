@@ -221,10 +221,19 @@ export const Navbar = () => {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -6, scale: 0.97 }}
                 transition={{ duration: 0.13 }}
-                className="absolute top-full left-0 mt-1.5 w-[220px] bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden"
+                className="absolute top-full left-0 mt-1.5 w-[235px] bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden"
               >
                 <div className="px-1.5 pt-1.5 pb-1">
-                  <p className="text-[10px] font-bold text-slate-400 px-2 py-1.5">My Shops</p>
+                  <div className="flex items-center justify-between px-2 py-1.5">
+                    <p className="text-[10px] font-bold text-slate-400">My Shops</p>
+                    <Link
+                      to="/shop-select"
+                      onClick={() => setIsShopMenuOpen(false)}
+                      className="text-[10.5px] font-semibold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-0.5"
+                    >
+                      View Full <ArrowRight size={10} />
+                    </Link>
+                  </div>
                   <div className="max-h-[200px] overflow-y-auto">
                     {shopsLoading ? (
                       <div className="flex items-center justify-center py-4">
@@ -262,6 +271,14 @@ export const Navbar = () => {
                 </div>
 
                 <div className="border-t border-slate-100 px-1.5 py-1.5 flex flex-col gap-0.5">
+                  <Link
+                    to="/shop-select"
+                    onClick={() => setIsShopMenuOpen(false)}
+                    className="flex items-center gap-2 px-2.5 py-2 rounded-lg text-slate-700 hover:bg-slate-50 text-[12.5px] font-semibold transition-colors"
+                  >
+                    <Store size={13} strokeWidth={2} className="text-slate-500" />
+                    View Full (All Shops)
+                  </Link>
                   <Link
                     to="/create-shop"
                     onClick={() => setIsShopMenuOpen(false)}

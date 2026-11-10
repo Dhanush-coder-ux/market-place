@@ -22,10 +22,11 @@ export interface StoreFormData {
   // Step 2 Additions
   operatingHours: any[];
   deliveryOptions: {
-    instant: DeliveryConfig;
-    standard: DeliveryConfig;
-    nationwide: DeliveryConfig;
+    delivery: DeliveryConfig;
     pickuponly: DeliveryConfig;
+    instant?: DeliveryConfig;
+    standard?: DeliveryConfig;
+    nationwide?: DeliveryConfig;
   };
 
   // Step 3 Additions

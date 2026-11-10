@@ -23,6 +23,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { extractSaleCustomerInfo } from "../type";
 import { useToast } from "@/context/ToastContext";
+import { calculateTaxSplit } from "@/utils/pricing";
 
 interface ReprintReceiptModalProps {
   isOpen: boolean;
@@ -188,7 +189,8 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
     } else if (calc.tax_rate !== undefined && Number(calc.tax_rate) > 0) {
       gstRate = Number(calc.tax_rate);
     } else if (itemsRaw.length > 0) {
-      const itRate = Number(itemsRaw[0].gst_rate || itemsRaw[0].tax_rate || itemsRaw[0].gst_percentage || itemsRaw[0].gst || 0);
+      const rawItGst = itemsRaw[0].gst_rate || itemsRaw[0].tax_rate || itemsRaw[0].gst_percentage || itemsRaw[0].gst || 0;
+      const itRate = typeof rawItGst === "number" ? rawItGst : (parseFloat(String(rawItGst).replace("%", "")) || 0);
       if (itRate > 0) gstRate = itRate;
     }
     if (gstRate === 0 && effectiveTaxable > 0 && gst > 0) {
@@ -197,11 +199,9 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
 
     // Ensure GST inclusive math is accurate (selling price is inclusive of GST)
     if (gstRate > 0 && grandTotal > 0) {
-      const expectedTaxable = Math.round((grandTotal / (1 + gstRate / 100)) * 100) / 100;
-      if (Math.abs(effectiveTaxable - expectedTaxable) > 0.05 || gst === 0) {
-        effectiveTaxable = expectedTaxable;
-        gst = Math.round((grandTotal - effectiveTaxable) * 100) / 100;
-      }
+      const split = calculateTaxSplit(grandTotal, gstRate);
+      effectiveTaxable = split.taxableValue;
+      gst = split.gstAmount;
     }
 
     const cgstRate = gstRate > 0 ? gstRate / 2 : 0;

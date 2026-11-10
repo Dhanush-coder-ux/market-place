@@ -7,7 +7,8 @@ import {
   CheckCircle2,
   Barcode,
   Plus,
-  X
+  X,
+  IndianRupee
 } from "lucide-react";
 import { QuickCreateModal, QuickCreateStep } from "./QuickCreateModal";
 import Input from "@/components/ui/Input";
@@ -500,6 +501,15 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
                 placeholder="18%"
               />
             </div>
+            <Input
+              label="MRP (optional)"
+              name="mrp"
+              type="number"
+              value={form.mrp}
+              onChange={handleChange}
+              placeholder="0.00"
+              leftIcon={<IndianRupee size={14} />}
+            />
           </div>
         </div>
       )
@@ -579,6 +589,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
                     variantTypes={variantTypes}
                     onChange={setCombinations}
                     trackStock={false}
+                    baseMrp={form.mrp ? Number(form.mrp) : undefined}
                   />
                 </div>
               )}
@@ -621,6 +632,10 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
               <div className="space-y-1">
                 <p className="text-[10px] font-black text-slate-400">Tax (GST)</p>
                 <p className="text-sm font-bold text-slate-700">{form.gst}%</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] font-black text-slate-400">MRP</p>
+                <p className="text-sm font-bold text-slate-700">{form.mrp ? `₹${form.mrp}` : "N/A"}</p>
               </div>
             </div>
 
@@ -696,15 +711,20 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
 
     setSubmitting(true);
     try {
+      const parsedMrp = form.mrp && !isNaN(Number(form.mrp)) && Number(form.mrp) > 0 ? Number(form.mrp) : null;
+
       const mappedVariants = form.has_variants ? combinations.filter(c => c.active).map(combo => {
         const variantName = Object.values(combo.attributes).join(" / ");
 
         const vData: any = {
           name: variantName,
-          storage_location: form.location || null,
-          reorder_point: Number(combo.reorder_point) || 1,
-          buy_price: 0,
-          sell_price: 0,
+          barcode: combo.barcode?.trim() || null,
+          sku: combo.sku?.trim() || combo.barcode?.trim() || null,
+          storage_location: combo.location?.trim() || form.location || null,
+          reorder_point: Number(combo.reorder_point) || Number(form.reorder_point) || 1,
+          buy_price: combo.buy_price ? Number(combo.buy_price) : 0,
+          sell_price: combo.price ? Number(combo.price) : (parsedMrp || 0),
+          mrp: combo.mrp ? Number(combo.mrp) : parsedMrp,
           visible_online: false,
         };
 
@@ -729,13 +749,14 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
         variant_infos: mappedVariants,
         storage_location: form.location || null,
         buy_price: null,
-        sell_price: null,
+        sell_price: parsedMrp,
+        mrp: parsedMrp,
         gst: form.gst ? (form.gst.includes("%") ? form.gst : `${form.gst}%`) : "18%",
         reorder_point: Number(form.reorder_point) || 1,
         visible_online: false,
         custom_fields: {
           brand: form.brand,
-          mrp: 0,
+          mrp: parsedMrp || 0,
           hsn: form.hsn,
           sku: "",
           supplier: "",
@@ -757,6 +778,15 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
 
         if (selectedCat) createdProduct.category_name = selectedCat.name;
         if (selectedUnit) createdProduct.unit_name = selectedUnit.name;
+        if (parsedMrp !== null) {
+          createdProduct.mrp = parsedMrp;
+          if (!createdProduct.custom_fields) createdProduct.custom_fields = {};
+          createdProduct.custom_fields.mrp = parsedMrp;
+          if (!createdProduct.sell_price) createdProduct.sell_price = parsedMrp;
+        }
+        if (form.gst) {
+          createdProduct.gst = form.gst;
+        }
 
         onSuccess(createdProduct);
         onClose();

@@ -537,6 +537,18 @@ const PurchaseForm = () => {
       return;
     }
 
+    // Validate Batch Manufacturing vs Expiry Date
+    const invalidBatchDate = products.find(p => {
+      if (!p.batchTracking || !p.manufacturingDate || !p.expiryDate) return false;
+      const mfg = new Date(p.manufacturingDate);
+      const exp = new Date(p.expiryDate);
+      return !isNaN(mfg.getTime()) && !isNaN(exp.getTime()) && exp < mfg;
+    });
+    if (invalidBatchDate) {
+      showToast(`Expiry date cannot be earlier than manufacturing date for batch "${invalidBatchDate.batchNum || invalidBatchDate.name}".`, "error");
+      return;
+    }
+
     // 💡 Strict validation for Direct Purchase only
     if (purchaseType === "DIRECT") {
       const missingBatch = products.find(p => p.batchTracking && !p.batchNum);
@@ -784,8 +796,9 @@ const PurchaseForm = () => {
       const hasSerialTracking = !!newProduct.has_serialno || !!(newProduct.datas && newProduct.datas.has_serialno);
 
       const newSp = newProduct.sell_price;
-      const newMrp = newProduct.mrp ?? newProduct.datas?.mrp;
+      const newMrp = newProduct.mrp ?? newProduct.datas?.mrp ?? newProduct.custom_fields?.mrp;
       const resolvedSp = resolveInitialSellingPrice(newSp, newMrp);
+      const parsedGst = newProduct.gst ? parseInt(String(newProduct.gst)) : (newProduct.datas?.gst !== undefined && newProduct.datas?.gst !== null ? parseInt(String(newProduct.datas?.gst)) : 18);
 
       if (emptyIndex >= 0) {
         updateProductFields(emptyIndex, {
@@ -797,7 +810,7 @@ const PurchaseForm = () => {
           sku: newProduct.barcode,
           unit: newProduct.unit_name || newProduct.datas?.unit || "pc",
           category: newProduct.category_name || newProduct.category_id || "",
-          taxGst: newProduct.datas?.gst !== undefined && newProduct.datas?.gst !== null ? parseInt(newProduct.datas?.gst) : 18,
+          taxGst: isNaN(parsedGst) ? 18 : parsedGst,
           batchTracking: hasBatchTracking,
           serialTracking: hasSerialTracking
         });
@@ -813,7 +826,7 @@ const PurchaseForm = () => {
           sku: newProduct.barcode,
           unit: newProduct.unit_name || newProduct.datas?.unit || "pc",
           category: newProduct.category_name || newProduct.category_id || "",
-          taxGst: newProduct.datas?.gst !== undefined && newProduct.datas?.gst !== null ? parseInt(newProduct.datas?.gst) : 18,
+          taxGst: isNaN(parsedGst) ? 18 : parsedGst,
           batchTracking: hasBatchTracking,
           serialTracking: hasSerialTracking
         }]);

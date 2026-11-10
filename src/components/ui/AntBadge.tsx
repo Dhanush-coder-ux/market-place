@@ -88,34 +88,61 @@ export const PaymentStatusBadge: React.FC<{
   status?: string;
   outstanding?: number;
   grandTotal?: number;
+  amountPaid?: number;
   className?: string;
-}> = ({ status, outstanding, grandTotal, className }) => {
-  let displayStatus = (status || "UNPAID").toUpperCase();
+}> = ({ status, outstanding, grandTotal, amountPaid, className }) => {
+  let displayStatus = (status || "").toUpperCase().replace(/[\-_]/g, " ").trim();
 
   if (displayStatus === "DRAFT") {
     return <AntBadge variant="ps-draft" type="pill" dot className={className}>DRAFT</AntBadge>;
   }
 
+  // Normalize common variations:
+  if (displayStatus.includes("PARTIAL")) {
+    displayStatus = "PARTIAL";
+  } else if (displayStatus === "NOT PAID" || displayStatus === "OUTSTANDING" || displayStatus === "UNPAID") {
+    displayStatus = "UNPAID";
+  } else if (displayStatus === "COMPLETED" || displayStatus === "PAID") {
+    displayStatus = "PAID";
+  }
+
   if (displayStatus !== "CANCELLED" && displayStatus !== "CANCELED" && displayStatus !== "CANCEL") {
-    if (outstanding !== undefined && grandTotal !== undefined && grandTotal > 0) {
-      if (outstanding <= 0) {
+    const paid = amountPaid !== undefined ? Number(amountPaid) : undefined;
+    const out = outstanding !== undefined ? Number(outstanding) : undefined;
+    const total = grandTotal !== undefined ? Number(grandTotal) : undefined;
+
+    // 1. If amountPaid is explicitly provided:
+    if (paid !== undefined && paid > 0) {
+      if (out !== undefined && out <= 0.001) {
         displayStatus = "PAID";
-      } else if (outstanding > 0 && grandTotal > outstanding) {
+      } else {
         displayStatus = "PARTIAL";
-      } else if (outstanding >= grandTotal) {
+      }
+    }
+    // 2. Or if outstanding and grandTotal are provided:
+    else if (out !== undefined && total !== undefined && total > 0) {
+      if (out <= 0.001) {
+        displayStatus = "PAID";
+      } else if (out < total - 0.001) {
+        displayStatus = "PARTIAL";
+      } else {
         displayStatus = "UNPAID";
       }
     }
-
-    if (displayStatus === "OUTSTANDING") {
-      displayStatus = "UNPAID";
+    // 3. Or if only outstanding is known:
+    else if (out !== undefined) {
+      if (out <= 0.001 && displayStatus !== "UNPAID") {
+        displayStatus = "PAID";
+      } else if (displayStatus === "OUTSTANDING") {
+        displayStatus = "UNPAID";
+      }
     }
   }
 
   let variant: any = "pay-pending";
   if (displayStatus === "PAID" || displayStatus === "COMPLETED") {
     variant = "pay-paid";
-  } else if (displayStatus === "PARTIAL" || displayStatus === "PARTIALLY_PAID" || displayStatus === "PARTIALLY PAID") {
+  } else if (displayStatus === "PARTIAL" || displayStatus.includes("PARTIAL")) {
     variant = "pay-partial";
   } else if (displayStatus === "UNPAID" || displayStatus === "DUE" || displayStatus === "PENDING") {
     variant = "pay-pending";
@@ -126,7 +153,7 @@ export const PaymentStatusBadge: React.FC<{
     displayStatus = "CANCELLED";
   }
 
-  const label = displayStatus === "PARTIALLY_PAID" || displayStatus === "PARTIALLY PAID" ? "PARTIAL" : displayStatus;
+  const label = displayStatus.includes("PARTIAL") ? "PARTIAL" : (displayStatus || "UNPAID");
 
   return <AntBadge variant={variant} type="pill" dot className={className}>{label}</AntBadge>;
 };

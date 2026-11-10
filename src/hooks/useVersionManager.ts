@@ -33,6 +33,11 @@ export function useVersionManager() {
           if (data.releaseNotes) setReleaseNotes(data.releaseNotes);
           setIsUpdateAvailable(true);
           return true;
+        } else {
+          // Version is already up-to-date
+          setIsUpdateAvailable(false);
+          setRemoteVersion(null);
+          return false;
         }
       }
     } catch (err) {
@@ -50,24 +55,35 @@ export function useVersionManager() {
       if (!reg) return;
 
       // If there is already a waiting worker
-      if (reg.waiting) {
-        console.log('[VersionManager] Found waiting service worker.');
-        waitingWorkerRef.current = reg.waiting;
-        setIsUpdateAvailable(true);
+      const initialWaiting = reg.waiting as ServiceWorker | null;
+      if (initialWaiting) {
+        waitingWorkerRef.current = initialWaiting;
+        // Verify with version.json first before prompting
+        const hasNewVersion = await checkVersionFile();
+        if (!hasNewVersion) {
+          // Worker was waiting for same version, activate silently
+          (initialWaiting as any).postMessage({ type: 'SKIP_WAITING' });
+          setIsUpdateAvailable(false);
+        }
         return;
       }
 
       // Trigger update check
       await reg.update();
 
-      if (reg.waiting) {
-        waitingWorkerRef.current = reg.waiting;
-        setIsUpdateAvailable(true);
+      const postUpdateWaiting = reg.waiting as ServiceWorker | null;
+      if (postUpdateWaiting) {
+        waitingWorkerRef.current = postUpdateWaiting;
+        const hasNewVersion = await checkVersionFile();
+        if (!hasNewVersion) {
+          (postUpdateWaiting as any).postMessage({ type: 'SKIP_WAITING' });
+          setIsUpdateAvailable(false);
+        }
       }
     } catch (err) {
       console.warn('[VersionManager] Service worker update check error:', err);
     }
-  }, []);
+  }, [checkVersionFile]);
 
   // Combined check
   const checkForUpdates = useCallback(async () => {
@@ -97,12 +113,15 @@ export function useVersionManager() {
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     // 4. Custom event from index.html SW registration
-    const handleSwUpdateAvailable = (e: any) => {
+    const handleSwUpdateAvailable = async (e: any) => {
       console.log('[VersionManager] sw-update-available event received.');
       if (e.detail) {
         waitingWorkerRef.current = e.detail;
       }
-      setIsUpdateAvailable(true);
+      const hasNew = await checkVersionFile();
+      if (!hasNew && waitingWorkerRef.current) {
+        waitingWorkerRef.current.postMessage({ type: 'SKIP_WAITING' });
+      }
     };
     window.addEventListener('sw-update-available', handleSwUpdateAvailable);
 
@@ -153,11 +172,13 @@ export function useVersionManager() {
     setIsUpdateAvailable(false);
   }, []);
 
+  const effectiveUpdateAvailable = Boolean(isUpdateAvailable && remoteVersion && remoteVersion !== APP_VERSION);
+
   return {
     currentVersion: APP_VERSION,
     remoteVersion: remoteVersion || APP_VERSION,
     releaseNotes,
-    isUpdateAvailable,
+    isUpdateAvailable: effectiveUpdateAvailable,
     isRefreshing,
     applyUpdate,
     dismissUpdate,

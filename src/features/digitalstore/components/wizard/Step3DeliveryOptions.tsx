@@ -4,8 +4,6 @@ import {
   MapPin,
   ShoppingBag,
   Truck,
-  Zap,
-  Globe,
   Timer,
   Lightbulb,
   Calculator,
@@ -19,7 +17,7 @@ interface Step3Props {
 }
 
 const DELIVERY_META: Record<
-  "instant" | "standard" | "nationwide" | "pickuponly",
+  "pickuponly" | "delivery",
   {
     title: string;
     subtitle: string;
@@ -32,39 +30,6 @@ const DELIVERY_META: Record<
     defaultSpeed: string;
   }
 > = {
-  standard: {
-    title: "Standard Delivery",
-    subtitle: "Standard shipping option for your regular orders",
-    badge: "Standard",
-    icon: Truck,
-    accentColor: "text-blue-600",
-    activeBg: "bg-blue-50/40",
-    activeBorder: "border-blue-400",
-    badgeColor: "bg-blue-100 text-blue-700",
-    defaultSpeed: "2–3 Business Days"
-  },
-  instant: {
-    title: "Instant Delivery",
-    subtitle: "Fast priority delivery for urgent customer orders",
-    badge: "Instant",
-    icon: Zap,
-    accentColor: "text-amber-600",
-    activeBg: "bg-amber-50/40",
-    activeBorder: "border-amber-400",
-    badgeColor: "bg-amber-100 text-amber-700",
-    defaultSpeed: "Within 12 Hours"
-  },
-  nationwide: {
-    title: "Nationwide Delivery",
-    subtitle: "Deliver orders across the country with our shipping partners",
-    badge: "Nationwide",
-    icon: Globe,
-    accentColor: "text-purple-600",
-    activeBg: "bg-purple-50/40",
-    activeBorder: "border-purple-400",
-    badgeColor: "bg-purple-100 text-purple-700",
-    defaultSpeed: "5-7 Business Days"
-  },
   pickuponly: {
     title: "Store Pickup",
     subtitle: "Customers can pick up their orders directly from the store",
@@ -74,6 +39,17 @@ const DELIVERY_META: Record<
     activeBg: "bg-emerald-50/40",
     activeBorder: "border-emerald-400",
     badgeColor: "bg-emerald-100 text-emerald-700",
+    defaultSpeed: "Same Day"
+  },
+  delivery: {
+    title: "Delivery",
+    subtitle: "Deliver orders directly to your customers within your set delivery radius",
+    badge: "Delivery",
+    icon: Truck,
+    accentColor: "text-blue-600",
+    activeBg: "bg-blue-50/40",
+    activeBorder: "border-blue-400",
+    badgeColor: "bg-blue-100 text-blue-700",
     defaultSpeed: "Same Day"
   },
 };
@@ -145,7 +121,7 @@ function StoreDeliveryCardInner({
   data,
   updateDelivery,
 }: {
-  meta: (typeof DELIVERY_META)["instant"];
+  meta: (typeof DELIVERY_META)["delivery"];
   data: any;
   updateDelivery: (field: string, value: any) => void;
 }) {
@@ -420,7 +396,7 @@ function StoreDeliveryCardInner({
 
 export default function Step3DeliveryOptions({ form, setForm }: Step3Props) {
   const updateDelivery = (
-    type: "instant" | "standard" | "nationwide" | "pickuponly",
+    type: "pickuponly" | "delivery",
     field: string,
     value: any
   ) => {
@@ -429,16 +405,17 @@ export default function Step3DeliveryOptions({ form, setForm }: Step3Props) {
       deliveryOptions: {
         ...prev.deliveryOptions,
         [type]: {
-          ...prev.deliveryOptions[type],
+          ...(prev.deliveryOptions[type] || {}),
           [field]: value,
         },
       },
     }));
   };
 
-  const activeCount = Object.values(form.deliveryOptions).filter(
-    (d) => d.enabled
-  ).length;
+  const activeCount = [
+    form.deliveryOptions.pickuponly?.enabled,
+    form.deliveryOptions.delivery?.enabled
+  ].filter(Boolean).length;
 
   return (
     <div className="space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
@@ -449,7 +426,7 @@ export default function Step3DeliveryOptions({ form, setForm }: Step3Props) {
             Delivery Options & Zones
           </p>
           <p className="text-[11.5px] text-slate-500 mt-0.5">
-            Enable shipping options and customize distance-based or flat rate charges.
+            Enable pickup and delivery options and customize distance-based or flat rate charges.
           </p>
         </div>
         <span
@@ -471,19 +448,9 @@ export default function Step3DeliveryOptions({ form, setForm }: Step3Props) {
           updateDelivery={(field, val) => updateDelivery("pickuponly", field, val)}
         />
         <StoreDeliveryCardInner
-          meta={DELIVERY_META.standard}
-          data={form.deliveryOptions.standard}
-          updateDelivery={(field, val) => updateDelivery("standard", field, val)}
-        />
-        <StoreDeliveryCardInner
-          meta={DELIVERY_META.instant}
-          data={form.deliveryOptions.instant}
-          updateDelivery={(field, val) => updateDelivery("instant", field, val)}
-        />
-        <StoreDeliveryCardInner
-          meta={DELIVERY_META.nationwide}
-          data={form.deliveryOptions.nationwide}
-          updateDelivery={(field, val) => updateDelivery("nationwide", field, val)}
+          meta={DELIVERY_META.delivery}
+          data={form.deliveryOptions.delivery}
+          updateDelivery={(field, val) => updateDelivery("delivery", field, val)}
         />
       </div>
 
@@ -491,7 +458,7 @@ export default function Step3DeliveryOptions({ form, setForm }: Step3Props) {
       <div className="flex items-start gap-2.5 bg-blue-50/60 border border-blue-100 rounded-2xl px-4 py-3.5">
         <Lightbulb size={16} className="text-amber-500 mt-0.5 shrink-0" />
         <p className="text-[12px] text-blue-800 leading-relaxed">
-          <span className="font-bold">Tip:</span> Set free delivery thresholds to encourage larger baskets.
+          <span className="font-bold">Tip:</span> Set a delivery radius and free delivery thresholds to encourage orders from customers in your area.
         </p>
       </div>
     </div>

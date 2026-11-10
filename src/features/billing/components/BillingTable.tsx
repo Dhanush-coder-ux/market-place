@@ -8,6 +8,7 @@ import { useToast } from "@/context/ToastContext";
 import { inventoryApi } from "@/services/api/inventory";
 import { SHOP_ID } from "@/services/endpoints";
 import { isShopGstRegistered, calculateTaxSplit } from "@/utils/pricing";
+import { calculateDaysToExpiry, formatDate } from "@/features/inventory/components/StockTree";
 
 interface BillingTableProps {
   items: BillingItem[];
@@ -32,26 +33,10 @@ const getAvatarBg = (name: string) => {
   return `hsl(${h}, 60%, 45%)`;
 };
 
-const formatDate = (dateStr?: string) => {
-  if (!dateStr) return '—';
-  return new Date(dateStr).toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
-};
-
-const getDaysDiff = (dateStr?: string) => {
-  if (!dateStr) return null;
-  const expDate = new Date(dateStr);
-  if (isNaN(expDate.getTime())) return null;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  expDate.setHours(0, 0, 0, 0);
-  const diffTime = expDate.getTime() - today.getTime();
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-};
-
 const formatExpiryBadgeInfo = (dateStr?: string) => {
   if (!dateStr) return { text: '—', variant: 'ps-draft' };
   const formatted = formatDate(dateStr);
-  const days = getDaysDiff(dateStr);
+  const days = calculateDaysToExpiry(dateStr);
   if (days === null) return { text: `EXP: ${formatted}`, variant: 'ps-completed' };
   if (days < 0) return { text: `Expired (${Math.abs(days)}d ago)`, variant: 'ps-cancelled' };
   if (days === 0) return { text: `EXP: Today (${formatted})`, variant: 'stk-low-stock' };
@@ -391,14 +376,22 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
         if (offerUntil && new Date(offerUntil).getTime() < new Date().setHours(0, 0, 0, 0)) {
           prodDiscount = 0;
         }
-        const costPriceVal = Number(
+        const rawCost = Number(
           fullProduct.pricing_infos?.buy_price ??
           fullProduct.buy_price ??
           (fullProduct as any).cost_to_make ??
           (fullProduct as any).custom_fields?.cost_to_make ??
           (fullProduct as any).custom_fields?.buy_price ??
           0
-        ) || undefined;
+        ) || 0;
+        let costPriceVal: number | undefined = undefined;
+        if (rawCost > 0) {
+          const prodGst = parseInt(String(fullProduct.gst || fullProduct.datas?.gst || "0").replace(/[^0-9.]/g, "")) || 0;
+          const isGstReg = isShopGstRegistered();
+          const effectiveGstRate = isGstReg ? prodGst : 0;
+          const costGstAmt = effectiveGstRate > 0 ? Math.round((rawCost * (effectiveGstRate / 100)) * 100) / 100 : 0;
+          costPriceVal = Math.round((rawCost + costGstAmt) * 100) / 100;
+        }
 
         if (existingIndex !== -1) {
           updatedItems = items.map((item, idx) => {
@@ -619,14 +612,22 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
     if (offerUntil && new Date(offerUntil).getTime() < new Date().setHours(0, 0, 0, 0)) {
       prodDiscount = 0;
     }
-    const costPriceVal = Number(
+    const rawCost = Number(
       pendingProduct.pricing_infos?.buy_price ??
       pendingProduct.buy_price ??
       (pendingProduct as any).cost_to_make ??
       (pendingProduct as any).custom_fields?.cost_to_make ??
       (pendingProduct as any).custom_fields?.buy_price ??
       0
-    ) || undefined;
+    ) || 0;
+    let costPriceVal: number | undefined = undefined;
+    if (rawCost > 0) {
+      const prodGst = parseInt(String(pendingProduct.gst || "0").replace(/[^0-9.]/g, "")) || 0;
+      const isGstReg = isShopGstRegistered();
+      const effectiveGstRate = isGstReg ? prodGst : 0;
+      const costGstAmt = effectiveGstRate > 0 ? Math.round((rawCost * (effectiveGstRate / 100)) * 100) / 100 : 0;
+      costPriceVal = Math.round((rawCost + costGstAmt) * 100) / 100;
+    }
 
     if (existingIndex !== -1) {
       updatedItems = items.map((item, idx) => {

@@ -34,6 +34,7 @@ import { SHOP_ID } from "@/services/endpoints";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import SkeletonLoader from "@/components/common/SkeletonLoader";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { GradientButton } from "@/components/ui/GradientButton";
 
 
 /* ================= TYPES ================= */
@@ -104,6 +105,7 @@ export interface DirectPurchaseData {
   total_cost: number;
   purchaseType: PurchaseType;
   paymentMethod?: string;
+  supplierId?: string;
   charges?: {
     other: number;
     transport: number;
@@ -246,6 +248,7 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
     date: dateObj.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }),
     time: timeObj.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true }),
     vendor: String(vendorName),
+    supplierId: String((p as any).supplier_id ?? vendorObj?.supplier_id ?? vendorObj?.id ?? d2?.supplier_id ?? d2?.supplier?.supplier_id ?? d2?.supplierDetails?.id ?? ""),
     totoalItems: totoalItems,
     version: (p as any).version || d2?.version || "v1",
     products: (products ?? []).map((pr: any) => {
@@ -414,7 +417,7 @@ const GridCard = ({ po, selected, onClick }: { po: DirectPurchaseData; selected?
             )}
           </div>
           <PurchaseStatusBadge status={po.status} />
-          <PaymentStatusBadge status={po.status === "DRAFT" ? "DRAFT" : po.payment_status} outstanding={po.outstanding} grandTotal={po.grand_total || po.total_cost} />
+          <PaymentStatusBadge status={po.status === "DRAFT" ? "DRAFT" : po.payment_status} outstanding={po.outstanding} grandTotal={po.grand_total || po.total_cost} amountPaid={po.paid_amount} />
           {po.purchaseType === "Purchase Return" && (
             <AntBadge variant="tag-returned" type="tag">Returned</AntBadge>
           )}
@@ -742,7 +745,7 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
                   {/* Payment Status */}
                   <td className="p-2.5 px-3 text-center">
                     <div className="flex flex-col items-center gap-1">
-                      <PaymentStatusBadge status={po.status === "DRAFT" ? "DRAFT" : po.payment_status} outstanding={po.outstanding} grandTotal={po.grand_total || po.total_cost} />
+                      <PaymentStatusBadge status={po.status === "DRAFT" ? "DRAFT" : po.payment_status} outstanding={po.outstanding} grandTotal={po.grand_total || po.total_cost} amountPaid={po.paid_amount} />
                     </div>
                   </td>
 
@@ -1001,6 +1004,12 @@ const PurchaseHistory = () => {
             <ExternalLink size={13} />
           </button>
         )}
+        <GradientButton
+          path="/purchase/add"
+          className="h-8 flex items-center px-4 text-[12px] rounded-md"
+        >
+          + Add Purchase
+        </GradientButton>
       </div>
     );
     return () => setActions(null);
@@ -1028,6 +1037,7 @@ const PurchaseHistory = () => {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
+  const [filterPaymentStatus, setFilterPaymentStatus] = useState("");
   const [filterPaymentMethod, setFilterPaymentMethod] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [selectedPurchases, setSelectedPurchases] = useState<Set<string>>(new Set());
@@ -1100,16 +1110,18 @@ const PurchaseHistory = () => {
     if (fromDate) count++;
     if (toDate) count++;
     if (filterStatus) count++;
+    if (filterPaymentStatus) count++;
     if (filterVendor) count++;
     if (filterPaymentMethod) count++;
     return count;
-  }, [fromDate, toDate, filterStatus, filterVendor, filterPaymentMethod]);
+  }, [fromDate, toDate, filterStatus, filterPaymentStatus, filterVendor, filterPaymentMethod]);
 
   const resetFilters = () => {
     setFilterVendor("");
     setFromDate("");
     setToDate("");
     setFilterStatus("");
+    setFilterPaymentStatus("");
     setSearchTerm("");
     setFilterPaymentMethod("");
   };
@@ -1125,6 +1137,7 @@ const PurchaseHistory = () => {
     if (filters.fromDate) params.from_date = filters.fromDate;
     if (filters.toDate) params.to_date = filters.toDate;
     if (filters.status) params.status = filters.status;
+    if (filters.payment_status) params.payment_status = filters.payment_status;
     if (filters.payment_method) params.payment_method = filters.payment_method;
     
     if (filters.activeKpi === "Outstanding Payments") {
@@ -1153,10 +1166,11 @@ const PurchaseHistory = () => {
     fromDate,
     toDate,
     status: filterStatus,
+    payment_status: filterPaymentStatus,
     payment_method: filterPaymentMethod,
     activeKpi,
     refreshKey
-  }), [debouncedSearch, filterVendor, fromDate, toDate, filterStatus, filterPaymentMethod, activeKpi, refreshKey]);
+  }), [debouncedSearch, filterVendor, fromDate, toDate, filterStatus, filterPaymentStatus, filterPaymentMethod, activeKpi, refreshKey]);
 
   const { items, loading, loadingMore, totalCount, lastElementRef } = useInfiniteScroll<DirectPurchaseData, any>({
     fetchPage,
@@ -1185,12 +1199,42 @@ const PurchaseHistory = () => {
       });
     }
 
+    if (filterPaymentStatus) {
+      const target = filterPaymentStatus.toUpperCase();
+      result = result.filter(po => {
+        const ps = (po.payment_status || "").toUpperCase();
+        if (target === "PAID") return ["PAID", "COMPLETED"].includes(ps);
+        if (target === "PARTIAL") return ["PARTIAL", "PARTIALLY_PAID", "PARTIAL_PAID", "PARTIALLY-PAID", "PARTIALY-PAID"].includes(ps);
+        if (target === "PENDING") return ["PENDING", "NOT-PAID", "NOT_PAID", "UNPAID"].includes(ps);
+        return ps === target;
+      });
+    }
+
+    if (filterVendor) {
+      result = result.filter(po => {
+        if (po.supplierId && po.supplierId === filterVendor) return true;
+        const suppObj = suppliersList.find(s => s.id === filterVendor);
+        if (suppObj && po.vendor && po.vendor.toLowerCase() === suppObj.name.toLowerCase()) return true;
+        return false;
+      });
+    }
+
     if (filterPaymentMethod) {
-      result = result.filter(po => po.paymentMethod?.toUpperCase() === filterPaymentMethod.toUpperCase());
+      const target = filterPaymentMethod.toUpperCase();
+      result = result.filter(po => {
+        const pm = (po.paymentMethod || "").toUpperCase();
+        if (target === "BANK_TRANSFER" || target === "BANK") {
+          return pm.includes("BANK");
+        }
+        if (target === "CREDIT" || target === "ON_CREDIT") {
+          return pm.includes("CREDIT") || (po.outstanding ?? 0) > 0 || (po.paid_amount ?? 0) === 0;
+        }
+        return pm === target || pm.includes(target);
+      });
     }
 
     return result;
-  }, [items, filterStatus, filterPaymentMethod]);
+  }, [items, filterStatus, filterPaymentStatus, filterPaymentMethod, filterVendor, suppliersList]);
 
 
 
@@ -1345,6 +1389,41 @@ const PurchaseHistory = () => {
                   className={`h-9 rounded-md text-xs font-semibold border transition-all ${filterStatus === "CANCELED" ? "border-rose-500 bg-rose-50 text-rose-700 font-bold" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
                 >
                   Canceled
+                </button>
+              </div>
+            </div>
+
+            {/* Payment Status */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Payment Status</label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setFilterPaymentStatus("")}
+                  className={`h-9 rounded-md text-xs font-semibold border transition-all ${!filterPaymentStatus ? "border-slate-800 bg-slate-800 text-white" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
+                >
+                  All Payments
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterPaymentStatus("PAID")}
+                  className={`h-9 rounded-md text-xs font-semibold border transition-all ${filterPaymentStatus === "PAID" ? "border-emerald-500 bg-emerald-50 text-emerald-700 font-bold" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
+                >
+                  Paid
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterPaymentStatus("PARTIAL")}
+                  className={`h-9 rounded-md text-xs font-semibold border transition-all ${filterPaymentStatus === "PARTIAL" ? "border-amber-500 bg-amber-50 text-amber-700 font-bold" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
+                >
+                  Partial
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterPaymentStatus("PENDING")}
+                  className={`h-9 rounded-md text-xs font-semibold border transition-all ${filterPaymentStatus === "PENDING" ? "border-rose-500 bg-rose-50 text-rose-700 font-bold" : "border-slate-200 text-slate-600 bg-slate-50 hover:bg-slate-100"}`}
+                >
+                  Pending
                 </button>
               </div>
             </div>

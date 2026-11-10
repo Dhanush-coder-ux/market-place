@@ -8,7 +8,9 @@ import {
   Hash,
   Package,
   Copy,
-  Check
+  Check,
+  AlertCircle,
+  AlertTriangle
 } from "lucide-react";
 import { AntBadge } from "@/components/ui/AntBadge";
 import { isShopGstRegistered, calculateTaxSplit } from "@/utils/pricing";
@@ -20,19 +22,116 @@ const formatCurrency = (amount?: number | string) => {
   return `₹${Number(amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
 };
 
-const formatDate = (dateStr?: string) => {
-  if (!dateStr) return '—';
-  try {
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return dateStr;
-    return date.toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    });
-  } catch (e) {
-    return dateStr;
+export const parseDateOnly = (dateVal: any): { year: number; month: number; day: number } | null => {
+  if (!dateVal) return null;
+  if (dateVal instanceof Date) {
+    if (isNaN(dateVal.getTime())) return null;
+    return { year: dateVal.getFullYear(), month: dateVal.getMonth(), day: dateVal.getDate() };
   }
+  const str = String(dateVal).trim();
+  if (!str) return null;
+
+  // 1. Check for YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss
+  const ymd = str.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+  if (ymd) {
+    const year = parseInt(ymd[1], 10);
+    const month = parseInt(ymd[2], 10) - 1; // 0-based
+    const day = parseInt(ymd[3], 10);
+    return { year, month, day };
+  }
+
+  // 2. Check for DD-MM-YYYY or DD/MM/YYYY
+  const dmy = str.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})/);
+  if (dmy) {
+    const day = parseInt(dmy[1], 10);
+    const month = parseInt(dmy[2], 10) - 1; // 0-based
+    const year = parseInt(dmy[3], 10);
+    return { year, month, day };
+  }
+
+  // 3. Fallback: standard new Date(str)
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) {
+    return { year: d.getFullYear(), month: d.getMonth(), day: d.getDate() };
+  }
+  return null;
+};
+
+export const calculateDaysToExpiry = (dateVal: any): number | null => {
+  const parsed = parseDateOnly(dateVal);
+  if (!parsed) return null;
+
+  // Batch expiry date at local midnight (user's system timezone)
+  const expMidnight = new Date(parsed.year, parsed.month, parsed.day, 0, 0, 0, 0);
+
+  // User system current date at local midnight (user's system timezone)
+  const now = new Date();
+  const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+
+  const diffMs = expMidnight.getTime() - todayMidnight.getTime();
+  return Math.round(diffMs / (1000 * 60 * 60 * 24));
+};
+
+export const formatDate = (dateVal?: any) => {
+  if (!dateVal) return '—';
+  const parsed = parseDateOnly(dateVal);
+  if (!parsed) {
+    try {
+      const date = new Date(dateVal);
+      if (isNaN(date.getTime())) return String(dateVal);
+      return date.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      });
+    } catch {
+      return String(dateVal);
+    }
+  }
+  const d = new Date(parsed.year, parsed.month, parsed.day);
+  return d.toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  });
+};
+
+export const extractBatchExpiry = (batch: any): string | null => {
+  if (!batch || typeof batch !== 'object') return null;
+  return (
+    batch.expiry_date ||
+    batch.exp_date ||
+    batch.expiry ||
+    batch.expiry_data ||
+    batch.expiration_infos?.expiry_date ||
+    batch.expiration_infos?.exp_date ||
+    batch.expiration_infos?.expiry_data ||
+    batch.datas?.expiry_date ||
+    batch.datas?.exp_date ||
+    batch.datas?.expiry ||
+    batch.datas?.expiry_data ||
+    batch.additional_infos?.expiry_date ||
+    batch.additional_infos?.exp_date ||
+    batch.additional_infos?.expiry_data ||
+    null
+  );
+};
+
+export const extractBatchMfg = (batch: any): string | null => {
+  if (!batch || typeof batch !== 'object') return null;
+  return (
+    batch.manufacturing_date ||
+    batch.mfg_date ||
+    batch.mfg ||
+    batch.expiration_infos?.manufacturing_date ||
+    batch.expiration_infos?.mfg_date ||
+    batch.datas?.manufacturing_date ||
+    batch.datas?.mfg_date ||
+    batch.datas?.mfg ||
+    batch.additional_infos?.manufacturing_date ||
+    batch.additional_infos?.mfg_date ||
+    null
+  );
 };
 
 const getStockStatus = (stock: number | string, reorderPoint?: number | string) => {
@@ -43,18 +142,10 @@ const getStockStatus = (stock: number | string, reorderPoint?: number | string) 
   return { label: `${stockNum} In Stock`, variant: 'stk-in-stock' };
 };
 
-const getDaysLeft = (expDate?: string) => {
-  if (!expDate) return null;
-  const now = new Date();
-  const exp = new Date(expDate);
-  const diff = Math.ceil((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  return diff;
-};
-
 /* ─── Shared Components ──────────────────────────────────────────────────── */
 
 export const BatchBadge = ({ expDate, qty }: { expDate?: string; qty: number }) => {
-  const days = getDaysLeft(expDate);
+  const days = calculateDaysToExpiry(expDate);
   if (qty <= 0) {
     return (
       <AntBadge variant="mv-sales" type="tag">
@@ -66,7 +157,14 @@ export const BatchBadge = ({ expDate, qty }: { expDate?: string; qty: number }) 
   if (days < 0) {
     return (
       <AntBadge variant="ps-cancelled" type="tag">
-        Expired
+        Expired ({Math.abs(days)}d ago)
+      </AntBadge>
+    );
+  }
+  if (days === 0) {
+    return (
+      <AntBadge variant="at-batch" type="tag" icon={<Clock size={10} />}>
+        Expires Today
       </AntBadge>
     );
   }
@@ -119,22 +217,26 @@ export const SerialBadgeList = ({ serials }: { serials: string[] }) => {
     </div>
   );
 };
-const parseBatches = (b: any) => {
-  if (!b) return [];
-  if (Array.isArray(b)) return b;
-  if (typeof b === 'string') {
+export const parseObjects = (val: any): any[] => {
+  if (!val) return [];
+  if (Array.isArray(val)) return val;
+  if (typeof val === "string") {
     try {
-      const parsed = JSON.parse(b);
+      const parsed = JSON.parse(val);
       if (Array.isArray(parsed)) return parsed;
-      if (parsed && typeof parsed === 'object') return Object.values(parsed);
+      if (parsed && typeof parsed === "object") return Object.values(parsed);
       return [];
-    } catch (e) { return []; }
+    } catch (e) {
+      return [];
+    }
   }
-  if (typeof b === 'object') {
-    return Object.values(b);
+  if (typeof val === "object") {
+    return Object.values(val);
   }
   return [];
 };
+
+const parseBatches = parseObjects;
 
 const extractSerials = (val: any): string[] => {
   if (!val) return [];
@@ -147,7 +249,7 @@ const extractSerials = (val: any): string[] => {
   return [];
 };
 
-const extractReorderPoint = (comb: any, parentReorderPoint?: number | null): number | null => {
+export const extractReorderPoint = (comb: any, parentReorderPoint?: number | null): number | null => {
   if (!comb) return parentReorderPoint ?? null;
   const combDatas = comb.datas || {};
   const addInfos = comb.additional_infos || combDatas.additional_infos || {};
@@ -246,19 +348,272 @@ const extractStorageLocation = (comb: any, parentStorageLocation?: string | null
   return parentStorageLocation || null;
 };
 
+export const calculateProductStock = (item: any): number => {
+  if (!item) return 0;
+  const datas = item.datas || {};
+
+  const combinations = (() => {
+    const raw = parseObjects(item.variants || item.variant_infos || datas.combinations || datas.variants);
+    return raw.filter((v: any) => v && typeof v === "object");
+  })();
+
+  const batches = (() => {
+    let raw: any[] = [];
+    if (
+      !(datas.has_variants || datas.has_varients || item.variants?.length || item.variant_infos?.length) &&
+      ((item.variants?.length ?? 0) > 0 || (item.variant_infos?.length ?? 0) > 0)
+    ) {
+      const firstVar = item.variants?.[0] || item.variant_infos?.[0];
+      raw = parseObjects(firstVar?.batches || firstVar?.batch_infos);
+    } else {
+      raw = parseObjects(item.batches || item.batch_infos || datas.batches || item.type_infos?.batch_infos);
+    }
+    return raw.filter((b: any) => b && typeof b === "object");
+  })();
+
+  const hasVariants =
+    (datas.has_variants ||
+      datas.has_varients ||
+      item.has_variant ||
+      item.type_infos?.has_variant) &&
+    combinations.length > 0;
+  const hasBatches = batches.length > 0 || item.has_batch || item.type_infos?.has_batch;
+
+  const calculateVariantStock = (comb: any) => {
+    const vBatches = parseObjects(comb.batch_infos ?? comb.batches ?? comb.datas?.batch_infos ?? comb.datas?.batches ?? []);
+    const vHasBatches = vBatches.length > 0;
+    let vStock = Number(comb.stock_infos?.available_stocks ?? comb.stock_infos?.physical_stocks ?? comb.stocks ?? comb.stock ?? comb.datas?.stocks ?? comb.datas?.datas?.stocks ?? 0);
+    if (vHasBatches || vStock === 0) {
+      const bSum = vBatches.reduce((acc: number, b: any) => acc + Number(b.stock_infos?.available_stocks ?? b.stock_infos?.physical_stocks ?? b.stocks ?? b.stock ?? b.quantity ?? b.qty ?? b.available_stocks ?? 0), 0);
+      if (bSum > 0) vStock = bSum;
+    }
+    return vStock;
+  };
+
+  let stockNumber = Number(item.stock_infos?.available_stocks ?? item.stock_infos?.physical_stocks ?? item.stocks ?? item.quantity ?? 0);
+  if (hasVariants) {
+    stockNumber = combinations.reduce((acc: number, comb: any) => acc + calculateVariantStock(comb), 0);
+  } else if (hasBatches) {
+    const bSum = batches.reduce((acc: number, b: any) => {
+      const bStock = Number(b.stock_infos?.available_stocks ?? b.stock_infos?.physical_stocks ?? b.stocks ?? b.stock ?? b.quantity ?? b.qty ?? b.available_stocks ?? 0);
+      return acc + bStock;
+    }, 0);
+    if (bSum > 0 || stockNumber === 0) {
+      stockNumber = bSum;
+    }
+  }
+  return stockNumber;
+};
+
+export interface ProductStockAnalysis {
+  status: {
+    label: string;
+    variant: string;
+    icon: any;
+    statusKey: "out_of_stock" | "low" | "in_stock" | "not_tracked";
+  };
+  hasOutOfStock: boolean;
+  hasLowStock: boolean;
+  hasInStock: boolean;
+  totalStock: number;
+}
+
+export const analyzeProductStock = (item: any): ProductStockAnalysis => {
+  if (!item) {
+    return {
+      status: { label: "In stock", variant: "stk-in-stock", icon: Package, statusKey: "in_stock" },
+      hasOutOfStock: false,
+      hasLowStock: false,
+      hasInStock: true,
+      totalStock: 0,
+    };
+  }
+  const datas = item.datas || {};
+  const haveTracking = (item as any).have_tracking !== false && (datas as any).have_tracking !== false;
+  if (!haveTracking) {
+    return {
+      status: {
+        label: "Stock Not Tracked",
+        variant: "stk-in-stock",
+        icon: Package,
+        statusKey: "not_tracked",
+      },
+      hasOutOfStock: false,
+      hasLowStock: false,
+      hasInStock: true,
+      totalStock: 0,
+    };
+  }
+
+  const combinations = (() => {
+    const raw = parseObjects(item.variants || item.variant_infos || datas.combinations || datas.variants);
+    return raw.filter((v: any) => v && typeof v === "object");
+  })();
+
+  const batches = (() => {
+    let raw: any[] = [];
+    if (
+      !(datas.has_variants || datas.has_varients || item.variants?.length || item.variant_infos?.length) &&
+      ((item.variants?.length ?? 0) > 0 || (item.variant_infos?.length ?? 0) > 0)
+    ) {
+      const firstVar = item.variants?.[0] || item.variant_infos?.[0];
+      raw = parseObjects(firstVar?.batches || firstVar?.batch_infos);
+    } else {
+      raw = parseObjects(item.batches || item.batch_infos || datas.batches || item.type_infos?.batch_infos);
+    }
+    return raw.filter((b: any) => b && typeof b === "object");
+  })();
+
+  const hasVariants =
+    (datas.has_variants ||
+      datas.has_varients ||
+      item.has_variant ||
+      item.type_infos?.has_variant) &&
+    combinations.length > 0;
+  const hasBatches = batches.length > 0 || item.has_batch || item.type_infos?.has_batch;
+
+  const parentRpRaw = (item as any).reorder_point_infos?.reorder_point ?? (item as any).reorder_point ?? datas.reorder_point ?? null;
+  const parentRp = parentRpRaw !== null && parentRpRaw !== undefined && parentRpRaw !== "" && !isNaN(Number(parentRpRaw)) ? Number(parentRpRaw) : null;
+
+  if (hasVariants) {
+    let hasOutOfStock = false;
+    let hasLowStock = false;
+    let hasInStock = false;
+    let totalStock = 0;
+
+    combinations.forEach((comb: any) => {
+      const combDatas = comb.datas || {};
+      const vBatches = parseObjects(comb.batch_infos ?? comb.batches ?? combDatas.batch_infos ?? combDatas.batches ?? []).filter((b: any) => b && typeof b === "object");
+      let stockNum = Number(comb.stock_infos?.available_stocks ?? comb.stock_infos?.physical_stocks ?? comb.stocks ?? comb.stock ?? combDatas.stocks ?? combDatas.datas?.stocks ?? 0);
+      if (vBatches.length > 0 && stockNum === 0) {
+        stockNum = vBatches.reduce((acc: number, b: any) => {
+          return acc + Number(b.stock_infos?.available_stocks ?? b.stock_infos?.physical_stocks ?? b.stocks ?? b.stock ?? b.quantity ?? b.qty ?? b.available_stocks ?? 0);
+        }, 0);
+      }
+      totalStock += stockNum;
+      const rp = extractReorderPoint(comb, parentRp);
+
+      if (stockNum <= 0) {
+        hasOutOfStock = true;
+      } else if (rp !== null && stockNum <= rp) {
+        hasLowStock = true;
+      } else {
+        hasInStock = true;
+      }
+    });
+
+    // Priority 1: Out of stock, Priority 2: Low stock, Priority 3: In stock
+    let statusKey: "out_of_stock" | "low" | "in_stock" = "in_stock";
+    let label = "In stock";
+    let variant = "stk-in-stock";
+    let icon = Package;
+
+    if (hasOutOfStock) {
+      statusKey = "out_of_stock";
+      label = "Out of stock";
+      variant = "stk-out-of-stock";
+      icon = AlertCircle;
+    } else if (hasLowStock) {
+      statusKey = "low";
+      label = "Low stock";
+      variant = "stk-low-stock";
+      icon = AlertTriangle;
+    }
+
+    return {
+      status: { label, variant, icon, statusKey },
+      hasOutOfStock,
+      hasLowStock,
+      hasInStock,
+      totalStock,
+    };
+  }
+
+  if (hasBatches) {
+    let hasOutOfStock = false;
+    let hasLowStock = false;
+    let hasInStock = false;
+    let totalStock = 0;
+
+    batches.forEach((b: any) => {
+      const bStock = Number(b.stock_infos?.available_stocks ?? b.stock_infos?.physical_stocks ?? b.stocks ?? b.stock ?? b.quantity ?? b.qty ?? b.available_stocks ?? 0);
+      totalStock += bStock;
+      const bRpRaw = b.reorder_point_infos?.reorder_point ?? b.reorder_point ?? parentRp;
+      const bRp = bRpRaw !== null && bRpRaw !== undefined && bRpRaw !== "" && !isNaN(Number(bRpRaw)) ? Number(bRpRaw) : null;
+
+      if (bStock <= 0) {
+        hasOutOfStock = true;
+      } else if (bRp !== null && bStock <= bRp) {
+        hasLowStock = true;
+      } else {
+        hasInStock = true;
+      }
+    });
+
+    let statusKey: "out_of_stock" | "low" | "in_stock" = "in_stock";
+    let label = "In stock";
+    let variant = "stk-in-stock";
+    let icon = Package;
+
+    if (hasOutOfStock) {
+      statusKey = "out_of_stock";
+      label = "Out of stock";
+      variant = "stk-out-of-stock";
+      icon = AlertCircle;
+    } else if (hasLowStock) {
+      statusKey = "low";
+      label = "Low stock";
+      variant = "stk-low-stock";
+      icon = AlertTriangle;
+    }
+
+    return {
+      status: { label, variant, icon, statusKey },
+      hasOutOfStock,
+      hasLowStock,
+      hasInStock,
+      totalStock,
+    };
+  }
+
+  // Simple product
+  const totalStock = calculateProductStock(item);
+  const rp = parentRp !== null ? parentRp : 10;
+  const hasOutOfStock = totalStock <= 0;
+  const hasLowStock = totalStock > 0 && totalStock <= rp;
+  const hasInStock = totalStock > rp;
+
+  let statusKey: "out_of_stock" | "low" | "in_stock" = "in_stock";
+  let label = "In stock";
+  let variant = "stk-in-stock";
+  let icon = Package;
+
+  if (hasOutOfStock) {
+    statusKey = "out_of_stock";
+    label = "Out of stock";
+    variant = "stk-out-of-stock";
+    icon = AlertCircle;
+  } else if (hasLowStock) {
+    statusKey = "low";
+    label = "Low stock";
+    variant = "stk-low-stock";
+    icon = AlertTriangle;
+  }
+
+  return {
+    status: { label, variant, icon, statusKey },
+    hasOutOfStock,
+    hasLowStock,
+    hasInStock,
+    totalStock,
+  };
+};
+
 export const BatchCards = ({ batches, parentGst, parentBuyPrice, parentSellPrice }: { batches: any | any[]; parentGst?: any; parentBuyPrice?: any; parentSellPrice?: any }) => {
   const safeBatches = parseBatches(batches);
   const [showAll, setShowAll] = useState(false);
   const visible = showAll ? safeBatches : safeBatches.slice(0, 4);
   const remaining = safeBatches.length - 4;
-
-  const getDaysDiff = (dateStr: string) => {
-    if (!dateStr) return null;
-    const expDate = new Date(dateStr);
-    const today = new Date();
-    const diffTime = expDate.getTime() - today.getTime();
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  };
 
   return (
     <div className="animate-in fade-in slide-in-from-top-1 duration-300 pt-1 pb-2">
@@ -278,7 +633,9 @@ export const BatchCards = ({ batches, parentGst, parentBuyPrice, parentSellPrice
           const availableQty = Number(batch.stock_infos?.available_stocks ?? batch.available_stocks ?? physicalQty);
           const reservedQty = Number(batch.stock_infos?.reserved_stocks ?? 0);
           const serials = extractSerials(batch.serialno_infos ?? batch.serial_numbers ?? batch.datas?.serial_numbers);
-          const daysToExpiry = getDaysDiff(batch.expiry_date || batch.expiry);
+          const batchExpiry = extractBatchExpiry(batch);
+          const batchMfg = extractBatchMfg(batch);
+          const daysToExpiry = calculateDaysToExpiry(batchExpiry);
           const storageLoc = batch.storage_location_infos?.storage_location ?? batch.storage_location ?? null;
           const reorderPt = batch.reorder_point_infos?.reorder_point ?? batch.reorder_point ?? null;
 
@@ -342,7 +699,11 @@ export const BatchCards = ({ batches, parentGst, parentBuyPrice, parentSellPrice
                 )}
                 {daysToExpiry !== null && (
                   <AntBadge variant={daysToExpiry <= 0 ? 'ps-cancelled' : daysToExpiry <= 7 ? 'at-batch' : 'ps-completed'} type="tag">
-                    {daysToExpiry < 0 ? `EXP ${Math.abs(daysToExpiry)} DAYS AGO` : daysToExpiry === 0 ? 'EXPIRES TODAY' : `EXP IN ${daysToExpiry} DAYS`}
+                    {daysToExpiry < 0
+                      ? `EXP ${Math.abs(daysToExpiry)} ${Math.abs(daysToExpiry) === 1 ? 'DAY' : 'DAYS'} AGO`
+                      : daysToExpiry === 0
+                        ? 'EXPIRES TODAY'
+                        : `EXP IN ${daysToExpiry} ${daysToExpiry === 1 ? 'DAY' : 'DAYS'}`}
                   </AntBadge>
                 )}
               </div>
@@ -385,6 +746,17 @@ export const BatchCards = ({ batches, parentGst, parentBuyPrice, parentSellPrice
                             {formatCurrency(sellTaxable)} + {formatCurrency(sellGstAmt)} GST {gstRate}%
                           </span>
                         )}
+                        {displaySellPrice > 0 && displayBuyPrice > 0 && (() => {
+                          const bProfit = Math.round((sellTaxable - displayBuyPrice) * 100) / 100;
+                          const bMargin = sellTaxable > 0 ? ((bProfit / sellTaxable) * 100) : 0;
+                          return (
+                            <span className="text-[8px] font-medium leading-tight mt-0.5">
+                              Margin: <span className={bProfit >= 0 ? "text-emerald-600 font-semibold" : "text-rose-600 font-semibold"}>
+                                {bMargin.toFixed(1)}% ({bProfit >= 0 ? "+" : ""}₹{bProfit.toFixed(2)})
+                              </span>
+                            </span>
+                          );
+                        })()}
                       </div>
                     </div>
                   </div>
@@ -392,10 +764,10 @@ export const BatchCards = ({ batches, parentGst, parentBuyPrice, parentSellPrice
               </div>
 
               {/* Dates */}
-              {(batch.manufacturing_date || batch.expiry_date || batch.expiry) && (
+              {(batchMfg || batchExpiry) && (
                 <div className="flex items-center justify-between text-[10px] bg-white border border-slate-100 rounded-md p-1.5 px-2">
-                  {batch.manufacturing_date && <div><span className="text-slate-400">MFG:</span> <span className="font-bold text-slate-700">{formatDate(batch.manufacturing_date)}</span></div>}
-                  {(batch.expiry_date || batch.expiry) && <div><span className="text-slate-400">EXP:</span> <span className="font-bold text-slate-700">{formatDate(batch.expiry_date || batch.expiry)}</span></div>}
+                  {batchMfg && <div><span className="text-slate-400">MFG:</span> <span className="font-bold text-slate-700">{formatDate(batchMfg)}</span></div>}
+                  {batchExpiry && <div><span className="text-slate-400">EXP:</span> <span className="font-bold text-slate-700">{formatDate(batchExpiry)}</span></div>}
                 </div>
               )}
 
@@ -469,6 +841,7 @@ export const VariantRows = ({
   hideReorderPoint = false,
   parentMrp,
   parentDiscountPercent,
+  parentHsn,
 }: {
   combinations: any[];
   baseSellPrice: any;
@@ -479,6 +852,7 @@ export const VariantRows = ({
   hideReorderPoint?: boolean;
   parentMrp?: any;
   parentDiscountPercent?: any;
+  parentHsn?: string | null;
 }) => {
   const [expandedVariant, setExpandedVariant] = useState<string | null>(null);
   const isGstReg = isShopGstRegistered();
@@ -492,11 +866,13 @@ export const VariantRows = ({
         <p className="text-[13px] font-bold text-slate-800 tracking-tight">Product Variants</p>
       </div>
       <div className="border border-slate-200 rounded-lg overflow-hidden bg-white shadow-sm overflow-x-auto">
-        <table className="w-full text-left border-collapse min-w-[800px]">
+        <table className="w-full text-left border-collapse min-w-[950px]">
           <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
             <tr>
               <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-left">Variant</th>
-              <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-left">SKU / Barcode</th>
+              <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-left">SKU</th>
+              <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-left">Barcode</th>
+              <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-left">HSN</th>
               <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Stock</th>
               <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Buy Price</th>
               <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Sell Price</th>
@@ -634,33 +1010,57 @@ export const VariantRows = ({
                       </div>
                     </td>
 
-                    {/* SKU / Barcode */}
+                    {/* SKU */}
                     <td className="px-4 py-2 align-middle">
                       {(() => {
                         const rawSku = comb.sku || comb.additional_infos?.sku || combDatas.sku || combDatas.datas?.sku || "";
-                        const rawBarcode = comb.barcode || comb.additional_infos?.barcode || combDatas.barcode || combDatas.datas?.barcode || "";
-
-                        if (!rawSku && !rawBarcode) {
+                        if (!rawSku) {
                           return <span className="text-[12px] font-mono text-slate-400 font-medium">—</span>;
                         }
-
-                        const primaryText = rawSku || rawBarcode;
-                        const secondaryText = rawSku && rawBarcode && rawBarcode !== rawSku ? rawBarcode : null;
-                        const trimmedPrimary = primaryText.length > 16 ? `${primaryText.slice(0, 14)}...` : primaryText;
-
+                        const trimmedSku = rawSku.length > 16 ? `${rawSku.slice(0, 14)}...` : rawSku;
                         return (
-                          <div className="flex flex-col gap-0.5">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-[12px] font-mono font-medium text-slate-700 tracking-tight" title={primaryText}>
-                                {trimmedPrimary}
-                              </span>
-                              <CopySKUButton val={primaryText} />
-                            </div>
-                            {secondaryText && (
-                              <span className="text-[10px] font-mono text-slate-400" title={`Barcode: ${secondaryText}`}>
-                                BC: {secondaryText.length > 14 ? `${secondaryText.slice(0, 12)}...` : secondaryText}
-                              </span>
-                            )}
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[12px] font-mono font-medium text-slate-700 tracking-tight" title={rawSku}>
+                              {trimmedSku}
+                            </span>
+                            <CopySKUButton val={rawSku} />
+                          </div>
+                        );
+                      })()}
+                    </td>
+
+                    {/* Barcode */}
+                    <td className="px-4 py-2 align-middle">
+                      {(() => {
+                        const rawBarcode = comb.barcode || comb.additional_infos?.barcode || combDatas.barcode || combDatas.datas?.barcode || "";
+                        if (!rawBarcode) {
+                          return <span className="text-[12px] font-mono text-slate-400 font-medium">—</span>;
+                        }
+                        const trimmedBc = rawBarcode.length > 16 ? `${rawBarcode.slice(0, 14)}...` : rawBarcode;
+                        return (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[12px] font-mono font-medium text-slate-700 tracking-tight" title={rawBarcode}>
+                              {trimmedBc}
+                            </span>
+                            <CopySKUButton val={rawBarcode} />
+                          </div>
+                        );
+                      })()}
+                    </td>
+
+                    {/* HSN */}
+                    <td className="px-4 py-2 align-middle">
+                      {(() => {
+                        const rawHsn = comb.hsn_code || comb.hsn || comb.additional_infos?.hsn_code || comb.additional_infos?.hsn || combDatas.hsn_code || combDatas.hsn || combDatas.datas?.hsn_code || combDatas.datas?.hsn || parentHsn || "";
+                        if (!rawHsn) {
+                          return <span className="text-[12px] font-mono text-slate-400 font-medium">—</span>;
+                        }
+                        return (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[12px] font-mono font-medium text-slate-700 tracking-tight" title={rawHsn}>
+                              {rawHsn}
+                            </span>
+                            <CopySKUButton val={rawHsn} />
                           </div>
                         );
                       })()}
@@ -705,6 +1105,17 @@ export const VariantRows = ({
                             {formatCurrency(sellTaxable)} + {formatCurrency(sellGstAmt)} GST {gstRate}%
                           </span>
                         )}
+                        {displaySellPrice > 0 && displayBuyPrice > 0 && (() => {
+                          const varProfit = Math.round((sellTaxable - displayBuyPrice) * 100) / 100;
+                          const varMargin = sellTaxable > 0 ? ((varProfit / sellTaxable) * 100) : 0;
+                          return (
+                            <span className="text-[9px] font-medium leading-tight mt-0.5">
+                              Margin: <span className={varProfit >= 0 ? "text-emerald-600 font-semibold" : "text-rose-600 font-semibold"}>
+                                {varMargin.toFixed(1)}% ({varProfit >= 0 ? "+" : ""}₹{varProfit.toFixed(2)})
+                              </span>
+                            </span>
+                          );
+                        })()}
                       </div>
                     </td>
 
@@ -777,7 +1188,7 @@ export const VariantRows = ({
                   {/* Serials Area */}
                   {hasSerials && (
                     <tr className="bg-indigo-50/10">
-                      <td colSpan={hideReorderPoint ? 10 : 11} className="p-0 border-t border-slate-50/50">
+                      <td colSpan={hideReorderPoint ? 12 : 13} className="p-0 border-t border-slate-50/50">
                         <div className="px-4 pb-2 pt-1.5 flex flex-col">
                           <p className="text-[10px] font-bold text-slate-500 mb-1 flex items-center gap-1 uppercase">
                             <Hash size={10} className="text-indigo-400" /> Serial Numbers ({serials.length})
@@ -791,7 +1202,7 @@ export const VariantRows = ({
                   {/* Nested Batches Area */}
                   {isVarExpanded && hasBatches && (
                     <tr className="bg-slate-50/50">
-                      <td colSpan={hideReorderPoint ? 10 : 11} className="p-0 border-t border-slate-100">
+                      <td colSpan={hideReorderPoint ? 12 : 13} className="p-0 border-t border-slate-100">
                         <div className="p-3 md:pl-10 pl-6 border-l-2 border-slate-200 ml-4 my-2">
                           <BatchCards batches={batches} parentGst={gstValue} parentBuyPrice={buyPrice} parentSellPrice={sellPrice} />
                         </div>

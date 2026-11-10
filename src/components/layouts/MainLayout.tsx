@@ -292,6 +292,7 @@ const MainLayout = () => {
     "/product",
     "/product/all",
     "/orders",
+    "/orders/returns",
     "/po-grn"
   ];
   const isListPage = listPaths.includes(location.pathname);

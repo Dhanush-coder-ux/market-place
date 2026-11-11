@@ -100,6 +100,9 @@ const getPageHeaderInfo = (pathname: string) => {
     "/orders": {
       title: "Online Orders",
     },
+    "/orders/returns": {
+      title: "Return Requests",
+    },
     "/settings": {
       title: "Settings",
     },
@@ -289,6 +292,7 @@ const MainLayout = () => {
     "/product",
     "/product/all",
     "/orders",
+    "/orders/returns",
     "/po-grn"
   ];
   const isListPage = listPaths.includes(location.pathname);

@@ -154,10 +154,12 @@ export const orderApi = {
 
   /**
    * Customer / staff creates a return request for an order
+   * POST /orders/returns/request
    */
   createReturnRequest: async (data: {
     order_id: string;
     shop_id?: string;
+    payment_infos?: Record<string, any>;
     items: Array<{
       order_item_id?: string;
       product_id?: string;
@@ -171,33 +173,84 @@ export const orderApi = {
     customer_email?: string;
     customer_id?: string;
   }) => {
-    return await apiClient.post(`${ENDPOINTS.RETURN}/request`, data);
+    const payload = {
+      ...data,
+      payment_infos: data.payment_infos || {
+        method: "ORIGINAL_PAYMENT",
+        status: "PENDING_REFUND",
+      },
+    };
+    try {
+      return await apiClient.post(`${ENDPOINTS.RETURN}/request`, payload);
+    } catch {
+      try {
+        return await apiClient.post(`${ENDPOINTS.ORDERS}/returns/request`, payload);
+      } catch {
+        return await apiClient.post(`${ENDPOINTS.ORDERS}/return-request`, payload);
+      }
+    }
   },
 
   /**
    * Get return requests for a specific shop
+   * GET /orders/return-requests/{shop_id}
    */
   getReturnRequests: async (shopId: string, params?: Record<string, any>) => {
     if (!shopId) throw new Error("Shop ID is required.");
-    return await apiClient.get(`${ENDPOINTS.RETURN}/requests/${shopId}`, params);
+    try {
+      return await apiClient.get(`${ENDPOINTS.ORDERS}/return-requests/${shopId}`, params);
+    } catch {
+      // Fallback to /returns/requests/{shop_id}
+      return await apiClient.get(`${ENDPOINTS.RETURN}/requests/${shopId}`, params);
+    }
   },
 
   /**
    * Get return requests for a specific order
    */
-  getReturnRequestsByOrder: async (orderId: string) => {
+  getReturnRequestsByOrder: async (orderId: string, shopId?: string) => {
     if (!orderId) throw new Error("Order ID is required.");
-    return await apiClient.get(`${ENDPOINTS.RETURN}/requests/order/${orderId}`);
+    try {
+      return await apiClient.get(`${ENDPOINTS.ORDERS}/return-requests/${shopId || 'ALL'}`, { order_id: orderId });
+    } catch {
+      return await apiClient.get(`${ENDPOINTS.RETURN}/requests/order/${orderId}`);
+    }
+  },
+
+  /**
+   * Get detail for a specific return request
+   */
+  getReturnRequestDetail: async (requestId: string, shopId?: string) => {
+    if (!requestId) throw new Error("Request ID is required.");
+    try {
+      return await apiClient.get(`${ENDPOINTS.RETURN}/requests/detail/${requestId}`);
+    } catch {
+      const listRes: any = await apiClient.get(`${ENDPOINTS.ORDERS}/return-requests/${shopId || 'ALL'}`);
+      const items = Array.isArray(listRes?.data) ? listRes.data : Array.isArray(listRes) ? listRes : [];
+      const match = items.find((r: any) => r.id === requestId);
+      if (match) return { data: match };
+      throw new Error("Return request not found");
+    }
   },
 
   /**
    * Update return request status (ACCEPTED or REJECTED)
+   * PATCH /orders/return-requests/{request_id}/status
    */
   updateReturnRequestStatus: async (
     requestId: string,
     data: { status: "ACCEPTED" | "REJECTED" | string; admin_notes?: string }
   ) => {
     if (!requestId) throw new Error("Request ID is required.");
-    return await apiClient.put(`${ENDPOINTS.RETURN}/requests/${requestId}/status`, data);
+    try {
+      return await apiClient.patch(`${ENDPOINTS.ORDERS}/return-requests/${requestId}/status`, data);
+    } catch {
+      // Fallback to PUT on /orders or /returns
+      try {
+        return await apiClient.put(`${ENDPOINTS.ORDERS}/return-requests/${requestId}/status`, data);
+      } catch {
+        return await apiClient.patch(`${ENDPOINTS.RETURN}/requests/${requestId}/status`, data);
+      }
+    }
   },
 };

@@ -723,11 +723,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   }, [numMrp, numSellingPrice, priceCalc]);
 
   const sellingPriceError = useMemo(() => {
-    if (form.track_stock && numMrp > 0 && numSellingPrice > numMrp) {
+    if (numMrp > 0 && numSellingPrice > numMrp) {
       return `Selling price (₹${formatINR(numSellingPrice)}) cannot exceed MRP (₹${formatINR(numMrp)})`;
     }
     return undefined;
-  }, [numMrp, numSellingPrice, form.track_stock]);
+  }, [numMrp, numSellingPrice]);
 
   // Validation computed values
   const missingFields: string[] = [];
@@ -1208,8 +1208,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       }
     }
 
-    // V1: selling_price > mrp (🔴 Block save when MRP is set — Legal Metrology requirement for tracked products)
-    if (form.track_stock && numMrp > 0 && numSp > 0 && numSp > numMrp) {
+    // V1: selling_price > mrp (🔴 Block save when MRP is set — applies to both tracked and non-tracked products)
+    if (numMrp > 0 && numSp > 0 && numSp > numMrp) {
       showToast(`Selling price cannot be above MRP. You entered ₹${numSp.toFixed(2)} but the MRP is ₹${numMrp.toFixed(2)}. Maximum you can charge is ₹${numMrp.toFixed(2)}.`, "error");
       return;
     }
@@ -1258,7 +1258,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       return;
     }
 
-    if (form.track_stock && form.has_variants) {
+    if (form.has_variants) {
       for (const combo of activeCombinations) {
         const comboMrp = combo.mrp !== "" && !isNaN(Number(combo.mrp)) ? Number(combo.mrp) : numMrp;
         const comboSp = combo.price !== "" && !isNaN(Number(combo.price)) ? Number(combo.price) : 0;
@@ -1297,9 +1297,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       const parsedBuyPrice = combo.buy_price !== "" && !isNaN(Number(combo.buy_price)) ? Number(combo.buy_price) : null;
       const parsedSellPrice = combo.price !== "" && !isNaN(Number(combo.price)) ? Number(combo.price) : null;
 
-      const parsedMrp = form.track_stock
-        ? (combo.mrp !== "" && !isNaN(Number(combo.mrp)) ? Number(combo.mrp) : (form.mrp !== "" && !isNaN(Number(form.mrp)) ? Number(form.mrp) : null))
-        : null;
+      const parsedMrp = combo.mrp !== "" && !isNaN(Number(combo.mrp)) && Number(combo.mrp) > 0
+        ? Number(combo.mrp)
+        : (form.mrp !== "" && !isNaN(Number(form.mrp)) && Number(form.mrp) > 0 ? Number(form.mrp) : null);
 
       let variantDiscPercent = 0;
       if (combo.discount_percent !== undefined && combo.discount_percent !== "" && !isNaN(Number(combo.discount_percent))) {
@@ -1451,7 +1451,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         online_sell_price: form.selling_price !== "" && !isNaN(Number(form.selling_price))
           ? Number(form.selling_price)
           : 0,
-        mrp: form.track_stock && form.mrp !== "" && !isNaN(Number(form.mrp)) && Number(form.mrp) > 0 ? Number(form.mrp) : null,
+        mrp: form.mrp !== "" && !isNaN(Number(form.mrp)) && Number(form.mrp) > 0 ? Number(form.mrp) : null,
         discount_percent: form.discount_percent !== "" && !isNaN(Number(form.discount_percent)) ? Number(form.discount_percent) : 0,
         offer_valid_until: form.offer_valid_until || null,
         custom_fields: {
@@ -1489,7 +1489,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         online_sell_price: form.selling_price !== "" && !isNaN(Number(form.selling_price))
           ? Number(form.selling_price)
           : 0,
-        mrp: form.track_stock && form.mrp !== "" && !isNaN(Number(form.mrp)) && Number(form.mrp) > 0 ? Number(form.mrp) : null,
+        mrp: form.mrp !== "" && !isNaN(Number(form.mrp)) && Number(form.mrp) > 0 ? Number(form.mrp) : null,
         discount_percent: form.discount_percent !== "" && !isNaN(Number(form.discount_percent)) ? Number(form.discount_percent) : 0,
         offer_valid_until: form.offer_valid_until || null,
         gst: gstFormatted,

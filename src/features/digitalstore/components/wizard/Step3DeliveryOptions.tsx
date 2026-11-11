@@ -7,9 +7,19 @@ import {
   Timer,
   Lightbulb,
   Calculator,
-  ArrowRight
+  ArrowRight,
+  ChevronDown,
 } from "lucide-react";
 import { StoreFormData } from "@/features/digitalstore/type";
+
+export const ESTIMATED_DELIVERY_TIME_OPTIONS = [
+  "Within a day",
+  "1-2 days",
+  "3-5 days",
+  "5-7 days",
+  "7-15 days",
+  "15-30 days",
+];
 
 interface Step3Props {
   form: StoreFormData;
@@ -50,7 +60,7 @@ const DELIVERY_META: Record<
     activeBg: "bg-blue-50/40",
     activeBorder: "border-blue-400",
     badgeColor: "bg-blue-100 text-blue-700",
-    defaultSpeed: "Same Day"
+    defaultSpeed: "Within a day"
   },
 };
 
@@ -64,7 +74,9 @@ function InputField({
   onChange,
   type = "number",
   placeholder,
-  helperText
+  helperText,
+  required = false,
+  error,
 }: {
   label: string;
   icon: React.ElementType;
@@ -76,14 +88,23 @@ function InputField({
   type?: "number" | "text";
   placeholder?: string;
   helperText?: string;
+  required?: boolean;
+  error?: string;
 }) {
   return (
     <div>
       <label className="flex items-center gap-1.5 text-[11px] font-bold text-slate-600 mb-1.5 uppercase tracking-wide">
         <Icon size={12} className={iconColor} />
         {label}
+        {required && <span className="text-red-500 font-black">*</span>}
       </label>
-      <div className="flex items-center rounded-xl border border-slate-200 bg-white overflow-hidden focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/10 transition-all shadow-xs">
+      <div
+        className={`flex items-center rounded-xl border bg-white overflow-hidden transition-all shadow-xs ${
+          error
+            ? "border-red-400 focus-within:border-red-500 focus-within:ring-2 focus-within:ring-red-500/15"
+            : "border-slate-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/10"
+        }`}
+      >
         {prefix && (
           <span className="px-3 py-2.5 text-xs font-bold text-slate-500 bg-slate-50 border-r border-slate-200 shrink-0">
             {prefix}
@@ -91,7 +112,7 @@ function InputField({
         )}
         <input
           type={type}
-          min={type === "number" ? "0" : undefined}
+          min={type === "number" ? (required ? "1" : "0") : undefined}
           value={value ?? ""}
           onChange={(e) => {
             if (type === "number") {
@@ -108,6 +129,60 @@ function InputField({
             {suffix}
           </span>
         )}
+      </div>
+      {error ? (
+        <p className="text-[10.5px] text-red-500 mt-1 font-semibold">{error}</p>
+      ) : (
+        helperText && (
+          <p className="text-[10.5px] text-slate-400 mt-1 font-medium">{helperText}</p>
+        )
+      )}
+    </div>
+  );
+}
+
+export function EstimatedDeliverySelect({
+  label = "Estimated Delivery Time",
+  icon: Icon = Timer,
+  iconColor = "text-blue-500",
+  value,
+  onChange,
+  helperText,
+  required = true,
+}: {
+  label?: string;
+  icon?: React.ElementType;
+  iconColor?: string;
+  value: string | undefined;
+  onChange: (v: string) => void;
+  helperText?: string;
+  required?: boolean;
+}) {
+  const currentVal = value?.trim() || "Within a day";
+  const options = ESTIMATED_DELIVERY_TIME_OPTIONS.includes(currentVal)
+    ? ESTIMATED_DELIVERY_TIME_OPTIONS
+    : [currentVal, ...ESTIMATED_DELIVERY_TIME_OPTIONS];
+
+  return (
+    <div>
+      <label className="flex items-center gap-1.5 text-[11px] font-bold text-slate-600 mb-1.5 uppercase tracking-wide">
+        <Icon size={12} className={iconColor} />
+        {label}
+        {required && <span className="text-red-500 font-black">*</span>}
+      </label>
+      <div className="relative flex items-center rounded-xl border border-slate-200 bg-white overflow-hidden focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/10 transition-all shadow-xs">
+        <select
+          value={currentVal}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full appearance-none px-3 py-2.5 pr-9 text-sm outline-none bg-transparent text-slate-700 cursor-pointer font-medium"
+        >
+          {options.map((opt) => (
+            <option key={opt} value={opt}>
+              {opt}
+            </option>
+          ))}
+        </select>
+        <ChevronDown size={15} className="absolute right-3 text-slate-400 pointer-events-none" />
       </div>
       {helperText && (
         <p className="text-[10.5px] text-slate-400 mt-1 font-medium">{helperText}</p>
@@ -128,7 +203,6 @@ function StoreDeliveryCardInner({
   const Icon = meta.icon;
   const enabled = data?.enabled;
   const isPickup = meta.badge === "Pickup";
-  const isDistanceTiered = data?.pricingModel === "DISTANCE_TIERED";
 
   const baseCharge = Number(data?.deliveryCharge) || 0;
   const baseKm = Number(data?.baseDistance) || 0;
@@ -192,100 +266,51 @@ function StoreDeliveryCardInner({
         <div className="px-5 pb-5 pt-0 border-t border-slate-200/60 animate-in slide-in-from-top-1 fade-in duration-200 space-y-4">
           {!isPickup ? (
             <>
-              {/* Pricing Mode Selector */}
-              <div className="pt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 bg-white/70 p-3 rounded-xl border border-slate-200/80">
-                <div>
-                  <span className="text-xs font-bold text-slate-700 block">Pricing Calculation Method</span>
-                  <span className="text-[11px] text-slate-500">Choose how delivery charge is calculated for orders</span>
-                </div>
-                <div className="inline-flex p-1 bg-slate-100 rounded-xl border border-slate-200/60">
-                  <button
-                    type="button"
-                    onClick={() => updateDelivery("pricingModel", "FLAT")}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                      !isDistanceTiered
-                        ? "bg-white text-blue-600 shadow-xs"
-                        : "text-slate-600 hover:text-slate-900"
-                    }`}
-                  >
-                    <Truck size={13} />
-                    Flat Charge
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => updateDelivery("pricingModel", "DISTANCE_TIERED")}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                      isDistanceTiered
-                        ? "bg-white text-blue-600 shadow-xs"
-                        : "text-slate-600 hover:text-slate-900"
-                    }`}
-                  >
-                    <MapPin size={13} />
-                    Distance-Based
-                  </button>
-                </div>
-              </div>
+              {/* Form Fields Grid (Distance-Based) */}
+              <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <InputField
+                  label="Base Delivery Charge"
+                  icon={Truck}
+                  iconColor="text-blue-500"
+                  value={data?.deliveryCharge}
+                  onChange={(v) => updateDelivery("deliveryCharge", v)}
+                  prefix="₹"
+                  placeholder="100"
+                  helperText="Charge for delivery up to base distance"
+                />
 
-              {/* Form Fields Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {isDistanceTiered ? (
-                  <>
-                    <InputField
-                      label="Base Delivery Charge"
-                      icon={Truck}
-                      iconColor="text-blue-500"
-                      value={data?.deliveryCharge}
-                      onChange={(v) => updateDelivery("deliveryCharge", v)}
-                      prefix="₹"
-                      placeholder="100"
-                      helperText="Charge for delivery up to base distance"
-                    />
+                <InputField
+                  label="Base Distance Limit"
+                  icon={MapPin}
+                  iconColor="text-blue-500"
+                  value={data?.baseDistance}
+                  onChange={(v) => updateDelivery("baseDistance", v)}
+                  suffix="km"
+                  placeholder="10"
+                  helperText="E.g. ₹100 is charged for up to 10 km"
+                />
 
-                    <InputField
-                      label="Base Distance Limit"
-                      icon={MapPin}
-                      iconColor="text-blue-500"
-                      value={data?.baseDistance}
-                      onChange={(v) => updateDelivery("baseDistance", v)}
-                      suffix="km"
-                      placeholder="10"
-                      helperText="E.g. ₹100 is charged for up to 10 km"
-                    />
+                <InputField
+                  label="Extra Distance (km)"
+                  icon={MapPin}
+                  iconColor="text-indigo-500"
+                  value={data?.extraDistanceStep}
+                  onChange={(v) => updateDelivery("extraDistanceStep", v)}
+                  suffix="km"
+                  placeholder="1"
+                  helperText="For every additional 1, 2, or 3 km"
+                />
 
-                    <InputField
-                      label="Extra Distance Step"
-                      icon={MapPin}
-                      iconColor="text-indigo-500"
-                      value={data?.extraDistanceStep}
-                      onChange={(v) => updateDelivery("extraDistanceStep", v)}
-                      suffix="km"
-                      placeholder="1"
-                      helperText="For every additional 1, 2, or 3 km"
-                    />
-
-                    <InputField
-                      label="Extra Fee per Step"
-                      icon={IndianRupee}
-                      iconColor="text-indigo-500"
-                      value={data?.chargePerKm}
-                      onChange={(v) => updateDelivery("chargePerKm", v)}
-                      prefix="₹"
-                      placeholder="10"
-                      helperText="Additional charge per distance step"
-                    />
-                  </>
-                ) : (
-                  <InputField
-                    label="Flat Delivery Charge"
-                    icon={Truck}
-                    iconColor="text-slate-500"
-                    value={data?.deliveryCharge}
-                    onChange={(v) => updateDelivery("deliveryCharge", v)}
-                    prefix="₹"
-                    placeholder="40"
-                    helperText="Fixed charge regardless of distance"
-                  />
-                )}
+                <InputField
+                  label="Extra Fee per km"
+                  icon={IndianRupee}
+                  iconColor="text-indigo-500"
+                  value={data?.chargePerKm}
+                  onChange={(v) => updateDelivery("chargePerKm", v)}
+                  prefix="₹"
+                  placeholder="10"
+                  helperText="Additional charge per extra km"
+                />
 
                 <InputField
                   label="Free Delivery Above"
@@ -299,14 +324,20 @@ function StoreDeliveryCardInner({
                 />
 
                 <InputField
-                  label="Delivery Radius (Optional)"
+                  label="Delivery Radius"
                   icon={MapPin}
                   iconColor="text-purple-500"
                   value={data?.radius}
                   onChange={(v) => updateDelivery("radius", v)}
                   suffix="km"
-                  placeholder="15"
-                  helperText="Max range your store delivers to (0 for unlimited)"
+                  placeholder="10"
+                  required
+                  error={
+                    data?.radius === "" || data?.radius === undefined || data?.radius === null || Number(data?.radius) <= 0
+                      ? "Delivery radius is required (must be greater than 0 km)"
+                      : undefined
+                  }
+                  helperText="Max range in km your store delivers to"
                 />
 
                 <InputField
@@ -319,14 +350,12 @@ function StoreDeliveryCardInner({
                   placeholder="0"
                 />
 
-                <InputField
+                <EstimatedDeliverySelect
                   label="Estimated Delivery Time"
                   icon={Timer}
                   iconColor="text-blue-500"
-                  type="text"
                   value={data?.speed}
                   onChange={(v) => updateDelivery("speed", v)}
-                  placeholder={meta.defaultSpeed}
                 />
               </div>
 
@@ -336,34 +365,26 @@ function StoreDeliveryCardInner({
                   <Calculator size={14} className="text-blue-600" />
                   <span className="text-xs font-bold text-slate-800">Live Delivery Rate Summary</span>
                 </div>
-                {isDistanceTiered ? (
-                  <div className="space-y-2">
-                    <p className="text-[11.5px] text-slate-600 leading-relaxed">
-                      Customers pay <span className="font-bold text-slate-800">₹{baseCharge}</span> for the first{" "}
-                      <span className="font-bold text-slate-800">{baseKm} km</span>. Every extra{" "}
-                      <span className="font-bold text-slate-800">{stepKm} km</span> adds{" "}
-                      <span className="font-bold text-emerald-600">+₹{extraCharge}</span>.
-                      {maxRadius > 0 && <span> (Max radius: {maxRadius} km)</span>}
-                      {freeAbove > 0 && <span> Free delivery for orders <span className="font-bold text-emerald-600">≥ ₹{freeAbove}</span>.</span>}
-                    </p>
-                    <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                      <span className="text-[10.5px] font-semibold text-slate-400">Sample:</span>
-                      <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[11px] font-bold border border-blue-100">
-                        Up to {baseKm || 5} km: ₹{baseCharge}
-                      </span>
-                      <ArrowRight size={10} className="text-slate-300" />
-                      <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-[11px] font-bold border border-indigo-100">
-                        {(baseKm || 5) + stepKm} km: ₹{baseCharge + extraCharge}
-                      </span>
-                    </div>
-                  </div>
-                ) : (
+                <div className="space-y-2">
                   <p className="text-[11.5px] text-slate-600 leading-relaxed">
-                    Flat rate of <span className="font-bold text-slate-800">₹{baseCharge}</span> across all delivery locations
-                    {maxRadius > 0 ? ` within ${maxRadius} km.` : "."}
-                    {freeAbove > 0 && <span> Orders above <span className="font-bold text-emerald-600">₹{freeAbove}</span> get free shipping.</span>}
+                    Customers pay <span className="font-bold text-slate-800">₹{baseCharge}</span> for the first{" "}
+                    <span className="font-bold text-slate-800">{baseKm} km</span>. Every extra{" "}
+                    <span className="font-bold text-slate-800">{stepKm} km</span> adds{" "}
+                    <span className="font-bold text-emerald-600">+₹{extraCharge}</span>.
+                    {maxRadius > 0 && <span> (Max radius: {maxRadius} km)</span>}
+                    {freeAbove > 0 && <span> Free delivery for orders <span className="font-bold text-emerald-600">≥ ₹{freeAbove}</span>.</span>}
                   </p>
-                )}
+                  <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                    <span className="text-[10.5px] font-semibold text-slate-400">Sample:</span>
+                    <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[11px] font-bold border border-blue-100">
+                      Up to {baseKm || 5} km: ₹{baseCharge}
+                    </span>
+                    <ArrowRight size={10} className="text-slate-300" />
+                    <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-[11px] font-bold border border-indigo-100">
+                      {(baseKm || 5) + stepKm} km: ₹{baseCharge + extraCharge}
+                    </span>
+                  </div>
+                </div>
               </div>
             </>
           ) : (

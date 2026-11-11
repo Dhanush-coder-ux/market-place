@@ -322,7 +322,7 @@ export function StoreSettingsLayout({ shop }: { shop: any }) {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
               {/* Form */}
               <div className="lg:col-span-7">
-                <ShopProfileForm editPath="/setup-digital-store" />
+                <ShopProfileForm editPath="/setup-digital-store?mode=edit" />
               </div>
 
               {/* Sidebar info */}

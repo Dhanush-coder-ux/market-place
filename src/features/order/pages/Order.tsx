@@ -18,7 +18,7 @@ import { VerifyDeliveryModal } from "../components/VerifyDeliveryModal";
 import { ReturnRequestCard } from "../components/ReturnRequestCard";
 import { CreateReturnRequestModal } from "../components/CreateReturnRequestModal";
 import type { ReturnRequestRecord } from "../types";
-import { toCardShape, parseOrderForDetail } from "../utils/orderDetailParser";
+import { toCardShape, parseOrderForDetail, isReturnDisallowedStatus } from "../utils/orderDetailParser";
 
 const Order = () => {
   const navigate = useNavigate();
@@ -221,6 +221,18 @@ const Order = () => {
   const handleStatusChange = async (newStatus: string, originalOrder: OrderRecord) => {
     try {
       const targetShopId = (originalOrder as any).shop_id || currentShopId;
+      const existingAdd = (originalOrder as any).additional_infos || {};
+      const isCanceling = ["CANCELED", "CANCELLED"].includes(String(newStatus || "").toUpperCase());
+      const mergedAddInfos = {
+        ...existingAdd,
+        ...(isCanceling
+          ? {
+              cancelled_by_source: "INVENTQ",
+              cancelled_by: "InventQ",
+              cancelled_by_label: "Cancelled manually by InventQ",
+            }
+          : {}),
+      };
       const payload = {
         id: originalOrder.id,
         shop_id: targetShopId,
@@ -232,12 +244,12 @@ const Order = () => {
         calculation_infos: (originalOrder as any).calculation_infos || {},
         charges_infos: (originalOrder as any).charges_infos || {},
         payment_infos: Array.isArray((originalOrder as any).payment_infos) ? {} : ((originalOrder as any).payment_infos || {}),
-        additional_infos: (originalOrder as any).additional_infos || {}
+        additional_infos: mergedAddInfos
       };
       
       const res = await orderApi.updateOrderStatus(payload);
       if (res) {
-        setOrders(prev => prev.map(o => o.id === originalOrder.id ? { ...o, status: newStatus } : o));
+        setOrders(prev => prev.map(o => o.id === originalOrder.id ? { ...o, status: newStatus, additional_infos: mergedAddInfos } : o));
         setRefreshKey(k => k + 1);
       }
     } catch (e) {
@@ -380,6 +392,7 @@ const Order = () => {
           <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" : "flex flex-col gap-3"}>
             {filteredOrders.map((order) => {
               const cardData = toCardShape(order, customerMap);
+              const allowReturn = !isReturnDisallowedStatus(cardData.status);
               return (
                 <OrdersCard
                   key={order.id}
@@ -387,7 +400,7 @@ const Order = () => {
                   setIsOpen={() => handleOpenDetails(order)}
                   viewMode={viewMode}
                   onStatusChange={(newStatus) => handleStatusChange(newStatus, order)}
-                  onRequestReturn={() => setRequestReturnModalOrder(order)}
+                  onRequestReturn={allowReturn ? () => setRequestReturnModalOrder(order) : undefined}
                   onVerifyDelivery={() => setVerifyingOrder({ id: order.id, shopId: (order as any).shop_id || currentShopId, billNo: cardData.billNo, customerName: cardData.customerName })}
                 />
               );
@@ -407,10 +420,14 @@ const Order = () => {
         {selectedOrder && (
           <OrderDetailView
             order={selectedOrder}
-            onRequestReturn={() => {
-              const orig = orders.find(o => o.id === selectedOrder.id) || selectedOrder;
-              setRequestReturnModalOrder(orig);
-            }}
+            onRequestReturn={
+              !isReturnDisallowedStatus(selectedOrder.status)
+                ? () => {
+                    const orig = orders.find(o => o.id === selectedOrder.id) || selectedOrder;
+                    setRequestReturnModalOrder(orig);
+                  }
+                : undefined
+            }
             onUpdateReturnStatus={handleReturnRequestStatusChange}
           />
         )}

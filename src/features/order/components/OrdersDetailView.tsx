@@ -3,6 +3,8 @@ import { Phone, User, ShoppingBag, IndianRupee, Percent, Truck, Tag, RotateCcw }
 import { AntBadge } from "@/components/ui/AntBadge";
 
 export type OrderItem = {
+  id?: string;
+  productId?: string;
   name: string;
   variant?: string;
   variantName?: string;
@@ -13,6 +15,9 @@ export type OrderItem = {
   gst?: string;
   gstRate?: number;
   gstAmount?: number;
+  returnedQuantity?: number;
+  status?: string;
+  isReturned?: boolean;
 };
 
 /**
@@ -62,8 +67,14 @@ export type OrderDetailType = {
   grandTotal: number;
   online_details?: any;
   status_updated_by?: string;
+  cancelled_by?: string | null;
+  cancelled_by_source?: string | null;
+  cancelled_by_user?: string | null;
   additional_infos?: any;
   return_requests?: any[];
+  returns?: any[];
+  hasReturn?: boolean;
+  isPartiallyReturned?: boolean;
 };
 
 const OrderDetailView: React.FC<{
@@ -71,6 +82,20 @@ const OrderDetailView: React.FC<{
   onRequestReturn?: () => void;
   onUpdateReturnStatus?: (requestId: string, status: "ACCEPTED" | "REJECTED") => void;
 }> = ({ order, onRequestReturn, onUpdateReturnStatus }) => {
+  const acceptedReturnStatuses = new Set(["ACCEPTED", "APPROVED", "COMPLETED", "RETURNED"]);
+  const hasReturn =
+    Boolean(order.hasReturn) ||
+    order.status === "RETURNED" ||
+    order.status === "REFUNDED" ||
+    (Array.isArray(order.returns) && order.returns.length > 0) ||
+    order.items.some((it) => Boolean(it.isReturned) || (it.returnedQuantity || 0) > 0) ||
+    (Array.isArray(order.return_requests) &&
+      order.return_requests.some((rr: any) =>
+        acceptedReturnStatuses.has(String(rr?.status || "").toUpperCase())
+      ));
+  const normalizedStatus = String(order.status || "").trim().toUpperCase();
+  const isCancelled = ["CANCELED", "CANCELLED", "REFUNDED", "REJECTED"].includes(normalizedStatus);
+  const isPartiallyReturned = Boolean(order.isPartiallyReturned);
   const gstAmt = Number(order.gstAmount || 0);
   const hasGst = gstAmt > 0;
   const cgstVal = order.cgst !== undefined ? order.cgst : Number((gstAmt / 2).toFixed(2));
@@ -149,7 +174,7 @@ const OrderDetailView: React.FC<{
         </h3>
 
         <div className="grid grid-cols-2 gap-3 text-xs text-slate-700">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-slate-500">Status:</span>
             <AntBadge 
               variant={
@@ -157,7 +182,7 @@ const OrderDetailView: React.FC<{
                   ? "pay-pending"
                   : order.status === "COMPLETED" || order.status === "DELIVERED"
                   ? "ps-completed"
-                  : order.status === "CANCELED" || order.status === "REFUNDED"
+                  : order.status === "CANCELED" || order.status === "CANCELLED" || order.status === "REFUNDED"
                   ? "ps-cancelled"
                   : "tx-adjustment"
               } 
@@ -166,6 +191,11 @@ const OrderDetailView: React.FC<{
             >
               {order.status}
             </AntBadge>
+            {hasReturn && (
+              <AntBadge variant="tx-sales-return" type="tag" icon={<RotateCcw size={10} strokeWidth={2.5} />}>
+                {isPartiallyReturned ? "Partially Returned" : "Returned"}
+              </AntBadge>
+            )}
           </div>
 
           <div>
@@ -193,6 +223,15 @@ const OrderDetailView: React.FC<{
               </div>
             )}
           </div>
+
+          {isCancelled && (
+            <div className="col-span-2 flex items-center justify-between text-xs pt-2 border-t border-slate-100">
+              <span className="font-semibold text-red-700">Cancelled by:</span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-50 border border-red-200 text-red-700 font-bold">
+                {order.cancelled_by || "Not recorded"}
+              </span>
+            </div>
+          )}
 
           {order.status_updated_by && (
             <div className="col-span-2 text-xs text-slate-500 pt-2 border-t border-slate-100">
@@ -252,6 +291,15 @@ const OrderDetailView: React.FC<{
                         {hasSeparateVariant && (
                           <div className="text-[11px] text-slate-500 font-normal truncate mt-0.5" title={cleanedVar}>
                             {cleanedVar}
+                          </div>
+                        )}
+                        {item.isReturned && (
+                          <div className="mt-1">
+                            <AntBadge variant="tx-sales-return" type="tag" icon={<RotateCcw size={9} strokeWidth={2.5} />}>
+                              {item.returnedQuantity && item.returnedQuantity < itmQty
+                                ? `Returned (${item.returnedQuantity}/${itmQty})`
+                                : "Returned"}
+                            </AntBadge>
                           </div>
                         )}
                       </td>
@@ -409,18 +457,26 @@ const OrderDetailView: React.FC<{
         </div>
       )}
 
-      {/* Action Footer: Request Return Button */}
-      {onRequestReturn && (
+      {/* Action Footer: Request Return Button (Blocked for cancelled orders) */}
+      {isCancelled ? (
         <div className="pt-2">
-          <button
-            type="button"
-            onClick={onRequestReturn}
-            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-500 hover:text-white transition-all shadow-xs"
-          >
-            <RotateCcw size={14} strokeWidth={2.5} />
-            Submit Return Request for This Order
-          </button>
+          <div className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-semibold text-red-700 bg-red-50/80 border border-red-200/80">
+            Return requests are disabled for cancelled orders
+          </div>
         </div>
+      ) : (
+        onRequestReturn && (
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={onRequestReturn}
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-500 hover:text-white transition-all shadow-xs"
+            >
+              <RotateCcw size={14} strokeWidth={2.5} />
+              Submit Return Request for This Order
+            </button>
+          </div>
+        )
       )}
     </div>
   );

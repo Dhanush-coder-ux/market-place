@@ -10,6 +10,7 @@ const statusConfig: Record<string, string> = {
   COMPLETED: "ps-completed",
   ACCEPTED: "ps-completed",
   CANCELED: "ps-cancelled",
+  CANCELLED: "ps-cancelled",
   REFUNDED: "ps-cancelled",
   EXCHANGED: "tx-adjustment",
   DELIVERED: "ps-completed",
@@ -39,7 +40,12 @@ const DeliveryBadge = ({ onClick }: { onClick?: () => void }) => (
 
 const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "grid", onStatusChange, onVerifyDelivery, onRequestReturn }) => {
   const variant = statusConfig[order.status] ?? "ps-draft";
-  const showDeliveryVerify = order.origin === "ONLINE" && !["COMPLETED", "CANCELED", "REFUNDED", "DELIVERED"].includes(order.status);
+  const showDeliveryVerify = order.origin === "ONLINE" && !["COMPLETED", "CANCELED", "CANCELLED", "REFUNDED", "DELIVERED"].includes(order.status);
+  const returnBadge = order.hasReturn ? (
+    <AntBadge variant="tx-sales-return" type="tag" icon={<RotateCcw size={10} strokeWidth={2.5} />}>
+      {order.isPartiallyReturned ? "Partially Returned" : "Returned"}
+    </AntBadge>
+  ) : null;
 
   const renderActions = (isGrid: boolean) => {
     const btnBase = `flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all duration-200 shadow-sm active:scale-95 ${isGrid ? 'flex-1' : ''}`;
@@ -94,8 +100,9 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
         {/* Left Section */}
         <div className="flex items-center gap-6 min-w-[240px]">
           <div>
-            <div className="mb-1.5 flex items-center gap-2">
+            <div className="mb-1.5 flex items-center gap-2 flex-wrap">
               <AntBadge variant="lb-brand" type="tag" icon={<Wifi size={10} strokeWidth={2} />}>Online</AntBadge>
+              {returnBadge}
               {showDeliveryVerify && <DeliveryBadge onClick={onVerifyDelivery} />}
             </div>
             <p className="text-xs font-normal text-slate-400 mb-0.5">{order.billNo}</p>
@@ -126,6 +133,11 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
             </div>
             <p className="text-xs font-medium text-slate-500 truncate">{order.phone}</p>
           </div>
+          {order.cancelled_by && ["CANCELED", "CANCELLED", "REFUNDED", "REJECTED"].includes((order.status || "").toUpperCase()) && (
+            <p className="text-[11px] text-red-600 truncate">
+              <span className="font-semibold">Cancelled by:</span> {order.cancelled_by}
+            </p>
+          )}
           {order.status_updated_by && (
             <p className="text-[11px] text-slate-500 truncate">
               <span className="font-semibold text-slate-600">Updated by:</span> {order.status_updated_by}
@@ -167,6 +179,7 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
           <div className="flex items-center gap-2.5 flex-wrap">
             <AntBadge variant="lb-brand" type="tag" icon={<Wifi size={10} strokeWidth={2} />}>Online</AntBadge>
             <span className="text-xs font-normal text-slate-400">{order.billNo}</span>
+            {returnBadge}
             {showDeliveryVerify && <DeliveryBadge onClick={onVerifyDelivery} />}
           </div>
 
@@ -203,6 +216,12 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
             <p className="text-sm font-medium text-slate-800 truncate">{order.phone}</p>
           </div>
         </div>
+
+        {order.cancelled_by && ["CANCELED", "CANCELLED", "REFUNDED", "REJECTED"].includes((order.status || "").toUpperCase()) && (
+          <div className="mb-2 px-2.5 py-1.5 rounded-md bg-red-50 border border-red-100 text-[11px] text-red-700">
+            <span className="font-bold">Cancelled by:</span> {order.cancelled_by}
+          </div>
+        )}
 
         {order.status_updated_by && (
           <div className="mb-4 px-2.5 py-1.5 rounded-md bg-slate-50 border border-slate-100 text-[11px] text-slate-600">

@@ -48,7 +48,7 @@ const INITIAL_STATE: StoreFormData = {
   ],
   deliveryOptions: {
     pickuponly: { enabled: true, speed: "Same Day", freeThreshold: 0, radius: 5, minOrderAmount: 0, chargePerKm: 0, manageStore: true, partners: false },
-    delivery: { enabled: true, speed: "Same Day", freeThreshold: 500, radius: 10, minOrderAmount: 0, deliveryCharge: 40, chargePerKm: 10, baseDistance: 5, extraDistanceStep: 1, pricingModel: "FLAT", manageStore: true, partners: true }
+    delivery: { enabled: true, speed: "Within a day", freeThreshold: 500, radius: 10, minOrderAmount: 0, deliveryCharge: 40, chargePerKm: 10, baseDistance: 5, extraDistanceStep: 1, pricingModel: "DISTANCE_TIERED", manageStore: true, partners: true }
   },
   selectedProducts: {}
 };
@@ -92,9 +92,15 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
       shop.getShopById(currentShopId).then((res) => {
         if (res && res.data) {
           const s = res.data;
-          if (s.name || s.id) {
-            setIsExistingStore(true);
-          }
+          const isConfigured =
+            s.visible_online === true ||
+            s.can_show_digital_store_dashboard === true ||
+            s.is_digital_store_configured === true ||
+            s.has_operating_hours === true ||
+            s.has_delivery_options === true ||
+            (Array.isArray(s.operating_hours) && s.operating_hours.length > 0) ||
+            (Array.isArray(s.delivery_options) && s.delivery_options.length > 0);
+          setIsExistingStore(Boolean(isConfigured));
           setForm((prev) => {
             const loadedOperatingHours = s.operating_hours?.length > 0 ? s.operating_hours : prev.operatingHours;
             const loadedDeliveryOptions = JSON.parse(JSON.stringify(prev.deliveryOptions));
@@ -121,7 +127,7 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
                     deliveryCharge: d.delivery_charge ?? loadedDeliveryOptions[key]?.deliveryCharge ?? 40,
                     baseDistance: d.base_distance ?? loadedDeliveryOptions[key]?.baseDistance ?? 5,
                     extraDistanceStep: d.extra_distance_step ?? loadedDeliveryOptions[key]?.extraDistanceStep ?? 1,
-                    pricingModel: d.pricing_model ?? loadedDeliveryOptions[key]?.pricingModel ?? "FLAT",
+                    pricingModel: key === "delivery" ? "DISTANCE_TIERED" : (d.pricing_model ?? loadedDeliveryOptions[key]?.pricingModel ?? "FLAT"),
                     chargePerKm: d.charge_per_km ?? loadedDeliveryOptions[key]?.chargePerKm ?? 10,
                     partners: d.delivery_by !== "INHOUSE",
                     manageStore: d.delivery_by === "INHOUSE",
@@ -291,15 +297,15 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
           ...(form.deliveryOptions.delivery ? [{
             type: "DELIVERY",
             enabled: !!form.deliveryOptions.delivery.enabled,
-            speed: form.deliveryOptions.delivery.speed || "Same Day",
+            speed: form.deliveryOptions.delivery.speed || "Within a day",
             free_shipping_amount: Number(form.deliveryOptions.delivery.freeThreshold) || 0,
-            radius: Number(form.deliveryOptions.delivery.radius) || 10,
+            radius: Number(form.deliveryOptions.delivery.radius) || 0,
             min_order_amount: Number(form.deliveryOptions.delivery.minOrderAmount) || 0,
             delivery_charge: Number(form.deliveryOptions.delivery.deliveryCharge) || 0,
             charge_per_km: Number(form.deliveryOptions.delivery.chargePerKm) || 0,
             base_distance: Number(form.deliveryOptions.delivery.baseDistance) || 0,
             extra_distance_step: Number(form.deliveryOptions.delivery.extraDistanceStep) || 1,
-            pricing_model: form.deliveryOptions.delivery.pricingModel || "FLAT",
+            pricing_model: "DISTANCE_TIERED",
             delivery_by: form.deliveryOptions.delivery.partners ? "PARTNERS" : "INHOUSE"
           }] : [])
         ]
@@ -344,8 +350,29 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
     }
   };
 
+  const validateStep3 = () => {
+    const del = form.deliveryOptions?.delivery;
+    if (del?.enabled) {
+      const r = Number(del.radius);
+      if (!del.radius || isNaN(r) || r <= 0) {
+        showToast("Please enter a valid delivery radius (greater than 0 km).", "error");
+        return false;
+      }
+      if (!del.speed || !String(del.speed).trim()) {
+        showToast("Please select an estimated delivery time.", "error");
+        return false;
+      }
+    }
+    if (!form.deliveryOptions?.pickuponly?.enabled && !form.deliveryOptions?.delivery?.enabled) {
+      showToast("Please enable at least one fulfillment option (Store Pickup or Delivery).", "error");
+      return false;
+    }
+    return true;
+  };
+
   const handleNext = async () => {
     if (currentStep === 1 && !validateStep1()) return;
+    if (currentStep === 3 && !validateStep3()) return;
     
     window.scrollTo({ top: 0, behavior: "smooth" });
     setCurrentStep((prev) => Math.min(prev + 1, STEPS.length));

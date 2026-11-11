@@ -25,6 +25,10 @@ export const CreateReturnRequestModal: React.FC<CreateReturnRequestModalProps> =
 
   if (!isOpen || !order) return null;
 
+  const isCancelledOrder = ["CANCELED", "CANCELLED", "REFUNDED", "REJECTED"].includes(
+    String(order.status || "").trim().toUpperCase()
+  );
+
   const rawItems: any[] = Array.isArray(order.items) ? order.items : [];
 
   const handleToggleItem = (itemId: string, defaultQty: number) => {
@@ -62,6 +66,11 @@ export const CreateReturnRequestModal: React.FC<CreateReturnRequestModalProps> =
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (isCancelledOrder) {
+      setError("Return requests cannot be submitted for cancelled or rejected orders.");
+      return;
+    }
 
     if (selectedCount === 0) {
       setError("Please select at least one item from this order to return.");
@@ -136,6 +145,26 @@ export const CreateReturnRequestModal: React.FC<CreateReturnRequestModalProps> =
         </div>
 
         {/* Content */}
+        {isCancelledOrder ? (
+          <div className="p-6 space-y-4">
+            <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm flex items-start gap-3">
+              <AlertCircle size={18} className="shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold">Return Request Not Allowed</p>
+                <p className="text-xs text-red-600 mt-1">
+                  This order has status {String(order.status || "CANCELED").toUpperCase()}. Cancelled orders cannot have return requests submitted.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        ) : (
         <form onSubmit={handleSubmit} className="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-xs flex items-center gap-2">
@@ -255,6 +284,7 @@ export const CreateReturnRequestModal: React.FC<CreateReturnRequestModalProps> =
             </button>
           </div>
         </form>
+        )}
       </div>
     </div>
   );

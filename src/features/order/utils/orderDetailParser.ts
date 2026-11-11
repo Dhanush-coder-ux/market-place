@@ -2,6 +2,90 @@ import type { OrderRecord } from "@/types/api";
 import type { OrderDetailType, OrderItem } from "../components/OrdersDetailView";
 import { cleanVariantText } from "../components/OrdersDetailView";
 
+export const RETURN_DISALLOWED_STATUSES = new Set([
+  "CANCELED",
+  "CANCELLED",
+  "REFUNDED",
+  "REJECTED",
+]);
+
+export const isReturnDisallowedStatus = (status?: string | null): boolean =>
+  RETURN_DISALLOWED_STATUSES.has(String(status || "").trim().toUpperCase());
+
+export const resolveCancelledInfo = (o: any, addObj: any) => {
+  const status = String(o?.status || "").trim().toUpperCase();
+  if (!["CANCELED", "CANCELLED", "REFUNDED", "REJECTED"].includes(status)) {
+    return {
+      cancelled_by: null,
+      cancelled_by_source: null,
+      cancelled_by_user: null,
+    };
+  }
+
+  const add = addObj && typeof addObj === "object" ? addObj : {};
+  const history: any[] = Array.isArray(add.status_history) ? add.status_history : [];
+  const cancelEntry = [...history]
+    .reverse()
+    .find((h) => ["CANCELED", "CANCELLED", "REJECTED"].includes(String(h?.to_status || "").toUpperCase()));
+
+  const rawSource = String(
+    add.cancelled_by_source ||
+      add.canceled_by_source ||
+      cancelEntry?.cancelled_by_source ||
+      ""
+  )
+    .trim()
+    .toUpperCase();
+
+  const rawActor = String(
+    add.cancelled_by ||
+      add.cancelled_by_label ||
+      cancelEntry?.cancelled_by ||
+      cancelEntry?.cancelled_by_label ||
+      ""
+  )
+    .trim()
+    .toUpperCase();
+
+  const rawUser =
+    add.cancelled_by_user ||
+    add.canceled_by ||
+    cancelEntry?.updated_by ||
+    o?.status_updated_by ||
+    add.status_updated_by ||
+    null;
+
+  if (
+    rawSource.includes("DIGITAL") ||
+    rawSource.includes("CUSTOMER") ||
+    rawActor === "CUSTOMER" ||
+    rawActor === "CANCELLED BY CUSTOMER"
+  ) {
+    return {
+      cancelled_by: "Customer",
+      cancelled_by_source: "DIGITAL_STORE",
+      cancelled_by_user: rawUser,
+    };
+  }
+
+  if (
+    rawSource.includes("INVENTQ") ||
+    rawActor.includes("INVENTQ")
+  ) {
+    return {
+      cancelled_by: "InventQ (Manual)",
+      cancelled_by_source: "INVENTQ",
+      cancelled_by_user: rawUser,
+    };
+  }
+
+  return {
+    cancelled_by: rawUser ? `InventQ (Manual)` : null,
+    cancelled_by_source: rawUser ? "INVENTQ" : null,
+    cancelled_by_user: rawUser,
+  };
+};
+
 export const toCardShape = (o: OrderRecord, customerMap?: Record<string, { name: string; phone: string }>) => {
   const c = o.customer_id && customerMap ? customerMap[o.customer_id] : null;
   const anyOrder = o as any;
@@ -60,19 +144,69 @@ export const toCardShape = (o: OrderRecord, customerMap?: Record<string, { name:
   }
   const totalAmount = Number(Number(rawTotal).toFixed(2));
 
+  const rawReturns: any[] = Array.isArray(anyOrder.returns) ? anyOrder.returns : [];
+  const rawReturnRequests: any[] = Array.isArray(anyOrder.return_requests) ? anyOrder.return_requests : [];
+  const rawOrderItems: any[] = Array.isArray(anyOrder.items) ? anyOrder.items : [];
+  const normalizedStatus = (o.status ?? "PENDING").toUpperCase();
+  const acceptedReturnStatuses = new Set(["ACCEPTED", "APPROVED", "COMPLETED", "RETURNED"]);
+  const hasAcceptedReturnReq = rawReturnRequests.some((rr: any) =>
+    acceptedReturnStatuses.has(String(rr?.status || "").toUpperCase())
+  );
+  const hasItemReturn = rawOrderItems.some((it: any) =>
+    Number(it?.returned_quantity || 0) > 0 ||
+    ["RETURNED", "REFUNDED"].includes(String(it?.status || "").toUpperCase()) ||
+    (Array.isArray(it?.returns) && it.returns.length > 0)
+  );
+  const hasReturn =
+    normalizedStatus === "RETURNED" ||
+    normalizedStatus === "REFUNDED" ||
+    rawReturns.length > 0 ||
+    hasAcceptedReturnReq ||
+    hasItemReturn;
+
+  let isPartiallyReturned = false;
+  if (hasReturn && normalizedStatus !== "RETURNED" && normalizedStatus !== "REFUNDED" && rawOrderItems.length > 0) {
+    const reqReturnedByProduct: Record<string, number> = {};
+    for (const rr of rawReturnRequests) {
+      if (!acceptedReturnStatuses.has(String(rr?.status || "").toUpperCase())) continue;
+      for (const rItem of (Array.isArray(rr?.items) ? rr.items : [])) {
+        const key = String(rItem?.order_item_id || rItem?.product_id || rItem?.product_name || "").toLowerCase();
+        if (key) reqReturnedByProduct[key] = (reqReturnedByProduct[key] || 0) + (Number(rItem?.quantity || 0) || 0);
+      }
+    }
+    const allItemsFullyReturned = rawOrderItems.every((it: any) => {
+      const q = Number(it?.quantity ?? it?.qty ?? 1) || 1;
+      const itemStatus = String(it?.status || "").toUpperCase();
+      if (itemStatus === "RETURNED" || itemStatus === "REFUNDED") return true;
+      const directRet = Number(it?.returned_quantity || 0);
+      const reqRet =
+        (it?.id ? reqReturnedByProduct[String(it.id).toLowerCase()] : 0) ||
+        (it?.product_id ? reqReturnedByProduct[String(it.product_id).toLowerCase()] : 0) ||
+        (it?.product_name ? reqReturnedByProduct[String(it.product_name).toLowerCase()] : 0) ||
+        0;
+      return Math.max(directRet, reqRet) >= q;
+    });
+    isPartiallyReturned = !allItemsFullyReturned;
+  }
+
   return {
     id: o.id,
     billNo: o.ui_id || o.id,
     customerName: name,
     phone: phone,
     totalAmount: isNaN(totalAmount) ? 0 : totalAmount,
-    status: (o.status ?? "PENDING").toUpperCase(),
+    status: normalizedStatus,
     origin: (o.origin || "ONLINE").toUpperCase(),
     deliveryCode: anyOrder.delivery_code || onlineObj.delivery_code || addObj.delivery_code || null,
     online_details: Object.keys(onlineObj).length > 0 ? onlineObj : (addObj.user_id || addObj.full_address || addObj.address_id ? addObj : {}),
     status_updated_by: o.status_updated_by || addObj.status_updated_by || addObj.accepted_by || addObj.canceled_by || addObj.rejected_by || addObj.last_action_by || null,
+    ...resolveCancelledInfo(o, addObj),
     status_history: addObj.status_history || [],
     additional_infos: addObj,
+    returns: rawReturns,
+    return_requests: rawReturnRequests,
+    hasReturn,
+    isPartiallyReturned,
   };
 };
 
@@ -94,6 +228,32 @@ export const parseOrderForDetail = (
     : (Array.isArray(calc.items) ? calc.items : []);
 
   const calcItemsList: any[] = Array.isArray(calc.items) ? calc.items : [];
+  const rawReturnsList: any[] = Array.isArray(o.returns)
+    ? o.returns
+    : (Array.isArray((cardShape as any).returns) ? (cardShape as any).returns : []);
+  const rawReturnRequestsList: any[] = Array.isArray(o.return_requests)
+    ? o.return_requests
+    : (Array.isArray((cardShape as any).return_requests) ? (cardShape as any).return_requests : []);
+  const acceptedReturnStatuses = new Set(["ACCEPTED", "APPROVED", "COMPLETED", "RETURNED"]);
+  const reqReturnedByItemKey: Record<string, number> = {};
+  for (const rr of rawReturnRequestsList) {
+    if (!acceptedReturnStatuses.has(String(rr?.status || "").toUpperCase())) continue;
+    for (const rItem of (Array.isArray(rr?.items) ? rr.items : [])) {
+      const qtyVal = Number(rItem?.quantity || 0) || 0;
+      if (rItem?.order_item_id) {
+        const k = `id:${String(rItem.order_item_id).toLowerCase()}`;
+        reqReturnedByItemKey[k] = (reqReturnedByItemKey[k] || 0) + qtyVal;
+      }
+      if (rItem?.product_id) {
+        const k = `prod:${String(rItem.product_id).toLowerCase()}`;
+        reqReturnedByItemKey[k] = (reqReturnedByItemKey[k] || 0) + qtyVal;
+      }
+      if (rItem?.product_name) {
+        const k = `name:${String(rItem.product_name).trim().toLowerCase()}`;
+        reqReturnedByItemKey[k] = (reqReturnedByItemKey[k] || 0) + qtyVal;
+      }
+    }
+  }
 
   const mappedItems: OrderItem[] = rawItems.map((i: any, index: number) => {
     const calcItem = calcItemsList.find(
@@ -163,7 +323,23 @@ export const parseOrderForDetail = (
       ? Number(i.taxable_price)
       : (gstAmount > 0 ? Math.max(0, (lineTotal - gstAmount) / qty) : price);
 
+    const itemStatus = String(i.status || "").toUpperCase();
+    const directReturnedQty = Number(i.returned_quantity || 0) || 0;
+    const reqReturnedQty =
+      (i.id ? reqReturnedByItemKey[`id:${String(i.id).toLowerCase()}`] : undefined) ??
+      (i.product_id ? reqReturnedByItemKey[`prod:${String(i.product_id).toLowerCase()}`] : undefined) ??
+      reqReturnedByItemKey[`name:${cleanVariantText(itemName).toLowerCase()}`] ??
+      0;
+    const returnedQty = Math.max(directReturnedQty, reqReturnedQty);
+    const isItemReturned =
+      returnedQty > 0 ||
+      itemStatus === "RETURNED" ||
+      itemStatus === "REFUNDED" ||
+      (Array.isArray(i.returns) && i.returns.length > 0);
+
     return {
+      id: i.id,
+      productId: i.product_id,
       name: cleanVariantText(itemName),
       variant: cleanVar || undefined,
       qty,
@@ -173,6 +349,9 @@ export const parseOrderForDetail = (
       gst: gstLabel,
       gstRate,
       gstAmount: Number(gstAmount.toFixed(2)),
+      returnedQuantity: returnedQty > 0 ? returnedQty : undefined,
+      status: itemStatus || undefined,
+      isReturned: isItemReturned,
     };
   });
 
@@ -232,6 +411,20 @@ export const parseOrderForDetail = (
 
   const grandTotal = Number((subtotal + effectiveGst + deliveryCharge - discount).toFixed(2));
 
+  const orderHasReturn =
+    Boolean((cardShape as any).hasReturn) ||
+    rawReturnsList.length > 0 ||
+    mappedItems.some((it) => Boolean(it.isReturned)) ||
+    rawReturnRequestsList.some((rr: any) =>
+      acceptedReturnStatuses.has(String(rr?.status || "").toUpperCase())
+    );
+  const orderIsPartiallyReturned =
+    orderHasReturn &&
+    cardShape.status !== "RETURNED" &&
+    cardShape.status !== "REFUNDED" &&
+    mappedItems.length > 0 &&
+    !mappedItems.every((it) => it.isReturned && (it.returnedQuantity || it.qty) >= it.qty);
+
   return {
     ...cardShape,
     orderType: o.origin || cardShape.origin || "ONLINE",
@@ -245,11 +438,16 @@ export const parseOrderForDetail = (
     deliveryCharge: isNaN(deliveryCharge) ? 0 : deliveryCharge,
     discount: isNaN(discount) ? 0 : discount,
     grandTotal: isNaN(grandTotal) ? 0 : grandTotal,
+    returns: rawReturnsList,
+    return_requests: rawReturnRequestsList,
+    hasReturn: orderHasReturn,
+    isPartiallyReturned: orderIsPartiallyReturned,
     online_details:
       (o.online_details && Object.keys(o.online_details).length > 0)
         ? o.online_details
         : cardShape.online_details,
     status_updated_by: o.status_updated_by || addInfos.status_updated_by || addInfos.accepted_by || addInfos.canceled_by || addInfos.rejected_by || cardShape.status_updated_by || null,
+    ...resolveCancelledInfo(o, addInfos),
   };
 };
 

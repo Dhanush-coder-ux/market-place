@@ -1,11 +1,10 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, FC, ReactNode } from "react";
 import {
   IndianRupee,
   ShoppingBag,
   ShoppingCart,
   TrendingUp,
   Package,
-  Calendar,
   RefreshCw,
   ArrowUpRight,
   ArrowDownRight,
@@ -22,14 +21,13 @@ import {
   PieChart,
   Pie,
   Cell,
+  CartesianGrid,
 } from "recharts";
 import { useBusinessApi } from "@/context/BusinessApiContext";
 import { useToast } from "@/context/ToastContext";
 import { useNotifications } from "@/context/NotificationContext";
 import { apiClient } from "@/services/api/apiClient";
 import { ENDPOINTS, SHOP_ID, getShopId } from "@/services/endpoints";
-import { CustomTooltip } from "../components/CustomTooltip";
-import { SectionCard } from "../components/SectionCard";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 
 // ── TYPES ────────────────────────────────────────────────────────────────────
@@ -133,7 +131,6 @@ const startOfDay = (d: Date) => {
   return r;
 };
 
-
 const normalizePaymentMethod = (val: string): "Cash" | "UPI" | "Card" | "Bank Transfer" | "On Credit" => {
   if (!val) return "Cash";
   const u = String(val).trim().toUpperCase();
@@ -178,6 +175,71 @@ const getRangeDate = (key: RangeKey): { start: Date; end: Date } | null => {
     case "custom":
       return { start: startOfDay(now), end: now };
   }
+};
+
+// ── ENHANCED SUB-COMPONENTS ──────────────────────────────────────────────────
+
+const SectionCard: FC<{ title: string; children: ReactNode; action?: ReactNode }> = ({
+  title,
+  children,
+  action,
+}) => (
+  <div className="bg-white rounded-xl border border-[#E5EAF0] shadow-[0_1px_3px_rgba(0,0,0,0.03)] overflow-hidden transition-all duration-200">
+    <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#E5EAF0] bg-white">
+      <h3 className="font-semibold text-[#27364B] text-sm tracking-tight">{title}</h3>
+      {action}
+    </div>
+    {children}
+  </div>
+);
+
+const TrendTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white border border-[#E5EAF0] text-xs rounded-lg px-3.5 py-2.5 shadow-[0_4px_16px_rgba(0,0,0,0.08)]">
+        <p className="font-semibold text-[#27364B] mb-1.5">{label}</p>
+        <div className="space-y-1">
+          {payload.map((p: any, i: number) => (
+            <div key={i} className="flex items-center justify-between gap-4 text-xs">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: p.stroke || p.color }} />
+                <span className="text-[#74839A] font-medium">{p.name}</span>
+              </div>
+              <span className="font-semibold text-[#27364B] tabular-nums">
+                ₹{Number(p.value || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
+const PaymentTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    const data = payload[0];
+    return (
+      <div className="bg-white border border-[#E5EAF0] text-xs rounded-lg px-3.5 py-2 shadow-[0_4px_16px_rgba(0,0,0,0.08)]">
+        <div className="flex items-center gap-1.5 mb-1">
+          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: data.payload?.color }} />
+          <span className="font-semibold text-[#27364B]">{data.name}</span>
+        </div>
+        <div className="space-y-0.5 text-[11px]">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[#74839A]">Amount:</span>
+            <span className="font-semibold text-[#27364B] tabular-nums">{fmt(data.value)}</span>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[#74839A]">Orders:</span>
+            <span className="font-semibold text-[#27364B] tabular-nums">{data.payload?.count ?? 0}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  return null;
 };
 
 // ── MAIN COMPONENT ───────────────────────────────────────────────────────────
@@ -252,7 +314,7 @@ const AnalyticsDashboard = () => {
     fetchProducts();
   }, [getActiveShopId]);
 
-  // ── Fetch Suppliers and Categories for Filter ──
+  // ── Fetch Suppliers for Filter ──
   useEffect(() => {
     const shopId = getActiveShopId();
     if (!shopId) return;
@@ -305,7 +367,7 @@ const AnalyticsDashboard = () => {
     } finally {
       setLoading(false);
     }
-  }, [analytics, dateRange, selectedSupplier, getActiveShopId]);
+  }, [analytics, dateRange, selectedSupplier, getActiveShopId, fetchOrders]);
 
   useEffect(() => {
     if (activeRange !== "custom" || (customStart && customEnd)) {
@@ -529,16 +591,16 @@ const AnalyticsDashboard = () => {
     return Object.values(map).sort((a: any, b: any) => a.date.localeCompare(b.date));
   }, [stats, netRevenue, totalOrders, totalProfit, totalPurchaseAmount]);
 
-  // Payment Breakdown
+  // Payment Breakdown with Brand Palette
   const paymentBreakdown = useMemo(() => {
     const backendBreakdown = salesOverall.payment_breakdown || (stats?.dashboard?.sales as any)?.payment_breakdown;
 
     const counts: Record<string, { name: string; value: number; count: number; color: string }> = {
-      Cash: { name: "Cash", value: 0, count: 0, color: "#10b981" },
-      UPI: { name: "UPI", value: 0, count: 0, color: "#3b82f6" },
-      Card: { name: "Card", value: 0, count: 0, color: "#6366f1" },
-      "Bank Transfer": { name: "Bank Transfer", value: 0, count: 0, color: "#06b6d4" },
-      "On Credit": { name: "On Credit", value: 0, count: 0, color: "#f59e0b" },
+      Cash: { name: "Cash", value: 0, count: 0, color: "#286038" },
+      UPI: { name: "UPI", value: 0, count: 0, color: "#0D9F6E" },
+      Card: { name: "Card", value: 0, count: 0, color: "#27364B" },
+      "Bank Transfer": { name: "Bank Transfer", value: 0, count: 0, color: "#88B878" },
+      "On Credit": { name: "On Credit", value: 0, count: 0, color: "#D69A35" },
     };
 
     if (ordersList.length > 0) {
@@ -605,7 +667,7 @@ const AnalyticsDashboard = () => {
 
     const active = Object.values(counts).filter((c) => c.value > 0 || c.count > 0);
     if (active.length === 0) {
-      return [{ name: "Cash", value: 0, count: 0, color: "#10b981" }];
+      return [{ name: "Cash", value: 0, count: 0, color: "#286038" }];
     }
     return active;
   }, [ordersList, dateRange, salesOverall, stats]);
@@ -714,83 +776,86 @@ const AnalyticsDashboard = () => {
   }, [stats, supplierNameMap]);
 
   return (
-    <div className="min-h-screen bg-slate-50/50 p-3 sm:p-4 md:p-6 lg:p-8 pb-20 md:pb-8 font-sans">
-      <div className="max-w-[1600px] mx-auto space-y-4 sm:space-y-6">
+    <div className="min-h-screen bg-[#F7F9FA] text-[#27364B] p-4 sm:p-6 lg:p-8 font-sans antialiased">
+      <div className="max-w-[1600px] mx-auto space-y-6">
 
-        {/* ── HEADER ── */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
-          <div className="p-4 sm:p-5 md:px-6 flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
-            <div>
-              <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">Dashboard</h1>
-            </div>
+        {/* ── HEADER / FILTER CONTROL BAR ── */}
+        <div className="bg-white rounded-xl border border-[#E5EAF0] shadow-[0_1px_3px_rgba(0,0,0,0.03)] overflow-hidden">
+          <div className="p-5 md:px-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <h1 className="text-lg sm:text-xl font-bold text-[#27364B] tracking-tight">Dashboard</h1>
 
             {/* Time filters & Actions */}
-            <div className="flex items-center gap-2 flex-wrap w-full md:w-auto">
-              <div className="bg-slate-100 p-1 rounded-xl flex items-center gap-1 overflow-x-auto max-w-full scrollbar-none">
-                {(["today", "month", "year", "all", "custom"] as RangeKey[]).map((r) => (
-                  <button
-                    key={r}
-                    onClick={() => setActiveRange(r)}
-                    className={`px-3 sm:px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all shrink-0 ${
-                      activeRange === r
-                        ? "bg-white text-slate-600 shadow-xs"
-                        : "text-slate-500 hover:text-slate-700"
-                    }`}
-                  >
-                    {RANGE_LABELS[r]}
-                  </button>
-                ))}
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Segmented Range Control */}
+              <div className="bg-[#F1F4F7] p-1 rounded-lg border border-[#E5EAF0] flex items-center gap-0.5 overflow-x-auto max-w-full">
+                {(["today", "month", "year", "all", "custom"] as RangeKey[]).map((r) => {
+                  const isActive = activeRange === r;
+                  return (
+                    <button
+                      key={r}
+                      onClick={() => setActiveRange(r)}
+                      className={`px-3 py-1.5 rounded-md text-xs transition-all duration-150 cursor-pointer shrink-0 ${
+                        isActive
+                          ? "bg-white text-[#103020] font-semibold shadow-[0_1px_2px_rgba(0,0,0,0.06)]"
+                          : "text-[#74839A] hover:text-[#27364B] hover:bg-white/50 font-medium"
+                      }`}
+                    >
+                      {RANGE_LABELS[r]}
+                    </button>
+                  );
+                })}
               </div>
 
-              {/* Refresh */}
+              {/* Refresh Button */}
               <button
                 onClick={fetchStats}
-                className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-all cursor-pointer"
-                title="Refresh"
+                className="w-9 h-9 rounded-lg border border-[#E5EAF0] bg-white text-[#74839A] hover:text-[#27364B] hover:bg-[#F7F9FA] hover:border-[#D1D9E2] flex items-center justify-center transition-all duration-150 shadow-[0_1px_2px_rgba(0,0,0,0.02)] active:scale-95 cursor-pointer"
+                title="Refresh dashboard data"
+                aria-label="Refresh dashboard data"
               >
-                <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-slate-600" : ""}`} />
+                <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-[#286038]" : ""}`} />
               </button>
               
-              {/* Sync */}
+              {/* Sync Button */}
               <button
                 onClick={handleSync}
                 disabled={isSyncing}
-                className="h-9 px-4 rounded-xl bg-slate-500 flex items-center justify-center text-white font-medium text-xs hover:bg-blue-700 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="h-9 px-3.5 rounded-lg bg-[#286038] hover:bg-[#103020] text-white font-medium text-xs flex items-center justify-center transition-all duration-150 shadow-[0_1px_2px_rgba(40,96,56,0.2)] active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Sync Data"
               >
-                <Zap className={`w-4 h-4 mr-1.5 ${isSyncing ? "animate-pulse" : ""}`} />
-                {isSyncing ? "Syncing..." : "Sync"}
+                <Zap className={`w-3.5 h-3.5 mr-1.5 ${isSyncing ? "animate-pulse" : ""}`} />
+                <span>{isSyncing ? "Syncing..." : "Sync"}</span>
               </button>
             </div>
           </div>
 
-          {/* Custom date inputs */}
+          {/* Custom date inputs when Custom is active */}
           {activeRange === "custom" && (
-            <div className="px-4 sm:px-6 pb-4 flex flex-wrap items-center gap-2 sm:gap-3 animate-in fade-in">
-              <div className="flex items-center gap-2 flex-1 sm:flex-initial min-w-[140px]">
-                <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
+            <div className="px-5 md:px-6 pb-4 pt-1 flex items-center gap-3 border-t border-[#E5EAF0] bg-[#FDFEFE] flex-wrap animate-in fade-in duration-150">
+              <span className="text-xs font-medium text-[#74839A]">Custom Range:</span>
+              <div className="flex items-center gap-2 flex-wrap">
                 <input
                   type="date"
                   value={customStart}
                   onChange={(e) => setCustomStart(e.target.value)}
-                  className="w-full sm:w-auto px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                  className="px-3 py-1.5 rounded-lg border border-[#E5EAF0] text-xs font-medium text-[#27364B] bg-white focus:outline-none focus:ring-2 focus:ring-[#88B878]/30 focus:border-[#286038] shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
+                />
+                <span className="text-xs text-[#74839A] font-medium">to</span>
+                <input
+                  type="date"
+                  value={customEnd}
+                  onChange={(e) => setCustomEnd(e.target.value)}
+                  className="px-3 py-1.5 rounded-lg border border-[#E5EAF0] text-xs font-medium text-[#27364B] bg-white focus:outline-none focus:ring-2 focus:ring-[#88B878]/30 focus:border-[#286038] shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
                 />
               </div>
-              <span className="text-xs text-slate-400">to</span>
-              <input
-                type="date"
-                value={customEnd}
-                onChange={(e) => setCustomEnd(e.target.value)}
-                className="flex-1 sm:flex-initial min-w-[130px] px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
-              />
             </div>
           )}
 
-          {/* Filters Bar */}
-          <div className="px-4 sm:px-6 py-3 border-t border-slate-100 flex items-center gap-3 sm:gap-4 bg-slate-50/50 flex-wrap">
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <span className="text-xs font-medium text-slate-500 shrink-0">Supplier:</span>
-              <div className="flex-1 sm:w-48">
+          {/* Supplier Filter Bar */}
+          <div className="px-5 md:px-6 py-3 border-t border-[#E5EAF0] flex items-center justify-between gap-4 bg-[#FDFEFE] flex-wrap">
+            <div className="flex items-center gap-2.5">
+              <span className="text-xs font-medium text-[#74839A]">Filter by Supplier:</span>
+              <div className="w-52">
                 <ReusableSelect
                   value={selectedSupplier}
                   onValueChange={setSelectedSupplier}
@@ -799,195 +864,228 @@ const AnalyticsDashboard = () => {
                     ...suppliers.map((s) => ({ label: String(s.name || s.business_name || s.id), value: s.id })),
                   ]}
                   placeholder="All Suppliers"
-                  className="h-8.5 py-0 px-3 min-h-0 text-xs font-medium bg-white"
+                  className="h-8.5 py-0 px-3 min-h-0 text-xs font-medium bg-white border-[#E5EAF0] text-[#27364B] focus:ring-[#88B878]/20 focus:border-[#286038] rounded-lg shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
                 />
               </div>
             </div>
 
-
+            {selectedSupplier && (
+              <button
+                onClick={() => setSelectedSupplier("")}
+                className="text-xs text-[#286038] hover:text-[#103020] font-medium hover:underline transition-colors cursor-pointer"
+              >
+                Clear filter
+              </button>
+            )}
           </div>
         </div>
 
         {/* ── ERROR STATE ── */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600 font-semibold">
-            {error}
+          <div className="bg-[#FDF2F2] border border-[#DC6464]/30 rounded-xl px-4 py-3 text-sm text-[#DC6464] font-medium flex items-center justify-between">
+            <span>{error}</span>
+            <button
+              onClick={fetchStats}
+              className="text-xs font-semibold text-[#DC6464] hover:underline cursor-pointer"
+            >
+              Retry
+            </button>
           </div>
         )}
 
-        {/* ── STAT CARDS ── */}
+        {/* ── STAT CARDS (5 KPIs) ── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-          {/* Net Revenue */}
-          <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-all duration-200 group flex flex-col justify-between">
+          
+          {/* 1. Net Revenue */}
+          <div className="bg-white rounded-xl p-5 border border-[#E5EAF0] shadow-[0_1px_3px_rgba(0,0,0,0.03)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.05)] hover:border-[#D1D9E2] transition-all duration-200 group flex flex-col justify-between h-full">
             <div>
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <h3 className="text-[11px] font-medium uppercase tracking-wider text-slate-400">Net Revenue</h3>
-                  <p className="text-[11px] text-slate-400 font-medium mt-0.5">Total excl. GST</p>
+                  <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[#74839A]">Net Revenue</h3>
+                  <p className="text-xs text-[#74839A] font-medium mt-0.5">Total excl. GST</p>
                 </div>
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-blue-50 text-slate-600 shrink-0">
-                  <IndianRupee className="w-5 h-5" strokeWidth={2.5} />
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-[#EAF2E8] text-[#286038] shrink-0 transition-transform duration-200 group-hover:scale-105">
+                  <IndianRupee className="w-4.5 h-4.5" strokeWidth={2.2} />
                 </div>
               </div>
-              <div className="flex items-end gap-2 mb-1">
-                <span className="text-[26px] font-semibold text-slate-700 tracking-tight leading-none">
+              <div className="flex items-end gap-2 mt-3">
+                <span className="text-[26px] font-semibold text-[#27364B] tracking-tight leading-none tabular-nums truncate" title={fmt(netRevenue)}>
                   {loading ? "—" : fmt(netRevenue)}
                 </span>
               </div>
             </div>
 
-            <div className="mt-4 pt-3.5 border-t border-slate-100 space-y-2">
-              <div className="flex items-center justify-between">
+            <div className="mt-5 pt-3.5 border-t border-[#E5EAF0] space-y-2">
+              <div className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-                  <span className="text-xs font-medium text-slate-600">Received</span>
+                  <span className="w-2 h-2 rounded-full bg-[#0D9F6E]"></span>
+                  <span className="font-medium text-[#74839A]">Received</span>
                 </div>
-                <span className="text-xs font-medium text-emerald-500">{fmt(receivedAmount)}</span>
+                <span className="font-semibold text-[#0D9F6E] tabular-nums">{loading ? "—" : fmt(receivedAmount)}</span>
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-amber-400"></span>
-                  <span className="text-xs font-medium text-slate-600">Outstanding</span>
+                  <span className="w-2 h-2 rounded-full bg-[#D69A35]"></span>
+                  <span className="font-medium text-[#74839A]">Outstanding</span>
                 </div>
-                <span className="text-xs font-medium text-amber-500">{fmt(customerOutstanding)}</span>
+                <span className="font-semibold text-[#D69A35] tabular-nums">{loading ? "—" : fmt(customerOutstanding)}</span>
               </div>
             </div>
           </div>
 
-          {/* Total Profit */}
-          <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-all duration-200 group flex flex-col justify-between">
+          {/* 2. Total Profit */}
+          <div className="bg-white rounded-xl p-5 border border-[#E5EAF0] shadow-[0_1px_3px_rgba(0,0,0,0.03)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.05)] hover:border-[#D1D9E2] transition-all duration-200 group flex flex-col justify-between h-full">
             <div>
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <h3 className="text-[11px] font-medium uppercase tracking-wider text-slate-400">Total Profit</h3>
-                  <p className="text-[11px] text-slate-400 font-medium mt-0.5">Net earnings</p>
+                  <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[#74839A]">Total Profit</h3>
+                  <p className="text-xs text-[#74839A] font-medium mt-0.5">Net earnings</p>
                 </div>
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${totalProfit >= 0 ? "bg-emerald-50 text-emerald-500" : "bg-rose-50 text-rose-500"}`}>
-                  <TrendingUp className="w-5 h-5" strokeWidth={2.5} />
+                <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-105 ${totalProfit >= 0 ? "bg-[#EBF8F2] text-[#0D9F6E]" : "bg-[#FDF2F2] text-[#DC6464]"}`}>
+                  <TrendingUp className="w-4.5 h-4.5" strokeWidth={2.2} />
                 </div>
               </div>
-              <div className="flex items-end gap-2 mb-1">
-                <span className={`text-[26px] font-semibold tracking-tight leading-none ${totalProfit >= 0 ? "text-emerald-500" : "text-rose-500"}`}>
+              <div className="flex items-baseline gap-2 mt-3">
+                <span className={`text-[26px] font-semibold tracking-tight leading-none tabular-nums truncate ${totalProfit >= 0 ? "text-[#0D9F6E]" : "text-[#DC6464]"}`} title={fmt(totalProfit)}>
                   {loading ? "—" : fmt(totalProfit)}
                 </span>
-                {totalProfit >= 0 ? (
-                  <ArrowUpRight className="w-4 h-4 text-emerald-500 mb-0.5" />
-                ) : (
-                  <ArrowDownRight className="w-4 h-4 text-rose-500 mb-0.5" />
+                {!loading && (
+                  totalProfit >= 0 ? (
+                    <ArrowUpRight className="w-4 h-4 text-[#0D9F6E] shrink-0" />
+                  ) : (
+                    <ArrowDownRight className="w-4 h-4 text-[#DC6464] shrink-0" />
+                  )
                 )}
               </div>
             </div>
 
-
+            <div className="mt-5 pt-3.5 border-t border-[#E5EAF0]">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-[11px] font-medium text-[#74839A] uppercase tracking-wider">Status</span>
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${totalProfit >= 0 ? "bg-[#EBF8F2] text-[#0D9F6E]" : "bg-[#FDF2F2] text-[#DC6464]"}`}>
+                  {totalProfit >= 0 ? "Profitable" : "Loss"}
+                </span>
+              </div>
+            </div>
           </div>
 
-          {/* Total Purchase */}
-          <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-all duration-200 group flex flex-col justify-between">
+          {/* 3. Total Purchase */}
+          <div className="bg-white rounded-xl p-5 border border-[#E5EAF0] shadow-[0_1px_3px_rgba(0,0,0,0.03)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.05)] hover:border-[#D1D9E2] transition-all duration-200 group flex flex-col justify-between h-full">
             <div>
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <h3 className="text-[11px] font-medium uppercase tracking-wider text-slate-400">Total Purchase</h3>
-                  <p className="text-[11px] text-slate-400 font-medium mt-0.5">Procurement spend</p>
+                  <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[#74839A]">Total Purchase</h3>
+                  <p className="text-xs text-[#74839A] font-medium mt-0.5">Procurement spend</p>
                 </div>
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-indigo-50 text-indigo-600 shrink-0">
-                  <ShoppingBag className="w-5 h-5" strokeWidth={2.2} />
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-[#F1F4F7] text-[#27364B] shrink-0 transition-transform duration-200 group-hover:scale-105">
+                  <ShoppingBag className="w-4.5 h-4.5" strokeWidth={2.2} />
                 </div>
               </div>
-              <div className="flex items-end gap-2 mb-1">
-                <span className="text-[26px] font-semibold text-slate-700 tracking-tight leading-none">
+              <div className="flex items-end gap-2 mt-3">
+                <span className="text-[26px] font-semibold text-[#27364B] tracking-tight leading-none tabular-nums truncate" title={fmt(totalPurchaseAmount)}>
                   {loading ? "—" : fmt(totalPurchaseAmount)}
                 </span>
               </div>
             </div>
 
-            <div className="mt-4 pt-3.5 border-t border-slate-100 space-y-1.5">
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="font-medium text-slate-400 uppercase tracking-wider">Purchases:</span>
-                <span className="font-medium text-slate-700">{loading ? "—" : `${totalPurchaseCount} (${totalPurchaseStocks} stocks)`}</span>
+            <div className="mt-5 pt-3.5 border-t border-[#E5EAF0] space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-[11px] font-medium text-[#74839A] uppercase tracking-wider">Purchases:</span>
+                <span className="font-medium text-[#27364B] tabular-nums">{loading ? "—" : `${totalPurchaseCount} (${totalPurchaseStocks} stocks)`}</span>
               </div>
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="font-medium text-slate-400 uppercase tracking-wider">Outstanding:</span>
-                <span className="font-medium text-amber-500">{loading ? "—" : fmt(totalPurchaseOutstanding)}</span>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-[11px] font-medium text-[#74839A] uppercase tracking-wider">Outstanding:</span>
+                <span className="font-semibold text-[#D69A35] tabular-nums">{loading ? "—" : fmt(totalPurchaseOutstanding)}</span>
               </div>
             </div>
           </div>
 
-          {/* Total Orders */}
-          <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-all duration-200 group flex flex-col justify-between">
+          {/* 4. Total Orders */}
+          <div className="bg-white rounded-xl p-5 border border-[#E5EAF0] shadow-[0_1px_3px_rgba(0,0,0,0.03)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.05)] hover:border-[#D1D9E2] transition-all duration-200 group flex flex-col justify-between h-full">
             <div>
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <h3 className="text-[11px] font-medium uppercase tracking-wider text-slate-400">Total Orders</h3>
-                  <p className="text-[11px] text-slate-400 font-medium mt-0.5">{RANGE_LABELS[activeRange]}</p>
+                  <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[#74839A]">Total Orders</h3>
+                  <p className="text-xs text-[#74839A] font-medium mt-0.5">{RANGE_LABELS[activeRange]}</p>
                 </div>
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-amber-50 text-amber-500 shrink-0">
-                  <ShoppingCart className="w-5 h-5" strokeWidth={2.2} />
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-[#FEF8EC] text-[#D69A35] shrink-0 transition-transform duration-200 group-hover:scale-105">
+                  <ShoppingCart className="w-4.5 h-4.5" strokeWidth={2.2} />
                 </div>
               </div>
-              <div className="flex items-end gap-2 mb-1">
-                <span className="text-[26px] font-semibold text-slate-700 tracking-tight leading-none">
+              <div className="flex items-end gap-2 mt-3">
+                <span className="text-[26px] font-semibold text-[#27364B] tracking-tight leading-none tabular-nums">
                   {loading ? "—" : totalOrders.toLocaleString()}
                 </span>
               </div>
             </div>
 
-
+            <div className="mt-5 pt-3.5 border-t border-[#E5EAF0]">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-[11px] font-medium text-[#74839A] uppercase tracking-wider">Period</span>
+                <span className="font-medium text-[#27364B]">{RANGE_LABELS[activeRange]}</span>
+              </div>
+            </div>
           </div>
 
-          {/* AOV */}
-          <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-all duration-200 group flex flex-col justify-between">
+          {/* 5. Avg. Order Value */}
+          <div className="bg-white rounded-xl p-5 border border-[#E5EAF0] shadow-[0_1px_3px_rgba(0,0,0,0.03)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.05)] hover:border-[#D1D9E2] transition-all duration-200 group flex flex-col justify-between h-full">
             <div>
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <h3 className="text-[11px] font-medium uppercase tracking-wider text-slate-400">Avg. Order Value</h3>
-                  <p className="text-[11px] text-slate-400 font-medium mt-0.5">Revenue / Orders</p>
+                  <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[#74839A]">Avg. Order Value</h3>
+                  <p className="text-xs text-[#74839A] font-medium mt-0.5">Revenue / Orders</p>
                 </div>
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-purple-50 text-purple-500 shrink-0">
-                  <Zap className="w-5 h-5" strokeWidth={2.2} />
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-[#EAF2E8] text-[#103020] shrink-0 transition-transform duration-200 group-hover:scale-105">
+                  <Zap className="w-4.5 h-4.5" strokeWidth={2.2} />
                 </div>
               </div>
-              <div className="flex items-end gap-2 mb-1">
-                <span className="text-[26px] font-semibold text-slate-700 tracking-tight leading-none">
+              <div className="flex items-end gap-2 mt-3">
+                <span className="text-[26px] font-semibold text-[#27364B] tracking-tight leading-none tabular-nums truncate" title={fmt(aov)}>
                   {loading ? "—" : fmt(aov)}
                 </span>
               </div>
             </div>
 
-            <div className="mt-4 pt-3.5 border-t border-slate-100">
-              <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
-                Gross Margin: <span className="text-slate-700">{loading ? "—" : `${grossMargin.toFixed(1)}%`}</span>
-              </p>
+            <div className="mt-5 pt-3.5 border-t border-[#E5EAF0]">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-[11px] font-medium text-[#74839A] uppercase tracking-wider">Gross Margin</span>
+                <span className="font-semibold text-[#27364B] tabular-nums">{loading ? "—" : `${grossMargin.toFixed(1)}%`}</span>
+              </div>
             </div>
           </div>
+
         </div>
 
         {/* ── ROW 2: Sales Performance ── */}
         <div className="space-y-4">
-          <h2 className="text-base font-medium text-slate-700">Sales Performance</h2>
+          <h2 className="text-base font-semibold text-[#27364B] tracking-tight">Sales Performance</h2>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            
             {/* Chart Area */}
             <div className="lg:col-span-2">
               <SectionCard title="Revenue & Profit Trend">
                 <div className="p-5">
-                  <div className="h-[280px] w-full min-w-0">
+                  <div className="h-[290px] w-full min-w-0">
                     {dailyTrend.length > 0 ? (
-                      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={280}>
-                        <AreaChart data={dailyTrend} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
+                      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={290}>
+                        <AreaChart data={dailyTrend} margin={{ top: 12, right: 12, left: -10, bottom: 0 }}>
                           <defs>
                             <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.25} />
-                              <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                              <stop offset="5%" stopColor="#286038" stopOpacity={0.16} />
+                              <stop offset="95%" stopColor="#286038" stopOpacity={0} />
                             </linearGradient>
                             <linearGradient id="profitGrad" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
-                              <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                              <stop offset="5%" stopColor="#0D9F6E" stopOpacity={0.18} />
+                              <stop offset="95%" stopColor="#0D9F6E" stopOpacity={0} />
                             </linearGradient>
                           </defs>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5EAF0" />
                           <XAxis
                             dataKey="date"
                             tickLine={false}
                             axisLine={false}
-                            tick={{ fill: "#94a3b8", fontSize: 11 }}
+                            tick={{ fill: "#74839A", fontSize: 11, fontWeight: 500 }}
+                            dy={6}
                             tickFormatter={(val) => {
                               try {
                                 const parts = val.split("-");
@@ -1000,16 +1098,16 @@ const AnalyticsDashboard = () => {
                           <YAxis
                             tickLine={false}
                             axisLine={false}
-                            tick={{ fill: "#94a3b8", fontSize: 11 }}
+                            tick={{ fill: "#74839A", fontSize: 11, fontWeight: 500 }}
                             tickFormatter={(val) => `₹${val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val}`}
                           />
-                          <Tooltip content={<CustomTooltip />} />
+                          <Tooltip content={<TrendTooltip />} />
                           <Area
                             type="monotone"
                             dataKey="revenue"
                             name="Revenue"
-                            stroke="#3b82f6"
-                            strokeWidth={2.5}
+                            stroke="#286038"
+                            strokeWidth={2}
                             fillOpacity={1}
                             fill="url(#revenueGrad)"
                           />
@@ -1017,29 +1115,29 @@ const AnalyticsDashboard = () => {
                             type="monotone"
                             dataKey="profit"
                             name="Profit"
-                            stroke="#10b981"
-                            strokeWidth={2.5}
+                            stroke="#0D9F6E"
+                            strokeWidth={2}
                             fillOpacity={1}
                             fill="url(#profitGrad)"
                           />
                         </AreaChart>
                       </ResponsiveContainer>
                     ) : (
-                      <div className="h-full flex items-center justify-center text-xs font-semibold text-slate-400">
+                      <div className="h-full flex items-center justify-center text-xs font-medium text-[#74839A]">
                         No trend data available for this range
                       </div>
                     )}
                   </div>
 
                   {/* Legend */}
-                  <div className="flex items-center gap-5 mt-3 pt-3 border-t border-slate-100 text-xs">
+                  <div className="flex items-center gap-5 mt-4 pt-3.5 border-t border-[#E5EAF0] text-xs">
                     <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-slate-400" />
-                      <span className="font-semibold text-slate-600">Revenue</span>
+                      <span className="w-2.5 h-2.5 rounded-full bg-[#286038]" />
+                      <span className="font-medium text-[#27364B]">Revenue</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-                      <span className="font-semibold text-slate-600">Profit</span>
+                      <span className="w-2.5 h-2.5 rounded-full bg-[#0D9F6E]" />
+                      <span className="font-medium text-[#27364B]">Profit</span>
                     </div>
                   </div>
                 </div>
@@ -1048,66 +1146,76 @@ const AnalyticsDashboard = () => {
 
             {/* Profitability & Quick Stats */}
             <div className="space-y-4">
-              {/* Profitability */}
-              <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs">
+              {/* Profitability Card */}
+              <div className="bg-white rounded-xl p-5 border border-[#E5EAF0] shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-medium text-slate-700">Profitability</h3>
-                  <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-500 flex items-center justify-center">
+                  <h3 className="text-sm font-semibold text-[#27364B]">Profitability</h3>
+                  <div className="w-7 h-7 rounded-lg bg-[#EAF2E8] text-[#286038] flex items-center justify-center">
                     <TrendingUp className="w-4 h-4" />
                   </div>
                 </div>
-                <p className="text-xs text-slate-400 font-medium">Gross Margin</p>
-                <div className="flex items-baseline gap-2 mt-1 mb-3">
-                  <span className={`text-2xl font-semibold ${grossMargin >= 0 ? "text-slate-700" : "text-rose-600"}`}>{grossMargin.toFixed(2)}%</span>
-                  <span className={`text-xs font-medium ${grossMargin >= 0 ? "text-emerald-500" : "text-rose-500"}`}>{grossMargin >= 0 ? "Profitable" : "Loss"}</span>
+                <p className="text-xs text-[#74839A] font-medium">Gross Margin</p>
+                <div className="flex items-baseline gap-2.5 mt-1 mb-3">
+                  <span className={`text-2xl font-semibold tabular-nums ${grossMargin >= 0 ? "text-[#27364B]" : "text-[#DC6464]"}`}>
+                    {grossMargin.toFixed(2)}%
+                  </span>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold ${grossMargin >= 0 ? "bg-[#EBF8F2] text-[#0D9F6E]" : "bg-[#FDF2F2] text-[#DC6464]"}`}>
+                    {grossMargin >= 0 ? "Profitable" : "Loss"}
+                  </span>
                 </div>
 
                 {/* Progress bar */}
-                <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden mb-2">
+                <div className="w-full bg-[#EAF2E8] rounded-full h-2 overflow-hidden mb-2">
                   <div
-                    className={`${grossMargin >= 0 ? "bg-emerald-400" : "bg-rose-400"} h-full rounded-full transition-all duration-500`}
+                    className={`${grossMargin >= 0 ? "bg-[#0D9F6E]" : "bg-[#DC6464]"} h-full rounded-full transition-all duration-500`}
                     style={{ width: `${Math.min(100, Math.max(0, Math.abs(grossMargin)))}%` }}
                   />
                 </div>
-                <div className="flex justify-between text-[10px] font-medium text-slate-400">
+                <div className="flex justify-between text-[11px] font-medium text-[#74839A]">
                   <span>0%</span>
                   <span>Margin: {grossMargin.toFixed(2)}%</span>
                   <span>100%</span>
                 </div>
               </div>
 
-              {/* Quick Stats */}
-              <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs">
-                <h3 className="text-xs font-medium uppercase tracking-wider text-slate-400 mb-3">Quick Stats</h3>
+              {/* Quick Stats Card */}
+              <div className="bg-white rounded-xl p-5 border border-[#E5EAF0] shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+                <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[#74839A] mb-3">Quick Stats</h3>
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-blue-50/50 border border-blue-100/60 rounded-xl p-3 text-center">
-                    <p className="text-lg font-semibold text-slate-700">{totalOrders}</p>
-                    <p className="text-[11px] font-semibold text-slate-500">Orders</p>
+                  <div className="bg-[#F7F9FA] border border-[#E5EAF0] rounded-xl p-3 text-center hover:bg-white hover:border-[#D1D9E2] transition-colors">
+                    <p className="text-lg font-semibold text-[#27364B] tabular-nums">{totalOrders}</p>
+                    <p className="text-[11px] font-medium text-[#74839A] mt-0.5">Orders</p>
                   </div>
-                  <div className={`${totalProfit >= 0 ? "bg-emerald-50/50 border-emerald-100/60" : "bg-rose-50/50 border-rose-100/60"} border rounded-xl p-3 text-center`}>
-                    <p className={`text-lg font-semibold ${totalProfit >= 0 ? "text-emerald-500" : "text-rose-500"}`}>{fmt(totalProfit)}</p>
-                    <p className="text-[11px] font-semibold text-slate-500">{totalProfit >= 0 ? "Profit" : "Loss"}</p>
+                  <div className="bg-[#F7F9FA] border border-[#E5EAF0] rounded-xl p-3 text-center hover:bg-white hover:border-[#D1D9E2] transition-colors">
+                    <p className={`text-lg font-semibold tabular-nums truncate ${totalProfit >= 0 ? "text-[#0D9F6E]" : "text-[#DC6464]"}`} title={fmt(totalProfit)}>
+                      {fmt(totalProfit)}
+                    </p>
+                    <p className="text-[11px] font-medium text-[#74839A] mt-0.5">{totalProfit >= 0 ? "Profit" : "Loss"}</p>
                   </div>
-                  <div className="bg-amber-50/50 border border-amber-100/60 rounded-xl p-3 text-center">
-                    <p className="text-lg font-semibold text-amber-600">{fmtShort(aov)}</p>
-                    <p className="text-[11px] font-semibold text-slate-500">AOV</p>
+                  <div className="bg-[#F7F9FA] border border-[#E5EAF0] rounded-xl p-3 text-center hover:bg-white hover:border-[#D1D9E2] transition-colors">
+                    <p className="text-lg font-semibold text-[#27364B] tabular-nums truncate" title={fmt(aov)}>
+                      {fmtShort(aov)}
+                    </p>
+                    <p className="text-[11px] font-medium text-[#74839A] mt-0.5">AOV</p>
                   </div>
-                  <div className="bg-purple-50/50 border border-purple-100/60 rounded-xl p-3 text-center">
-                    <p className="text-lg font-semibold text-purple-500">{totalReturnsCount}</p>
-                    <p className="text-[11px] font-semibold text-slate-500">Returns</p>
+                  <div className="bg-[#F7F9FA] border border-[#E5EAF0] rounded-xl p-3 text-center hover:bg-white hover:border-[#D1D9E2] transition-colors">
+                    <p className="text-lg font-semibold text-[#27364B] tabular-nums">{totalReturnsCount}</p>
+                    <p className="text-[11px] font-medium text-[#74839A] mt-0.5">Returns</p>
                   </div>
                 </div>
               </div>
             </div>
+
           </div>
         </div>
 
         {/* ── ROW 3: Sales by Payment & Top Selling Products ── */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+          
           {/* Sales by Payment */}
           <div className="xl:col-span-1">
             <SectionCard title="Sales by Payment">
-              <div className="p-4 sm:p-5 flex flex-col justify-between min-h-[340px] h-auto">
+              <div className="p-5 flex flex-col justify-between min-h-[340px]">
                 <div className="h-[180px] w-full min-w-0 flex items-center justify-center">
                   <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={180}>
                     <PieChart>
@@ -1115,29 +1223,29 @@ const AnalyticsDashboard = () => {
                         data={paymentBreakdown}
                         cx="50%"
                         cy="50%"
-                        innerRadius={55}
-                        outerRadius={75}
-                        paddingAngle={4}
+                        innerRadius={56}
+                        outerRadius={76}
+                        paddingAngle={3}
                         dataKey="value"
                       >
                         {paymentBreakdown.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
+                          <Cell key={`cell-${index}`} fill={entry.color} stroke="#FFFFFF" strokeWidth={1.5} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value: any) => fmt(Number(value))} />
+                      <Tooltip content={<PaymentTooltip />} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
 
-                <div className="space-y-2 pt-3 border-t border-slate-100">
+                <div className="space-y-1.5 pt-3.5 border-t border-[#E5EAF0] max-h-[125px] overflow-y-auto">
                   {paymentBreakdown.map((item) => (
-                    <div key={item.name} className="flex items-center justify-between text-xs font-semibold">
+                    <div key={item.name} className="flex items-center justify-between text-xs py-1 px-1 rounded-md hover:bg-[#F7F9FA] transition-colors">
                       <div className="flex items-center gap-2">
-                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-                        <span className="text-slate-600">{item.name}</span>
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                        <span className="text-[#27364B] font-medium">{item.name}</span>
                       </div>
-                      <span className="text-slate-700 font-medium">
-                        {fmt(item.value)} <span className="text-slate-400 font-normal">({item.count})</span>
+                      <span className="text-[#27364B] font-semibold tabular-nums">
+                        {fmt(item.value)} <span className="text-[#74839A] font-normal text-[11px]">({item.count})</span>
                       </span>
                     </div>
                   ))}
@@ -1149,35 +1257,37 @@ const AnalyticsDashboard = () => {
           {/* Top Selling Products */}
           <div className="xl:col-span-2">
             <SectionCard title="Top Selling Products">
-              <div className="p-5 flex flex-col justify-between min-h-[340px]">
+              <div className="p-5 flex flex-col justify-between min-h-[350px]">
                 {topProducts.length > 0 ? (
-                  <div className="space-y-3">
+                  <div className="space-y-2.5">
                     {topProducts.slice(0, 5).map((p: any, i: number) => {
                       const maxQty = topProducts[0]?.total_qty || 1;
                       return (
-                        <div key={p.product_id || i} className="flex items-center gap-3.5 p-2 rounded-xl hover:bg-slate-50/80 transition-colors group">
+                        <div key={p.product_id || i} className="flex items-center gap-3.5 p-2 rounded-lg hover:bg-[#F7F9FA] transition-colors group">
                           {/* Rank */}
-                          <span className="w-7 h-7 flex items-center justify-center bg-slate-100 rounded-lg text-xs font-medium text-slate-500 shrink-0">
+                          <span className="w-6 h-6 flex items-center justify-center bg-[#F1F4F7] rounded-md text-xs font-semibold text-[#74839A] shrink-0">
                             #{i + 1}
                           </span>
+                          
                           {/* Product info */}
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs font-medium text-slate-700 truncate">{p.name}</p>
-                            <div className="w-full bg-slate-100 rounded-full h-1.5 mt-1.5 overflow-hidden">
+                            <p className="text-xs font-semibold text-[#27364B] truncate" title={p.name}>{p.name}</p>
+                            <div className="w-full bg-[#EAF2E8] rounded-full h-1.5 mt-1.5 overflow-hidden">
                               <div
-                                className="h-full rounded-full bg-slate-400 group-hover:bg-slate-500 transition-all"
+                                className="h-full rounded-full bg-[#286038] group-hover:bg-[#103020] transition-all"
                                 style={{ width: `${Math.max(5, (p.total_qty / maxQty) * 100)}%` }}
                               />
                             </div>
                           </div>
+                          
                           {/* Stats */}
                           <div className="text-right shrink-0">
-                            <p className="text-xs font-medium text-slate-700">{fmt(p.total_revenue)}</p>
-                            <div className="flex items-center gap-1 justify-end text-[11px]">
-                              <Package className="w-3 h-3 text-slate-400" />
-                              <span className="text-slate-500">{p.total_qty} sold</span>
-                              <span className="text-slate-300">·</span>
-                              <span className="font-semibold text-emerald-500">
+                            <p className="text-xs font-semibold text-[#27364B] tabular-nums">{fmt(p.total_revenue)}</p>
+                            <div className="flex items-center gap-1.5 justify-end text-[11px] mt-0.5">
+                              <Package className="w-3 h-3 text-[#74839A]" />
+                              <span className="text-[#74839A]">{p.total_qty} sold</span>
+                              <span className="text-[#E5EAF0]">·</span>
+                              <span className="font-medium text-[#0D9F6E] tabular-nums">
                                 +{fmt(p.total_profit)}
                               </span>
                             </div>
@@ -1187,60 +1297,62 @@ const AnalyticsDashboard = () => {
                     })}
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center h-[160px] text-xs font-semibold text-slate-400 gap-1.5">
-                    <Package className="w-6 h-6 text-slate-300 mb-0.5" />
-                    <span>No sales recorded yet</span>
-                    <span className="text-[11px] font-normal text-slate-400">Products will appear here once they are sold</span>
+                  <div className="flex flex-col items-center justify-center h-[170px] text-xs font-medium text-[#74839A] gap-1.5">
+                    <Package className="w-6 h-6 text-[#74839A]/60 mb-0.5" />
+                    <span className="font-semibold text-[#27364B]">No sales recorded yet</span>
+                    <span className="text-[11px] text-[#74839A]">Products will appear here once they are sold</span>
                   </div>
                 )}
 
                 {/* Bottom quick stats */}
-                <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-3 gap-2 sm:gap-3">
-                  <div className="text-center p-2.5 sm:p-3 bg-slate-50 rounded-xl min-w-0">
+                <div className="mt-4 pt-4 border-t border-[#E5EAF0] grid grid-cols-3 gap-3">
+                  <div className="text-center p-2.5 bg-[#F7F9FA] border border-[#E5EAF0] rounded-xl hover:bg-white transition-colors min-w-0">
                     <div className="mb-1 flex justify-center">
-                      <BarChart2 className="w-4 h-4 text-slate-500" />
+                      <BarChart2 className="w-3.5 h-3.5 text-[#286038]" />
                     </div>
-                    <p className="text-xs font-medium text-slate-700 truncate">{grossMargin.toFixed(1)}%</p>
-                    <p className="text-[10px] font-semibold text-slate-400 truncate">Gross Margin</p>
+                    <p className="text-xs font-semibold text-[#27364B] tabular-nums">{grossMargin.toFixed(1)}%</p>
+                    <p className="text-[10px] font-medium text-[#74839A] uppercase tracking-wider mt-0.5">Gross Margin</p>
                   </div>
-                  <div className="text-center p-2.5 sm:p-3 bg-slate-50 rounded-xl min-w-0">
+                  <div className="text-center p-2.5 bg-[#F7F9FA] border border-[#E5EAF0] rounded-xl hover:bg-white transition-colors min-w-0">
                     <div className="mb-1 flex justify-center">
-                      <ShoppingCart className="w-4 h-4 text-slate-500" />
+                      <ShoppingCart className="w-3.5 h-3.5 text-[#74839A]" />
                     </div>
-                    <p className="text-xs font-medium text-slate-700 truncate">{totalOrders}</p>
-                    <p className="text-[10px] font-semibold text-slate-400 truncate">Total Orders</p>
+                    <p className="text-xs font-semibold text-[#27364B] tabular-nums">{totalOrders}</p>
+                    <p className="text-[10px] font-medium text-[#74839A] uppercase tracking-wider mt-0.5">Total Orders</p>
                   </div>
-                  <div className="text-center p-2.5 sm:p-3 bg-slate-50 rounded-xl min-w-0">
+                  <div className="text-center p-2.5 bg-[#F7F9FA] border border-[#E5EAF0] rounded-xl hover:bg-white transition-colors min-w-0">
                     <div className="mb-1 flex justify-center">
-                      <TrendingUp className="w-4 h-4 text-emerald-500" />
+                      <TrendingUp className="w-3.5 h-3.5 text-[#0D9F6E]" />
                     </div>
-                    <p className="text-xs font-medium text-slate-700 truncate">{fmtShort(aov)}</p>
-                    <p className="text-[10px] font-semibold text-slate-400 truncate">AOV</p>
+                    <p className="text-xs font-semibold text-[#27364B] tabular-nums truncate" title={fmt(aov)}>{fmtShort(aov)}</p>
+                    <p className="text-[10px] font-medium text-[#74839A] uppercase tracking-wider mt-0.5">AOV</p>
                   </div>
                 </div>
               </div>
             </SectionCard>
           </div>
+
         </div>
 
         {/* ── ROW 4: Vendor & Category Analytics ── */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+          
           {/* Sales by Category */}
           <SectionCard title="Sales by Category">
             <div className="p-5">
               {salesByCategory.length > 0 ? (
-                <div className="space-y-4">
+                <div className="space-y-3.5">
                   {salesByCategory.slice(0, 5).map((c: any) => {
                     const maxRev = salesByCategory[0]?.revenue || 1;
                     return (
                       <div key={c.category} className="group">
-                        <div className="flex justify-between items-end mb-1">
-                          <p className="text-xs font-medium text-slate-700">{c.category}</p>
-                          <p className="text-xs font-medium text-slate-700">{fmt(c.revenue)}</p>
+                        <div className="flex justify-between items-end mb-1.5">
+                          <p className="text-xs font-semibold text-[#27364B]">{c.category}</p>
+                          <p className="text-xs font-semibold text-[#27364B] tabular-nums">{fmt(c.revenue)}</p>
                         </div>
-                        <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                        <div className="w-full bg-[#EAF2E8] rounded-full h-2 overflow-hidden">
                           <div
-                            className="h-full rounded-full bg-purple-400 group-hover:bg-purple-500 transition-all"
+                            className="h-full rounded-full bg-[#88B878] group-hover:bg-[#286038] transition-all duration-300"
                             style={{ width: `${Math.max(2, (c.revenue / maxRev) * 100)}%` }}
                           />
                         </div>
@@ -1249,7 +1361,7 @@ const AnalyticsDashboard = () => {
                   })}
                 </div>
               ) : (
-                <div className="flex items-center justify-center h-[160px] text-xs font-semibold text-slate-400">
+                <div className="flex items-center justify-center h-[160px] text-xs font-medium text-[#74839A]">
                   No category data for this period
                 </div>
               )}
@@ -1260,33 +1372,35 @@ const AnalyticsDashboard = () => {
           <SectionCard title="Top Suppliers by Performance">
             <div className="p-5">
               {topSuppliers.length > 0 ? (
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   {topSuppliers.map((s: any, i: number) => {
                     const maxRev = topSuppliers[0]?.total_revenue || 1;
                     return (
-                      <div key={s.supplier_id || i} className="flex items-center gap-3.5 p-2 rounded-xl hover:bg-slate-50/80 transition-colors group">
+                      <div key={s.supplier_id || i} className="flex items-center gap-3.5 p-2 rounded-lg hover:bg-[#F7F9FA] transition-colors group">
                         {/* Rank */}
-                        <span className="w-7 h-7 flex items-center justify-center bg-slate-100 rounded-lg text-xs font-medium text-slate-500 shrink-0">
+                        <span className="w-6 h-6 flex items-center justify-center bg-[#F1F4F7] rounded-md text-xs font-semibold text-[#74839A] shrink-0">
                           #{i + 1}
                         </span>
+
                         {/* Supplier info */}
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium text-slate-700 truncate">{s.name}</p>
-                          <div className="w-full bg-slate-100 rounded-full h-1.5 mt-1.5 overflow-hidden">
+                          <p className="text-xs font-semibold text-[#27364B] truncate" title={s.name}>{s.name}</p>
+                          <div className="w-full bg-[#EAF2E8] rounded-full h-1.5 mt-1.5 overflow-hidden">
                             <div
-                              className="h-full rounded-full bg-slate-400 group-hover:bg-slate-500 transition-all"
+                              className="h-full rounded-full bg-[#286038] group-hover:bg-[#103020] transition-all"
                               style={{ width: `${Math.max(5, (s.total_revenue / maxRev) * 100)}%` }}
                             />
                           </div>
                         </div>
+
                         {/* Stats */}
                         <div className="text-right shrink-0">
-                          <p className="text-xs font-medium text-slate-700">{fmt(s.total_revenue)}</p>
-                          <div className="flex items-center gap-1 justify-end text-[11px]">
-                            <Package className="w-3 h-3 text-slate-400" />
-                            <span className="text-slate-500">{s.total_qty} items</span>
-                            <span className="text-slate-300">·</span>
-                            <span className="font-semibold text-amber-500">
+                          <p className="text-xs font-semibold text-[#27364B] tabular-nums">{fmt(s.total_revenue)}</p>
+                          <div className="flex items-center gap-1.5 justify-end text-[11px] mt-0.5">
+                            <Package className="w-3 h-3 text-[#74839A]" />
+                            <span className="text-[#74839A]">{s.total_qty} items</span>
+                            <span className="text-[#E5EAF0]">·</span>
+                            <span className="font-medium text-[#D69A35] tabular-nums">
                               +{fmt(s.total_profit)}
                             </span>
                           </div>
@@ -1296,12 +1410,13 @@ const AnalyticsDashboard = () => {
                   })}
                 </div>
               ) : (
-                <div className="flex items-center justify-center h-[160px] text-xs font-semibold text-slate-400">
+                <div className="flex items-center justify-center h-[160px] text-xs font-medium text-[#74839A]">
                   No supplier data for this period
                 </div>
               )}
             </div>
           </SectionCard>
+
         </div>
 
       </div>

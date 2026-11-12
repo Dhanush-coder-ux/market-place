@@ -1,12 +1,12 @@
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { useToast } from "@/context/ToastContext";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import {
-  Megaphone, RefreshCw, Gift, Wand2,
+  Megaphone, RefreshCw, Tag, Plus,
   Inbox, Send, Clock,
-  Copy, Trash2, Edit3, CheckCircle2,
-  Smile, Timer, Calendar, FileText, UserCheck,
-  Users, X,
+  Copy, Trash2, Edit3,
+  X, Search, Eye,
 } from "lucide-react";
 import { useBusinessApi } from "@/context/BusinessApiContext";
 import { SHOP_ID } from "@/services/endpoints";
@@ -22,82 +22,90 @@ interface AnnouncementItem {
   date: string;
   type: AnnouncementType;
   status: StatusType;
-  audience: string;
-  views: number;
+  audience?: string;
   schedule_at?: string | null;
   expire_at?: string | null;
 }
 
-interface TypeConfigDetails {
-  label: string;
-  bg: string;
-  text: string;
-  border: string;
-  dot: string;
-  emoji: React.ReactNode;
-  gradientSolid: string;
-  accentRgb: string;
-}
+// ─── Design Tokens & Config (Forest Green Theme) ─────────────────────────────
 
-// ─── Design Config ────────────────────────────────────────────────────────────
+const BRAND_GREEN = "#286038";
+const BRAND_GREEN_HOVER = "#1e4a2b";
 
-const TYPE_CONFIG: Record<AnnouncementType, TypeConfigDetails> = {
+const TYPE_CONFIG: Record<
+  AnnouncementType,
+  {
+    label: string;
+    description: string;
+    icon: React.ElementType;
+    badgeClass: string;
+    iconClass: string;
+    previewBg: string;
+  }
+> = {
   Announcement: {
     label: "Announcement",
-    bg: "bg-blue-50",
-    text: "text-blue-700",
-    border: "border-blue-200",
-    dot: "bg-blue-500",
-    emoji: <Megaphone size={13} strokeWidth={2.5} />,
-    gradientSolid: "#3b82f6",
-    accentRgb: "59, 130, 246",
+    description: "General store notices & news",
+    icon: Megaphone,
+    badgeClass: "bg-emerald-50 text-[#1e4a2b] border-emerald-200",
+    iconClass: "text-[#286038] bg-emerald-100/80",
+    previewBg: "bg-[#286038]",
   },
   Update: {
-    label: "Update",
-    bg: "bg-amber-50",
-    text: "text-amber-700",
-    border: "border-amber-200",
-    dot: "bg-amber-500",
-    emoji: <RefreshCw size={13} strokeWidth={2.5} />,
-    gradientSolid: "#f59e0b",
-    accentRgb: "245, 158, 11",
+    label: "Store Update",
+    description: "Operating hours, holidays & logistics",
+    icon: RefreshCw,
+    badgeClass: "bg-amber-50 text-amber-800 border-amber-200",
+    iconClass: "text-amber-700 bg-amber-100/80",
+    previewBg: "bg-amber-600",
   },
   Offer: {
-    label: "Offer",
-    bg: "bg-emerald-50",
-    text: "text-emerald-800",
-    border: "border-emerald-200",
-    dot: "bg-emerald-500",
-    emoji: <Gift size={13} strokeWidth={2.5} />,
-    gradientSolid: "#10b981",
-    accentRgb: "16, 185, 129",
+    label: "Promotion / Offer",
+    description: "Discounts, seasonal sales & deals",
+    icon: Tag,
+    badgeClass: "bg-emerald-50 text-emerald-800 border-emerald-200",
+    iconClass: "text-emerald-700 bg-emerald-100/80",
+    previewBg: "bg-emerald-600",
   },
 };
 
-const STATUS_CONFIG: Record<StatusType, { dot: string; bg: string; text: string; border: string }> = {
-  Draft:     { dot: "bg-slate-400",   bg: "bg-slate-100",   text: "text-slate-600",   border: "border-slate-200" },
-  Scheduled: { dot: "bg-amber-500",   bg: "bg-amber-50",    text: "text-amber-700",   border: "border-amber-200" },
-  Published: { dot: "bg-emerald-500", bg: "bg-emerald-50",  text: "text-emerald-700", border: "border-emerald-200" },
-  Expired:   { dot: "bg-rose-500",    bg: "bg-rose-50",     text: "text-rose-700",    border: "border-rose-200" },
+const STATUS_CONFIG: Record<
+  StatusType,
+  { dot: string; bg: string; text: string; border: string; label: string }
+> = {
+  Draft: {
+    dot: "bg-slate-400",
+    bg: "bg-slate-100",
+    text: "text-slate-600",
+    border: "border-slate-200",
+    label: "Draft",
+  },
+  Scheduled: {
+    dot: "bg-amber-500",
+    bg: "bg-amber-50",
+    text: "text-amber-800",
+    border: "border-amber-200",
+    label: "Scheduled",
+  },
+  Published: {
+    dot: "bg-[#286038]",
+    bg: "bg-emerald-50",
+    text: "text-[#1e4a2b]",
+    border: "border-emerald-200",
+    label: "Live on Store",
+  },
+  Expired: {
+    dot: "bg-rose-500",
+    bg: "bg-rose-50",
+    text: "text-rose-700",
+    border: "border-rose-200",
+    label: "Expired",
+  },
 };
 
-const AI_SUGGESTIONS: { text: string; type: AnnouncementType }[] = [
-  { text: "🎉 Grand sale — up to 50% off this weekend only!", type: "Offer" },
-  { text: "⏰ We're closing early today at 6 PM. Plan accordingly!", type: "Update" },
-  { text: "🆕 New arrivals just landed. Come see what's fresh!", type: "Announcement" },
-  { text: "🎁 Buy 2 get 1 free on all bakery items today only.", type: "Offer" },
-  { text: "🔧 Scheduled maintenance on Sunday 2–4 AM. Brief downtime expected.", type: "Update" },
-  { text: "🎊 We just hit 10,000 customers! Thank you for your support.", type: "Announcement" },
-];
+const MAX_CHAR_LIMIT = 160;
 
-const EMOJI_LIST = ["🎉", "🔥", "⭐", "💥", "🎁", "⚡", "🚀", "💯", "🌟", "👋", "🛍️", "❤️"];
-
-const AUDIENCE_OPTIONS = [
-  { value: "ALL_FOLLOWED_USERS", label: "All followers" },
-  { value: "ALL_USERS", label: "All users" },
-];
-
-// ─── Utility ──────────────────────────────────────────────────────────────────
+// ─── Utilities ───────────────────────────────────────────────────────────────
 
 function timeAgo(dateStr: string): string {
   const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
@@ -116,7 +124,7 @@ function fmtDate(dateStr: string): string {
   });
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// ─── Sub-Components ───────────────────────────────────────────────────────────
 
 function StatusBadge({
   status,
@@ -129,14 +137,16 @@ function StatusBadge({
 }) {
   const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.Draft;
   return (
-    <div className="flex flex-col items-start gap-0.5">
-      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${cfg.bg} ${cfg.text} border ${cfg.border}`}>
-        <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} inline-block`} />
-        {status}
+    <div className="flex flex-col items-start gap-1">
+      <span
+        className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${cfg.bg} ${cfg.text} border ${cfg.border}`}
+      >
+        <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} shrink-0`} />
+        <span>{cfg.label}</span>
       </span>
       {status === "Scheduled" && scheduleAt && (
-        <span className="text-[10px] text-amber-600 flex items-center gap-1 font-medium whitespace-nowrap">
-          <Clock size={10} />
+        <span className="text-[11px] text-amber-700 flex items-center gap-1 font-medium whitespace-nowrap">
+          <Clock size={10} className="shrink-0" />
           {new Date(scheduleAt).toLocaleDateString("en-US", {
             month: "short",
             day: "numeric",
@@ -146,8 +156,8 @@ function StatusBadge({
         </span>
       )}
       {status === "Expired" && expireAt && (
-        <span className="text-[10px] text-rose-500 flex items-center gap-1 font-medium whitespace-nowrap">
-          Expired: {fmtDate(expireAt)}
+        <span className="text-[11px] text-rose-500 font-medium whitespace-nowrap">
+          Ended {fmtDate(expireAt)}
         </span>
       )}
     </div>
@@ -155,11 +165,14 @@ function StatusBadge({
 }
 
 function TypeBadge({ type }: { type: AnnouncementType }) {
-  const cfg = TYPE_CONFIG[type];
+  const cfg = TYPE_CONFIG[type] || TYPE_CONFIG.Announcement;
+  const Icon = cfg.icon;
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium ${cfg.bg} ${cfg.text} border ${cfg.border}`}>
-      <span className="flex items-center justify-center">{cfg.emoji}</span>
-      {type}
+    <span
+      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-semibold border ${cfg.badgeClass}`}
+    >
+      <Icon size={12} className="shrink-0" />
+      <span>{cfg.label}</span>
     </span>
   );
 }
@@ -175,74 +188,114 @@ function DeleteModal({
   onCancel: () => void;
   isSaving?: boolean;
 }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-slate-900/50" onClick={isSaving ? undefined : onCancel} />
-      <div className="relative bg-white rounded-xl border border-slate-200 shadow-xl p-6 w-[400px] max-w-[90vw]">
-        <div className="flex items-start gap-3 mb-4">
-          <div className="w-9 h-9 rounded-lg bg-red-50 border border-red-100 flex items-center justify-center shrink-0">
-            <Trash2 size={16} className="text-red-500" />
+  // Lock background scroll when modal is open and handle Escape key
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !isSaving) {
+        onCancel();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isSaving, onCancel]);
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-150"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !isSaving) onCancel();
+      }}
+    >
+      <div
+        className="relative bg-white rounded-2xl border border-slate-200 shadow-2xl p-6 w-full max-w-md animate-in zoom-in-95 duration-150"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="delete-announcement-title"
+      >
+        <div className="flex items-start gap-3.5 mb-4">
+          <div className="w-10 h-10 rounded-xl bg-red-50 border border-red-100 flex items-center justify-center shrink-0">
+            <Trash2 size={18} className="text-red-600" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-slate-900">Delete Announcement</h3>
-            <p className="text-sm text-slate-500 mt-0.5 leading-relaxed">
-              Permanently delete "
-              <span className="font-medium text-slate-700">{item.text.slice(0, 50)}…</span>"?
-              This cannot be undone.
+            <h3 id="delete-announcement-title" className="text-base font-bold text-slate-900">
+              Delete Announcement
+            </h3>
+            <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+              Are you sure you want to delete this announcement? It will be permanently removed from
+              your digital storefront.
             </p>
           </div>
         </div>
-        <div className="flex gap-2 justify-end">
+
+        <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 mb-6">
+          <p className="text-xs text-slate-700 font-medium line-clamp-3">"{item.text}"</p>
+          <div className="flex items-center gap-2 mt-2 text-[11px] text-slate-400">
+            <span className="font-semibold text-slate-600">{item.type}</span>
+            <span>·</span>
+            <span>{fmtDate(item.date)}</span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-3">
           <button
+            type="button"
             disabled={isSaving}
             onClick={onCancel}
-            className="px-4 py-2 rounded-lg border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer disabled:opacity-50"
+            className="h-10 px-4 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer disabled:opacity-50"
           >
             Cancel
           </button>
           <button
+            type="button"
             disabled={isSaving}
             onClick={onConfirm}
-            className="px-4 py-2 rounded-lg bg-red-600 text-sm font-semibold text-white hover:bg-red-700 transition-colors cursor-pointer flex items-center gap-2 disabled:opacity-50"
+            className="h-10 px-4 rounded-xl bg-red-600 hover:bg-red-700 text-xs font-semibold text-white shadow-sm transition-colors cursor-pointer flex items-center gap-2 disabled:opacity-50"
           >
-            {isSaving && <Timer size={13} className="animate-spin" />}
-            Delete
+            {isSaving && (
+              <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            )}
+            <span>Delete Announcement</span>
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
-// ─── Main Component ────────────────────────────────────────────────────────────
+// ─── Main Component ──────────────────────────────────────────────────────────
 
 export default function AnnouncementsPage() {
   const { showToast } = useToast();
   const { shop } = useBusinessApi();
+
+  // State
+  const [history, setHistory] = useState<AnnouncementItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isComposing, setIsComposing] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Form Fields
   const [text, setText] = useState("");
   const [type, setType] = useState<AnnouncementType>("Announcement");
-  const [status, setStatus] = useState<StatusType>("Draft");
-  const [audience, setAudience] = useState("ALL_FOLLOWED_USERS");
-  const [scheduleDate, setScheduleDate] = useState("");
-  const [scheduleTime, setScheduleTime] = useState("");
-  const [sent, setSent] = useState(false);
-  const [, setIsSaving] = useState(false);
 
-  const [showEmoji, setShowEmoji] = useState(false);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [history, setHistory] = useState<AnnouncementItem[]>([]);
+  // Filter & Search State
   const [filterType, setFilterType] = useState<AnnouncementType | "All">("All");
   const [filterStatus, setFilterStatus] = useState<StatusType | "All">("All");
+  const [searchQuery, setSearchQuery] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<AnnouncementItem | null>(null);
-  const [activeTab, setActiveTab] = useState<"editor" | "history">("editor");
 
   const textRef = useRef<HTMLTextAreaElement>(null);
-  const MAX = 160;
   const charCount = text.length;
-  const isOverLimit = charCount >= MAX * 0.9;
+  const isOverLimit = charCount >= MAX_CHAR_LIMIT * 0.9;
 
-  // Map API to UI Enums
+  // ── API Mapping Functions ──
   const apiToType = (t: string): AnnouncementType => {
     const raw = String(t || "").toUpperCase();
     if (raw === "OFFER") return "Offer";
@@ -282,664 +335,620 @@ export default function AnnouncementsPage() {
     return "Draft";
   };
 
-  const statusToApi = (s: StatusType) => {
-    if (s === "Scheduled") return "SCHEDULED";
-    if (s === "Published") return "PUBLISHED";
-    if (s === "Expired") return "EXPIRED";
-    return "DRAFT";
-  };
-
+  // ── Load Announcements ──
   const loadAnnouncements = () => {
-    shop.getAnnouncements(SHOP_ID).then((res) => {
-      const list = Array.isArray(res) 
-        ? res 
-        : (Array.isArray(res?.data) ? res.data : (Array.isArray(res?.detail?.data) ? res.detail.data : []));
-      setHistory(
-        list.map((d: any) => ({
-          id: d.id,
-          text: d.message || "",
-          date: d.schedule_at || d.created_at || new Date().toISOString(),
-          type: apiToType(d.type),
-          status: apiToStatus(d.status, d.schedule_at, d.expire_at),
-          audience: d.send_to || "ALL_FOLLOWED_USERS",
-          views: 0,
-          schedule_at: d.schedule_at,
-          expire_at: d.expire_at,
-        }))
-      );
-    }).catch(console.error);
+    const activeShopId = localStorage.getItem("shop_id") || SHOP_ID;
+    setLoading(true);
+    shop
+      .getAnnouncements(activeShopId)
+      .then((res: any) => {
+        const list = Array.isArray(res)
+          ? res
+          : Array.isArray(res?.data)
+          ? res.data
+          : Array.isArray(res?.detail?.data)
+          ? res.detail.data
+          : [];
+        setHistory(
+          list.map((d: any) => ({
+            id: d.id,
+            text: d.message || "",
+            date: d.schedule_at || d.created_at || new Date().toISOString(),
+            type: apiToType(d.type),
+            status: apiToStatus(d.status, d.schedule_at, d.expire_at),
+            audience: d.send_to || "ALL_FOLLOWED_USERS",
+            schedule_at: d.schedule_at,
+            expire_at: d.expire_at,
+          }))
+        );
+      })
+      .catch((err: any) => {
+        console.error(err);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   };
 
   useEffect(() => {
     loadAnnouncements();
   }, []);
 
-  const filteredHistory = history.filter(
-    (h) =>
-      (filterType === "All" || h.type === filterType) &&
-      (filterStatus === "All" || h.status === filterStatus)
-  );
-
+  // ── Metrics Calculation ──
   const publishedCount = history.filter((h) => h.status === "Published").length;
   const scheduledCount = history.filter((h) => h.status === "Scheduled").length;
   const draftCount = history.filter((h) => h.status === "Draft").length;
   const expiredCount = history.filter((h) => h.status === "Expired").length;
 
+  // ── Filtered History ──
+  const filteredHistory = useMemo(() => {
+    return history.filter((h) => {
+      const matchType = filterType === "All" || h.type === filterType;
+      const matchStatus = filterStatus === "All" || h.status === filterStatus;
+      const matchSearch =
+        !searchQuery.trim() || h.text.toLowerCase().includes(searchQuery.toLowerCase().trim());
+      return matchType && matchStatus && matchSearch;
+    });
+  }, [history, filterType, filterStatus, searchQuery]);
+
+  // ── Form Handlers ──
   const resetForm = () => {
     setText("");
-    setStatus("Draft");
-    setScheduleDate("");
-    setScheduleTime("");
+    setType("Announcement");
     setEditingId(null);
   };
 
-  const handlePublish = async (overrideStatus?: StatusType) => {
-    if (!text.trim()) return;
+  const handleStartCompose = () => {
+    resetForm();
+    setIsComposing(true);
+    setTimeout(() => {
+      textRef.current?.focus();
+    }, 50);
+  };
+
+  const handlePublish = async (asDraft: boolean = false) => {
+    if (!text.trim()) {
+      showToast("Please enter an announcement message", "error");
+      return;
+    }
     setIsSaving(true);
-    const targetStatus = overrideStatus || status;
+    const activeShopId = localStorage.getItem("shop_id") || SHOP_ID;
     const apiType = typeToApi(type);
-    const apiStatus = targetStatus === "Scheduled" || (scheduleDate && targetStatus !== "Draft" && targetStatus !== "Published")
-      ? "SCHEDULED"
-      : statusToApi(targetStatus);
+    const apiStatus = asDraft ? "DRAFT" : "PUBLISHED";
 
     const payload = {
       type: apiType,
       message: text.trim(),
       call_to_action: null,
-      schedule_at: (targetStatus === "Scheduled" || (scheduleDate && targetStatus !== "Draft" && targetStatus !== "Published")) && scheduleDate
-        ? new Date(`${scheduleDate}T${scheduleTime || "00:00"}`).toISOString()
-        : null,
-      send_to: audience,
+      schedule_at: null,
+      send_to: "ALL_FOLLOWED_USERS",
       status: apiStatus,
     };
+
     try {
       if (editingId) {
         await shop.updateAnnouncement(editingId, { ...payload, id: editingId });
         showToast("Announcement updated successfully", "success");
       } else {
-        await shop.createAnnouncement(SHOP_ID, payload);
+        await shop.createAnnouncement(activeShopId, payload);
         showToast(
-          targetStatus === "Published"
-            ? "Announcement published!"
-            : targetStatus === "Scheduled"
-            ? "Announcement scheduled!"
-            : "Draft saved!",
+          asDraft ? "Draft saved successfully" : "Announcement published to store!",
           "success"
         );
       }
-      setSent(true);
+      resetForm();
+      setIsComposing(false);
       loadAnnouncements();
-      setTimeout(() => { setSent(false); resetForm(); }, 1200);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      showToast("Failed to save announcement", "error");
+      const detail = err?.response?.data?.detail;
+      const msg =
+        typeof detail === "string"
+          ? detail
+          : Array.isArray(detail)
+          ? detail[0]?.msg || "Failed to save announcement"
+          : err?.message || "Failed to save announcement";
+      showToast(msg, "error");
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleDuplicate = (item: AnnouncementItem) => {
-    setText(item.text);
-    setType(item.type);
-    setStatus("Draft");
-    setAudience(item.audience);
-    setEditingId(null);
-    setActiveTab("editor");
-    textRef.current?.focus();
-  };
-
   const handleEdit = (item: AnnouncementItem) => {
     setText(item.text);
     setType(item.type);
-    setStatus(item.status);
-    setAudience(item.audience);
     setEditingId(item.id);
-    if (item.schedule_at) {
-      const d = new Date(item.schedule_at);
-      const iso = d.toISOString();
-      setScheduleDate(iso.slice(0, 10));
-      setScheduleTime(iso.slice(11, 16));
-    } else {
-      setScheduleDate("");
-      setScheduleTime("");
-    }
-    setActiveTab("editor");
-    textRef.current?.focus();
+    setIsComposing(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    setTimeout(() => {
+      textRef.current?.focus();
+    }, 50);
+  };
+
+  const handleDuplicate = (item: AnnouncementItem) => {
+    setText(item.text);
+    setType(item.type);
+    setEditingId(null);
+    setIsComposing(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    setTimeout(() => {
+      textRef.current?.focus();
+    }, 50);
   };
 
   const handleDelete = async () => {
-    if (deleteTarget) {
-      setIsSaving(true);
-      try {
-        await shop.deleteAnnouncement(deleteTarget.id);
-        setHistory((prev) => prev.filter((h) => h.id !== deleteTarget.id));
-        setDeleteTarget(null);
-        showToast("Announcement deleted", "success");
-      } catch (err) {
-        console.error(err);
-        showToast("Failed to delete announcement", "error");
-      } finally {
-        setIsSaving(false);
-      }
+    if (!deleteTarget) return;
+    setIsSaving(true);
+    try {
+      await shop.deleteAnnouncement(deleteTarget.id);
+      setHistory((prev) => prev.filter((h) => h.id !== deleteTarget.id));
+      showToast("Announcement deleted successfully", "success");
+      setDeleteTarget(null);
+    } catch (err: any) {
+      console.error(err);
+      showToast(err?.message || "Failed to delete announcement", "error");
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const handleAI = () => {
-    setAiLoading(true);
-    const pick = AI_SUGGESTIONS[Math.floor(Math.random() * AI_SUGGESTIONS.length)];
-    setTimeout(() => {
-      setText(pick.text);
-      setType(pick.type);
-      setAiLoading(false);
-      textRef.current?.focus();
-    }, 900);
-  };
-
-  const insertEmoji = (emoji: string) => {
-    const el = textRef.current;
-    if (!el) return;
-    const start = el.selectionStart, end = el.selectionEnd;
-    const newText = text.slice(0, start) + emoji + text.slice(end);
-    setText(newText.slice(0, MAX));
-    setTimeout(() => {
-      el.setSelectionRange(start + emoji.length, start + emoji.length);
-      el.focus();
-    }, 0);
-    setShowEmoji(false);
-  };
-
   return (
-    <>
-      <style>{`
-        @keyframes ann-fadeIn { from { opacity: 0 } to { opacity: 1 } }
-        @keyframes ann-slideUp { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: translateY(0) } }
-        @keyframes ann-spin { to { transform: rotate(360deg) } }
-        .ann-spin { animation: ann-spin 0.7s linear infinite; }
-      `}</style>
-
+    <div className="space-y-6" style={{ fontFamily: "Inter, sans-serif" }}>
       {deleteTarget && (
         <DeleteModal
           item={deleteTarget}
           onConfirm={handleDelete}
           onCancel={() => setDeleteTarget(null)}
+          isSaving={isSaving}
         />
       )}
 
-      <div style={{ fontFamily: "Inter, sans-serif" }}>
+      {/* ─── PAGE HEADER & ACTIONS ──────────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200/80">
+        <div>
+          <h2 className="text-lg font-bold text-slate-900 tracking-tight">Store Announcements</h2>
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+            Manage broadcast banners and promotional messages displayed across your digital storefront.
+          </p>
+        </div>
 
-        {/* ── Page Header ────────────────────────────────────────── */}
-        <div className="mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h2 className="text-base font-semibold text-slate-900">Announcements</h2>
-            <p className="text-sm text-slate-500 mt-0.5">
-              Broadcast messages across store, WhatsApp & notifications
-            </p>
+        <div className="flex items-center gap-3">
+          {!isComposing && (
+            <button
+              type="button"
+              onClick={handleStartCompose}
+              className="inline-flex items-center gap-2 h-9.5 px-4 rounded-xl text-white text-xs font-semibold shadow-sm transition-all cursor-pointer"
+              style={{
+                backgroundColor: BRAND_GREEN,
+                boxShadow: "0 2px 8px rgba(40, 96, 56, 0.25)",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = BRAND_GREEN_HOVER)}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = BRAND_GREEN)}
+            >
+              <Plus size={14} />
+              <span>New Announcement</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ─── COMPOSER CARD (CREATE / EDIT) ──────────────────────────── */}
+      {isComposing && (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden animate-in fade-in duration-200">
+          {/* Card Header */}
+          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <div className="flex items-center gap-2.5">
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center font-bold"
+                style={{ backgroundColor: "#EAF4E6", color: BRAND_GREEN }}
+              >
+                {editingId ? <Edit3 size={15} /> : <Megaphone size={15} />}
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">
+                  {editingId ? `Edit Announcement #${editingId}` : "Create New Announcement"}
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Compose a customer-facing banner to display at the top of your store.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                resetForm();
+                setIsComposing(false);
+              }}
+              className="w-8 h-8 rounded-lg hover:bg-slate-200/60 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+              title="Close composer"
+            >
+              <X size={15} />
+            </button>
           </div>
 
-          {/* Stat pills + tab switcher */}
-          <div className="flex flex-wrap items-center justify-between sm:justify-end gap-3">
-            <div className="flex flex-wrap items-center gap-2 text-[12px] text-slate-500">
-              <span className="flex items-center gap-1">
-                <CheckCircle2 size={12} className="text-emerald-500" />
-                {publishedCount} published
-              </span>
-              <span className="text-slate-300">·</span>
-              <span className="flex items-center gap-1">
-                <Clock size={12} className="text-amber-500" />
-                {scheduledCount} scheduled
-              </span>
-              <span className="text-slate-300">·</span>
-              <span className="flex items-center gap-1">
-                <Edit3 size={12} className="text-slate-400" />
-                {draftCount} drafts
-              </span>
-              {expiredCount > 0 && (
-                <>
-                  <span className="text-slate-300">·</span>
-                  <span className="flex items-center gap-1">
-                    <X size={12} className="text-rose-500" />
-                    {expiredCount} expired
+          {/* Card Body */}
+          <div className="p-6 space-y-5">
+            {/* Category Selector */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-2">
+                Announcement Category
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {(["Announcement", "Update", "Offer"] as AnnouncementType[]).map((t) => {
+                  const isSelected = type === t;
+                  const cfg = TYPE_CONFIG[t];
+                  const Icon = cfg.icon;
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setType(t)}
+                      className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                        isSelected
+                          ? t === "Offer"
+                            ? "bg-emerald-50/80 border-emerald-300 text-emerald-900 shadow-xs"
+                            : t === "Update"
+                            ? "bg-amber-50/80 border-amber-300 text-amber-900 shadow-xs"
+                            : "bg-[#EAF4E6] border-[#A8C898] text-[#1e4a2b] shadow-xs"
+                          : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300"
+                      }`}
+                    >
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${cfg.iconClass}`}>
+                        <Icon size={15} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold">{cfg.label}</div>
+                        <div className="text-[11px] text-slate-500 font-normal truncate">
+                          {cfg.description}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Message Area */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-semibold text-slate-700">
+                  Announcement Message <span className="text-red-500">*</span>
+                </label>
+                <span
+                  className={`text-xs font-mono font-medium ${
+                    isOverLimit ? "text-amber-600 font-bold" : "text-slate-400"
+                  }`}
+                >
+                  {charCount} / {MAX_CHAR_LIMIT}
+                </span>
+              </div>
+              <textarea
+                ref={textRef}
+                rows={3}
+                maxLength={MAX_CHAR_LIMIT}
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="Write your announcement message here (e.g., Weekend special: 20% off all dairy & fresh produce)..."
+                className="w-full bg-slate-50/50 hover:bg-white focus:bg-white border border-slate-200 rounded-xl px-3.5 py-3 text-sm text-slate-900 leading-relaxed resize-none outline-none focus:border-[#286038] focus:ring-3 focus:ring-[#286038]/15 transition-all placeholder:text-slate-400 shadow-2xs"
+              />
+            </div>
+
+            {/* Live Storefront Preview */}
+            <div className="rounded-xl border border-slate-200/90 bg-slate-50/60 p-4">
+              <div className="flex items-center justify-between mb-2.5">
+                <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <Eye size={12} className="text-slate-400" />
+                  Live Storefront Preview
+                </span>
+                <span className="text-[11px] text-slate-400">Customer view</span>
+              </div>
+
+              <div className="rounded-xl overflow-hidden border border-slate-200 shadow-xs bg-white">
+                <div className="px-3 py-1.5 bg-slate-100/80 border-b border-slate-200 flex items-center gap-1.5">
+                  <div className="flex gap-1">
+                    <span className="w-2 h-2 rounded-full bg-slate-300" />
+                    <span className="w-2 h-2 rounded-full bg-slate-300" />
+                    <span className="w-2 h-2 rounded-full bg-slate-300" />
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-mono ml-2">
+                    storefront-banner
                   </span>
-                </>
+                </div>
+
+                <div
+                  className={`px-4 py-2.5 flex items-center justify-center gap-2 text-center text-xs font-medium text-white transition-colors ${
+                    TYPE_CONFIG[type]?.previewBg || "bg-[#286038]"
+                  }`}
+                >
+                  {type === "Offer" && <Tag size={13} className="shrink-0" />}
+                  {type === "Update" && <RefreshCw size={13} className="shrink-0" />}
+                  {type === "Announcement" && <Megaphone size={13} className="shrink-0" />}
+                  <span className="truncate">
+                    {text.trim() ||
+                      "Your announcement banner message will be presented here to visiting customers…"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Card Footer Actions */}
+          <div className="px-6 py-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-end gap-2.5">
+            <button
+              type="button"
+              disabled={isSaving}
+              onClick={() => {
+                resetForm();
+                setIsComposing(false);
+              }}
+              className="h-9.5 px-4 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-all cursor-pointer disabled:opacity-50"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="button"
+              disabled={!text.trim() || isSaving}
+              onClick={() => handlePublish(true)}
+              className="h-9.5 px-4 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Save as Draft
+            </button>
+
+            <button
+              type="button"
+              disabled={!text.trim() || isSaving}
+              onClick={() => handlePublish(false)}
+              className="h-9.5 px-5 rounded-xl text-white text-xs font-semibold shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{
+                backgroundColor: BRAND_GREEN,
+                boxShadow: "0 2px 8px rgba(40, 96, 56, 0.25)",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = BRAND_GREEN_HOVER)}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = BRAND_GREEN)}
+            >
+              {isSaving ? (
+                <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <Send size={14} />
+              )}
+              <span>{editingId ? "Save Changes" : "Publish Announcement"}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ─── ANNOUNCEMENTS LIST / TABLE ─────────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        {/* Table Filter Bar */}
+        <div className="p-4 sm:px-6 sm:py-4 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row md:items-center justify-between gap-3">
+          {/* Status Quick Chips (Green active pill instead of black) */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+            {[
+              { label: "All", value: "All", count: history.length },
+              {
+                label: "Live",
+                value: "Published",
+                count: publishedCount,
+                dot: "bg-emerald-500",
+              },
+              {
+                label: "Scheduled",
+                value: "Scheduled",
+                count: scheduledCount,
+                dot: "bg-amber-500",
+              },
+              {
+                label: "Drafts",
+                value: "Draft",
+                count: draftCount,
+                dot: "bg-slate-400",
+              },
+              ...(expiredCount > 0
+                ? [{ label: "Expired", value: "Expired", count: expiredCount, dot: "bg-rose-500" }]
+                : []),
+            ].map((pill) => {
+              const isActive = filterStatus === pill.value;
+              return (
+                <button
+                  key={pill.value}
+                  type="button"
+                  onClick={() => setFilterStatus(pill.value as StatusType | "All")}
+                  className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap border ${
+                    isActive
+                      ? "text-white shadow-xs"
+                      : "bg-white text-slate-600 border-slate-200 hover:bg-emerald-50/50 hover:text-[#286038]"
+                  }`}
+                  style={
+                    isActive
+                      ? {
+                          backgroundColor: BRAND_GREEN,
+                          borderColor: BRAND_GREEN,
+                        }
+                      : undefined
+                  }
+                >
+                  {pill.dot && (
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        isActive ? "bg-white" : pill.dot
+                      }`}
+                    />
+                  )}
+                  <span>{pill.label}</span>
+                  <span
+                    className={`text-[11px] px-1.5 py-0.2 rounded-full font-mono ${
+                      isActive ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"
+                    }`}
+                  >
+                    {pill.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Search & Category Filter */}
+          <div className="flex items-center gap-2.5">
+            {/* Search */}
+            <div className="relative w-full sm:w-56">
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search announcements…"
+                className="w-full h-8 pl-8 pr-3 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 placeholder:text-slate-400 outline-none focus:border-[#286038] focus:ring-2 focus:ring-[#286038]/15 transition-all"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  <X size={12} />
+                </button>
               )}
             </div>
 
-            <div className="flex bg-white border border-slate-200 rounded-lg overflow-hidden">
-              <button
-                onClick={() => setActiveTab("editor")}
-                className={`px-4 py-2 text-sm font-medium transition-colors cursor-pointer ${
-                  activeTab === "editor"
-                    ? "bg-blue-600 text-white"
-                    : "text-slate-600 hover:bg-slate-50"
-                }`}
-              >
-                Compose
-              </button>
-              <button
-                onClick={() => setActiveTab("history")}
-                className={`px-4 py-2 text-sm font-medium transition-colors border-l border-slate-200 cursor-pointer ${
-                  activeTab === "history"
-                    ? "bg-blue-600 text-white"
-                    : "text-slate-600 hover:bg-slate-50"
-                }`}
-              >
-                History
-              </button>
+            {/* Category Dropdown */}
+            <div className="w-36 shrink-0">
+              <ReusableSelect
+                options={[
+                  { label: "All Types", value: "All" },
+                  { label: "Announcement", value: "Announcement" },
+                  { label: "Store Update", value: "Update" },
+                  { label: "Offer", value: "Offer" },
+                ]}
+                value={filterType}
+                onValueChange={(val) => setFilterType(val as AnnouncementType | "All")}
+                className="h-8 text-xs bg-white rounded-lg border-slate-200"
+              />
             </div>
           </div>
         </div>
 
-        {/* ═══ EDITOR TAB ════════════════════════════════════════ */}
-        {activeTab === "editor" && (
-          <div
-            className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-5"
-            style={{ animation: "ann-fadeIn 0.2s ease" }}
-          >
-            {/* ── Left: Compose form ── */}
-            <div className="space-y-4">
-              {editingId && (
-                <div className="flex items-center justify-between px-4 py-2.5 bg-blue-50 border border-blue-200 rounded-lg text-sm">
-                  <span className="text-blue-700 font-medium flex items-center gap-2">
-                    <Edit3 size={13} /> Editing announcement #{editingId}
-                  </span>
-                  <button
-                    onClick={resetForm}
-                    className="text-blue-500 hover:text-blue-700 transition-colors cursor-pointer"
-                  >
-                    <X size={14} />
-                  </button>
+        {/* Table Content */}
+        {loading ? (
+          <div className="p-8 space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="animate-pulse flex items-center justify-between gap-4">
+                <div className="space-y-2 flex-1">
+                  <div className="h-4 bg-slate-100 rounded w-2/3" />
+                  <div className="h-3 bg-slate-100 rounded w-1/4" />
                 </div>
-              )}
-
-              {/* Main editor card */}
-              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                {/* Textarea */}
-                <div className="px-4 pt-4 pb-2">
-                  <label className="block text-xs font-medium text-slate-500 mb-2">
-                    Message <span className="text-red-400">*</span>
-                  </label>
-                  <textarea
-                    ref={textRef}
-                    rows={7}
-                    maxLength={MAX}
-                    value={text}
-                    onChange={(e) => setText(e.target.value)}
-                    placeholder="Write a clear and engaging announcement for your customers…"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-800 leading-relaxed resize-none outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 transition-all placeholder-slate-400"
-                  />
-
-                  {/* char count + progress */}
-                  <div className="flex items-center justify-between mt-2">
-                    <div className="flex items-center gap-2">
-                      {/* Emoji picker */}
-                      <div className="relative">
-                        <button
-                          onClick={() => setShowEmoji((p) => !p)}
-                          className="p-1.5 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
-                          title="Add emoji"
-                        >
-                          <Smile size={14} />
-                        </button>
-                        {showEmoji && (
-                          <div
-                            className="absolute left-0 top-[calc(100%+4px)] z-50 bg-white border border-slate-200 rounded-xl p-2.5 grid grid-cols-6 gap-1 shadow-lg"
-                            style={{ animation: "ann-slideUp 0.15s ease" }}
-                          >
-                            {EMOJI_LIST.map((e) => (
-                              <button
-                                key={e}
-                                onClick={() => insertEmoji(e)}
-                                className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-100 transition-colors cursor-pointer text-base"
-                              >
-                                {e}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* AI Suggest */}
-                      <button
-                        disabled={aiLoading}
-                        onClick={handleAI}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[12px] font-medium border border-slate-200 bg-white text-slate-600 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-colors cursor-pointer disabled:opacity-50"
-                      >
-                        {aiLoading ? (
-                          <span className="w-3 h-3 border-2 border-slate-200 border-t-blue-600 rounded-full inline-block ann-spin" />
-                        ) : (
-                          <Wand2 size={12} />
-                        )}
-                        AI Suggest
-                      </button>
-                    </div>
-
-                    <span
-                      className={`text-[12px] font-mono font-medium ${
-                        isOverLimit ? "text-red-500" : "text-slate-400"
-                      }`}
-                    >
-                      {charCount}/{MAX}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Quick templates when empty */}
-                {!text && (
-                  <div className="px-4 pb-4 border-t border-slate-100 pt-3">
-                    <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-2">
-                      Quick templates
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {AI_SUGGESTIONS.slice(0, 3).map((s, i) => (
-                        <button
-                          key={i}
-                          onClick={() => { setText(s.text); setType(s.type); textRef.current?.focus(); }}
-                          className="py-1 px-2.5 rounded-lg bg-slate-50 border border-slate-200 text-[11px] text-slate-600 cursor-pointer hover:border-blue-300 hover:text-blue-700 hover:bg-blue-50 transition-colors"
-                        >
-                          {s.text.slice(0, 38)}…
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                <div className="h-7 w-24 bg-slate-100 rounded-lg" />
               </div>
-            </div>
-
-            {/* ── Right: Settings panel ── */}
-            <div className="space-y-4">
-              <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-5">
-
-                {/* Type */}
-                <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-2">Type</label>
-                  <div className="space-y-1.5">
-                    {(Object.keys(TYPE_CONFIG) as AnnouncementType[]).map((t) => {
-                      const tcfg = TYPE_CONFIG[t];
-                      const isActive = type === t;
-                      return (
-                        <button
-                          key={t}
-                          onClick={() => setType(t)}
-                          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border text-sm font-medium transition-colors cursor-pointer ${
-                            isActive
-                              ? `${tcfg.bg} ${tcfg.text} ${tcfg.border}`
-                              : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-                          }`}
-                        >
-                          <span className="flex items-center">{tcfg.emoji}</span>
-                          {t}
-                          {isActive && (
-                            <CheckCircle2 size={13} className="ml-auto" />
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="border-t border-slate-100" />
-
-                {/* Status */}
-                <div>
-                  <ReusableSelect
-                    label="Status"
-                    options={[
-                      { label: "Draft", value: "Draft", icon: <FileText size={13} className="text-slate-400" /> },
-                      { label: "Scheduled", value: "Scheduled", icon: <Calendar size={13} className="text-amber-500" /> },
-                      { label: "Published", value: "Published", icon: <Send size={13} className="text-blue-500" /> }
-                    ]}
-                    value={status}
-                    onValueChange={(val) => setStatus(val as StatusType)}
-                    placeholder="Select Status"
-                    className="h-9 py-1 px-3 text-xs bg-slate-50"
-                  />
-                </div>
-
-                {/* Schedule date/time — show when Scheduled */}
-                {status === "Scheduled" && (
-                  <div style={{ animation: "ann-fadeIn 0.2s ease" }}>
-                    <label className="block text-xs font-medium text-slate-500 mb-2 flex items-center gap-1.5">
-                      <Calendar size={12} className="text-amber-500" />
-                      Schedule Date & Time
-                    </label>
-                    <div className="space-y-2">
-                      <input
-                        type="date"
-                        value={scheduleDate}
-                        onChange={(e) => setScheduleDate(e.target.value)}
-                        className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 transition-all cursor-pointer"
-                      />
-                      <input
-                        type="time"
-                        value={scheduleTime}
-                        onChange={(e) => setScheduleTime(e.target.value)}
-                        className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 transition-all cursor-pointer"
-                      />
-                      {scheduleDate && scheduleTime && (
-                        <p className="text-[11px] text-amber-600 font-medium flex items-center gap-1">
-                          <Clock size={11} />
-                          Goes live:{" "}
-                          {new Date(`${scheduleDate}T${scheduleTime}`).toLocaleDateString("en-US", {
-                            weekday: "short",
-                            month: "short",
-                            day: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                <div className="border-t border-slate-100" />
-
-                {/* Audience */}
-                <div>
-                  <ReusableSelect
-                    label="Audience"
-                    options={AUDIENCE_OPTIONS.map((o) => ({
-                      label: o.label,
-                      value: o.value,
-                      icon: o.value === "ALL_USERS" ? <Users size={13} className="text-slate-400" /> : <UserCheck size={13} className="text-blue-500" />
-                    }))}
-                    value={audience}
-                    onValueChange={(val) => setAudience(val)}
-                    placeholder="Select Audience"
-                    className="h-9 py-1 px-3 text-xs bg-slate-50"
-                  />
-                </div>
-
-                <div className="border-t border-slate-100" />
-
-                {/* Actions */}
-                <div className="space-y-2">
-                  <button
-                    onClick={() => handlePublish("Draft")}
-                    disabled={!text.trim() || sent}
-                    className="w-full h-9 px-4 rounded-lg border border-slate-200 text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    Save Draft
-                  </button>
-
-                  <button
-                    onClick={() => handlePublish(status === "Scheduled" ? "Scheduled" : "Published")}
-                    disabled={!text.trim() || sent}
-                    className={`w-full h-9 px-4 rounded-lg text-sm font-semibold transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
-                      sent
-                        ? "bg-emerald-500 text-white"
-                        : "bg-blue-600 text-white hover:bg-blue-700"
-                    }`}
-                  >
-                    {sent ? (
-                      <><CheckCircle2 size={14} /> Saved!</>
-                    ) : status === "Scheduled" ? (
-                      <><Clock size={14} /> Schedule</>
-                    ) : (
-                      <><Send size={14} /> Publish Now</>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Summary card */}
-              {(type || status) && (
-                <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-2">
-                  <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Summary</p>
-                  <div className="flex items-center justify-between py-1 border-b border-slate-100">
-                    <span className="text-[12px] text-slate-500">Type</span>
-                    <TypeBadge type={type} />
-                  </div>
-                  <div className="flex items-center justify-between py-1">
-                    <span className="text-[12px] text-slate-500">Status</span>
-                    <StatusBadge
-                      status={status === "Scheduled" || scheduleDate ? "Scheduled" : status}
-                      scheduleAt={scheduleDate && scheduleTime ? `${scheduleDate}T${scheduleTime}` : null}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
+            ))}
           </div>
-        )}
-
-        {/* ═══ HISTORY TAB ════════════════════════════════════════ */}
-        {activeTab === "history" && (
-          <div
-            className="bg-white rounded-xl border border-slate-200 overflow-hidden"
-            style={{ animation: "ann-fadeIn 0.2s ease" }}
-          >
-            {/* Filters */}
-            <div className="px-5 py-3.5 border-b border-slate-100 flex items-center gap-3 flex-wrap bg-slate-50/60">
-              {/* Type filter */}
-              <div className="w-36">
-                <ReusableSelect
-                  options={[
-                    { label: "All Types", value: "All" },
-                    ...(Object.keys(TYPE_CONFIG) as AnnouncementType[]).map((t) => ({ label: t, value: t }))
-                  ]}
-                  value={filterType}
-                  onValueChange={(val) => setFilterType(val as AnnouncementType | "All")}
-                  placeholder="All Types"
-                  className="h-8 py-0 px-2 text-xs bg-white"
-                />
-              </div>
-
-              {/* Status filter */}
-              <div className="w-36">
-                <ReusableSelect
-                  options={[
-                    { label: "All Statuses", value: "All" },
-                    { label: "Published", value: "Published" },
-                    { label: "Scheduled", value: "Scheduled" },
-                    { label: "Draft", value: "Draft" },
-                    { label: "Expired", value: "Expired" }
-                  ]}
-                  value={filterStatus}
-                  onValueChange={(val) => setFilterStatus(val as StatusType | "All")}
-                  placeholder="All Statuses"
-                  className="h-8 py-0 px-2 text-xs bg-white"
-                />
-              </div>
-
-              <div className="flex-1" />
-              <span className="text-[12px] text-slate-500 font-medium">
-                {filteredHistory.length} result{filteredHistory.length !== 1 ? "s" : ""}
-              </span>
+        ) : filteredHistory.length === 0 ? (
+          <div className="py-16 px-6 text-center flex flex-col items-center">
+            <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mb-3.5">
+              <Inbox size={22} className="text-slate-400" />
             </div>
-
-            {/* Table header (desktop only) */}
-            <div className="hidden md:grid grid-cols-[1fr_110px_140px_110px] gap-4 px-5 py-2.5 border-b border-slate-100 bg-slate-50/40">
-              {["Message", "Type", "Status", "Actions"].map((h) => (
-                <span key={h} className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">
-                  {h}
-                </span>
-              ))}
-            </div>
-
-            {/* Rows */}
-            {filteredHistory.length === 0 ? (
-              <div className="py-16 px-5 text-center flex flex-col items-center">
-                <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center mb-3">
-                  <Inbox size={22} className="text-slate-400" strokeWidth={1.5} />
-                </div>
-                <p className="text-sm font-semibold text-slate-700 mb-1">No announcements found</p>
-                <p className="text-[12px] text-slate-400">Try adjusting your filters or create a new one</p>
-              </div>
-            ) : (
-              filteredHistory.map((item, idx) => (
-                <div
-                  key={item.id}
-                  className={`flex flex-col md:grid md:grid-cols-[1fr_110px_140px_110px] gap-3 md:gap-4 px-4 sm:px-5 py-3.5 md:items-center hover:bg-slate-50/70 transition-colors ${
-                    idx < filteredHistory.length - 1 ? "border-b border-slate-100" : ""
-                  }`}
-                  style={{ animation: `ann-fadeIn 0.15s ease ${idx * 0.03}s both` }}
-                >
-                  {/* Message */}
-                  <div>
-                    <p className="text-sm font-medium text-slate-800 line-clamp-2 leading-snug">{item.text}</p>
-                    <p className="text-[11px] text-slate-400 mt-1 flex flex-wrap items-center gap-1.5">
-                      <span>{timeAgo(item.date)}</span>
-                      <span>·</span>
-                      <span>{fmtDate(item.date)}</span>
-                      {item.audience && (
-                        <>
-                          <span>·</span>
-                          <span className="text-slate-500 font-medium">
-                            {item.audience === "ALL_FOLLOWED_USERS" ? "Followers" : "All Users"}
-                          </span>
-                        </>
-                      )}
-                    </p>
-                  </div>
-
-                  {/* Mobile inline badges + actions row; desktop grid columns via md:contents */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 md:contents pt-2 border-t border-slate-100 md:border-0 md:pt-0">
-                    <div className="flex flex-wrap items-center gap-2 md:contents">
-                      <div>
-                        <TypeBadge type={item.type} />
-                      </div>
-
-                      <div>
-                        <StatusBadge
-                          status={item.status}
-                          scheduleAt={item.schedule_at}
-                          expireAt={item.expire_at}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex gap-1.5">
-                      <button
-                        onClick={() => handleEdit(item)}
-                        title="Edit"
-                        className="w-9 h-9 md:w-7 md:h-7 rounded-lg border border-slate-200 bg-white flex items-center justify-center text-slate-400 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-all cursor-pointer"
-                      >
-                        <Edit3 size={13} />
-                      </button>
-                      <button
-                        onClick={() => handleDuplicate(item)}
-                        title="Duplicate"
-                        className="w-9 h-9 md:w-7 md:h-7 rounded-lg border border-slate-200 bg-white flex items-center justify-center text-slate-400 hover:border-emerald-300 hover:text-emerald-600 hover:bg-emerald-50 transition-all cursor-pointer"
-                      >
-                        <Copy size={13} />
-                      </button>
-                      <button
-                        onClick={() => setDeleteTarget(item)}
-                        title="Delete"
-                        className="w-9 h-9 md:w-7 md:h-7 rounded-lg border border-slate-200 bg-white flex items-center justify-center text-slate-400 hover:border-red-300 hover:text-red-500 hover:bg-red-50 transition-all cursor-pointer"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))
+            <h4 className="text-sm font-bold text-slate-800 mb-1">No announcements found</h4>
+            <p className="text-xs text-slate-500 max-w-sm mb-5 leading-relaxed">
+              {searchQuery || filterType !== "All" || filterStatus !== "All"
+                ? "No announcements matched your current filters. Try resetting your search or filter criteria."
+                : "Create an announcement banner to inform your customers about special offers, new items, or operating hours."}
+            </p>
+            {!isComposing && (
+              <button
+                type="button"
+                onClick={handleStartCompose}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-white text-xs font-semibold shadow-sm transition-all cursor-pointer"
+                style={{
+                  backgroundColor: BRAND_GREEN,
+                  boxShadow: "0 2px 8px rgba(40, 96, 56, 0.25)",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = BRAND_GREEN_HOVER)}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = BRAND_GREEN)}
+              >
+                <Plus size={14} />
+                <span>Create Announcement</span>
+              </button>
             )}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50/30 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  <th className="py-3 px-6">Announcement Message</th>
+                  <th className="py-3 px-4">Category</th>
+                  <th className="py-3 px-4">Status & Schedule</th>
+                  <th className="py-3 px-6 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-xs">
+                {filteredHistory.map((item) => (
+                  <tr
+                    key={item.id}
+                    className="hover:bg-slate-50/70 transition-colors group"
+                  >
+                    {/* Message Column */}
+                    <td className="py-3.5 px-6 max-w-md">
+                      <p className="text-sm font-semibold text-slate-900 leading-snug line-clamp-2">
+                        {item.text}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-400 font-medium">
+                        <span>{timeAgo(item.date)}</span>
+                        <span>·</span>
+                        <span>{fmtDate(item.date)}</span>
+                      </div>
+                    </td>
+
+                    {/* Category Column */}
+                    <td className="py-3.5 px-4 whitespace-nowrap align-middle">
+                      <TypeBadge type={item.type} />
+                    </td>
+
+                    {/* Status Column */}
+                    <td className="py-3.5 px-4 whitespace-nowrap align-middle">
+                      <StatusBadge
+                        status={item.status}
+                        scheduleAt={item.schedule_at}
+                        expireAt={item.expire_at}
+                      />
+                    </td>
+
+                    {/* Action Buttons Column */}
+                    <td className="py-3.5 px-6 whitespace-nowrap align-middle text-right">
+                      <div className="inline-flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleEdit(item)}
+                          title="Edit announcement"
+                          className="w-8 h-8 rounded-lg border border-slate-200 bg-white hover:bg-emerald-50 hover:border-emerald-300 hover:text-[#286038] flex items-center justify-center text-slate-500 transition-all cursor-pointer shadow-2xs"
+                        >
+                          <Edit3 size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDuplicate(item)}
+                          title="Duplicate as draft"
+                          className="w-8 h-8 rounded-lg border border-slate-200 bg-white hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 flex items-center justify-center text-slate-500 transition-all cursor-pointer shadow-2xs"
+                        >
+                          <Copy size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeleteTarget(item)}
+                          title="Delete announcement"
+                          className="w-8 h-8 rounded-lg border border-slate-200 bg-white hover:bg-red-50 hover:border-red-300 hover:text-red-600 flex items-center justify-center text-slate-500 transition-all cursor-pointer shadow-2xs"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 }

@@ -1,10 +1,15 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   Megaphone, Package, Settings2, AlertCircle,
   PowerOff,
   Edit3, QrCode, Users, X, Download, ExternalLink,
-  Hash,
   BadgeCheck,
+  MapPin,
+  Tag,
+  Store,
+  Copy,
+  Check,
 } from "lucide-react";
 import { useToast } from "@/context/ToastContext";
 import { QRCodeSVG } from "qrcode.react";
@@ -88,17 +93,28 @@ const Skeleton = ({ className }: { className?: string }) => (
 
 const HeaderSkeleton = () => (
   <div className="bg-white border-b border-slate-200">
-    <div className="h-32 bg-slate-100 animate-pulse" />
-    <div className="px-6 py-4 flex items-center gap-4">
-      <Skeleton className="w-16 h-16 rounded-xl shrink-0 -mt-10" />
-      <div className="flex-1 space-y-2 pt-2">
-        <Skeleton className="h-4 w-40" />
-        <Skeleton className="h-3 w-64" />
+    <div className="h-64 sm:h-72 lg:h-80 bg-slate-200 animate-pulse" />
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8 sm:pb-10 pt-3">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 sm:gap-6 min-w-0 flex-1">
+          <Skeleton className="w-28 h-28 sm:w-36 sm:h-36 lg:w-40 lg:h-40 rounded-3xl border-4 border-white shadow-xl shrink-0 -mt-14 sm:-mt-18 lg:-mt-20" />
+          <div className="space-y-3 pt-2 sm:pt-3 flex-1">
+            <Skeleton className="h-9 w-64 rounded-xl" />
+            <Skeleton className="h-4 w-96 rounded-md" />
+            <Skeleton className="h-4 w-72 rounded-md" />
+          </div>
+        </div>
+        <div className="flex items-center gap-3 shrink-0 pt-2 lg:pt-0">
+          <Skeleton className="h-11 w-32 rounded-xl" />
+          <Skeleton className="h-11 w-28 rounded-xl" />
+          <Skeleton className="h-11 w-32 rounded-xl" />
+        </div>
       </div>
-      <Skeleton className="h-8 w-24 rounded-lg" />
     </div>
-    <div className="px-6 flex gap-6 border-t border-slate-100">
-      {[1, 2, 3].map((i) => <Skeleton key={i} className="h-10 w-28 my-2" />)}
+    <div className="border-t border-slate-200/80">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex gap-6">
+        {[1, 2, 3].map((i) => <Skeleton key={i} className="h-10 w-28 my-3 rounded-lg" />)}
+      </div>
     </div>
   </div>
 );
@@ -107,6 +123,19 @@ const HeaderSkeleton = () => (
 function QRModal({ shop, onClose }: { shop: ShopData; onClose: () => void }) {
   const storeUrl = shop.additional_infos?.website
     || `${window.location.origin}/store/${shop.id}`;
+
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onClose]);
 
   const handleDownload = () => {
     const svg = document.getElementById("store-qr-svg") as unknown as SVGSVGElement;
@@ -127,15 +156,15 @@ function QRModal({ shop, onClose }: { shop: ShopData; onClose: () => void }) {
     setTimeout(() => setCopied(false), 1500);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ animation: "qr-fadeIn 0.15s ease" }}>
-      <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-[340px] overflow-hidden" style={{ animation: "qr-slideUp 0.2s ease" }}>
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-150">
+      <div className="absolute inset-0" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-[340px] overflow-hidden animate-in zoom-in-95 duration-150">
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
           <div className="flex items-center gap-2">
-            <QrCode size={16} className="text-blue-600" />
+            <QrCode size={16} className="text-[#286038]" />
             <span className="text-sm font-semibold text-slate-800">Store QR Code</span>
           </div>
           <button onClick={onClose} className="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors cursor-pointer">
@@ -174,7 +203,7 @@ function QRModal({ shop, onClose }: { shop: ShopData; onClose: () => void }) {
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Open Link in New Tab"
-                className="text-blue-600 hover:text-blue-700 p-1 hover:bg-blue-50 rounded shrink-0 transition-colors"
+                className="text-[#286038] hover:text-[#1e4a2b] p-1 hover:bg-emerald-50 rounded shrink-0 transition-colors"
               >
                 <ExternalLink size={12} />
               </a>
@@ -185,29 +214,26 @@ function QRModal({ shop, onClose }: { shop: ShopData; onClose: () => void }) {
           <div className="flex gap-2 w-full">
             <button
               onClick={handleCopy}
-              className={`flex-1 h-9 border rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+              className={`flex-1 h-9 border rounded-lg text-sm font-medium transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${
                 copied
                   ? "bg-emerald-50 border-emerald-200 text-emerald-600"
                   : "border-slate-200 text-slate-600 hover:bg-slate-50"
               }`}
             >
+              {copied ? <Check size={13} /> : <Copy size={13} />}
               {copied ? "Copied!" : "Copy Link"}
             </button>
             <button
               onClick={handleDownload}
-              className="flex-1 h-9 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+              className="flex-1 h-9 bg-[#286038] hover:bg-[#1e4a2b] text-white rounded-lg text-sm font-semibold transition-colors cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
             >
               <Download size={13} /> Download
             </button>
           </div>
         </div>
       </div>
-
-      <style>{`
-        @keyframes qr-fadeIn  { from { opacity:0 } to { opacity:1 } }
-        @keyframes qr-slideUp { from { opacity:0; transform:translateY(12px) } to { opacity:1; transform:translateY(0) } }
-      `}</style>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -372,173 +398,275 @@ const DigitalMain = () => {
       <div className="bg-white border-b border-slate-200">
 
         {/* Banner */}
-        <div className="relative h-36 overflow-hidden">
+        <div className="relative h-64 sm:h-72 lg:h-80 w-full overflow-hidden bg-slate-900">
           {shop.banner_url ? (
-            <img src={shop.banner_url} alt="Store banner" className="w-full h-full object-cover" />
+            <>
+              <img src={shop.banner_url} alt="Store banner" className="w-full h-full object-cover object-center" />
+              {/* Bottom gradient scrim for smooth visual transition */}
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-slate-950/20 to-transparent" />
+              <div className="absolute top-0 inset-x-0 h-24 bg-gradient-to-b from-slate-950/30 to-transparent" />
+            </>
           ) : (
-            <div className="w-full h-full" style={{ background: "linear-gradient(135deg,#dbeafe 0%,#eff6ff 50%,#e0f2fe 100%)" }}>
-              <div className="absolute inset-0 opacity-40" style={{ backgroundImage: "radial-gradient(circle,#93c5fd 1px,transparent 1px)", backgroundSize: "24px 24px" }} />
+            <div className="w-full h-full relative overflow-hidden bg-gradient-to-r from-emerald-50/90 via-[#EAF4E6] to-[#DCEDD9]">
+              {/* Ambient radial glow highlights */}
+              <div className="absolute -top-24 -left-20 w-96 h-96 bg-emerald-200/50 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-24 right-10 w-96 h-96 bg-[#8FBC8F]/30 rounded-full blur-3xl pointer-events-none" />
+              {/* Subtle geometric dot pattern */}
+              <div
+                className="absolute inset-0 opacity-30"
+                style={{
+                  backgroundImage: "radial-gradient(#286038 1px, transparent 1px)",
+                  backgroundSize: "24px 24px",
+                }}
+              />
             </div>
           )}
 
-          {/* Overlay buttons */}
-          <div className="absolute top-3 right-3 flex gap-2 z-10">
-            <button
-              onClick={() => { setActiveTab("Settings"); document.getElementById("digital-store-tabs")?.scrollIntoView({ behavior: "smooth" }); }}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 shadow-sm transition-all"
+          {/* Banner Floating Top Badges (Aligned to max-w-7xl container) */}
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-start justify-between pt-5 sm:pt-6 relative z-10">
+            <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white/95 backdrop-blur-md text-[#286038] border border-white/60 shadow-sm transition-all">
+              <Store size={13} className="text-[#286038]" />
+              <span>Digital Storefront</span>
+            </span>
+
+            <a
+              href={shop.additional_infos?.website || `${window.location.origin}/store/${shop.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-white/95 hover:bg-white backdrop-blur-md text-slate-800 hover:text-[#286038] border border-white/60 shadow-md transition-all cursor-pointer"
+              title="Preview Public Storefront"
             >
-              <Edit3 size={11} /> Edit Store
-            </button>
+              <ExternalLink size={13} />
+              <span>View Public Store</span>
+            </a>
           </div>
         </div>
 
-        {/* ── Profile Row ── */}
-        {/*
-          Layout:
-          ┌───────────────────────────────────────────────────────┐
-          │ [Logo overlapping banner]                             │
-          │                                                       │
-          │ Shop Name  #Store1  ● Online       [QR]  [Followers] │
-          │ "Good Clothings"                                      │
-          │ super store                                           │
-          │ 📍 22, pandian street…                                │
-          │ 🏷 Restaurant & Cafe  OTHERS  INR                     │
-          └───────────────────────────────────────────────────────┘
-        */}
-        <div className="px-6 pb-4">
+        {/* ── Profile Header Row (Spacious & Aligned) ── */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8 sm:pb-10 pt-3">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
 
-          {/* Logo — pulled up to overlap banner */}
-          <div className="relative z-10 -mt-10 mb-3">
-            <div className="relative inline-block">
-              <div className="w-20 h-20 rounded-xl border-4 border-white shadow-md overflow-hidden bg-blue-50 flex items-center justify-center">
-                {shop.logo_url ? (
-                  <img src={shop.logo_url} alt={shop.name} className="w-full h-full object-cover" />
-                ) : fallbackImg ? (
-                  <img src={fallbackImg} alt={shop.name} className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-3xl font-bold text-blue-600">{initials}</span>
-                )}
-              </div>
-              {/* Online dot on logo */}
-              <span className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${shop.visible_online ? "bg-emerald-500" : "bg-slate-400"}`} />
-            </div>
-          </div>
+            {/* Left: Avatar + Store Info */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 sm:gap-6 min-w-0 flex-1">
 
-          {/* Info row: name/details (left) + QR/Followers (right) */}
-          <div className="flex items-start justify-between gap-4">
+              {/* Store Avatar - Only the avatar has negative margin to overlap banner */}
+              <div className="-mt-14 sm:-mt-18 lg:-mt-20 relative shrink-0 z-10">
+                <div className="w-28 h-28 sm:w-36 sm:h-36 lg:w-40 lg:h-40 rounded-3xl border-4 border-white shadow-xl overflow-hidden bg-white flex items-center justify-center">
+                  {shop.logo_url ? (
+                    <img src={shop.logo_url} alt={shop.name} className="w-full h-full object-cover" />
+                  ) : fallbackImg ? (
+                    <img src={fallbackImg} alt={shop.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-[#EAF4E6] border border-[#D5E8D0] flex items-center justify-center text-[#286038]">
+                      <span className="text-4xl sm:text-5xl font-extrabold tracking-tight">{initials}</span>
+                    </div>
+                  )}
+                </div>
 
-            {/* ── Left: all shop info stacked ── */}
-            <div className="flex-1 min-w-0 space-y-1.5">
-
-              {/* Row 1: Name + badges */}
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-[18px] font-semibold text-slate-900 leading-tight">{shop.name}</h1>
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 text-slate-700 rounded-full text-xs font-semibold hover:bg-blue-50 hover:text-blue-600 hover:shadow-sm hover:scale-105 transition-all cursor-pointer group" title="View followers">
-                  <Users size={13} className="group-hover:scale-110 transition-transform" />
-                  <span>
-                    {followersCount >= 1000 ? `${(followersCount / 1000).toFixed(1)}K` : followersCount} Followers
+                {/* Online status indicator on avatar */}
+                <div
+                  className="absolute -bottom-1 -right-1 p-1 bg-white rounded-full shadow-lg"
+                  title={shop.visible_online ? "Storefront is Online" : "Storefront is Offline"}
+                >
+                  <span
+                    className={`flex items-center justify-center w-6 h-6 rounded-full ${
+                      shop.visible_online ? "bg-emerald-500" : "bg-slate-400"
+                    }`}
+                  >
+                    {shop.visible_online ? (
+                      <span className="w-2.5 h-2.5 rounded-full bg-white animate-pulse" />
+                    ) : (
+                      <span className="w-2.5 h-2.5 rounded-full bg-white/70" />
+                    )}
                   </span>
                 </div>
-                {shop.sequence_id && (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                    <Hash size={9} /> Store #{shop.sequence_id}
-                  </span>
-                )}
-                {/* Digital Store Visibility Toggle */}
-                <button
-                  type="button"
-                  onClick={handleToggleStoreVisibility}
-                  disabled={updatingVisibility}
-                  className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all border shadow-sm cursor-pointer ${
-                    shop.visible_online
-                      ? "bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100"
-                      : "bg-slate-100 text-slate-600 border-slate-300 hover:bg-slate-200"
-                  }`}
-                  title={shop.visible_online ? "Click to turn off Digital Store" : "Click to turn on Digital Store"}
-                >
-                  <span className={`w-2 h-2 rounded-full ${shop.visible_online ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`} />
-                  <span>{shop.visible_online ? "Online" : "Offline"}</span>
-                  <span className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ml-0.5 ${shop.visible_online ? "bg-emerald-500" : "bg-slate-300"}`}>
-                    <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${shop.visible_online ? "translate-x-3.5" : "translate-x-0.5"}`} />
-                  </span>
-                </button>
-                {shop.business_infos?.gst_infos?.registered && (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                    <BadgeCheck size={10} /> GST Registered
-                  </span>
-                )}
               </div>
 
-              {/* Row 2: Tagline */}
-              {shop.tagline && (
-                <p className="text-[13px] text-slate-500 italic">"{shop.tagline}"</p>
-              )}
+              {/* Identity & Details */}
+              <div className="flex-1 min-w-0 space-y-2.5 pt-2 sm:pt-4">
+                
+                {/* Title line with badges */}
+                <div className="flex flex-wrap items-center gap-3">
+                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
+                    {shop.name}
+                  </h1>
 
-              {/* Row 3: Description */}
-              {shop.description && (
-                <p className="text-[12px] text-slate-500 leading-relaxed max-w-xl">{shop.description}</p>
-              )}
+                  {/* GST Registered Badge */}
+                  {shop.business_infos?.gst_infos?.registered && (
+                    <span
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-[#1e4a2b] border border-emerald-200/90 shadow-2xs"
+                      title={shop.business_infos?.gst_infos?.number ? `GSTIN: ${shop.business_infos.gst_infos.number}` : "GST Registered Merchant"}
+                    >
+                      <BadgeCheck size={14} className="text-[#286038]" />
+                      <span>GST Registered</span>
+                    </span>
+                  )}
 
+                  {/* Status badge pill */}
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold border ${
+                      shop.visible_online
+                        ? "bg-emerald-50 text-[#1e4a2b] border-emerald-200"
+                        : "bg-slate-100 text-slate-600 border-slate-200"
+                    }`}
+                  >
+                    <span className={`w-2 h-2 rounded-full ${shop.visible_online ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`} />
+                    <span>{shop.visible_online ? "Live Online" : "Offline"}</span>
+                  </span>
+                </div>
+
+                {/* Tagline */}
+                {shop.tagline && (
+                  <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed">
+                    {shop.tagline}
+                  </p>
+                )}
+
+                {/* Description */}
+                {shop.description && (
+                  <p className="text-xs sm:text-sm text-slate-500 leading-relaxed max-w-3xl line-clamp-2">
+                    {shop.description}
+                  </p>
+                )}
+
+                {/* Meta details strip: Followers, Categories, Address */}
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-2.5 text-xs sm:text-sm text-slate-500 pt-1.5">
+                  {/* Followers */}
+                  <div className="inline-flex items-center gap-2 font-medium text-slate-700">
+                    <Users size={15} className="text-slate-400" />
+                    <span>
+                      <strong className="text-slate-900 font-bold">{followersCount >= 1000 ? `${(followersCount / 1000).toFixed(1)}K` : followersCount}</strong> {followersCount === 1 ? "follower" : "followers"}
+                    </span>
+                  </div>
+
+                  {/* Categories */}
+                  {Array.isArray(shop.categories) && shop.categories.length > 0 && (
+                    <div className="inline-flex items-center gap-2 text-slate-600">
+                      <Tag size={14} className="text-slate-400" />
+                      <span className="truncate max-w-xs" title={shop.categories.join(", ")}>
+                        {shop.categories.slice(0, 3).join(", ")}{shop.categories.length > 3 ? ` +${shop.categories.length - 3}` : ""}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Address */}
+                  {shop.address?.full_address && (
+                    <div className="inline-flex items-center gap-2 text-slate-600 truncate max-w-xs" title={shop.address.full_address}>
+                      <MapPin size={14} className="text-slate-400 shrink-0" />
+                      <span className="truncate">{shop.address.full_address}</span>
+                    </div>
+                  )}
+
+                  {/* Announcements counter */}
+                  {shop.announcements?.length > 0 && (
+                    <div className="inline-flex items-center gap-1.5 text-[#1e4a2b] font-medium bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-200">
+                      <Megaphone size={13} className="text-[#286038]" />
+                      <span>{shop.announcements.length} active {shop.announcements.length === 1 ? "announcement" : "announcements"}</span>
+                    </div>
+                  )}
+                </div>
+
+              </div>
 
             </div>
 
-            {/* ── Right: QR + Followers ── */}
-            <div className="flex items-center gap-2 shrink-0 self-start mt-1">
+            {/* Right: Executive Action Bar */}
+            <div className="flex flex-wrap items-center gap-3 shrink-0 pt-4 lg:pt-0 lg:pb-1">
+              
+              {/* Online/Offline Toggle Switch Button */}
+              <button
+                type="button"
+                onClick={handleToggleStoreVisibility}
+                disabled={updatingVisibility}
+                className={`inline-flex items-center gap-3 h-11 px-4.5 rounded-xl border text-xs font-semibold shadow-xs transition-all cursor-pointer ${
+                  shop.visible_online
+                    ? "bg-emerald-50/80 hover:bg-emerald-100 text-emerald-900 border-emerald-300"
+                    : "bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300"
+                }`}
+                title={shop.visible_online ? "Storefront is Online. Click to turn off." : "Storefront is Offline. Click to turn on."}
+              >
+                <span className="flex items-center gap-2">
+                  <span className={`w-2.5 h-2.5 rounded-full ${shop.visible_online ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`} />
+                  <span className="font-semibold">{shop.visible_online ? "Online" : "Offline"}</span>
+                </span>
+                <span className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${
+                  shop.visible_online ? "bg-emerald-600" : "bg-slate-300"
+                }`}>
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
+                    shop.visible_online ? "translate-x-4.5" : "translate-x-0.5"
+                  }`} />
+                </span>
+              </button>
+
+              {/* QR Code */}
               <button
                 onClick={() => setShowQR(true)}
                 title="View Store QR Code"
-                className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all cursor-pointer group"
+                className="inline-flex items-center gap-2 h-11 px-4.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 text-slate-700 text-xs font-semibold shadow-xs transition-all cursor-pointer"
               >
-                <QrCode size={15} className="text-blue-500 group-hover:text-blue-600" />
-                <span className="text-sm font-medium text-slate-700 group-hover:text-blue-600">QR Code</span>
+                <QrCode size={15} className="text-slate-500" />
+                <span>QR Code</span>
+              </button>
+
+              {/* Edit Store Button */}
+              <button
+                onClick={() => {
+                  setActiveTab("Settings");
+                  document.getElementById("digital-store-tabs")?.scrollIntoView({ behavior: "smooth" });
+                }}
+                title="Edit Store Profile & Settings"
+                className="inline-flex items-center gap-2 h-11 px-5 text-white text-xs font-semibold rounded-xl shadow-sm transition-all cursor-pointer"
+                style={{
+                  backgroundColor: "#286038",
+                  boxShadow: "0 2px 10px rgba(40, 96, 56, 0.25)",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#1e4a2b")}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#286038")}
+              >
+                <Edit3 size={14} />
+                <span>Edit Store</span>
               </button>
 
             </div>
-          </div>
 
-          {/* ── Quick info strips: Hours + Delivery ── */}
-          <div className="flex flex-wrap gap-3 mt-1 pt-3 border-t border-slate-100">
-
-
-            {/* Announcement count strip */}
-            {shop.announcements?.length > 0 && (
-              <div className="flex items-center gap-2 ml-auto">
-                <Megaphone size={12} className="text-blue-400" />
-                <span className="text-[11px] text-slate-500">
-                  <span className="font-semibold text-blue-600">{shop.announcements.length}</span> active announcement{shop.announcements.length !== 1 ? "s" : ""}
-                </span>
-              </div>
-            )}
           </div>
         </div>
 
         {/* ─── TAB BAR ──────────────────────────────────────────── */}
-        <div id="digital-store-tabs" className="px-6 flex items-center gap-0 border-t border-slate-100">
-          {TAB_CONFIG.map(({ tab, icon: Icon }) => {
-            const isActive = activeTab === tab;
-            return (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`relative flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap ${isActive ? "text-blue-600" : "text-slate-500 hover:text-slate-800"}`}
-              >
-                <Icon size={14} strokeWidth={2} />
-                {tab}
-                {/* badge for announcements */}
-                {tab === "Announcements" && (shop.announcements?.length ?? 0) > 0 && (
-                  <span className="ml-0.5 text-[10px] font-bold bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full">
-                    {shop.announcements.length}
-                  </span>
-                )}
-                {isActive && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full" />}
-              </button>
-            );
-          })}
+        <div className="border-t border-slate-200/90 bg-white">
+          <div id="digital-store-tabs" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-2 overflow-x-auto">
+            {TAB_CONFIG.map(({ tab, icon: Icon }) => {
+              const isActive = activeTab === tab;
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`relative flex items-center gap-2.5 px-6 py-4.5 text-sm font-semibold transition-all whitespace-nowrap cursor-pointer ${
+                    isActive ? "text-[#286038]" : "text-slate-500 hover:text-slate-800 hover:bg-slate-50/50 rounded-t-lg"
+                  }`}
+                >
+                  <Icon size={16} strokeWidth={isActive ? 2.2 : 1.8} />
+                  <span>{tab}</span>
+                  {/* badge for announcements */}
+                  {tab === "Announcements" && (shop.announcements?.length ?? 0) > 0 && (
+                    <span className={`ml-1 text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                      isActive ? "bg-emerald-100 text-[#1e4a2b]" : "bg-slate-100 text-slate-600"
+                    }`}>
+                      {shop.announcements.length}
+                    </span>
+                  )}
+                  {isActive && (
+                    <span className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#286038] rounded-full" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
       {/* ─── MAIN CONTENT ──────────────────────────────────────── */}
-      <div className="px-6 pt-5">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
         <div key={activeTab} style={{ animation: "fadeIn 0.15s ease" }}>
           {activeTab === "Announcements" && <Promotions />}
           {activeTab === "Products"      && <ProductDashboard />}
@@ -547,44 +675,46 @@ const DigitalMain = () => {
       </div>
 
       {/* ── Confirmation Modal for Turning Off Digital Store ── */}
-      {showTurnOffConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="relative bg-white rounded-2xl shadow-xl border border-slate-200 max-w-md w-full p-6 animate-in zoom-in-95 duration-150">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
-                <PowerOff className="w-5 h-5 text-amber-600" />
+      {showTurnOffConfirm &&
+        createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-150">
+            <div className="relative bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-6 animate-in zoom-in-95 duration-150">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                  <PowerOff className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-800">Turn Off Digital Store?</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Take your online storefront offline</p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-base font-bold text-slate-800">Turn Off Digital Store?</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Take your online storefront offline</p>
+
+              <p className="text-sm text-slate-600 leading-relaxed mb-6">
+                Your digital store will be taken offline and hidden from customers. All your existing products, categories, delivery options, and operating hours will be preserved so you can turn it back on anytime.
+              </p>
+
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowTurnOffConfirm(false)}
+                  disabled={updatingVisibility}
+                  className="h-9 px-4 rounded-lg border border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmTurnOff}
+                  disabled={updatingVisibility}
+                  className="h-9 px-4 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold transition-colors flex items-center gap-2 cursor-pointer shadow-sm disabled:opacity-50"
+                >
+                  {updatingVisibility ? "Turning Off..." : "Turn Off Store"}
+                </button>
               </div>
             </div>
-
-            <p className="text-sm text-slate-600 leading-relaxed mb-6">
-              Your digital store will be taken offline and hidden from customers. All your existing products, categories, delivery options, and operating hours will be preserved so you can turn it back on anytime.
-            </p>
-
-            <div className="flex items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setShowTurnOffConfirm(false)}
-                disabled={updatingVisibility}
-                className="h-9 px-4 rounded-lg border border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmTurnOff}
-                disabled={updatingVisibility}
-                className="h-9 px-4 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold transition-colors flex items-center gap-2 cursor-pointer shadow-sm disabled:opacity-50"
-              >
-                {updatingVisibility ? "Turning Off..." : "Turn Off Store"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
 
       <style>{`
         @keyframes fadeIn { from { opacity:0; transform:translateY(4px) } to { opacity:1; transform:translateY(0) } }

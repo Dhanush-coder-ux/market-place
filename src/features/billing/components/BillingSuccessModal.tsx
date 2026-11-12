@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
-import { User, Clock, Check, Printer, Plus, Power, Settings, ChevronDown } from "lucide-react";
+import { User, Clock, Check, Printer, Plus, Power, Settings } from "lucide-react";
+import { ReusableSelect } from "@/components/ui";
 import { shopApi } from "../../../services/api/shop";
 import { PrinterConfigModal } from "./PrinterConfigModal";
 import {
@@ -355,7 +356,7 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
         <div className="fixed inset-0 bg-[#12151A]/60 backdrop-blur-sm transition-all animate-in fade-in" />
 
         {/* Modal Container */}
-        <div className="relative bg-white rounded-[16px] shadow-[0_20px_50px_-12px_rgba(19,24,34,0.35)] w-[380px] overflow-hidden transform animate-in fade-in zoom-in-95 duration-200 flex flex-col">
+        <div className="relative bg-white rounded-[16px] shadow-[0_20px_50px_-12px_rgba(19,24,34,0.35)] w-full max-w-[380px] max-h-[90dvh] overflow-hidden transform animate-in fade-in zoom-in-95 duration-200 flex flex-col">
           
           {/* Top Section */}
           <div className="p-[20px_20px_16px] text-center border-b border-[#E6EAF1]">
@@ -522,33 +523,27 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
                 )}
               </div>
 
-              <div className="relative">
-                <select
-                  value={selectedPrinterId}
-                  onChange={(e) => setSelectedPrinterId(e.target.value)}
-                  className="w-full h-9 pl-3 pr-8 rounded-[8px] bg-[#F8FAFC] hover:bg-slate-50 border border-[#D5DBE5] hover:border-[#94A3B8] text-[12px] font-bold text-[#1E293B] outline-none focus:border-[#285737] focus:ring-2 focus:ring-[#285737]/15 transition-all cursor-pointer appearance-none truncate"
-                >
-                  {printersList.map((p) => {
-                    const connBadge =
-                      p.connectionType === "system"
-                        ? "System Driver"
-                        : p.connectionType === "bluetooth"
-                        ? "Bluetooth"
-                        : p.connectionType === "usb"
-                        ? "USB / Serial"
-                        : `WiFi/LAN (${p.networkIp || "IP"})`;
-                    const isDef = p.isDefault;
-                    return (
-                      <option key={p.id} value={p.id}>
-                        {p.name || p.deviceName || "Thermal Printer"} ({connBadge}){isDef ? " ★ Primary" : ""}
-                      </option>
-                    );
-                  })}
-                </select>
-                <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                  <ChevronDown size={14} />
-                </div>
-              </div>
+              <ReusableSelect
+                size="sm"
+                value={selectedPrinterId}
+                onValueChange={setSelectedPrinterId}
+                options={printersList.map((p) => {
+                  const connBadge =
+                    p.connectionType === "system"
+                      ? "System Driver"
+                      : p.connectionType === "bluetooth"
+                      ? "Bluetooth"
+                      : p.connectionType === "usb"
+                      ? "USB / Serial"
+                      : `WiFi/LAN (${p.networkIp || "IP"})`;
+                  const isDef = p.isDefault;
+                  return {
+                    value: p.id,
+                    label: `${p.name || p.deviceName || "Thermal Printer"} (${connBadge})${isDef ? " ★ Primary" : ""}`,
+                  };
+                })}
+                className="w-full"
+              />
             </div>
 
             <div className="flex gap-2 mb-2">
@@ -618,7 +613,7 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
       >
         {/* Printer Body */}
         <div
-          className="relative w-[340px] sm:w-[360px] rounded-t-[18px] rounded-b-[6px] overflow-hidden"
+          className="relative w-full max-w-[360px] rounded-t-[18px] rounded-b-[6px] overflow-hidden"
           style={{
             background: "linear-gradient(180deg, #2A2F36 0%, #1E2328 100%)",
             boxShadow: "0 8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06)",
@@ -690,7 +685,7 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
         {/* ── Receipt Paper ───────────────────────────────────────────── */}
         {showReceipt && (
           <div
-            className="relative w-[310px] sm:w-[330px]"
+            className="relative w-[92%] max-w-[330px]"
             style={{
               animation:
                 phase === "tearaway"
@@ -938,7 +933,7 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
 
         {/* ── Action Buttons (below printer) ───────────────────────────── */}
         <div
-          className="w-[340px] sm:w-[360px] mt-4 flex flex-col gap-2"
+          className="w-full max-w-[360px] mt-4 flex flex-col gap-2 pb-[env(safe-area-inset-bottom)]"
           style={{ animation: "printerSlideIn 0.4s ease-out 0.1s both" }}
         >
           {isAnimating && phase !== "tearaway" && (
@@ -970,7 +965,7 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
                 <button
                   type="button"
                   onClick={startPrint}
-                  className="flex-1 h-9 rounded-[8px] font-semibold text-[12px] inline-flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer"
+                  className="flex-1 h-10 sm:h-9 rounded-[8px] font-semibold text-[12px] inline-flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer"
                   style={{
                     background: "rgba(255,255,255,0.12)",
                     color: "#fff",
@@ -982,7 +977,7 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsPrinterConfigOpen(true)}
-                  className="flex-1 h-9 rounded-[8px] font-semibold text-[12px] inline-flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer"
+                  className="flex-1 h-10 sm:h-9 rounded-[8px] font-semibold text-[12px] inline-flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer"
                   style={{
                     background: "rgba(255,255,255,0.08)",
                     color: "rgba(255,255,255,0.8)",
@@ -993,7 +988,7 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
                 </button>
                 <button
                   onClick={handleClose}
-                  className="flex-1 h-9 rounded-[8px] font-semibold text-[12px] inline-flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer"
+                  className="flex-1 h-10 sm:h-9 rounded-[8px] font-semibold text-[12px] inline-flex items-center justify-center gap-1.5 transition-all duration-200 cursor-pointer"
                   style={{
                     background: "rgba(255,255,255,0.08)",
                     color: "rgba(255,255,255,0.55)",
@@ -1007,7 +1002,7 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
           )}
 
           {/* Keyboard hints */}
-          <div className="text-center text-[10px] mt-1" style={{ color: "rgba(255,255,255,0.25)" }}>
+          <div className="hidden sm:block text-center text-[10px] mt-1" style={{ color: "rgba(255,255,255,0.25)" }}>
             {phase === "done" && (
               <>
                 Press{" "}

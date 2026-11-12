@@ -87,9 +87,9 @@ const Breadcrumb = () => {
         <>
           <button 
             onClick={() => navigate(-1)}
-            className="flex items-center gap-1 hover:text-blue-600 transition-colors bg-white px-2 py-0.5 rounded-md border border-slate-200 shadow-sm text-[10px] text-slate-500 font-bold"
+            className="flex items-center gap-1 hover:text-blue-600 transition-colors bg-white px-2.5 py-1 rounded-lg border border-slate-200 shadow-xs text-[11px] sm:text-[10px] text-slate-600 font-bold shrink-0 active:scale-95"
           >
-            <ChevronLeft size={10} />
+            <ChevronLeft size={12} />
             Back
           </button>
           <ChevronRight size={10} className="shrink-0 opacity-40" />

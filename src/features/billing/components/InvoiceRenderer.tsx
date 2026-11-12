@@ -264,7 +264,7 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
 
         {/* Summary (Section 8.1 & 8.3) */}
         <div className={config.summary.wrapper}>
-          <div className="w-[280px] space-y-1.5">
+          <div className="w-full sm:w-[280px] space-y-1.5">
              <div className={config.summary.row}>
                 <span>Base Subtotal (Gross SP)</span>
                 <span className={config.summary.value}>₹{formatINR(billTotals.baseSubtotal)}</span>

@@ -19,7 +19,7 @@ import { ReturnModal } from "../components/ReturnOrderFlow";
 import { StatCard } from "@/components/common/StatsCard";
 import { AntBadge } from "@/components/ui/AntBadge";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
-import { ReusableSelect } from "@/components/ui/ReusableSelect";
+import { ReusableSelect, SearchBar, Button, GradientButton } from "@/components/ui";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { extractSaleCustomerInfo } from "../type";
 import { ReprintReceiptModal } from "../components/ReprintReceiptModal";
@@ -332,7 +332,7 @@ const SalesListPage: React.FC = () => {
               })()}
             </div>
           </div>
-          <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto scrollbar-none pb-0.5 sm:pb-0">
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-1.5 w-full sm:w-auto">
             <button
               onClick={() => setSelectedSale(null)}
               className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 font-semibold text-[11px] transition-colors"
@@ -847,49 +847,45 @@ const SalesListPage: React.FC = () => {
       )}
 
       {/* ── Toolbar ── */}
-      <div className="bg-white border border-slate-100 rounded-lg p-1.5 px-2.5 flex flex-wrap sm:flex-nowrap items-center gap-2 shadow-sm mt-2">
-        <div className="relative flex-1 min-w-[180px] sm:w-80 sm:flex-none">
-          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-          <input
-            className="w-full h-8 pl-8 pr-3 text-[12px] font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-md placeholder:text-slate-400 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
-            placeholder="Search order or customer…"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-        </div>
+      <div className="bg-white border border-slate-200/80 rounded-xl p-2 px-3 flex flex-wrap sm:flex-nowrap items-center gap-2 shadow-xs mt-2">
+        <SearchBar
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          onClear={() => setSearch("")}
+          placeholder="Search order or customer…"
+          size="sm"
+          className="flex-1 min-w-[180px] sm:w-80 sm:flex-none"
+        />
 
         <div className="flex items-center gap-1.5 shrink-0 ml-auto sm:ml-0">
-          <button
+          <Button
             type="button"
+            variant="outline"
             onClick={() => setIsFilterOpen(true)}
-            className={`h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm ${activeFilters > 0
-              ? "border-blue-200 text-blue-600 bg-blue-50/50"
-              : "border-slate-200 text-slate-650 bg-white hover:bg-slate-50"
-              }`}
+            className={activeFilters > 0 ? "border-blue-200 text-blue-600 bg-blue-50/60" : ""}
             title="Filters"
           >
-            <Filter size={13} />
+            <Filter size={14} />
             Filters
             {activeFilters > 0 && (
-              <span className="ml-1 px-1.5 py-0.5 bg-blue-600 text-white rounded-full text-[9px] font-black">{activeFilters}</span>
+              <span className="ml-0.5 px-1.5 py-0.5 bg-blue-600 text-white rounded-full text-[10px] font-bold">{activeFilters}</span>
             )}
-          </button>
+          </Button>
 
-          <button
+          <Button
             type="button"
+            variant="outline"
             onClick={() => setIsExportOpen(true)}
-            className="h-8 px-3 rounded-md border border-slate-200 text-slate-650 bg-white hover:bg-slate-50 text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm"
             title="Export Sales"
           >
-            <FileDown size={13} />
+            <FileDown size={14} />
             Export
-          </button>
+          </Button>
 
-          <button className="inline-flex items-center gap-1.5 h-8 px-3 sm:px-3.5 text-xs font-bold bg-blue-600 text-white border-none rounded-md cursor-pointer transition-all hover:bg-blue-700 hover:shadow-lg shadow-blue-500/20 active:scale-95 whitespace-nowrap" onClick={() => setIsReturnSearchOpen(true)}>
-            <RotateCcw size={13} />
+          <GradientButton onClick={() => setIsReturnSearchOpen(true)} icon={<RotateCcw size={14} />}>
             <span className="hidden sm:inline">Process Return</span>
             <span className="sm:hidden">Return</span>
-          </button>
+          </GradientButton>
         </div>
       </div>
 
@@ -1449,27 +1445,27 @@ const ReturnSearchPortal: React.FC<ReturnSearchPortalProps> = ({ isOpen, onClose
       />
 
       {/* Centering Wrapper */}
-      <div className="relative w-full h-full flex items-center justify-center p-4 pointer-events-none">
-        <div className="relative w-full max-w-[500px] bg-white rounded-lg shadow-[0_24px_80px_rgba(0,0,0,0.3)] overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 ease-out pointer-events-auto">
-          <div className="p-5 px-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+      <div className="relative w-full h-full flex items-end sm:items-center justify-center p-0 sm:p-4 pointer-events-none">
+        <div className="relative w-full max-w-[500px] max-h-[90dvh] flex flex-col bg-white rounded-t-2xl sm:rounded-lg shadow-[0_24px_80px_rgba(0,0,0,0.3)] overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 ease-out pointer-events-auto">
+          <div className="p-4 sm:p-5 sm:px-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
             <div>
               <h3 className="text-[15px] font-black text-slate-900">Process Return</h3>
               <p className="text-[11px] text-slate-400 mt-0.5 font-bold tracking-tight uppercase">Find an order to begin</p>
             </div>
             <button onClick={onClose} className="w-8 h-8 rounded-full bg-white shadow-sm border border-slate-100 flex items-center justify-center cursor-pointer text-slate-400 hover:text-slate-600 hover:rotate-90 transition-all"><X size={16} /></button>
           </div>
-          <div className="p-5 px-6 flex flex-col gap-4">
-            <div className="relative group">
+          <div className="p-4 sm:p-5 sm:px-6 pb-[max(16px,env(safe-area-inset-bottom))] flex flex-col gap-4 overflow-y-auto">
+            <div className="relative group shrink-0">
               <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
               <input
                 autoFocus
                 placeholder="Order ID or customer name…"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full h-12 pl-11 pr-4 text-[13px] border-2 border-slate-100 rounded-lg outline-none bg-slate-50/50 text-slate-800 transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/5 placeholder:text-slate-400 font-bold"
+                className="w-full h-12 pl-11 pr-4 text-[14px] sm:text-[13px] border-2 border-slate-100 rounded-lg outline-none bg-slate-50/50 text-slate-800 transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/5 placeholder:text-slate-400 font-bold"
               />
             </div>
-            <div className="flex flex-col gap-2 max-h-[400px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-200">
+            <div className="flex flex-col gap-2 max-h-[45dvh] sm:max-h-[400px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-200">
               {results.length > 0 ? results.map(sale => (
                 <button key={sale.id} onClick={() => onSelect(sale)}
                   className="flex items-center gap-3.5 p-3.5 px-4 bg-white border-2 border-slate-50 rounded-lg cursor-pointer text-left transition-all hover:border-blue-500 hover:shadow-lg hover:scale-[0.99] active:scale-[0.97] group w-full"

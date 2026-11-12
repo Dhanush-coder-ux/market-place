@@ -23,7 +23,7 @@ const getPageHeaderInfo = (pathname: string) => {
       title: "Sale Detail",
     },
     "/product": {
-      title: "Product Detail",
+      title: "Search Products",
     },
     "/product/detail": {
       title: "Product Detail",
@@ -59,7 +59,7 @@ const getPageHeaderInfo = (pathname: string) => {
       title: "Purchase Detail",
     },
     "/purchase/detail": {
-      title: "Purchase Detail",
+      title: "Search Purchases",
     },
     "/purchase/add": {
       title: "Add Purchase",
@@ -231,10 +231,6 @@ const isDetailsRoute = (pathname: string) => {
     return true;
   }
 
-  if (pathname.startsWith("/purchase/detail/") || pathname.startsWith("/product/detail/")) {
-    return true;
-  }
-
   return false;
 };
 
@@ -315,7 +311,7 @@ const MainLayout = () => {
         <SubscriptionAlertBanner />
 
         <main className="flex-1 flex flex-col min-w-0 relative overflow-hidden">
-          <div className={`flex-1 flex flex-col min-h-0 overflow-hidden relative ${hideNav ? (isBillingPage ? "p-0" : "p-2.5 md:p-4") : isStorePage ? "p-0 pb-20 md:pb-0" : isBillingPage ? "pl-6 pr-3.5 pt-4 pb-2 md:pl-8 lg:pl-10 lg:pr-6" : "p-1.5 md:p-2 lg:p-2.5"} ${(!bottomActions && !isBillingPage) ? "pb-20 md:pb-0" : ""}`}>
+          <div className={`flex-1 flex flex-col min-h-0 overflow-hidden relative ${hideNav ? (isBillingPage ? "p-0" : "p-2.5 md:p-4") : isStorePage ? "p-0" : "p-2 sm:p-2.5 md:p-3 lg:p-3"} ${!isBillingPage && !isCleanMode ? (bottomActions ? "pb-[calc(124px+env(safe-area-inset-bottom))] md:pb-0" : "pb-[calc(64px+env(safe-area-inset-bottom))] md:pb-0") : ""}`}>
 
             {isExpired && !isPricingPage ? (
               <SubscriptionExpiredLockScreen planName={subData?.plan_name} />
@@ -348,15 +344,15 @@ const MainLayout = () => {
 
           {/* Global Bottom Action Bar (Glassmorphism) */}
           {bottomActions && (
-            <div className="flex-shrink-0 h-16 md:h-12 flex items-center justify-between px-4 md:px-8 gap-3
-              fixed bottom-[calc(60px+env(safe-area-inset-bottom))] left-0 right-0 
+            <div className={`flex-shrink-0 min-h-14 md:h-12 flex items-center justify-between px-3 sm:px-4 md:px-8 py-2 md:py-0 gap-2 sm:gap-3
+              fixed ${isBillingPage || isCleanMode ? "bottom-[env(safe-area-inset-bottom)]" : "bottom-[calc(58px+env(safe-area-inset-bottom))]"} left-0 right-0 
               md:relative md:bottom-0
               bg-white/95 backdrop-mobile
               border-t border-slate-200/80
               shadow-[0_-8px_30px_rgba(0,0,0,0.08)]
               z-[65] md:animate-in md:slide-in-from-bottom-full md:duration-500
-              gpu-layer">
-              <div className="flex items-center gap-2 w-full justify-end">
+              gpu-layer`}>
+              <div className="flex flex-wrap items-center gap-2 w-full justify-end">
                 {bottomActions}
               </div>
             </div>
@@ -364,8 +360,8 @@ const MainLayout = () => {
         </main>
       </div>
 
-      {/* Mobile Bottom Navigation Bar - at layout root so it is truly fixed to viewport */}
-      {!isCleanMode && <MobileBottomBar />}
+      {/* Mobile Bottom Navigation Bar - at layout root so it is truly fixed to viewport (hidden on clean mode & full-screen mobile POS) */}
+      {!hideNav && <MobileBottomBar />}
     </div>
   );
 };

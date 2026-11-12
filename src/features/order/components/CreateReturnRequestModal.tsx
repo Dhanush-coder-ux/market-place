@@ -123,10 +123,10 @@ export const CreateReturnRequestModal: React.FC<CreateReturnRequestModalProps> =
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden font-sans">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg max-h-[92dvh] sm:max-h-[90dvh] flex flex-col overflow-hidden font-sans">
         {/* Header */}
-        <div className="px-6 py-4 bg-slate-50 border-b border-slate-200/80 flex items-center justify-between">
+        <div className="px-4 sm:px-6 py-3.5 sm:py-4 bg-slate-50 border-b border-slate-200/80 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-blue-100/70 text-blue-700 flex items-center justify-center">
               <RotateCcw size={16} strokeWidth={2.5} />
@@ -138,7 +138,7 @@ export const CreateReturnRequestModal: React.FC<CreateReturnRequestModalProps> =
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 transition-colors"
+            className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 transition-colors"
           >
             <X size={18} />
           </button>
@@ -146,7 +146,7 @@ export const CreateReturnRequestModal: React.FC<CreateReturnRequestModalProps> =
 
         {/* Content */}
         {isCancelledOrder ? (
-          <div className="p-6 space-y-4">
+          <div className="p-4 sm:p-6 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-6 space-y-4 overflow-y-auto">
             <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm flex items-start gap-3">
               <AlertCircle size={18} className="shrink-0 mt-0.5" />
               <div>
@@ -165,7 +165,7 @@ export const CreateReturnRequestModal: React.FC<CreateReturnRequestModalProps> =
             </button>
           </div>
         ) : (
-        <form onSubmit={handleSubmit} className="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-6 space-y-5 flex-1 overflow-y-auto">
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-xs flex items-center gap-2">
               <AlertCircle size={15} className="shrink-0" />
@@ -208,12 +208,12 @@ export const CreateReturnRequestModal: React.FC<CreateReturnRequestModalProps> =
                           : "bg-white border-slate-200 hover:border-slate-300"
                       }`}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex flex-wrap sm:flex-nowrap items-center gap-3">
                         <input
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => handleToggleItem(key, itemQty)}
-                          className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer"
+                          className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer shrink-0"
                         />
                         <div className="min-w-0 flex-1">
                           <p className="text-xs font-bold text-slate-800 truncate">
@@ -227,7 +227,7 @@ export const CreateReturnRequestModal: React.FC<CreateReturnRequestModalProps> =
                         {isChecked && (
                           <div
                             onClick={(e) => e.stopPropagation()}
-                            className="flex items-center gap-1.5 text-xs bg-white px-2 py-1 rounded border border-blue-200"
+                            className="flex items-center gap-1.5 text-xs bg-white px-2 py-1 rounded border border-blue-200 ml-7 sm:ml-0"
                           >
                             <span className="text-[11px] text-slate-500 font-medium">Return Qty:</span>
                             <input
@@ -265,19 +265,19 @@ export const CreateReturnRequestModal: React.FC<CreateReturnRequestModalProps> =
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+          <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 sm:gap-3 pt-3 border-t border-slate-100">
             <button
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
+              className="w-full sm:w-auto px-4 py-2.5 sm:py-2 rounded-xl text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading || selectedCount === 0 || !description.trim()}
-              className="flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-all disabled:opacity-50"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 sm:py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-sm transition-all disabled:opacity-50"
             >
               <RotateCcw size={14} strokeWidth={2.5} />
               {loading ? "Submitting..." : "Submit Return Request"}

@@ -147,7 +147,7 @@ export default function EmployeeDetail() {
             { icon: Phone, text: String(employee.mobile_number || "No phone") }
           ]}
           actions={
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {!employee.accepted && (
                 <button
                   onClick={handleResendVerification}
@@ -179,7 +179,7 @@ export default function EmployeeDetail() {
       </div>
 
       {/* Main Content Area (scrollable) */}
-      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-1 pt-3 pb-6">
+      <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-1 pt-3 pb-24 md:pb-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
 
           {/* Professional Profile Information Card */}

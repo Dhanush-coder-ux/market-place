@@ -35,6 +35,20 @@ const STYLES = `
   
   .pb-root * { box-sizing: border-box; }
   .pb-root .shell { max-width:1240px; margin:0 auto; padding:26px 24px 140px; }
+  .pb-root .pb-table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  @media(max-width:640px) {
+    .pb-root .shell { padding: 14px 12px 130px; }
+    .pb-root .pb-tabs { width: 100%; }
+    .pb-root .pb-tab { flex: 1; justify-content: center; padding: 8px 10px; font-size: 12.5px; }
+    .pb-root .cyc { width: 100%; overflow-x: auto; }
+    .pb-root .cyc button { flex: 1; justify-content: center; white-space: nowrap; padding: 0 10px; font-size: 12px; }
+    .pb-root .bar-b { bottom: calc(64px + env(safe-area-inset-bottom)); padding: 12px 14px; }
+    .pb-root .bar-r { width: 100%; gap: 10px; }
+    .pb-root .bar-r .tot { width: 100%; text-align: left; }
+    .pb-root .bar-r .cx, .pb-root .bar-r .go { flex: 1; justify-content: center; height: 42px; padding: 0 12px; font-size: 13px; }
+    .pb-root .curplan { padding: 18px 16px; }
+    .pb-root .curplan .nm { font-size: 22px; }
+  }
   .pb-root .crumb { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--muted); margin-bottom:14px; }
   .pb-root .crumb a { color:var(--muted); text-decoration:none; }
   .pb-root .crumb .cur { color:var(--brand); font-weight:600; }
@@ -1523,6 +1537,7 @@ const PricingPlansPage: React.FC<PricingPlansPageProps> = ({ isEmbedded = false 
                 <div><div className="t">Billing History &amp; Invoices</div><div className="s">Download official tax invoices and payment receipts</div></div>
                 <a className="lnk" style={{ cursor: "pointer" }} onClick={handleDownloadAllInvoices}>Download all</a>
               </div>
+              <div className="pb-table-wrap">
               <table>
                 <thead>
                   <tr>
@@ -1579,6 +1594,7 @@ const PricingPlansPage: React.FC<PricingPlansPageProps> = ({ isEmbedded = false 
                   )}
                 </tbody>
               </table>
+              </div>
             </div>
           </div>
         )}

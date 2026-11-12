@@ -849,7 +849,7 @@ const PurchaseForm = () => {
           navigate("/purchase-history");
         }}
       />
-      <div className="min-h-screen bg-slate-50/50 p-4 md:p-6 lg:p-8 font-sans">
+      <div className="bg-slate-50/50 p-3 pb-24 sm:p-4 md:p-6 lg:p-8 font-sans">
         <div className="max-w-[1600px] mx-auto flex flex-col xl:flex-row gap-6 items-start">
 
           {/* --- Left Column (Scrollable Content) --- */}
@@ -876,11 +876,11 @@ const PurchaseForm = () => {
 
             {/* 1. Purchase Details Card */}
             <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
-              <div className="px-8 py-5 bg-gradient-to-r from-blue-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 border border-blue-200 shadow-sm">
+              <div className="px-4 sm:px-8 py-4 sm:py-5 bg-gradient-to-r from-blue-50/50 to-transparent border-b border-slate-100 flex flex-wrap items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 border border-blue-200 shadow-sm shrink-0">
                   <PackageOpen size={20} />
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <h2 className="text-sm font-medium text-slate-800 uppercase tracking-widest">Purchase Details</h2>
                   <p className="text-[10px] text-slate-400 font-medium uppercase tracking-widest mt-0.5">Basic information & supplier</p>
                 </div>
@@ -894,7 +894,7 @@ const PurchaseForm = () => {
                 )}
               </div>
 
-              <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="p-4 sm:p-6 md:p-8 grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
                 <div className="flex flex-col gap-2">
                   <label className="text-[10px] font-medium text-slate-500 uppercase tracking-widest ml-1">Supplier *</label>
                   <SearchSelect

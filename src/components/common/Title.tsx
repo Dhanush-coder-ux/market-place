@@ -16,14 +16,14 @@ const Title: React.FC<TitleProps> = ({
         )}
 
         <div className="min-w-0">
-          <h1 className="text-[17px] sm:text-[19px] font-bold tracking-tight text-slate-900 leading-tight truncate flex items-center gap-2">
+          <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 leading-tight truncate flex items-center gap-2">
             {title}
           </h1>
         </div>
       </div>
 
       {actions && (
-        <div className="flex items-center justify-end gap-2.5 shrink-0">
+        <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2 sm:gap-2.5 w-full sm:w-auto">
           {actions}
         </div>
       )}

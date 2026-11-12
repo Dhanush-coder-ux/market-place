@@ -1103,7 +1103,7 @@ const SaleDetailPage: React.FC = () => {
             ...(customerInfo.city ? [{ icon: MapPin, text: `${customerInfo.city}${customerInfo.pincode ? ` (${customerInfo.pincode})` : ''}` }] : [])
           ]}
           actions={
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={() => setIsReprintOpen(true)}
                 className="h-8 px-3 rounded-lg border border-sky-200 text-sky-600 bg-sky-50 hover:bg-sky-100 hover:text-sky-700 font-bold text-[11px] uppercase tracking-wider transition-all shadow-sm shrink-0 flex items-center gap-1.5 active:scale-95 cursor-pointer"
@@ -1155,8 +1155,8 @@ const SaleDetailPage: React.FC = () => {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex-none px-1 py-2">
-        <div className="flex gap-2 p-1 bg-slate-100/50 w-fit rounded-lg border border-slate-200/50">
+      <div className="flex-none px-1 py-2 overflow-x-auto scrollbar-none">
+        <div className="flex gap-2 p-1 bg-slate-100/50 w-max min-w-fit rounded-lg border border-slate-200/50">
           {["Overview", "Items"].map((tab, i) => (
             <button
               key={tab}

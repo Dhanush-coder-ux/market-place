@@ -74,8 +74,46 @@ export const DynamicListDict: React.FC<DynamicListDictProps> = ({
         </button>
       </div>
 
-      {/* Table Container (Allows horizontal scrolling for many fields) */}
-      <div className="overflow-x-auto ring-1 ring-slate-200 rounded-lg shadow-sm">
+      {/* Mobile Card Repeater */}
+      <div className="md:hidden space-y-3">
+        {rows.map((row, idx) => (
+          <div key={row._id} className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-2xs space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <span className="text-xs font-bold text-slate-500">Item #{idx + 1}</span>
+              <button
+                type="button"
+                onClick={() => removeRow(row._id)}
+                disabled={rows.length <= minRows}
+                className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold text-rose-500 hover:bg-rose-50 rounded-md disabled:opacity-30"
+              >
+                <Trash2 size={14} /> Remove
+              </button>
+            </div>
+            <div className="space-y-3">
+              {schemaEntries.map(([key, field]) => (
+                <div key={key}>
+                  <DynamicField
+                    field={{ ...field }}
+                    value={row[key]}
+                    onChange={(name, val) => updateField(row._id, name, val)}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+        {rows.length === 0 && (
+          <div className="border border-dashed border-slate-200 rounded-xl p-6 text-center text-slate-500 bg-white">
+            <p className="text-sm">No items added yet.</p>
+            <button onClick={addRow} type="button" className="text-blue-600 font-semibold mt-1 text-sm">
+              Add your first row
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Desktop Table Container */}
+      <div className="hidden md:block overflow-x-auto ring-1 ring-slate-200 rounded-lg shadow-sm">
         <table className="min-w-full divide-y divide-slate-200">
           <thead className="bg-slate-50">
             <tr>

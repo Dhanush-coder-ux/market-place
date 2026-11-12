@@ -12,6 +12,7 @@ import {
 
 import { Switch } from "@/components/ui/switch";
 import Input from "@/components/ui/Input";
+import { Textarea } from "@/components/ui";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { useBusinessApi } from "@/context/BusinessApiContext";
@@ -383,23 +384,23 @@ const CustomerFormPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/50  font-sans">
-      <div className="mx-auto space-y-8">
+    <div className="bg-slate-50/50 font-sans pb-28 md:pb-8">
+      <div className="mx-auto space-y-6 sm:space-y-8">
 
         {/* FORM REMOVED (actions now in global header) */}
 
         {/* ── FORM ── */}
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-6 gap-6 items-start">
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-6 gap-5 sm:gap-6 items-start">
 
           {/* BOX 1: IDENTITY (Spans 6 cols) */}
           <div className="lg:col-span-6 bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
-            <div className="px-6 py-4 bg-gradient-to-r from-blue-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
+            <div className="px-4 sm:px-6 py-4 bg-gradient-to-r from-blue-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
                 <User size={18} />
               </div>
               <h2 className="text-xs font-bold text-slate-800  ">Personal Identity</h2>
             </div>
-            <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="p-4 sm:p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
               <Input
                 label="First Name"
                 required
@@ -444,7 +445,7 @@ const CustomerFormPage = () => {
               </div>
               <h2 className="text-xs font-bold text-slate-800  ">Billing Address</h2>
             </div>
-            <div className="p-8 space-y-6">
+            <div className="p-4 sm:p-6 md:p-8 space-y-5 sm:space-y-6">
               <Input
                 label="Full Address (optional)"
                 name="full_address"
@@ -487,7 +488,7 @@ const CustomerFormPage = () => {
               </div>
               <h2 className="text-xs font-bold text-slate-800  ">Financial & Notes</h2>
             </div>
-            <div className="p-8 space-y-6 flex-1 flex flex-col">
+            <div className="p-4 sm:p-6 md:p-8 space-y-5 sm:space-y-6 flex-1 flex flex-col">
                 <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50 border border-slate-100">
                   <span className="text-xs font-bold text-slate-500">Allow Credit</span>
                   <Switch
@@ -518,19 +519,14 @@ const CustomerFormPage = () => {
                     placeholder="Select Terms"
                   />
                 )}
-              <div className="flex flex-col gap-1.5 w-full flex-1">
-                <label className="text-[11px] font-bold text-slate-500 ml-1  ">
-                  Internal Remarks <span className="normal-case font-normal text-slate-400">(optional)</span>
-                </label>
-                <textarea
-                  name="notes"
-                  value={formData.notes}
-                  onChange={handleChange}
-                  rows={4}
-                  placeholder="Briefly describe the customer or special needs..."
-                  className="w-full px-4 py-4 rounded-lg border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 transition-all duration-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none resize-none bg-slate-50/30 flex-1"
-                />
-              </div>
+              <Textarea
+                label="Internal Remarks (optional)"
+                name="notes"
+                value={formData.notes}
+                onChange={handleChange}
+                rows={4}
+                placeholder="Briefly describe the customer or special needs..."
+              />
             </div>
           </div>
 
@@ -541,10 +537,7 @@ const CustomerFormPage = () => {
                 <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center text-[#286038]">
                   <Layers size={18} />
                 </div>
-                <div>
-                  <h2 className="text-xs font-bold text-slate-800">Custom Fields</h2>
-                  <p className="text-[10px] text-slate-400 font-medium">Define and populate additional customer properties</p>
-                </div>
+                <h2 className="text-xs font-bold text-slate-800">Custom Fields</h2>
               </div>
               <button
                 type="button"
@@ -597,7 +590,7 @@ const CustomerFormPage = () => {
                         </div>
                       </div>
                       {field.type === 'boolean' ? (
-                        <div className="flex items-center gap-8 h-10 px-4 rounded-lg border border-slate-200 bg-slate-50/30">
+                        <div className="flex flex-wrap items-center gap-4 sm:gap-8 min-h-10 h-auto py-2 px-4 rounded-lg border border-slate-200 bg-slate-50/30">
                           <label className="inline-flex items-center gap-2 cursor-pointer select-none">
                             <input
                               type="checkbox"

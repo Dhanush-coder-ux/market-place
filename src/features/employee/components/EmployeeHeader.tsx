@@ -26,8 +26,8 @@ const navigate = useNavigate();
         </GradientButton>
 
       </div>
-      <div className='flex-none overflow-y-auto px-6 py-2.5 bg-accent'>
-        <div className="flex gap-2.5 ">
+      <div className='flex-none overflow-x-auto no-scrollbar px-3 sm:px-6 py-2.5 bg-accent'>
+        <div className="flex gap-2.5 min-w-max sm:min-w-0">
 
           <StatCard
             label="Onboarding Progress"

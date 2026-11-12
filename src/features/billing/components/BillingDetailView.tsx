@@ -59,7 +59,7 @@ const BillingDetailView = ({ invoice, isSubmitting, onConfirm }: BillingDetailVi
     <div className="max-w-7xl mx-auto space-y-6">
 
       {/* ── Invoice Header ───────────────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-lg border border-slate-200 bg-gradient-to-br from-blue-50 to-indigo-50 p-7 shadow-sm">
+      <div className="relative overflow-hidden rounded-lg border border-slate-200 bg-gradient-to-br from-blue-50 to-indigo-50 p-4 sm:p-7 shadow-sm">
         <div className="flex flex-col md:flex-row justify-between gap-6">
           <div>
             <p className="text-[11px] font-bold   text-indigo-400 mb-1">Tax Invoice</p>
@@ -86,7 +86,7 @@ const BillingDetailView = ({ invoice, isSubmitting, onConfirm }: BillingDetailVi
       </div>
 
       {/* ── Amount Hero ──────────────────────────────────────────────── */}
-      <div className="rounded-lg bg-white shadow-sm border border-slate-200 p-7 flex flex-col md:flex-row justify-between items-center gap-6">
+      <div className="rounded-lg bg-white shadow-sm border border-slate-200 p-4 sm:p-7 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sm:gap-6">
         <div>
           <p className="text-[11px] font-bold text-slate-400   mb-1">Total Payable</p>
           <div className="flex items-start gap-1">
@@ -105,7 +105,7 @@ const BillingDetailView = ({ invoice, isSubmitting, onConfirm }: BillingDetailVi
           )}
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3 w-full md:w-auto">
           <GradientButton icon={<Printer size={18} />} variant="outline">
             Print Invoice
           </GradientButton>
@@ -154,13 +154,14 @@ const BillingDetailView = ({ invoice, isSubmitting, onConfirm }: BillingDetailVi
 
       {/* ── Items Table ──────────────────────────────────────────────── */}
       <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
-        <table className="w-full">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[480px]">
           <thead className="bg-slate-50 border-b border-slate-100">
             <tr>
               {["S.No", "Product", "Qty", "Unit Price", "Total"].map((h, i) => (
                 <th
                   key={h}
-                  className={`px-5 py-3.5 text-xs font-bold text-slate-500  
+                  className={`px-3 sm:px-5 py-3 text-xs font-bold text-slate-500  
                     ${i === 0 ? "text-left w-10" : i === 1 ? "text-left" : "text-right"}`}
                 >
                   {h}
@@ -171,20 +172,21 @@ const BillingDetailView = ({ invoice, isSubmitting, onConfirm }: BillingDetailVi
           <tbody className="divide-y divide-slate-100">
             {items.map((item, i) => (
               <tr key={i} className="hover:bg-slate-50 transition-colors">
-                <td className="px-5 py-4 text-xs text-slate-400 font-mono">{i + 1}</td>
-                <td className="px-5 py-4">
+                <td className="px-3 sm:px-5 py-3 sm:py-4 text-xs text-slate-400 font-mono">{i + 1}</td>
+                <td className="px-3 sm:px-5 py-3 sm:py-4">
                   <p className="font-semibold text-slate-800 text-sm">{item.name}</p>
                   {item.code && (
                     <p className="text-xs text-blue-500 font-mono mt-0.5">{item.code}</p>
                   )}
                 </td>
-                <td className="px-5 py-4 text-center text-sm text-slate-700 font-medium">{item.qty}</td>
-                <td className="px-5 py-4 text-right text-sm text-slate-500">₹{formatINR(item.price)}</td>
-                <td className="px-5 py-4 text-right text-sm font-semibold text-slate-900">₹{formatINR(item.tprice)}</td>
+                <td className="px-3 sm:px-5 py-3 sm:py-4 text-center text-sm text-slate-700 font-medium">{item.qty}</td>
+                <td className="px-3 sm:px-5 py-3 sm:py-4 text-right text-sm text-slate-500">₹{formatINR(item.price)}</td>
+                <td className="px-3 sm:px-5 py-3 sm:py-4 text-right text-sm font-semibold text-slate-900">₹{formatINR(item.tprice)}</td>
               </tr>
             ))}
           </tbody>
         </table>
+        </div>
 
         {/* Sticky Total */}
         <div className="sticky bottom-0 bg-white border-t border-slate-100 px-6 py-4">

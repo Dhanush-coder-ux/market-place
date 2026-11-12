@@ -119,69 +119,64 @@ export default function NotificationsPage() {
     : notifications;
 
   return (
-    <div className="max-w-4xl mx-auto p-4 md:p-6 lg:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="max-w-4xl mx-auto p-4 pb-24 md:p-6 lg:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <div>
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-black text-slate-800 flex items-center gap-2">
-              <Bell className="w-6 h-6 text-blue-600" />
-              Notifications
-            </h1>
-            {isProduction ? (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-sm" title="Only Digital Store notifications are allowed in production">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                Digital Store Mode (Production)
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-sm" title="All notifications are allowed in development">
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
-                All Alerts Mode (Development)
-              </span>
-            )}
-            {isConnected ? (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200 shadow-sm" title="Real-time WebSocket connection active">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <Wifi className="w-3 h-3" /> Live
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 border border-amber-200 shadow-sm" title="Connecting to WebSocket server...">
-                <WifiOff className="w-3 h-3" /> Connecting...
-              </span>
-            )}
-          </div>
-          <p className="text-slate-500 text-sm mt-1 font-medium">
-            Stay updated with your latest alerts, real-time activities, and announcements.
-          </p>
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+            <Bell className="w-5 h-5 text-blue-600" />
+            Notifications
+          </h1>
+          {isProduction ? (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200" title="Only Digital Store notifications are allowed in production">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              Digital Store Mode
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200" title="All notifications are allowed in development">
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+              All Alerts Mode
+            </span>
+          )}
+          {isConnected ? (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200" title="Real-time WebSocket connection active">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <Wifi className="w-3 h-3" /> Live
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 border border-amber-200" title="Connecting to WebSocket server...">
+              <WifiOff className="w-3 h-3" /> Connecting...
+            </span>
+          )}
         </div>
         
         <div className="flex items-center gap-2 flex-wrap">
           <button 
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="flex items-center gap-2 px-3.5 py-2 bg-white border border-slate-200 text-slate-700 font-semibold text-sm rounded-xl hover:bg-slate-50 hover:text-blue-600 transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:opacity-50"
+            className="h-9 inline-flex items-center gap-2 px-3.5 bg-white border border-slate-200 text-slate-700 font-semibold text-xs rounded-lg hover:bg-slate-50 hover:text-blue-600 transition-colors disabled:opacity-50"
           >
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-blue-500' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-blue-500' : ''}`} />
             Refresh
           </button>
 
           {unreadCount > 0 && (
             <button
               onClick={handleMarkAllRead}
-              className="flex items-center gap-2 px-3.5 py-2 bg-blue-50 border border-blue-200 text-blue-700 font-semibold text-sm rounded-xl hover:bg-blue-100 transition-all shadow-sm"
+              className="h-9 inline-flex items-center gap-2 px-3.5 bg-blue-50 border border-blue-200 text-blue-700 font-semibold text-xs rounded-lg hover:bg-blue-100 transition-colors"
             >
-              <CheckCheck className="w-4 h-4" />
-              Mark all as read
+              <CheckCheck className="w-3.5 h-3.5" />
+              Mark all read
             </button>
           )}
 
           {notifications.length > 0 && (
             <button
               onClick={handleClearAll}
-              className="flex items-center gap-2 px-3.5 py-2 bg-rose-50 border border-rose-200 text-rose-700 font-semibold text-sm rounded-xl hover:bg-rose-100 transition-all shadow-sm"
+              className="h-9 inline-flex items-center gap-2 px-3.5 bg-red-50 border border-red-200 text-red-600 font-semibold text-xs rounded-lg hover:bg-red-100 transition-colors"
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="w-3.5 h-3.5" />
               Clear all
             </button>
           )}
@@ -189,7 +184,7 @@ export default function NotificationsPage() {
       </div>
 
       {/* Tabs Filter */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-3 mb-6">
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-3 mb-6 overflow-x-auto no-scrollbar">
         <button
           onClick={() => setActiveTab("all")}
           className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${
@@ -288,15 +283,15 @@ export default function NotificationsPage() {
                     )}
                   </div>
                   
-                  {/* Actions on hover */}
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {/* Actions: always visible on mobile touch, hover-reveal on md+ */}
+                  <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity shrink-0">
                     {!isRead && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           markAsRead(notif.id);
                         }}
-                        className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+                        className="p-2.5 sm:p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
                         title="Mark as read"
                       >
                         <CheckCircle className="w-4 h-4" />
@@ -304,7 +299,7 @@ export default function NotificationsPage() {
                     )}
                     <button 
                       onClick={(e) => handleDelete(e, notif.id)}
-                      className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      className="p-2.5 sm:p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                       title="Dismiss notification"
                       aria-label="Dismiss notification"
                     >

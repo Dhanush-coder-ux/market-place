@@ -4,11 +4,16 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { cn } from "@/lib/utils"
-import { ReusableSelectProps } from "../types"
-import { SelectPortal } from "@radix-ui/react-select"
-import { useState } from "react"
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+import { ReusableSelectProps } from "../types";
+import { SelectPortal } from "@radix-ui/react-select";
+import { useState } from "react";
+
+const TRIGGER_SIZES: Record<"sm" | "md", string> = {
+  sm: "h-9 px-3 text-xs",
+  md: "h-10 px-3.5 text-sm",
+};
 
 export function ReusableSelect({
   options,
@@ -21,8 +26,9 @@ export function ReusableSelect({
   required,
   footer,
   onScrollEnd,
-  disabled
-}: ReusableSelectProps) {
+  disabled,
+  size = "md",
+}: ReusableSelectProps & { size?: "sm" | "md" }) {
   const [open, setOpen] = useState(false);
   const mappedValue = value === "" ? "__EMPTY__" : value;
 
@@ -33,19 +39,26 @@ export function ReusableSelect({
   };
 
   return (
-    <div className="space-y-2 w-full">
+    <div className="flex flex-col gap-1.5 w-full">
       {label && (
-        <label className="text-xs font-semibold text-gray-500 ml-1">
+        <label className="text-xs font-medium text-slate-600 ml-0.5">
           {label}
           {required === true ? <span className="text-red-500 ml-1">*</span> : required}
         </label>
       )}
 
-      <Select value={mappedValue} onValueChange={handleValueChange} open={open} onOpenChange={setOpen} disabled={disabled}>
+      <Select
+        value={mappedValue}
+        onValueChange={handleValueChange}
+        open={open}
+        onOpenChange={setOpen}
+        disabled={disabled}
+      >
         <SelectTrigger
           className={cn(
-            "w-full h-10 rounded-lg border-gray-200 bg-white px-4 py-5 shadow-sm transition-all hover:border-blue-400 focus:ring-4 focus:ring-blue-500/10 outline-none",
-            error && "border-red-500 focus:ring-red-500/10",
+            "w-full rounded-lg border-slate-200 bg-white shadow-none transition-colors hover:border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 outline-none",
+            TRIGGER_SIZES[size],
+            error && "border-red-400 focus:ring-red-500/15",
             className
           )}
         >
@@ -54,7 +67,7 @@ export function ReusableSelect({
         <SelectPortal>
           <SelectContent
             position="popper"
-            className="z-[999999] rounded-lg shadow-2xl border-gray-100 overflow-hidden max-h-[300px] animate-in fade-in zoom-in-95 duration-200"
+            className="z-[999999] rounded-lg shadow-lg border-slate-200 overflow-hidden max-h-[300px]"
             onViewportScroll={(e) => {
               if (!onScrollEnd) return;
               const target = e.currentTarget;
@@ -74,11 +87,11 @@ export function ReusableSelect({
               <SelectItem
                 key={option.value || "__EMPTY__"}
                 value={option.value === "" ? "__EMPTY__" : option.value}
-                className="px-3 py-2.5 rounded-lg cursor-pointer transition-colors focus:bg-blue-50 focus:text-blue-600"
+                className="px-3 py-2 rounded-md cursor-pointer transition-colors text-[13px] focus:bg-blue-50 focus:text-blue-600"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5">
                   {option.icon && (
-                    <span className="flex-shrink-0 text-gray-400 group-focus:text-blue-500">
+                    <span className="flex-shrink-0 text-slate-400">
                       {option.icon}
                     </span>
                   )}
@@ -90,8 +103,7 @@ export function ReusableSelect({
         </SelectPortal>
       </Select>
 
-      {error && <p className="text-xs text-red-500 ml-1">{error}</p>}
+      {error && <p className="text-xs text-red-500 ml-0.5">{error}</p>}
     </div>
-  )
+  );
 }
-

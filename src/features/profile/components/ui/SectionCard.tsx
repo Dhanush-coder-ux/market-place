@@ -16,7 +16,6 @@ interface SectionCardProps {
 
 const SectionCard: React.FC<SectionCardProps> = ({
   title,
-  subtitle,
   icon,
   iconBg,
   children,
@@ -34,12 +33,9 @@ const SectionCard: React.FC<SectionCardProps> = ({
         {icon}
       </div>
       <div className="flex-1 min-w-0">
-        <h3 className="text-sm font-bold text-slate-800 leading-tight">
+        <h3 className="text-sm font-semibold text-slate-800 leading-tight">
           {title}
         </h3>
-        {subtitle && (
-          <p className="text-[11px] text-slate-400 font-medium">{subtitle}</p>
-        )}
       </div>
       {headerAction && <div className="shrink-0">{headerAction}</div>}
     </div>

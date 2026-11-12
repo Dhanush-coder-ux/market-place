@@ -694,7 +694,7 @@ Thank you for your business!`;
         </div>
 
         {/* Sticky Action Footer */}
-        <div className="flex items-center justify-between px-4 py-3 sm:px-5 sm:py-3.5 bg-white border-t border-slate-200/80 shrink-0 gap-2 no-print overflow-x-auto scrollbar-none">
+        <div className="flex flex-wrap items-center justify-between px-3.5 py-3 pb-[max(12px,env(safe-area-inset-bottom))] sm:px-5 sm:py-3.5 bg-white border-t border-slate-200/80 shrink-0 gap-2 no-print">
           <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={handlePrint}

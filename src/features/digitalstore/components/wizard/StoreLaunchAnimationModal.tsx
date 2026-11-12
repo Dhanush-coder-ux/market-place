@@ -141,10 +141,10 @@ export const StoreLaunchAnimationModal: React.FC<StoreLaunchModalProps> = ({
   const isReady = isComplete && progress >= 90;
 
   const modalContent = (
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[99999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
       
       {/* ─── MODAL CARD (LIGHT ROYAL BLUE THEME) ─── */}
-      <div className="relative w-full max-w-lg bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-7 shadow-2xl shadow-blue-950/20 overflow-hidden text-slate-900 flex flex-col items-center animate-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-lg max-h-[90dvh] overflow-y-auto bg-white border border-slate-200/90 rounded-t-3xl sm:rounded-3xl p-5 sm:p-7 pb-[max(20px,env(safe-area-inset-bottom))] sm:pb-7 shadow-2xl shadow-blue-950/20 text-slate-900 flex flex-col items-center animate-in zoom-in-95 duration-200">
         
         {/* Soft Ambient Brand Glow */}
         <div className="absolute -top-24 -right-24 w-60 h-60 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />

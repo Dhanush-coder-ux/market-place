@@ -64,7 +64,7 @@ const CustomerCreateModal: React.FC<CustomerCreateModalProps> = ({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[1200] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[1200] flex items-end sm:items-center justify-center p-0 sm:p-4">
       {/* Backdrop */}
       <div 
         className="fixed inset-0 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300" 
@@ -72,10 +72,10 @@ const CustomerCreateModal: React.FC<CustomerCreateModalProps> = ({
       />
       
       {/* Modal Container */}
-      <div className="relative w-full max-w-[480px] bg-white rounded-2xl shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] border border-slate-200/60 overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
+      <div className="relative w-full max-w-[480px] max-h-[90dvh] flex flex-col bg-white rounded-t-2xl sm:rounded-2xl shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] border border-slate-200/60 overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
         
         {/* Header */}
-        <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+        <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
               <UserPlus size={20} />
@@ -94,7 +94,7 @@ const CustomerCreateModal: React.FC<CustomerCreateModalProps> = ({
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-7 space-y-5">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-7 space-y-4 sm:space-y-5 overflow-y-auto pb-[max(20px,env(safe-area-inset-bottom))]">
           
           {/* Name Field */}
           <div className="space-y-1.5">
@@ -109,7 +109,7 @@ const CustomerCreateModal: React.FC<CustomerCreateModalProps> = ({
                 value={formData.name}
                 onChange={e => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Ex: John Doe"
-                className={`w-full h-11 px-4 bg-slate-50 border rounded-xl text-[13px] font-bold text-slate-700 outline-none transition-all placeholder:text-slate-300 ${
+                className={`w-full h-11 px-4 bg-slate-50 border rounded-xl text-[14px] sm:text-[13px] font-bold text-slate-700 outline-none transition-all placeholder:text-slate-300 ${
                   errors.name ? "border-rose-300 bg-rose-50/30 ring-4 ring-rose-500/5" : "border-slate-200 focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-500/5"
                 }`}
               />
@@ -118,7 +118,7 @@ const CustomerCreateModal: React.FC<CustomerCreateModalProps> = ({
           </div>
 
           {/* Contact Group */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Mobile Field */}
             <div className="space-y-1.5">
               <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
@@ -130,7 +130,7 @@ const CustomerCreateModal: React.FC<CustomerCreateModalProps> = ({
                 value={formData.mobile_number}
                 onChange={e => setFormData({ ...formData, mobile_number: e.target.value })}
                 placeholder="10 Digit Number"
-                className={`w-full h-11 px-4 bg-slate-50 border rounded-xl text-[13px] font-bold text-slate-700 outline-none transition-all placeholder:text-slate-300 ${
+                className={`w-full h-11 px-4 bg-slate-50 border rounded-xl text-[14px] sm:text-[13px] font-bold text-slate-700 outline-none transition-all placeholder:text-slate-300 ${
                   errors.mobile_number ? "border-rose-300 bg-rose-50/30 ring-4 ring-rose-500/5" : "border-slate-200 focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-500/5"
                 }`}
               />

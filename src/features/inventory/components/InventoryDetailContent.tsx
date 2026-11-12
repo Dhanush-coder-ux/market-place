@@ -46,7 +46,7 @@ export const InventoryDetailContent = ({ item }: { item: InventoryRecord | null 
 
       {/* Header Stat Cards */}
       {/* Header Stat Cards */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         <div className="p-4 bg-white rounded-lg border border-gray-100 shadow-sm">
           <p className="text-[10px] text-slate-400 font-black mb-1">Profit Margin</p>
           <p className={`text-xl font-black tabular-nums ${profitMargin >= 0 ? "text-emerald-600" : "text-rose-600"}`}>

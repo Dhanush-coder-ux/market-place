@@ -481,7 +481,7 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
         </div>
 
         {/* ── Fixed Bottom Confirm Buttons (Generate Bill & Generate Invoice) ────── */}
-        <div className="shrink-0 p-3 pt-2.5 pb-[calc(54px+env(safe-area-inset-bottom))] lg:pb-3 bg-white border-t border-slate-200/80 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] flex gap-2.5 z-10">
+        <div className="shrink-0 p-3 pt-2.5 pb-[max(12px,env(safe-area-inset-bottom))] lg:pb-3 bg-white border-t border-slate-200/80 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] flex gap-2.5 z-10">
           <button
             onClick={handleQuickCheckout}
             disabled={totalQty === 0 || balanceAmount > 0.01 || isSubmitting}

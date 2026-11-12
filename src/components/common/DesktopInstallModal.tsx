@@ -47,14 +47,14 @@ export const DesktopInstallModal: React.FC<DesktopInstallModalProps> = ({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 16 }}
           transition={{ duration: 0.2, ease: 'easeOut' }}
-          className="relative w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl border border-slate-100 z-10"
+          className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-2xl border border-slate-100 z-10"
         >
           {/* Header Banner */}
           <div
             style={{
               background: `linear-gradient(135deg, var(--t-sidebar-from, #286038) 0%, var(--t-sidebar-via, #174B2E) 50%, var(--t-sidebar-to, #0D3522) 100%)`,
             }}
-            className="relative p-6 text-white overflow-hidden"
+            className="relative p-4 sm:p-6 text-white overflow-hidden"
           >
             <div className="absolute -right-8 -bottom-8 w-36 h-36 rounded-full bg-white/10 blur-xl pointer-events-none" />
             <div className="absolute top-2 right-16 w-20 h-20 rounded-full bg-white/5 blur-lg pointer-events-none" />
@@ -90,8 +90,8 @@ export const DesktopInstallModal: React.FC<DesktopInstallModalProps> = ({
           </div>
 
           {/* App Advantages Grid */}
-          <div className="p-6 space-y-4">
-            <div className="grid grid-cols-2 gap-3">
+          <div className="p-4 sm:p-6 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div
                 className="p-3 rounded-xl border"
                 style={{

@@ -227,8 +227,8 @@ const PurchaseHistoryTab = () => {
       )}
 
       {/* Toolbar */}
-      <div className="bg-white border border-slate-100 rounded-lg p-2.5 px-3.5 flex flex-nowrap items-center gap-2 shadow-sm overflow-x-auto scrollbar-none">
-        <div className="relative w-56 shrink-0">
+      <div className="bg-white border border-slate-100 rounded-lg p-2.5 px-3 sm:px-3.5 flex flex-wrap items-center gap-2 shadow-sm">
+        <div className="relative w-full sm:w-64 md:w-72 shrink-0">
           <Search
             size={13}
             className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"

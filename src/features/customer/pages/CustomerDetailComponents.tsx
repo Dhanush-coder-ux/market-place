@@ -119,13 +119,13 @@ export function Modal({ show, onClose, title, children, footer, className }: Mod
   if (!show) return null;
   return createPortal(
     <div
-      className="fixed inset-0 bg-black/50 z-[1000] flex items-center justify-center"
+      className="fixed inset-0 bg-black/50 z-[1000] flex items-end sm:items-center justify-center sm:p-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className={`bg-white rounded-lg w-[90%] max-h-[90vh] overflow-y-auto modal-content shadow-2xl animate-[slideUp_0.3s_ease] ${className || "max-w-xl"}`}>
+      <div className={`bg-white rounded-t-2xl sm:rounded-lg w-full sm:w-[90%] max-h-[90dvh] flex flex-col overflow-hidden modal-content shadow-2xl animate-[slideUp_0.3s_ease] ${className || "sm:max-w-xl"}`}>
         {/* Header */}
-        <div className="px-6 py-5 border-b border-slate-200 flex justify-between items-center">
-          <h2 className="text-xl font-semibold text-slate-700">{title}</h2>
+        <div className="px-4 sm:px-6 py-3.5 sm:py-5 border-b border-slate-200 flex justify-between items-center shrink-0">
+          <h2 className="text-lg sm:text-xl font-semibold text-slate-700">{title}</h2>
           <button
             onClick={onClose}
             className="w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-md text-lg transition-colors"
@@ -135,11 +135,11 @@ export function Modal({ show, onClose, title, children, footer, className }: Mod
         </div>
 
         {/* Body */}
-        <div className="p-6">{children}</div>
+        <div className={`p-4 sm:p-6 overflow-y-auto flex-1 ${footer ? "" : "pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-6"}`}>{children}</div>
 
         {/* Footer */}
         {footer && (
-          <div className="px-6 py-4 border-t border-slate-200 flex justify-end gap-3 bg-slate-50 rounded-b-2xl">
+          <div className="px-4 sm:px-6 py-3.5 sm:py-4 pb-[calc(0.875rem+env(safe-area-inset-bottom))] sm:pb-4 border-t border-slate-200 flex flex-wrap justify-end gap-2 sm:gap-3 bg-slate-50 sm:rounded-b-2xl shrink-0">
             {footer}
           </div>
         )}
@@ -295,7 +295,7 @@ export function SectionCard({ children, className = "", title }: SectionCardProp
   return (
     <div className={`bg-white rounded-lg shadow-sm border border-slate-100 ${className}`}>
       {title && <h3 className="text-sm font-bold text-slate-800 px-6 py-4 border-b border-slate-100">{title}</h3>}
-      <div className="p-8">
+      <div className="p-4 sm:p-6 md:p-8">
         {children}
       </div>
     </div>
@@ -369,9 +369,9 @@ export function BottomActionBar({ customerName, actions }: BottomActionBarProps)
     // 1. Changed "fixed" to "sticky"
     // 2. Added negative margins/bottom offsets to bypass the MainLayout padding
     // 3. Added mt-auto to push it down on shorter pages
-    <div className="sticky -bottom-4 md:-bottom-6 lg:-bottom-8 -mx-4 md:-mx-6 lg:-mx-8 -mb-4 md:-mb-6 lg:-mb-8 mt-auto bg-white border-t-2 border-slate-200 px-8 py-4 flex justify-between items-center shadow-[0_-4px_12px_rgba(0,0,0,0.08)] z-[100]">
-      <span className="text-sm text-slate-500">Quick actions for {customerName}</span>
-      <div className="flex gap-3">
+    <div className="sticky bottom-[calc(60px+env(safe-area-inset-bottom))] md:-bottom-6 lg:-bottom-8 -mx-4 md:-mx-6 lg:-mx-8 -mb-4 md:-mb-6 lg:-mb-8 mt-auto bg-white border-t-2 border-slate-200 px-4 sm:px-8 py-3 sm:py-4 flex flex-wrap justify-between items-center gap-2.5 shadow-[0_-4px_12px_rgba(0,0,0,0.08)] z-[100]">
+      <span className="text-xs sm:text-sm text-slate-500">Quick actions for {customerName}</span>
+      <div className="flex flex-wrap gap-2 sm:gap-3 w-full sm:w-auto justify-end">
         {actions.map((action) => (
           <button
             key={action.label}

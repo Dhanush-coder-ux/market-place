@@ -75,8 +75,8 @@ export function SectionCard({ children, title, className = "" }: SectionCardProp
   return (
     <div className={`bg-white rounded-lg border border-slate-200 p-3 sm:p-5 shadow-sm overflow-hidden relative ${className}`}>
       {title && (
-        <div className="flex items-center gap-2.5 mb-4 sm:mb-5 border-b border-slate-100 pb-2 sm:pb-3">
-          <h2 className="text-[10px] font-semibold text-slate-500  tracking-[0.12em]">{title}</h2>
+        <div className="flex items-center gap-2.5 mb-4 border-b border-slate-100 pb-2.5">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">{title}</h2>
         </div>
       )}
       {children}
@@ -147,27 +147,27 @@ export function Modal({ show, onClose, title, children, footer, className }: Mod
   if (!show) return null;
   return (
     <div
-      className="fixed inset-0 bg-black/50 z-[1000] flex items-center justify-center"
+      className="fixed inset-0 bg-black/50 z-[1000] flex items-end sm:items-center justify-center p-0 sm:p-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className={`bg-white rounded-lg w-[90%] max-h-[90vh] overflow-y-auto modal-content shadow-2xl animate-[slideUp_0.3s_ease] ${className || "max-w-xl"}`}>
+      <div className={`bg-white rounded-t-2xl sm:rounded-xl w-full sm:w-[92%] max-h-[90vh] overflow-y-auto modal-content shadow-2xl animate-[slideUp_0.3s_ease] pb-[env(safe-area-inset-bottom)] ${className || "max-w-xl"}`}>
         {/* Header */}
-        <div className="px-6 py-5 border-b border-slate-200 flex justify-between items-center">
-          <h2 className="text-xl font-semibold text-slate-700">{title}</h2>
+        <div className="px-4 py-3.5 sm:px-6 sm:py-5 border-b border-slate-200 flex justify-between items-center sticky top-0 bg-white z-10">
+          <h2 className="text-base sm:text-xl font-semibold text-slate-700 truncate pr-2">{title}</h2>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-md text-lg transition-colors"
+            className="w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-md text-lg transition-colors shrink-0"
           >
             ×
           </button>
         </div>
 
         {/* Body */}
-        <div className="p-6">{children}</div>
+        <div className="p-4 sm:p-6">{children}</div>
 
         {/* Footer */}
         {footer && (
-          <div className="px-6 py-4 border-t border-slate-200 flex justify-end gap-3 bg-slate-50 rounded-b-2xl">
+          <div className="px-4 py-3 sm:px-6 sm:py-4 border-t border-slate-200 flex flex-wrap justify-end gap-2 sm:gap-3 bg-slate-50 sm:rounded-b-xl">
             {footer}
           </div>
         )}
@@ -232,14 +232,14 @@ export function BottomActionBar({ label, actions }: BottomActionBarProps) {
   };
 
   return (
-    <div className="sticky -bottom-4 md:-bottom-6 lg:-bottom-8 -mx-4 md:-mx-6 lg:-mx-8 -mb-4 md:-mb-6 lg:-mb-8 mt-auto bg-white border-t-2 border-slate-100 px-8 py-4 flex justify-between items-center shadow-[0_-4px_12px_rgba(0,0,0,0.08)] z-[100]">
-      <span className="text-sm font-bold text-slate-400  ">{label}</span>
-      <div className="flex gap-3">
+    <div className="sticky bottom-0 -mx-2 sm:-mx-4 md:-mx-6 lg:-mx-8 -mb-2 sm:-mb-4 md:-mb-6 lg:-mb-8 mt-auto bg-white/95 backdrop-blur-md border-t border-slate-200 px-3 sm:px-6 md:px-8 py-3 sm:py-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2.5 shadow-[0_-4px_12px_rgba(0,0,0,0.08)] z-[40]">
+      <span className="text-xs sm:text-sm font-bold text-slate-500">{label}</span>
+      <div className="flex flex-wrap gap-2 sm:gap-3 justify-end">
         {actions.map((action) => (
           <button
             key={action.label}
             onClick={action.onClick}
-            className={`px-5 py-2.5 rounded-lg text-xs font-semibold   flex items-center gap-2 transition-all active:scale-95 shadow-sm ${variantClass[action.variant ?? "secondary"]
+            className={`px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 sm:gap-2 transition-all active:scale-95 shadow-sm flex-1 sm:flex-initial ${variantClass[action.variant ?? "secondary"]
               }`}
           >
             {typeof action.icon === 'function' ? <action.icon size={14} /> : action.icon}

@@ -682,12 +682,12 @@ const Login = () => {
               NEED HELP?
             </div>
 
-            <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-3.5 flex items-center justify-between gap-3 shadow-sm hover:border-slate-300 transition-all">
-              <div className="flex items-center gap-3">
+            <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-3 shadow-sm hover:border-slate-300 transition-all">
+              <div className="flex items-center gap-3 min-w-0">
                 <div className="w-9 h-9 rounded-lg bg-[#286038]/10 text-[#286038] border border-[#286038]/20 flex items-center justify-center shrink-0">
                   <Phone size={17} />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <h4 className="text-[13px] font-semibold text-slate-900">Talk to support</h4>
                   <p className="text-[11.5px] text-slate-500">Monday – Saturday, 9am – 8pm IST</p>
                 </div>
@@ -695,7 +695,7 @@ const Login = () => {
 
               <button
                 onClick={() => setShowSupportModal(true)}
-                className="px-3.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-xs font-semibold text-slate-800 shadow-sm transition-all active:scale-95"
+                className="px-3.5 py-2 sm:py-1.5 w-full sm:w-auto rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-xs font-semibold text-slate-800 shadow-sm transition-all active:scale-95"
               >
                 Contact us
               </button>
@@ -748,8 +748,8 @@ const Login = () => {
           CONTACT SUPPORT / PHONE DIALER MODAL
           ========================================================================= */}
       {showSupportModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative space-y-6">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white border border-slate-200 rounded-t-2xl sm:rounded-2xl p-5 sm:p-8 pb-[max(20px,env(safe-area-inset-bottom))] sm:pb-8 max-w-md w-full max-h-[90dvh] overflow-y-auto shadow-2xl relative space-y-5 sm:space-y-6">
             <button
               onClick={() => setShowSupportModal(false)}
               className="absolute top-5 right-5 p-2 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
@@ -798,7 +798,7 @@ const Login = () => {
                             <button
                               type="button"
                               onClick={(e) => handleCopy(phone.number, copyKey, e)}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all cursor-pointer"
+                              className="p-2.5 sm:p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all cursor-pointer"
                               title="Copy number"
                             >
                               {copiedKey === copyKey ? (
@@ -810,7 +810,7 @@ const Login = () => {
                             <button
                               type="button"
                               onClick={() => handleDial(phone.raw)}
-                              className="p-2 rounded-xl bg-[#286038] text-white shadow-xs group-hover:scale-105 transition-transform cursor-pointer"
+                              className="p-2.5 sm:p-2 rounded-xl bg-[#286038] text-white shadow-xs group-hover:scale-105 transition-transform cursor-pointer"
                               title="Call number"
                             >
                               <Phone size={13} />

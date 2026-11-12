@@ -45,13 +45,13 @@ const ImportExportFloatingCard: FC<ImportExportFloatingCardProps> = ({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md transition-all">
-      <div className="w-full max-w-md overflow-hidden rounded-lg bg-white shadow-2xl ring-1 ring-black/5">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/40 backdrop-blur-md transition-all" onClick={onClose}>
+      <div className="w-full max-w-md overflow-hidden rounded-t-2xl sm:rounded-xl bg-white shadow-2xl ring-1 ring-black/5 max-h-[90vh] flex flex-col pb-[env(safe-area-inset-bottom)]" onClick={(e) => e.stopPropagation()}>
         
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50/50 px-6 py-4">
+        <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50/50 px-4 py-3.5 sm:px-6 sm:py-4 shrink-0">
           <div>
-            <h2 className="text-lg font-bold text-gray-900">Data Management</h2>
+            <h2 className="text-base sm:text-lg font-bold text-gray-900">Data Management</h2>
             <p className="text-xs text-gray-500">Import or export your project data</p>
           </div>
           <button 
@@ -62,7 +62,7 @@ const ImportExportFloatingCard: FC<ImportExportFloatingCardProps> = ({
           </button>
         </div>
 
-        <div className="space-y-6 p-6">
+        <div className="space-y-5 p-4 sm:p-6 overflow-y-auto">
           {/* Import Section - Drag & Drop */}
           <section>
             <label className="mb-2 block text-sm font-semibold text-gray-700">Import Files</label>
@@ -126,7 +126,7 @@ const ImportExportFloatingCard: FC<ImportExportFloatingCardProps> = ({
             <div>
               <p className="text-xs font-medium text-amber-900">Using a template?</p>
               <p className="mb-2 text-[11px] text-amber-800/80">Ensure your data matches our structure for a smooth import.</p>
-              <div className="flex gap-4">
+              <div className="flex flex-wrap gap-3 sm:gap-4">
                 <a href="/samples/sample.xlsx" download className="text-[11px] font-bold text-amber-700 underline hover:text-amber-800">Download XLSX Template</a>
                 <a href="/samples/sample.docx" download className="text-[11px] font-bold text-amber-700 underline hover:text-amber-800">Download DOCX Template</a>
               </div>

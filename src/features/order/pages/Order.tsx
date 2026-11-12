@@ -12,13 +12,20 @@ import SkeletonLoader from "@/components/common/SkeletonLoader";
 import { useApi } from "@/context/ApiContext";
 import { getShopId, SHOP_ID } from "@/services/endpoints";
 import { orderApi } from "@/services/api/order";
+import { inventoryApi } from "@/services/api/inventory";
 import { customerApi } from "@/services/api/customer";
 import type { OrderRecord } from "@/types/api";
 import { VerifyDeliveryModal } from "../components/VerifyDeliveryModal";
 import { ReturnRequestCard } from "../components/ReturnRequestCard";
 import { CreateReturnRequestModal } from "../components/CreateReturnRequestModal";
+import {
+  AcceptOrderSerialModal,
+  type SerialAssignmentItemInput,
+  type SerialAssignmentPayloadItem,
+} from "../components/AcceptOrderSerialModal";
 import type { ReturnRequestRecord } from "../types";
 import { toCardShape, parseOrderForDetail, isReturnDisallowedStatus } from "../utils/orderDetailParser";
+import { buildSerialAssignmentItems } from "../utils/orderSerialHelper";
 
 const Order = () => {
   const navigate = useNavigate();
@@ -40,6 +47,18 @@ const Order = () => {
   const [returnRequests, setReturnRequests] = useState<ReturnRequestRecord[]>([]);
   const [returnRequestsLoading, setReturnRequestsLoading] = useState(false);
   const [requestReturnModalOrder, setRequestReturnModalOrder] = useState<any | null>(null);
+
+  // Serial Assignment on Accept state
+  const [statusError, setStatusError] = useState<string | null>(null);
+  const [acceptSubmitting, setAcceptSubmitting] = useState(false);
+  const [acceptError, setAcceptError] = useState<string | null>(null);
+  const [acceptModalData, setAcceptModalData] = useState<{
+    originalOrder: any;
+    targetShopId: string;
+    orderLabel: string;
+    customerName?: string;
+    items: SerialAssignmentItemInput[];
+  } | null>(null);
 
   const [statusCounts, setStatusCounts] = useState<{
     ALL: number;
@@ -218,42 +237,160 @@ const Order = () => {
     }).catch(console.error);
   }, [refreshKey, status, dateRange, currentShopId]);
 
-  const handleStatusChange = async (newStatus: string, originalOrder: OrderRecord) => {
-    try {
-      const targetShopId = (originalOrder as any).shop_id || currentShopId;
-      const existingAdd = (originalOrder as any).additional_infos || {};
-      const isCanceling = ["CANCELED", "CANCELLED"].includes(String(newStatus || "").toUpperCase());
-      const mergedAddInfos = {
-        ...existingAdd,
-        ...(isCanceling
-          ? {
-              cancelled_by_source: "INVENTQ",
-              cancelled_by: "InventQ",
-              cancelled_by_label: "Cancelled manually by InventQ",
-            }
-          : {}),
-      };
-      const payload = {
-        id: originalOrder.id,
-        shop_id: targetShopId,
-        session_id: (originalOrder as any).session_id || "",
-        customer_id: (originalOrder as any).customer_id || "",
-        status: newStatus,
-        origin: (originalOrder as any).origin || "ONLINE",
-        type: (originalOrder as any).type || "",
-        calculation_infos: (originalOrder as any).calculation_infos || {},
-        charges_infos: (originalOrder as any).charges_infos || {},
-        payment_infos: Array.isArray((originalOrder as any).payment_infos) ? {} : ((originalOrder as any).payment_infos || {}),
-        additional_infos: mergedAddInfos
-      };
-      
-      const res = await orderApi.updateOrderStatus(payload);
-      if (res) {
-        setOrders(prev => prev.map(o => o.id === originalOrder.id ? { ...o, status: newStatus, additional_infos: mergedAddInfos } : o));
-        setRefreshKey(k => k + 1);
+  const extractApiError = (err: any, fallback: string) => {
+    const detail = err?.response?.data?.detail ?? err?.data?.detail ?? err?.detail;
+    if (typeof detail === "string" && detail.trim()) return detail;
+    if (detail && typeof detail === "object") {
+      return detail.msg || detail.description || fallback;
+    }
+    return err?.message || fallback;
+  };
+
+  const executeStatusUpdate = async (
+    targetShopId: string,
+    originalOrder: OrderRecord,
+    newStatus: string,
+    serialAssignments?: SerialAssignmentPayloadItem[]
+  ) => {
+    const existingAdd = (originalOrder as any).additional_infos || {};
+    const isCanceling = ["CANCELED", "CANCELLED"].includes(String(newStatus || "").toUpperCase());
+    const mergedAddInfos = {
+      ...existingAdd,
+      ...(isCanceling
+        ? {
+            cancelled_by_source: "INVENTQ",
+            cancelled_by: "InventQ",
+            cancelled_by_label: "Cancelled manually by InventQ",
+          }
+        : {}),
+    };
+    const payload: Record<string, any> = {
+      id: originalOrder.id,
+      shop_id: targetShopId,
+      session_id: (originalOrder as any).session_id || "",
+      customer_id: (originalOrder as any).customer_id || "",
+      status: newStatus,
+      origin: (originalOrder as any).origin || "ONLINE",
+      type: (originalOrder as any).type || "",
+      calculation_infos: (originalOrder as any).calculation_infos || {},
+      charges_infos: (originalOrder as any).charges_infos || {},
+      payment_infos: Array.isArray((originalOrder as any).payment_infos) ? {} : ((originalOrder as any).payment_infos || {}),
+      additional_infos: mergedAddInfos,
+      ...(serialAssignments && serialAssignments.length > 0
+        ? { serial_assignments: serialAssignments }
+        : {}),
+    };
+
+    const res = await orderApi.updateOrderStatus(payload);
+    if (res) {
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === originalOrder.id ? { ...o, status: newStatus, additional_infos: mergedAddInfos } : o
+        )
+      );
+      setRefreshKey((k) => k + 1);
+      if (isOpen && selectedOrder?.id === originalOrder.id) {
+        await handleOpenDetails(originalOrder);
       }
-    } catch (e) {
+    }
+  };
+
+  const handleStatusChange = async (newStatus: string, originalOrder: OrderRecord) => {
+    setStatusError(null);
+    const targetShopId = (originalOrder as any).shop_id || currentShopId;
+    const isAcceptingPending =
+      String(newStatus || "").toUpperCase() === "ACCEPTED" &&
+      String(originalOrder.status || "").toUpperCase() === "PENDING";
+
+    if (isAcceptingPending) {
+      try {
+        let fullOrder: any = originalOrder;
+        try {
+          const orderRes = await orderApi.getOrderById(targetShopId, originalOrder.id);
+          if (orderRes?.data) {
+            fullOrder = Array.isArray(orderRes.data)
+              ? orderRes.data[0]
+              : Array.isArray(orderRes.data.datas)
+                ? orderRes.data.datas[0]
+                : orderRes.data;
+          }
+        } catch {
+          fullOrder = originalOrder;
+        }
+
+        const rawItems: any[] = Array.isArray(fullOrder?.items) ? fullOrder.items : [];
+        const productIds = Array.from(
+          new Set(rawItems.map((i) => i?.product_id).filter(Boolean).map(String))
+        );
+
+        const productsById: Record<string, any> = {};
+        if (productIds.length > 0) {
+          const invRes = await inventoryApi.getInventoriesByIds(targetShopId, productIds, true);
+          const invList = Array.isArray(invRes)
+            ? invRes
+            : Array.isArray(invRes?.data)
+              ? invRes.data
+              : Array.isArray(invRes?.datas)
+                ? invRes.datas
+                : [];
+          for (const prod of invList) {
+            if (prod?.id) productsById[String(prod.id)] = prod;
+          }
+        }
+
+        const serialItems = buildSerialAssignmentItems(rawItems, productsById);
+        if (serialItems.length > 0) {
+          const custInfo = customerMap[(originalOrder as any).customer_id];
+          const customerName =
+            fullOrder?.online_details?.customer_name ||
+            fullOrder?.customer_name ||
+            custInfo?.name ||
+            undefined;
+          setAcceptError(null);
+          setAcceptModalData({
+            originalOrder: fullOrder,
+            targetShopId,
+            orderLabel: String(fullOrder?.ui_id || originalOrder.ui_id || originalOrder.id),
+            customerName,
+            items: serialItems,
+          });
+          return;
+        }
+
+        await executeStatusUpdate(targetShopId, fullOrder, newStatus);
+        return;
+      } catch (e: any) {
+        console.error("Failed to accept order", e);
+        setStatusError(extractApiError(e, "Failed to accept order. Please try again."));
+        return;
+      }
+    }
+
+    try {
+      await executeStatusUpdate(targetShopId, originalOrder, newStatus);
+    } catch (e: any) {
       console.error("Failed to update status", e);
+      setStatusError(extractApiError(e, "Failed to update order status."));
+    }
+  };
+
+  const handleConfirmSerialAccept = async (assignments: SerialAssignmentPayloadItem[]) => {
+    if (!acceptModalData) return;
+    setAcceptSubmitting(true);
+    setAcceptError(null);
+    try {
+      await executeStatusUpdate(
+        acceptModalData.targetShopId,
+        acceptModalData.originalOrder,
+        "ACCEPTED",
+        assignments
+      );
+      setAcceptModalData(null);
+    } catch (e: any) {
+      console.error("Failed to accept order with serials", e);
+      setAcceptError(extractApiError(e, "Failed to assign serial numbers and accept order."));
+    } finally {
+      setAcceptSubmitting(false);
     }
   };
 
@@ -291,10 +428,18 @@ const Order = () => {
 
 
 
-        {error && (
+        {(error || statusError) && (
           <div className="flex items-center justify-between gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
-            <span>{error}</span>
-            <button onClick={clearError} className="shrink-0 text-red-400 hover:text-red-600"><X size={14} /></button>
+            <span>{statusError || error}</span>
+            <button
+              onClick={() => {
+                clearError();
+                setStatusError(null);
+              }}
+              className="shrink-0 text-red-400 hover:text-red-600"
+            >
+              <X size={14} />
+            </button>
           </div>
         )}
 
@@ -346,7 +491,7 @@ const Order = () => {
 
         {status === "RETURN_REQUESTS" ? (
           <div>
-            <div className="mb-4 p-3.5 bg-amber-50/80 border border-amber-200 rounded-xl flex items-center justify-between">
+            <div className="mb-4 p-3.5 bg-amber-50/80 border border-amber-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
               <div className="flex items-center gap-2.5 text-xs font-bold text-amber-900">
                 <RotateCcw size={16} className="text-amber-700 shrink-0" />
                 <span>Customer Return Requests</span>
@@ -354,7 +499,7 @@ const Order = () => {
               <button
                 type="button"
                 onClick={() => navigate("/orders/returns")}
-                className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs"
+                className="w-full sm:w-auto px-3 py-2 sm:py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs text-center"
               >
                 Open Return Management Dashboard →
               </button>
@@ -467,6 +612,23 @@ const Order = () => {
         onSubmitted={() => {
           setRefreshKey(k => k + 1);
         }}
+      />
+
+      {/* Serial Number Assignment Modal on Accept */}
+      <AcceptOrderSerialModal
+        isOpen={!!acceptModalData}
+        onClose={() => {
+          if (!acceptSubmitting) {
+            setAcceptModalData(null);
+            setAcceptError(null);
+          }
+        }}
+        orderLabel={acceptModalData?.orderLabel || ""}
+        customerName={acceptModalData?.customerName}
+        items={acceptModalData?.items || []}
+        submitting={acceptSubmitting}
+        errorMsg={acceptError}
+        onConfirm={handleConfirmSerialAccept}
       />
     </div>
   );

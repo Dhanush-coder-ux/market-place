@@ -183,6 +183,7 @@ export const RightSidebarFilter: React.FC<RightSidebarFilterProps> = ({
             border-slate-100
             bg-slate-50
             p-4
+            pb-[max(16px,env(safe-area-inset-bottom))]
           "
         >
           <div className="flex items-center gap-3">

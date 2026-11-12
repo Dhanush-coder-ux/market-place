@@ -225,8 +225,56 @@ const StockMovementDetail = () => {
 
           {activeTab === 1 && (
             <SectionCard title="Affected Products & Stock Overview">
-              <div className="border border-slate-200 rounded-lg overflow-hidden bg-white shadow-sm">
-                <table className="w-full text-left border-collapse">
+              {/* Mobile card list */}
+              <div className="md:hidden divide-y divide-slate-100 border border-slate-200 rounded-lg bg-white overflow-hidden">
+                {products.length === 0 ? (
+                  <div className="p-6 text-center text-slate-400 font-medium text-xs bg-slate-50/30">No products found in this movement.</div>
+                ) : (
+                  products.map((prod: any, idx: number) => {
+                    const isDec = prod.type === "DECREMENT" || adjustment.movement_type === "SALES";
+                    const stocksAdj = prod.stock_infos?.stocks !== undefined ? prod.stock_infos.stocks : (prod.stocks_adjusted !== undefined ? prod.stocks_adjusted : prod.stocks);
+                    const qty = Math.abs(Number(stocksAdj || 0));
+                    const rawBefore = prod.stock_infos?.stocks_before !== undefined ? prod.stock_infos.stocks_before : prod.stocks_before;
+                    const rawAfter = prod.stock_infos?.stocks_after !== undefined ? prod.stock_infos.stocks_after : prod.stocks_after;
+                    const sBefore = rawBefore !== undefined && rawBefore !== null ? Number(rawBefore) : null;
+                    const sAfter = rawAfter !== undefined && rawAfter !== null ? Number(rawAfter) : (sBefore !== null ? (isDec ? sBefore - qty : sBefore + qty) : null);
+
+                    return (
+                      <div key={idx} className="p-3.5 space-y-2.5">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="font-bold text-slate-800 text-[13px]">{prod.name || "Unknown Product"}</p>
+                            {prod.description && <p className="text-[11px] text-slate-500 mt-0.5 font-medium">{prod.description}</p>}
+                          </div>
+                          <span className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold border ${isDec ? "bg-rose-50 text-rose-700 border-rose-200" : "bg-emerald-50 text-emerald-700 border-emerald-200"}`}>
+                            {isDec ? <TrendingDown size={11} /> : <TrendingUp size={11} />}
+                            {movementLabel.toUpperCase()}
+                          </span>
+                        </div>
+                        <ProductDetailsList prod={prod} />
+                        <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 text-xs">
+                          <div>
+                            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 block">Qty Changed</span>
+                            <span className={`font-black text-base tabular-nums ${isDec ? "text-rose-600" : "text-emerald-600"}`}>
+                              {isDec ? "-" : "+"}{formatStockValue(qty)}
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 block">Stock After</span>
+                            <span className="font-bold text-base text-blue-600 tabular-nums">
+                              {sAfter !== null ? formatStockValue(sAfter) : "—"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Desktop table */}
+              <div className="hidden md:block border border-slate-200 rounded-lg overflow-x-auto bg-white shadow-sm">
+                <table className="w-full text-left border-collapse min-w-[540px]">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-black text-slate-400 tracking-wider uppercase">
                       <th className="px-4 py-3 w-[45%]">Product Information</th>

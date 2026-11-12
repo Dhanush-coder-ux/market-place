@@ -1,6 +1,7 @@
-import React, { useState } from "react";
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Inbox } from "lucide-react";
 import type { TableProps as BaseTableProps } from "../types";
+import { cn } from "@/lib/utils";
 
 interface TableProps extends BaseTableProps {
   selectedIds?: any[];
@@ -8,7 +9,17 @@ interface TableProps extends BaseTableProps {
   pagination?: {
     pageSize?: number;
   };
+  emptyMessage?: string;
+  emptyState?: React.ReactNode;
+  loading?: boolean;
+  compact?: boolean;
 }
+
+const ALIGN_CLASS: Record<"left" | "center" | "right", string> = {
+  left: "text-left",
+  center: "text-center",
+  right: "text-right",
+};
 
 const Table: React.FC<TableProps> = ({
   columns,
@@ -19,26 +30,29 @@ const Table: React.FC<TableProps> = ({
   selectedIds = [],
   onSelectionChange,
   pagination,
+  emptyMessage = "No records found",
+  emptyState,
+  loading = false,
+  compact = false,
 }) => {
-  /* ================= PAGINATION ================= */
-
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = pagination?.pageSize || 10;
-  const totalPages = Math.ceil(data.length / pageSize);
+  const totalPages = Math.max(1, Math.ceil(data.length / pageSize));
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const startIndex = (currentPage - 1) * pageSize;
-
   const currentData = pagination
     ? data.slice(startIndex, startIndex + pageSize)
     : data;
 
-  /* ================= SELECTION ================= */
-
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!onSelectionChange) return;
-
     const currentPageIds = currentData.map((row) => row[rowKey]);
-
     if (e.target.checked) {
       const newSelection = Array.from(new Set([...selectedIds, ...currentPageIds]));
       onSelectionChange(newSelection);
@@ -52,9 +66,7 @@ const Table: React.FC<TableProps> = ({
     id: any
   ) => {
     e.stopPropagation();
-
     if (!onSelectionChange) return;
-
     onSelectionChange(
       selectedIds.includes(id)
         ? selectedIds.filter((item) => item !== id)
@@ -70,21 +82,21 @@ const Table: React.FC<TableProps> = ({
     !isAllSelected &&
     currentData.some((row) => selectedIds.includes(row[rowKey]));
 
-  /* ================= RENDER ================= */
+  const cellPad = compact ? "px-3 py-2 sm:px-3.5 sm:py-2.5" : "px-3 py-2.5 sm:px-4 sm:py-3";
 
   return (
     <div
-      className={`flex flex-col bg-white rounded-lg border border-slate-100 shadow-sm ${className}`}
+      className={cn(
+        "flex flex-col bg-white rounded-xl border border-slate-200/80 shadow-xs overflow-hidden",
+        className
+      )}
     >
       <div className="overflow-x-auto">
         <table className="min-w-full border-separate border-spacing-0">
-          
-          {/* ================= HEADER ================= */}
-
           <thead>
             <tr>
               {onSelectionChange && (
-                <th className="px-3 py-2.5 sm:px-5 sm:py-3.5 w-10 text-left border-b border-slate-100 bg-slate-50 first:rounded-tl-2xl">
+                <th className={cn(cellPad, "w-10 text-left border-b border-slate-200/80 bg-slate-50/90")}>
                   <input
                     type="checkbox"
                     ref={(el) => {
@@ -92,21 +104,21 @@ const Table: React.FC<TableProps> = ({
                     }}
                     checked={isAllSelected}
                     onChange={handleSelectAll}
-                    className="w-4 h-4 rounded-md border-slate-300 accent-blue-600 cursor-pointer"
+                    className="w-4 h-4 rounded border-slate-300 accent-blue-600 cursor-pointer"
                   />
                 </th>
               )}
 
-              {columns.map((col, i) => (
+              {columns.map((col) => (
                 <th
                   key={col.key}
-                  className={`
-                    px-3 py-2.5 sm:px-5 sm:py-3.5 text-left border-b border-slate-100 bg-slate-50
-                    text-[11px] font-semibold text-slate-500  
-                    ${!onSelectionChange && i === 0 ? "rounded-tl-2xl" : ""}
-                    ${i === columns.length - 1 ? "rounded-tr-2xl" : ""}
-                    ${col.className ?? ""}
-                  `}
+                  className={cn(
+                    cellPad,
+                    "border-b border-slate-200/80 bg-slate-50/90 text-[11px] font-semibold uppercase tracking-wider text-slate-500 whitespace-nowrap",
+                    ALIGN_CLASS[col.align || "left"],
+                    col.headerClassName,
+                    col.className
+                  )}
                 >
                   {col.label}
                 </th>
@@ -114,163 +126,171 @@ const Table: React.FC<TableProps> = ({
             </tr>
           </thead>
 
-          {/* ================= BODY ================= */}
-
           <tbody>
-            {currentData.map((row, index) => {
-              const id = row[rowKey] ?? index;
-              const isSelected = selectedIds.includes(id);
-              const isLast = index === currentData.length - 1;
-
-              return (
-                <tr
-                  key={id}
-                  onClick={() => onRowClick?.(row)}
-                  className={`
-                    group transition-colors duration-150
-                    ${isSelected ? "bg-blue-50/60" : "hover:bg-slate-50/80"}
-                    ${onRowClick ? "cursor-pointer" : ""}
-                  `}
+            {loading ? (
+              <tr>
+                <td
+                  colSpan={columns.length + (onSelectionChange ? 1 : 0)}
+                  className="py-12 text-center text-xs font-medium text-slate-400"
                 >
-                  {onSelectionChange && (
-                    <td
-                      className={`px-3 py-2.5 sm:px-5 sm:py-3.5 whitespace-nowrap ${
-                        !isLast ? "border-b border-slate-100" : ""
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={(e) => handleRowCheckboxChange(e, id)}
-                        onClick={(e) => e.stopPropagation()}
-                        className={`
-                          w-4 h-4 rounded-md border-slate-300 text-blue-600
-                          transition-opacity duration-150
-                          ${isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"}
-                        `}
-                      />
-                    </td>
+                  Loading...
+                </td>
+              </tr>
+            ) : currentData.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={columns.length + (onSelectionChange ? 1 : 0)}
+                  className="py-12 text-center"
+                >
+                  {emptyState || (
+                    <div className="flex flex-col items-center justify-center gap-2 text-slate-400">
+                      <Inbox size={22} strokeWidth={1.75} />
+                      <span className="text-xs font-medium">{emptyMessage}</span>
+                    </div>
                   )}
+                </td>
+              </tr>
+            ) : (
+              currentData.map((row, index) => {
+                const id = row[rowKey] ?? index;
+                const isSelected = selectedIds.includes(id);
+                const isLast = index === currentData.length - 1;
 
-                  {columns.map((col, ci) => {
-                    const value = row[col.key];
-
-                    return (
+                return (
+                  <tr
+                    key={id}
+                    onClick={() => onRowClick?.(row)}
+                    className={cn(
+                      "group transition-colors duration-150",
+                      isSelected ? "bg-blue-50/60" : "hover:bg-slate-50/80",
+                      onRowClick && "cursor-pointer"
+                    )}
+                  >
+                    {onSelectionChange && (
                       <td
-                        key={col.key}
-                        className={`
-                          px-3 py-2.5 sm:px-5 sm:py-3.5 text-[13px] text-slate-700 whitespace-nowrap font-medium
-                          ${!isLast ? "border-b border-slate-100" : ""}
-                        `}
-                      >
-                        {/* FIX: USE render() FIRST */}
-                        {col.render ? (
-                          col.render(value, row)
-                        ) : typeof value === "string" || typeof value === "number" ? (
-                          <span
-                            className={
-                              ci === 0
-                                ? "font-semibold text-slate-800"
-                                : "text-slate-500"
-                            }
-                          >
-                            {value}
-                          </span>
-                        ) : (
-                          value
+                        className={cn(
+                          cellPad,
+                          "whitespace-nowrap",
+                          !isLast && "border-b border-slate-100"
                         )}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => handleRowCheckboxChange(e, id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className={cn(
+                            "w-4 h-4 rounded border-slate-300 accent-blue-600 cursor-pointer transition-opacity duration-150",
+                            isSelected ? "opacity-100" : "opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                          )}
+                        />
                       </td>
-                    );
-                  })}
-                </tr>
-              );
-            })}
+                    )}
+
+                    {columns.map((col, ci) => {
+                      const value = row[col.key];
+                      return (
+                        <td
+                          key={col.key}
+                          className={cn(
+                            cellPad,
+                            "text-[13px] text-slate-700 whitespace-nowrap font-medium",
+                            ALIGN_CLASS[col.align || "left"],
+                            !isLast && "border-b border-slate-100",
+                            col.className
+                          )}
+                        >
+                          {col.render ? (
+                            col.render(value, row)
+                          ) : typeof value === "string" || typeof value === "number" ? (
+                            <span className={ci === 0 ? "font-semibold text-slate-800" : "text-slate-600"}>
+                              {value}
+                            </span>
+                          ) : (
+                            value
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>
 
-      {/* ================= FOOTER ================= */}
+      {(data.length > 0 || (onSelectionChange && selectedIds.length > 0)) && (
+        <div className="flex flex-col sm:flex-row items-center justify-between px-4 py-3 bg-white border-t border-slate-100 gap-3">
+          <div className="flex items-center gap-3">
+            {onSelectionChange && selectedIds.length > 0 && (
+              <div className="flex items-center gap-2 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
+                <span className="text-[11px] font-semibold text-blue-700">
+                  {selectedIds.length} Selected
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onSelectionChange([])}
+                  className="text-blue-500 hover:text-red-600 text-[10px] font-bold uppercase"
+                >
+                  Clear
+                </button>
+              </div>
+            )}
 
-      <div className="flex flex-col sm:flex-row items-center justify-between px-3 py-3 sm:px-5 sm:py-4 bg-white border-t border-slate-100 rounded-b-2xl gap-4">
-        
-        {/* Selection Info */}
+            <span className="text-xs text-slate-400 font-medium">
+              Showing {data.length > 0 ? startIndex + 1 : 0} to{" "}
+              {Math.min(startIndex + pageSize, data.length)} of {data.length}
+            </span>
+          </div>
 
-        <div className="flex items-center gap-3">
-          {onSelectionChange && selectedIds.length > 0 && (
-            <div className="flex items-center gap-2 bg-blue-50 px-3 py-1.5 rounded-full border border-blue-100">
-              <span className="text-[11px] font-bold text-blue-700  tracking-tight">
-                {selectedIds.length} Selected
-              </span>
+          {pagination && totalPages > 1 && (
+            <div className="flex items-center gap-1">
               <button
-                onClick={() => onSelectionChange([])}
-                className="text-blue-400 hover:text-rose-500 text-[10px] font-bold"
+                type="button"
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+                className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 disabled:opacity-30 hover:bg-slate-50"
               >
-                CLEAR
+                <ChevronsLeft size={15} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 disabled:opacity-30 hover:bg-slate-50"
+              >
+                <ChevronLeft size={15} />
+              </button>
+
+              <div className="flex items-center px-3 gap-1.5 text-xs">
+                <span className="font-semibold text-slate-700">{currentPage}</span>
+                <span className="text-slate-300">/</span>
+                <span className="font-medium text-slate-400">{totalPages}</span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 disabled:opacity-30 hover:bg-slate-50"
+              >
+                <ChevronRight size={15} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages}
+                className="h-8 w-8 inline-flex items-center justify-center rounded-lg border border-slate-200 text-slate-500 disabled:opacity-30 hover:bg-slate-50"
+              >
+                <ChevronsRight size={15} />
               </button>
             </div>
           )}
-
-          <span className="text-[12px] text-slate-400 font-medium">
-            Showing {data.length > 0 ? startIndex + 1 : 0} to{" "}
-            {Math.min(startIndex + pageSize, data.length)} of {data.length}
-          </span>
         </div>
-
-        {/* Pagination */}
-
-        {pagination && totalPages > 1 && (
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setCurrentPage(1)}
-              disabled={currentPage === 1}
-              className="p-1.5 rounded-lg border border-slate-200 text-slate-400 disabled:opacity-30 hover:bg-slate-50"
-            >
-              <ChevronsLeft size={16} />
-            </button>
-
-            <button
-              onClick={() =>
-                setCurrentPage((prev) => Math.max(prev - 1, 1))
-              }
-              disabled={currentPage === 1}
-              className="p-1.5 rounded-lg border border-slate-200 text-slate-400 disabled:opacity-30 hover:bg-slate-50"
-            >
-              <ChevronLeft size={16} />
-            </button>
-
-            <div className="flex items-center px-4 gap-2">
-              <span className="text-[13px] font-bold text-slate-700">
-                {currentPage}
-              </span>
-              <span className="text-[12px] text-slate-300">/</span>
-              <span className="text-[13px] font-medium text-slate-400">
-                {totalPages}
-              </span>
-            </div>
-
-            <button
-              onClick={() =>
-                setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-              }
-              disabled={currentPage === totalPages}
-              className="p-1.5 rounded-lg border border-slate-200 text-slate-400 disabled:opacity-30 hover:bg-slate-50"
-            >
-              <ChevronRight size={16} />
-            </button>
-
-            <button
-              onClick={() => setCurrentPage(totalPages)}
-              disabled={currentPage === totalPages}
-              className="p-1.5 rounded-lg border border-slate-200 text-slate-400 disabled:opacity-30 hover:bg-slate-50"
-            >
-              <ChevronsRight size={16} />
-            </button>
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 };
 
 export default Table;
-

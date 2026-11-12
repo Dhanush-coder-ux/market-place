@@ -72,15 +72,15 @@ export const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
   }[size];
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex flex-col items-center p-4 md:p-12 overflow-y-auto bg-slate-900/40 backdrop-blur-md custom-scrollbar animate-in fade-in duration-300">
+    <div className="fixed inset-0 z-[100] flex flex-col items-center justify-end sm:justify-center sm:p-4 md:p-12 overflow-y-auto bg-slate-900/40 backdrop-blur-md custom-scrollbar animate-in fade-in duration-300">
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className={`w-full ${maxWidthClass} bg-white rounded-lg shadow-2xl overflow-hidden flex flex-col border border-white/20 my-auto shadow-blue-200/20`}
+        className={`w-full ${maxWidthClass} bg-white rounded-t-2xl sm:rounded-lg shadow-2xl overflow-hidden flex flex-col border border-white/20 sm:my-auto max-h-[92dvh] sm:max-h-[90dvh] pb-[env(safe-area-inset-bottom)] sm:pb-0 shadow-blue-200/20`}
       >
         {/* Header */}
-        <div className="px-8 py-5 flex items-center justify-between border-b border-slate-100 bg-slate-50/50">
+        <div className="px-4 sm:px-8 py-4 sm:py-5 flex items-center justify-between border-b border-slate-100 bg-slate-50/50 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-1.5 h-6 bg-blue-600 rounded-full" />
             <h2 className="text-[14px] font-black text-slate-800 uppercase tracking-tight">
@@ -127,7 +127,7 @@ export const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
         </div>
 
         {/* Content Area */}
-        <div className="p-4 md:p-6 min-h-[300px] md:min-h-[350px] max-h-[55vh] md:max-h-[60vh] overflow-y-auto modal-content custom-scrollbar">
+        <div className="p-4 md:p-6 min-h-[240px] sm:min-h-[300px] md:min-h-[350px] flex-1 overflow-y-auto modal-content custom-scrollbar">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentStep}

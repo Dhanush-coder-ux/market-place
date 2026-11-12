@@ -378,36 +378,46 @@ export default function Step2OperatingHours({ form, setForm }: Step2Props) {
           return (
             <div
               key={dayName}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-200
+              className={`flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3 px-3.5 sm:px-4 py-3 rounded-xl border transition-all duration-200
                 ${isOpen
                   ? "border-blue-200 bg-blue-50/40"
                   : "border-slate-200 bg-white"
                 }`}
             >
-              {/* Toggle switch */}
-              <button
-                type="button"
-                onClick={() => toggleDay(dayName, isOpen)}
-                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none
-                  ${isOpen ? 'bg-blue-600' : 'bg-slate-300'}`}
-                aria-label={`Toggle ${dayName}`}
-              >
-                <span className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${isOpen ? "translate-x-4" : "translate-x-0.5"}`} />
-              </button>
+              <div className="flex items-center justify-between sm:justify-start gap-3">
+                <div className="flex items-center gap-3">
+                  {/* Toggle switch */}
+                  <button
+                    type="button"
+                    onClick={() => toggleDay(dayName, isOpen)}
+                    className={`relative inline-flex h-6 w-10 sm:h-5 sm:w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none
+                      ${isOpen ? 'bg-blue-600' : 'bg-slate-300'}`}
+                    aria-label={`Toggle ${dayName}`}
+                  >
+                    <span className={`pointer-events-none inline-block h-4 w-4 sm:h-3 sm:w-3 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${isOpen ? "translate-x-4" : "translate-x-0.5"}`} />
+                  </button>
 
-              {/* Day name */}
-              <div className="w-[90px] shrink-0">
-                <span className={`text-[13px] font-bold ${isOpen ? 'text-slate-800' : 'text-slate-400'}`}>
-                  {DAY_LABELS[dayName]}
-                </span>
-                {isWeekend && (
-                  <span className="ml-1.5 text-[9px] font-bold text-amber-500 uppercase">Weekend</span>
+                  {/* Day name */}
+                  <div className="sm:w-[90px] shrink-0">
+                    <span className={`text-[13px] font-bold ${isOpen ? 'text-slate-800' : 'text-slate-400'}`}>
+                      {DAY_LABELS[dayName]}
+                    </span>
+                    {isWeekend && (
+                      <span className="ml-1.5 text-[9px] font-bold text-amber-500 uppercase">Weekend</span>
+                    )}
+                  </div>
+                </div>
+
+                {!isOpen && (
+                  <span className="sm:hidden text-[11px] font-bold text-slate-400 bg-slate-100 px-3 py-1 rounded-full">
+                    Closed
+                  </span>
                 )}
               </div>
 
               {/* Time pickers or Closed badge */}
               {isOpen ? (
-                <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-2 flex-wrap pl-12 sm:pl-0 sm:ml-auto">
                   <TimePicker
                     id={`open-${dayName}`}
                     value={hourConfig.open_at}
@@ -421,7 +431,7 @@ export default function Step2OperatingHours({ form, setForm }: Step2Props) {
                   />
                 </div>
               ) : (
-                <span className="ml-auto text-[11px] font-bold text-slate-400 bg-slate-100 px-3 py-1 rounded-full">
+                <span className="hidden sm:inline-block ml-auto text-[11px] font-bold text-slate-400 bg-slate-100 px-3 py-1 rounded-full">
                   Closed
                 </span>
               )}

@@ -40,17 +40,12 @@ export default function CarouselBanners() {
     <div className="py-5 px-1 space-y-5" style={{ fontFamily: "Inter, Poppins, sans-serif" }}>
 
       {/* ── Page Header ── */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "#eff6ff", color: "#3b82f6" }}>
-              <ImageIcon size={18} strokeWidth={2.5} />
-            </div>
-            <h1 className="text-[20px] font-extrabold text-slate-800 tracking-tight">Carousel Banners</h1>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "#eff6ff", color: "#3b82f6" }}>
+            <ImageIcon size={18} strokeWidth={2.5} />
           </div>
-          <p className="text-[13px] text-slate-400 ml-12">
-            Upload and manage promotional banners for your storefront slider.
-          </p>
+          <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">Carousel Banners</h1>
         </div>
 
         {/* Summary pills */}
@@ -149,7 +144,7 @@ export default function CarouselBanners() {
                 {/* Delete */}
                 <button
                   onClick={() => removeBanner(banner.id)}
-                  className="w-8 h-8 rounded-lg border border-slate-200 bg-white flex items-center justify-center text-slate-400 hover:text-red-500 hover:border-red-200 hover:bg-red-50 transition-all cursor-pointer"
+                  className="w-10 h-10 sm:w-8 sm:h-8 rounded-lg border border-slate-200 bg-white flex items-center justify-center text-slate-400 hover:text-red-500 hover:border-red-200 hover:bg-red-50 transition-all cursor-pointer"
                   title="Remove banner"
                 >
                   <Trash2 size={14} strokeWidth={2.5} />
@@ -170,7 +165,7 @@ export default function CarouselBanners() {
       <div className="flex justify-end pt-2">
         <button
           onClick={handleSave}
-          className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-[13.5px] font-bold text-white transition-all hover:opacity-90 cursor-pointer shadow-md"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-[13.5px] font-bold text-white transition-all hover:opacity-90 cursor-pointer shadow-md"
           style={{
             background: saved ? "#16a34a" : "#3b82f6",
             boxShadow: saved ? "0 4px 14px rgba(22,163,74,0.3)" : "0 4px 14px rgba(59,130,246,0.3)"

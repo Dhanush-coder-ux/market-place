@@ -366,7 +366,7 @@ const ProductionForm = () => {
 
 
   return (
-    <div className="min-h-screen bg-slate-50/50 p-4 md:p-6 lg:p-8 font-sans">
+    <div className="bg-slate-50/50 p-3 pb-24 sm:p-4 md:p-6 lg:p-8 font-sans">
       
 
 
@@ -378,8 +378,8 @@ const ProductionForm = () => {
             
             {/* 1. Production Header Details Card */}
             <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md">
-              <div className="px-8 py-5 bg-gradient-to-r from-blue-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 border border-blue-200 shadow-sm">
+              <div className="px-4 sm:px-8 py-4 sm:py-5 bg-gradient-to-r from-blue-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 border border-blue-200 shadow-sm shrink-0">
                   <Factory size={20} />
                 </div>
                 <div>
@@ -388,7 +388,7 @@ const ProductionForm = () => {
                 </div>
               </div>
               
-              <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="p-4 sm:p-6 md:p-8 grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
                 <div className="flex flex-col gap-2">
                   <label className="text-[10px] font-black text-slate-500   ml-1">Location / Floor <span className="normal-case font-normal text-slate-400">(optional)</span></label>
                   <div className="relative group">
@@ -496,7 +496,7 @@ const ProductionForm = () => {
                 </div>
               </div>
               
-              <div className="p-8 space-y-5">
+              <div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-5">
                 <Input label="Labor Cost" type="number" placeholder="0.00" leftIcon={<User size={14} />} value={productionCosts.labor as any} onChange={(e) => setProductionCosts({...productionCosts, labor: e.target.value ? Number(e.target.value) : ""})} />
                 <Input label="Overhead Cost" type="number" placeholder="0.00" leftIcon={<Zap size={14} />} value={productionCosts.overhead as any} onChange={(e) => setProductionCosts({...productionCosts, overhead: e.target.value ? Number(e.target.value) : ""})} />
                 <Input label="Packaging Cost" type="number" placeholder="0.00" leftIcon={<PackageOpen size={14} />} value={productionCosts.packaging as any} onChange={(e) => setProductionCosts({...productionCosts, packaging: e.target.value ? Number(e.target.value) : ""})} />
@@ -511,7 +511,7 @@ const ProductionForm = () => {
             </div>
 
             {/* Logistics & Summary Card */}
-            <div className="bg-white rounded-lg p-8 border border-slate-200 shadow-sm relative overflow-hidden group">
+            <div className="bg-white rounded-lg p-4 sm:p-6 md:p-8 border border-slate-200 shadow-sm relative overflow-hidden group">
               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl group-hover:bg-blue-500/10 transition-all duration-700" />
               <div className="relative z-10 space-y-8">
                 <div>

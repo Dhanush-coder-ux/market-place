@@ -102,23 +102,23 @@ const AuthCallback = () => {
           <div className="h-5 w-32 bg-slate-200 rounded-lg animate-pulse" />
         </div>
         <div className="hidden md:flex items-center gap-3">
-          <div className="h-9 w-64 bg-slate-100 border border-slate-200/60 rounded-xl animate-pulse" />
+          <div className="h-9 flex-1 max-w-64 bg-slate-100 border border-slate-200/60 rounded-xl animate-pulse hidden sm:block" />
           <div className="w-9 h-9 rounded-full bg-slate-200 animate-pulse" />
         </div>
       </header>
 
       {/* Main Content Area Skeleton */}
-      <main className="flex-1 max-w-6xl w-full mx-auto p-6 md:p-10 space-y-8 animate-pulse">
+      <main className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 md:p-10 space-y-6 sm:space-y-8 animate-pulse">
         {/* Banner Skeleton */}
         <div className="w-full h-36 md:h-44 rounded-3xl bg-gradient-to-r from-slate-200/70 via-slate-100 to-slate-200/70 relative overflow-hidden shadow-sm">
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent -translate-x-full animate-[shimmer_1.8s_infinite]" />
         </div>
 
         {/* Section Title Skeleton */}
-        <div className="flex items-center justify-between">
-          <div className="space-y-2">
-            <div className="h-6 w-48 bg-slate-200 rounded-lg" />
-            <div className="h-4 w-72 bg-slate-200/60 rounded-md" />
+        <div className="flex items-center justify-between gap-3">
+          <div className="space-y-2 flex-1 min-w-0">
+            <div className="h-6 w-48 max-w-full bg-slate-200 rounded-lg" />
+            <div className="h-4 w-72 max-w-full bg-slate-200/60 rounded-md" />
           </div>
           <div className="h-9 w-28 bg-slate-200 rounded-xl hidden sm:block" />
         </div>

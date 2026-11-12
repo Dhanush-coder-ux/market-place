@@ -33,24 +33,24 @@ const Drawer: React.FC<DrawerProps> = ({ isOpen, onClose, title, children }) => 
         `}
       >
         {/* Header */}
-        <div className="flex items-center gap-4 p-6 border-b shrink-0">
+        <div className="flex items-center gap-3 sm:gap-4 p-4 sm:p-6 pt-[max(16px,env(safe-area-inset-top))] border-b shrink-0 bg-white">
           <button 
             onClick={onClose} 
-            className="group p-1 transition-transform hover:scale-110 active:scale-95"
+            className="group p-1.5 -ml-1 transition-transform hover:scale-105 active:scale-95 shrink-0"
             aria-label="Close drawer"
           >
             <CircleArrowRight 
-              size={32} 
-              className="text-blue-600 transition-colors group-hover:text-blue-700"
+              size={28} 
+              className="text-blue-600 transition-colors group-hover:text-blue-700 sm:w-8 sm:h-8"
             />
           </button>
-          <h2 className="text-2xl md:text-2xl font-bold text-gray-800 tracking-tight">
+          <h2 className="text-lg sm:text-2xl font-bold text-gray-800 tracking-tight truncate">
             {title}
           </h2>
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto p-6 bg-gray-50/50">
+        <div className="flex-1 overflow-y-auto p-3.5 sm:p-6 pb-[max(24px,env(safe-area-inset-bottom))] bg-gray-50/50 mobile-scroll">
           <div className="max-w-3xl mx-auto">
             {children}
           </div>

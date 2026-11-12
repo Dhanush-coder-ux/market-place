@@ -391,10 +391,10 @@ ${(err as Error)?.message ?? String(err)}`);
       <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm no-print" onClick={onClose} />
 
       {/* Modal Container */}
-      <div className="relative bg-slate-100 rounded-2xl shadow-[0_24px_80px_rgba(0,0,0,0.35)] w-full max-w-[620px] max-h-[88vh] h-[88vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 print:max-h-none print:h-auto print:bg-white print:rounded-none print:shadow-none print:w-full print:max-w-none print:animate-none print:transform-none">
+      <div className="relative bg-slate-100 rounded-2xl shadow-[0_24px_80px_rgba(0,0,0,0.35)] w-full max-w-[620px] max-h-[92dvh] h-[92dvh] sm:h-[88vh] sm:max-h-[88vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 print:max-h-none print:h-auto print:bg-white print:rounded-none print:shadow-none print:w-full print:max-w-none print:animate-none print:transform-none">
 
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-5 py-3.5 bg-white border-b border-slate-200/80 shrink-0 no-print">
+        <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-3.5 bg-white border-b border-slate-200/80 shrink-0 no-print">
           <div className="flex items-center gap-2">
             <h3 className="text-[14px] font-bold text-slate-800">Order Preview</h3>
           </div>
@@ -431,9 +431,9 @@ ${(err as Error)?.message ?? String(err)}`);
         </div>
 
         {/* Sticky Action Footer */}
-        <div className={`flex items-center ${orderId ? 'justify-between' : 'justify-end'} px-4 py-3 sm:px-5 sm:py-3.5 bg-white border-t border-slate-200/80 shrink-0 gap-2 no-print overflow-x-auto scrollbar-none`}>
+        <div className={`flex flex-wrap items-center ${orderId ? 'justify-between' : 'justify-end'} px-3.5 py-3 pb-[max(12px,env(safe-area-inset-bottom))] sm:px-5 sm:py-3.5 bg-white border-t border-slate-200/80 shrink-0 gap-2 no-print`}>
           {orderId && (
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={handlePrint}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-slate-200 text-[12px] font-medium text-slate-600 bg-white hover:bg-slate-50 transition-colors"

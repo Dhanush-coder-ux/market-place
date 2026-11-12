@@ -191,14 +191,14 @@ const InventoryForm = () => {
         <button
           type="button"
           onClick={() => navigate("/inventory")}
-          className="px-6 h-11 rounded-lg border border-slate-200 text-slate-500 font-bold text-xs hover:bg-slate-50 transition-all"
+          className="px-5 h-9 rounded-lg border border-slate-200 text-slate-600 font-semibold text-xs hover:bg-slate-50 transition-colors"
         >
           Discard
         </button>
         <GradientButton
           onClick={handleSubmit}
           disabled={submitting}
-          className="rounded-lg shadow-md text-xs px-8 h-11 flex items-center"
+          size="md"
         >
           {submitting ? "Saving…" : "Confirm & Save Product"}
         </GradientButton>
@@ -218,8 +218,7 @@ const InventoryForm = () => {
             <Package size={18} />
           </div>
           <div>
-            <h2 className="text-xs font-black text-slate-800">Product Identity</h2>
-            <p className="text-[10px] font-semibold text-slate-400 mt-0.5">Core product information</p>
+            <h2 className="text-sm font-semibold text-slate-800">Product Identity</h2>
           </div>
         </div>
         <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -305,10 +304,7 @@ const InventoryForm = () => {
           <div className="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
             <Settings size={18} />
           </div>
-          <div>
-            <h3 className="text-xs font-black text-slate-800">Tracking Configuration</h3>
-            <p className="text-[10px] font-semibold text-slate-400 mt-0.5">Enable advanced product tracking features</p>
-          </div>
+          <h3 className="text-xs font-semibold text-slate-800 uppercase tracking-wider">Tracking Configuration</h3>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 relative z-10">
@@ -351,10 +347,7 @@ const InventoryForm = () => {
           <div className="w-9 h-9 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600">
             <IndianRupee size={18} />
           </div>
-          <div>
-            <h2 className="text-xs font-black text-slate-800">Pricing & Stock</h2>
-            <p className="text-[10px] font-semibold text-slate-400 mt-0.5">Set initial pricing and reorder point</p>
-          </div>
+          <h2 className="text-xs font-semibold text-slate-800 uppercase tracking-wider">Pricing & Stock</h2>
         </div>
         <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
           <div>
@@ -408,15 +401,12 @@ const InventoryForm = () => {
               <div className="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
                 <ListPlus size={18} />
               </div>
-              <div>
-                <h3 className="text-xs font-black text-slate-800">Variants Manager</h3>
-                <p className="text-[10px] font-semibold text-slate-400 mt-0.5">Define product variants (e.g. sizes, colors)</p>
-              </div>
+              <h3 className="text-xs font-semibold text-slate-800 uppercase tracking-wider">Variants Manager</h3>
             </div>
             <button
               type="button"
               onClick={addVariant}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-[10px] font-black hover:bg-indigo-700 transition-all shadow-md shadow-indigo-100"
+              className="flex items-center gap-2 h-9 px-4 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700 transition-all shadow-sm"
             >
               <Plus size={14} /> Add Variant
             </button>

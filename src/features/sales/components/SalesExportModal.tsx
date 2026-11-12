@@ -439,10 +439,10 @@ export const SalesExportModal: React.FC<SalesExportModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white rounded-xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-2xl border border-slate-200 w-full max-w-md max-h-[90dvh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-slate-100 bg-slate-50/50 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
               <FileDown size={18} />
@@ -462,7 +462,7 @@ export const SalesExportModal: React.FC<SalesExportModalProps> = ({
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-5">
+        <div className="p-4 sm:p-6 pb-[max(20px,env(safe-area-inset-bottom))] space-y-5 overflow-y-auto">
           {/* Format Selection */}
           <div className="space-y-2">
             <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Export Format</label>
@@ -497,7 +497,7 @@ export const SalesExportModal: React.FC<SalesExportModalProps> = ({
           {/* Scope Selection */}
           <div className="space-y-2">
             <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Data Scope</label>
-            <div className="grid grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <button
                 type="button"
                 onClick={() => setScope("all")}

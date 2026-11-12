@@ -28,7 +28,7 @@ export const ActionMenuItem: React.FC<ActionMenuItemProps> = ({
   <button
     disabled={disabled}
     onClick={onClick}
-    className={`flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold transition-colors ${
+    className={`flex items-center gap-2 w-full px-3 py-2.5 sm:py-2 text-xs font-semibold transition-colors ${
       disabled
         ? "text-slate-300 cursor-not-allowed"
         : danger
@@ -70,10 +70,11 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
       ? rect.top + window.scrollY - menuHeight - 4
       : rect.bottom + window.scrollY + 4;
 
-    const left =
+    const rawLeft =
       align === "right"
-        ? Math.min(rect.right + window.scrollX - width, window.innerWidth - width - 8)
+        ? rect.right + window.scrollX - width
         : rect.left + window.scrollX;
+    const left = Math.max(8, Math.min(rawLeft, window.innerWidth - width - 8));
 
     setPos({ top, left });
     setReady(true);

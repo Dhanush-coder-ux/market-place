@@ -5,7 +5,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ReusableSelect } from "@/components/ui/ReusableSelect";
+import { ReusableSelect, SearchBar } from "@/components/ui";
 import { useMemo, useState, useEffect } from "react";
 import {
   Edit2, Plus, Search, RotateCcw, Globe, ShieldCheck, Ban, RefreshCw,
@@ -906,18 +906,15 @@ const ProductDashboard = () => {
     <div className="flex-1 flex flex-col min-h-0 gap-2.5 font-sans w-full overflow-hidden relative" style={{ fontFamily: "Inter, sans-serif" }}>
 
       {/* ── Toolbar ── */}
-      <div className="bg-white rounded-xl border border-slate-200 px-4 py-3 flex flex-wrap items-center gap-3">
-        {/* Search */}
-        <div className="relative flex-1 min-w-[180px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={13} />
-          <input
-            type="text"
-            placeholder="Search products or ID…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full h-9 bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 text-sm text-slate-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 transition-all placeholder-slate-400"
-          />
-        </div>
+      <div className="bg-white rounded-xl border border-slate-200/80 px-4 py-3 flex flex-wrap items-center gap-3">
+        <SearchBar
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          onClear={() => setSearch("")}
+          placeholder="Search products or ID…"
+          size="sm"
+          className="flex-1 min-w-[180px]"
+        />
 
         {/* Category filter */}
         <div className="min-w-[170px]">
@@ -1048,7 +1045,7 @@ const ProductDashboard = () => {
               <p className="text-[12px] text-slate-400">Try adjusting your filters or search term</p>
             </div>
           ) : viewMode === "grid" ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 min-[420px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
               {filtered.map((p) => (
                 <ProductCard
                   key={p.id}

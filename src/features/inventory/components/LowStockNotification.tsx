@@ -15,7 +15,7 @@ const LowStockNotification :React.FC<LowStockNotificationProps>= ({
           animate={{ opacity: 1, x: 0, scale: 1 }}
           exit={{ opacity: 0, x: 50, scale: 0.95 }}
           transition={{ duration: 0.25, ease: "easeOut" }}
-          className="fixed bottom-6 right-6 max-w-sm bg-white border border-slate-200 shadow-2xl rounded-lg p-4 flex items-start gap-4"
+          className="fixed bottom-20 md:bottom-6 left-4 right-4 sm:left-auto sm:right-6 sm:w-full max-w-sm bg-white border border-slate-200 shadow-2xl rounded-xl p-4 flex items-start gap-3 sm:gap-4 z-50"
         >
           <div className="bg-red-50 p-2 rounded-lg">
             <CircleFadingPlus className="text-red-600" size={20} />

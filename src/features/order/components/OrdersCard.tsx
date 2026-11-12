@@ -146,21 +146,14 @@ const OrdersCard: React.FC<OrdersCardProps> = ({ order, setIsOpen, viewMode = "g
         </div>
 
         {/* Right Section: Actions */}
-        <div className="flex items-center gap-3 shrink-0 md:border-l md:border-slate-100 md:pl-6 w-full md:w-auto mt-2 md:mt-0">
-          <div className="hidden sm:block">
+        <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2.5 sm:gap-3 shrink-0 md:border-l md:border-slate-100 md:pl-6 w-full md:w-auto mt-2 md:mt-0">
+          <div className="flex flex-wrap items-center gap-1.5">
             {renderActions(false)}
           </div>
-          
-          <div className="sm:hidden mr-auto">
-            <AntBadge variant={variant} type="pill" dot pulse={order.status === "PENDING"}>
-              {order.status.replace(/_/g, " ")}
-            </AntBadge>
-          </div>
-
 
           <button
             onClick={() => setIsOpen(true)}
-            className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium text-slate-600 bg-slate-50 border border-slate-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all duration-200 whitespace-nowrap"
+            className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-medium text-slate-600 bg-slate-50 border border-slate-200 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all duration-200 whitespace-nowrap ml-auto sm:ml-0"
           >
             Details
             <ArrowRight size={14} strokeWidth={2} className="transition-transform duration-200 group-hover:translate-x-1" />

@@ -124,14 +124,14 @@ const DeliveryVerifyPage = () => {
                 </div>
               </div>
 
-              <div className="px-6 py-7 space-y-6">
+              <div className="px-4 sm:px-6 py-6 sm:py-7 space-y-6">
                 <div className="text-center">
                   <h1 className="text-lg font-black text-slate-800 mb-1">Enter Delivery Code</h1>
                   <p className="text-xs text-slate-500 font-medium">Enter the 6-digit code provided by the delivery person</p>
                 </div>
 
                 {/* OTP Boxes */}
-                <div className="flex items-center gap-2 justify-center" onPaste={handlePaste}>
+                <div className="flex items-center gap-1.5 sm:gap-2 justify-center" onPaste={handlePaste}>
                   {digits.map((d, i) => (
                     <input
                       key={i}
@@ -142,7 +142,7 @@ const DeliveryVerifyPage = () => {
                       value={d}
                       onChange={e => handleDigitChange(i, e.target.value)}
                       onKeyDown={e => handleKeyDown(i, e)}
-                      className={`w-11 text-center text-xl font-black rounded-xl border-2 outline-none transition-all duration-200 focus:scale-110
+                      className={`w-10 sm:w-11 text-center text-lg sm:text-xl font-black rounded-xl border-2 outline-none transition-all duration-200 focus:scale-105 sm:focus:scale-110
                         ${status === "error"
                           ? "border-rose-300 bg-rose-50 text-rose-700 focus:border-rose-400"
                           : d

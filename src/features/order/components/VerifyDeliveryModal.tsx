@@ -102,9 +102,9 @@ export const VerifyDeliveryModal: React.FC<VerifyDeliveryModalProps> = ({
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
 
       {/* Modal */}
-      <div className="relative w-full sm:max-w-md bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
+      <div className="relative w-full sm:max-w-md max-h-[90dvh] flex flex-col bg-white sm:rounded-2xl rounded-t-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
         {/* Header */}
-        <div className="relative bg-gradient-to-br from-amber-500 to-orange-600 px-6 py-5">
+        <div className="relative bg-gradient-to-br from-amber-500 to-orange-600 px-4 sm:px-6 py-4 sm:py-5 shrink-0">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center shrink-0">
@@ -116,13 +116,13 @@ export const VerifyDeliveryModal: React.FC<VerifyDeliveryModalProps> = ({
                 <p className="text-white/80 text-xs font-medium mt-0.5">{customerName}</p>
               </div>
             </div>
-            <button onClick={onClose} className="w-8 h-8 bg-white/20 hover:bg-white/30 rounded-lg flex items-center justify-center text-white transition-colors">
-              <X size={14} />
+            <button onClick={onClose} className="w-9 h-9 bg-white/20 hover:bg-white/30 rounded-lg flex items-center justify-center text-white transition-colors shrink-0">
+              <X size={16} />
             </button>
           </div>
         </div>
 
-        <div className="px-6 py-6 space-y-5">
+        <div className="px-4 sm:px-6 py-5 sm:py-6 pb-[max(20px,env(safe-area-inset-bottom))] space-y-5 overflow-y-auto">
           {status === "success" ? (
             <div className="flex flex-col items-center justify-center py-6 gap-3 animate-in zoom-in duration-300">
               <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center border-4 border-emerald-100">
@@ -142,7 +142,7 @@ export const VerifyDeliveryModal: React.FC<VerifyDeliveryModalProps> = ({
               </div>
 
               {/* OTP Input */}
-              <div className="flex items-center gap-2 justify-center" onPaste={handlePaste}>
+              <div className="flex items-center gap-1.5 sm:gap-2 justify-center" onPaste={handlePaste}>
                 {digits.map((d, i) => (
                   <input
                     key={i}
@@ -153,7 +153,7 @@ export const VerifyDeliveryModal: React.FC<VerifyDeliveryModalProps> = ({
                     value={d}
                     onChange={e => handleDigitChange(i, e.target.value)}
                     onKeyDown={e => handleKeyDown(i, e)}
-                    className={`w-11 text-center text-lg font-black rounded-xl border-2 outline-none transition-all duration-200 focus:scale-105
+                    className={`w-10 sm:w-11 text-center text-lg font-black rounded-xl border-2 outline-none transition-all duration-200 focus:scale-105
                       ${status === "error"
                         ? "border-rose-300 bg-rose-50 text-rose-700 focus:border-rose-400"
                         : d

@@ -678,9 +678,9 @@ export default function StockAdjustmentPage() {
 
       {/* --- BATCH SELECTION MODAL --- */}
       {batchModal.isOpen && createPortal(
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col border border-slate-200 animate-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+        <div className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center bg-slate-900/40 backdrop-blur-sm p-0 sm:p-4">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-md max-h-[90dvh] overflow-hidden flex flex-col border border-slate-200 animate-in zoom-in-95 duration-200 pb-[env(safe-area-inset-bottom)] sm:pb-0">
+            <div className="px-4 sm:px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-amber-600 border border-amber-100">
                   <PackageOpen size={18} />
@@ -1030,9 +1030,9 @@ export default function StockAdjustmentPage() {
             </div>
           </div>
 
-          {/* Summary Panel - Desktop */}
-          <div className="hidden lg:block lg:col-span-1">
-            <div className="bg-white rounded-3xl border border-slate-200/80 shadow-lg shadow-slate-100/50 overflow-hidden sticky top-4">
+          {/* Summary Panel */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-3xl border border-slate-200/80 shadow-lg shadow-slate-100/50 overflow-hidden lg:sticky lg:top-4">
               <div className="px-5 py-4 bg-gradient-to-r from-emerald-50/40 to-transparent border-b border-slate-100 flex items-center gap-3">
                 <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shadow-sm">
                   <History size={16} />

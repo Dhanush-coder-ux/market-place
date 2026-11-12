@@ -337,11 +337,24 @@ export const parseOrderForDetail = (
       itemStatus === "REFUNDED" ||
       (Array.isArray(i.returns) && i.returns.length > 0);
 
+    const rawSerials = Array.isArray(i.serialno_infos)
+      ? i.serialno_infos
+      : Array.isArray(i.serial_numbers)
+        ? i.serial_numbers
+        : [];
+    const serialNumbers = rawSerials
+      .map((s: any) => (typeof s === "string" ? s : s?.name || s?.serial_no || s?.serial || s?.id))
+      .filter((val: any): val is string => Boolean(val && String(val).trim()))
+      .map((val: string) => String(val).trim());
+
     return {
       id: i.id,
       productId: i.product_id,
+      variantId: i.variant_id || undefined,
+      batchId: i.batch_id || undefined,
       name: cleanVariantText(itemName),
       variant: cleanVar || undefined,
+      serialNumbers: serialNumbers.length > 0 ? serialNumbers : undefined,
       qty,
       price: Number(baseItemPrice.toFixed(2)),
       inclusivePrice: Number(price.toFixed(2)),
@@ -368,13 +381,20 @@ export const parseOrderForDetail = (
   const gstAmount = Number(Number(rawGstAmount || 0).toFixed(2));
 
   const positiveRates = Array.from(new Set(mappedItems.map((it) => it.gstRate).filter((r): r is number => Boolean(r && r > 0))));
+  const positiveTaxGroupRates =
+    calc.tax_groups && typeof calc.tax_groups === "object"
+      ? Object.keys(calc.tax_groups)
+          .map((k) => Number(k))
+          .filter((n) => !isNaN(n) && n > 0)
+      : [];
+
   let gstPercentLabel = "";
-  if (calc.tax_groups && typeof calc.tax_groups === "object" && Object.keys(calc.tax_groups).length > 0) {
-    gstPercentLabel = Object.keys(calc.tax_groups).map((k) => `${k}%`).join(", ");
+  if (positiveTaxGroupRates.length > 0) {
+    gstPercentLabel = positiveTaxGroupRates.map((r) => `${r}%`).join(", ");
   } else if (positiveRates.length > 0) {
     gstPercentLabel = positiveRates.map((r) => `${r}%`).join(", ");
-  } else if (calc.tax_rate) {
-    gstPercentLabel = `${calc.tax_rate}%`;
+  } else if (Number(calc.tax_rate) > 0) {
+    gstPercentLabel = `${Number(calc.tax_rate)}%`;
   }
 
   const cgst = calc.cgst !== undefined ? Number(calc.cgst) : Number((gstAmount / 2).toFixed(2));

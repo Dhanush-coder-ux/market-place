@@ -87,7 +87,7 @@ export const ReturnRequestCard: React.FC<ReturnRequestCardProps> = ({
   return (
     <div className={`w-full bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 font-sans overflow-hidden flex flex-col justify-between ${isGrid ? "h-full" : ""}`}>
       {/* Top Header Bar */}
-      <div className="bg-slate-50/70 border-b border-slate-100 px-5 py-3.5 flex flex-wrap items-center justify-between gap-3">
+      <div className="bg-slate-50/70 border-b border-slate-100 px-4 sm:px-5 py-3 sm:py-3.5 flex flex-wrap items-center justify-between gap-2.5 sm:gap-3">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
             <RotateCcw size={15} strokeWidth={2.2} />
@@ -150,18 +150,18 @@ export const ReturnRequestCard: React.FC<ReturnRequestCardProps> = ({
 
           <div className="bg-slate-50/80 rounded-lg border border-slate-200/80 divide-y divide-slate-100">
             {(request.items || []).map((itm, idx) => (
-              <div key={idx} className="p-3 flex items-center justify-between gap-3 text-xs">
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-slate-800 truncate">
+              <div key={idx} className="p-3 flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 sm:gap-3 text-xs">
+                <div className="min-w-0 flex-1 basis-full sm:basis-auto">
+                  <p className="font-semibold text-slate-800 break-words sm:truncate">
                     {itm.product_name}
                     {itm.variant_name ? ` (${itm.variant_name})` : ""}
                   </p>
                   {itm.reason && itm.reason !== request.description && (
-                    <p className="text-[11px] text-slate-500 mt-0.5 truncate italic">Note: {itm.reason}</p>
+                    <p className="text-[11px] text-slate-500 mt-0.5 break-words sm:truncate italic">Note: {itm.reason}</p>
                   )}
                 </div>
 
-                <div className="text-right shrink-0">
+                <div className="text-left sm:text-right shrink-0 w-full sm:w-auto flex sm:block items-center justify-between">
                   <div className="font-medium text-slate-600">
                     Qty: <span className="font-bold text-slate-800">{itm.quantity}</span> {itm.unit || ""}
                   </div>
@@ -265,8 +265,8 @@ export const ReturnRequestCard: React.FC<ReturnRequestCardProps> = ({
 
       {/* Reject Remarks Modal */}
       {showRejectModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-xl shadow-xl border border-slate-200 p-5 w-full max-w-md space-y-4">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-xl border border-slate-200 p-4 sm:p-5 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-5 w-full max-w-md max-h-[90dvh] overflow-y-auto space-y-4">
             <div className="flex items-center gap-2.5 text-red-600">
               <AlertCircle size={20} strokeWidth={2.5} />
               <h3 className="text-base font-bold text-slate-800">Reject Return Request</h3>

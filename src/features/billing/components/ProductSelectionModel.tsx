@@ -337,14 +337,13 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
       <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-all duration-300 pointer-events-auto" onClick={onClose} />
 
       {/* Centering Wrapper */}
-      <div className="relative w-full h-full flex items-center justify-center p-4 pointer-events-none">
+      <div className="relative w-full h-full flex items-end sm:items-center justify-center p-0 sm:p-4 pointer-events-none">
         <div
-          className="relative bg-white w-full max-w-md rounded-lg shadow-[0_24px_80px_rgba(0,0,0,0.3)] border border-slate-100 overflow-hidden transform scale-100 animate-in fade-in zoom-in-95 duration-300 pointer-events-auto flex flex-col"
-          style={{ display: "flex", flexDirection: "column", maxHeight: "80vh" }}
+          className="relative bg-white w-full max-w-md rounded-t-2xl sm:rounded-lg shadow-[0_24px_80px_rgba(0,0,0,0.3)] border border-slate-100 overflow-hidden transform scale-100 animate-in fade-in zoom-in-95 duration-300 pointer-events-auto flex flex-col max-h-[90dvh] sm:max-h-[82vh]"
         >
 
           {/* Header */}
-          <div className="px-6 py-5 border-b border-slate-100 bg-white relative shrink-0">
+          <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-100 bg-white relative shrink-0">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-lg font-bold text-slate-800 tracking-tight">{product.product_name}</h3>
@@ -366,8 +365,7 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
               ))}
             </div>
           </div>          <div
-            className="p-6 flex flex-col flex-1 min-h-0 overflow-hidden"
-            style={{ maxHeight: "calc(80vh - 200px)" }}
+            className="p-4 sm:p-6 flex flex-col flex-1 min-h-0 overflow-hidden"
           >
 
             {/* STEP: VARIANT */}
@@ -632,7 +630,7 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
 
                   <div className="flex-1 overflow-y-auto custom-scrollbar modal-content pr-0.5">
                     {availableSerials.length > 0 ? (
-                      <div className="grid grid-cols-2 gap-2 pb-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pb-2">
                         {availableSerials
                           .filter((s: string) => s.toLowerCase().includes(serialSearch.toLowerCase()))
                           .map((s: any) => {

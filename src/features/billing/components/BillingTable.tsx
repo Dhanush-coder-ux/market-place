@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { Package, Trash2, Barcode, Search, Plus, Minus, RotateCcw, Layers, Hash, Zap, Tag } from "lucide-react";
+import { Package, Trash2, Barcode, Plus, Minus, RotateCcw, Layers, Hash, Zap, Tag } from "lucide-react";
 import { AntBadge } from "@/components/ui/AntBadge";
+import { ReusableSelect, SearchBar } from "@/components/ui";
 import { v4 as uuidv4 } from "uuid";
 import { BillingItem, ProductVariant, cleanVariantLabel, formatVariantLabel } from "../types";
 import ProductSelectionModal from "./ProductSelectionModel";
@@ -83,13 +84,13 @@ const QtyAdjuster = ({
     );
   }
   return (
-    <div className={`inline-flex items-center border border-slate-200 rounded-lg overflow-hidden bg-white h-[32px] shrink-0 shadow-sm ${disabled ? "opacity-40 pointer-events-none" : ""}`}>
+    <div className={`inline-flex items-center border border-slate-200 rounded-lg overflow-hidden bg-white h-9 sm:h-[32px] shrink-0 shadow-sm ${disabled ? "opacity-40 pointer-events-none" : ""}`}>
       <button
         type="button"
-        className="w-7 h-full flex items-center justify-center border-none bg-transparent cursor-pointer text-slate-400 hover:bg-slate-50 hover:text-slate-650 transition-colors active:scale-90"
+        className="w-9 sm:w-7 h-full flex items-center justify-center border-none bg-transparent cursor-pointer text-slate-400 hover:bg-slate-50 hover:text-slate-650 transition-colors active:scale-90"
         onClick={() => onChange(Math.max(1, value - 1))}
       >
-        <Minus size={10} />
+        <Minus size={12} />
       </button>
       <input
         type="number"
@@ -116,11 +117,11 @@ const QtyAdjuster = ({
             onChange(finalNum);
           }
         }}
-        className="w-14 bg-transparent text-center outline-none text-[12px] font-bold text-slate-700 tabular-nums border-x border-slate-100 h-full p-0 flex items-center justify-center"
+        className="w-12 sm:w-14 bg-transparent text-center outline-none text-[13px] sm:text-[12px] font-bold text-slate-700 tabular-nums border-x border-slate-100 h-full p-0 flex items-center justify-center"
       />
       <button
         type="button"
-        className="w-7 h-full flex items-center justify-center border-none bg-transparent cursor-pointer text-slate-400 hover:bg-slate-50 hover:text-slate-650 transition-colors active:scale-90"
+        className="w-9 sm:w-7 h-full flex items-center justify-center border-none bg-transparent cursor-pointer text-slate-400 hover:bg-slate-50 hover:text-slate-650 transition-colors active:scale-90"
         onClick={() => {
           let newVal = value + 1;
           if (typeof max === 'number' && newVal > max) newVal = max;
@@ -128,7 +129,7 @@ const QtyAdjuster = ({
         }}
         disabled={typeof max === 'number' && value >= max}
       >
-        <Plus size={10} />
+        <Plus size={12} />
       </button>
     </div>
   );
@@ -733,25 +734,24 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
       {/* Global Product Search Section */}
       <div ref={dropdownRef} className="relative w-full shrink-0 z-30">
         <div className="flex items-center gap-3">
-          <div className="flex-1 relative">
-            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-            <input
-              ref={searchInputRef}
-              type="text"
-              value={searchQuery}
-              onFocus={() => {
-                setDropdownOpen(true);
-                fetchInventory(searchQuery);
-              }}
-              onChange={e => {
-                setSearchQuery(e.target.value);
-                setDropdownOpen(true);
-              }}
-              onKeyDown={handleKeyDown}
-              placeholder="Scan a barcode, or type a product name..."
-              className="w-full h-[46px] pl-11 pr-4 bg-white border border-slate-200 rounded-xl text-[13px] font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/5 transition-all shadow-sm"
-            />
-          </div>
+          <SearchBar
+            ref={searchInputRef}
+            size="md"
+            className="flex-1"
+            inputClassName="h-[44px]"
+            value={searchQuery}
+            onFocus={() => {
+              setDropdownOpen(true);
+              fetchInventory(searchQuery);
+            }}
+            onChange={e => {
+              setSearchQuery(e.target.value);
+              setDropdownOpen(true);
+            }}
+            onClear={() => setSearchQuery("")}
+            onKeyDown={handleKeyDown}
+            placeholder="Scan a barcode, or type a product name..."
+          />
 
           {/* Barcode Scanner Symbol */}
           <button
@@ -1006,10 +1006,10 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                   </div>
 
                   {/* Right Side: Quantity Adjuster, Price, Total, Trash Button */}
-                  <div className="flex items-center justify-between sm:justify-end gap-6 shrink-0">
+                  <div className="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-center sm:justify-end gap-3 sm:gap-4 md:gap-5 pt-2.5 sm:pt-0 border-t sm:border-t-0 border-slate-100 shrink-0">
 
                     {/* Quantity Adjustment Controls */}
-                    <div className="flex flex-col items-center">
+                    <div className="flex flex-col items-start sm:items-center">
                       <span className="text-[8px] font-bold text-slate-400 block uppercase tracking-wider mb-0.5">Qty</span>
                       <QtyAdjuster
                         value={item.qty}
@@ -1022,14 +1022,21 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
 
                     {/* Unit/Sub-Unit Selection */}
                     {item.unitInfos && (
-                      <div className="text-right w-20">
+                      <div className="text-left sm:text-right w-full sm:w-20">
                         <span className="text-[8px] font-bold text-slate-400 block uppercase tracking-wider mb-0.5">Unit</span>
-                        <select
-                          className="w-full text-[11px] font-bold py-1 px-1 border border-slate-200 rounded-md bg-white text-slate-700 outline-none hover:border-blue-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all cursor-pointer shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        <ReusableSelect
+                          size="sm"
+                          className="w-full h-8 text-[11px] font-semibold"
                           value={item.selectedUnit || item.unitInfos.name}
                           disabled={item.requireSerial}
-                          onChange={(e) => {
-                            const unitName = e.target.value;
+                          options={[
+                            { label: item.unitInfos.name, value: item.unitInfos.name },
+                            ...(item.unitInfos.sub_units?.map((su: any) => ({
+                              label: su.name,
+                              value: su.name,
+                            })) ?? []),
+                          ]}
+                          onValueChange={(unitName) => {
                             let factor = 1;
                             if (unitName !== item.unitInfos.name) {
                               const sub = item.unitInfos.sub_units?.find((su: any) => su.name === unitName || su.short_name === unitName);
@@ -1065,24 +1072,19 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                               return it;
                             }));
                           }}
-                        >
-                          <option value={item.unitInfos.name}>{item.unitInfos.name}</option>
-                          {item.unitInfos.sub_units?.map((su: any) => (
-                            <option key={su.name} value={su.name}>{su.name}</option>
-                          ))}
-                        </select>
+                        />
                       </div>
                     )}
 
                     {/* Cashier Line Discount Controls */}
-                    <div className="flex flex-col items-end w-32">
+                    <div className="flex flex-col items-start sm:items-end w-full sm:w-32">
                       <span className="text-[8px] font-bold text-slate-400 block uppercase tracking-wider mb-0.5">Line Disc.</span>
-                      <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden bg-white h-[32px] w-full shadow-xs px-1">
+                      <div className="flex items-center border border-slate-200 rounded-lg overflow-hidden bg-white h-9 sm:h-[32px] w-full shadow-xs px-1">
                         <div className="flex bg-slate-100 rounded p-0.5 shrink-0">
                           <button
                             type="button"
                             onClick={() => handleLineDiscountChange(item.id, '%', item.lineDiscountValue || 0)}
-                            className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
+                            className={`px-2 py-1 sm:px-1.5 sm:py-0.5 rounded text-[11px] sm:text-[10px] font-bold transition-all cursor-pointer ${
                               item.lineDiscountMode === '%'
                                 ? 'bg-white text-blue-600 shadow-2xs'
                                 : 'text-slate-400 hover:text-slate-600'
@@ -1094,7 +1096,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                           <button
                             type="button"
                             onClick={() => handleLineDiscountChange(item.id, '₹', item.lineDiscountValue || 0)}
-                            className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
+                            className={`px-2 py-1 sm:px-1.5 sm:py-0.5 rounded text-[11px] sm:text-[10px] font-bold transition-all cursor-pointer ${
                               (item.lineDiscountMode || '₹') === '₹'
                                 ? 'bg-white text-blue-600 shadow-2xs'
                                 : 'text-slate-400 hover:text-slate-600'
@@ -1114,7 +1116,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                             const val = Math.max(0, parseFloat(e.target.value) || 0);
                             handleLineDiscountChange(item.id, item.lineDiscountMode || '₹', val);
                           }}
-                          className="flex-1 w-full bg-transparent text-right outline-none text-[12px] font-bold text-slate-800 pr-1 tabular-nums"
+                          className="flex-1 w-full bg-transparent text-right outline-none text-[13px] sm:text-[12px] font-bold text-slate-800 pr-1 tabular-nums"
                         />
                       </div>
                     </div>
@@ -1143,45 +1145,47 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
 
                       return (
                         <>
-                          <div className="text-right w-20">
+                          <div className="text-left sm:text-right w-full sm:w-20">
                             <span className="text-[8px] font-bold text-slate-400 block uppercase tracking-wider mb-0.5">Price</span>
                             <span className="text-[12px] font-bold text-slate-700 tabular-nums block">
                               ₹{formatPrice(item.price)}
                             </span>
                           </div>
 
-                          {/* Total Price Display */}
-                          <div className="text-right w-28">
-                            <span className="text-[8px] font-bold text-slate-400 block uppercase tracking-wider mb-0.5">Total</span>
-                            <span className="text-[13px] font-black text-slate-900 tabular-nums block">
-                              ₹{formatPrice(finalLineTotal)}
-                            </span>
-                            {isGstReg && gstRate > 0 ? (
-                              <span className="text-[9px] text-slate-400 font-medium leading-tight block">
-                                Taxable ₹{taxableVal.toFixed(2)} + ₹{gstVal.toFixed(2)} GST
+                          {/* Total Price Display + Mobile Delete Group */}
+                          <div className="col-span-2 sm:col-span-1 flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t border-dashed sm:border-t-0 border-slate-100">
+                            <div className="text-left sm:text-right sm:w-28">
+                              <span className="text-[8px] font-bold text-slate-400 block uppercase tracking-wider mb-0.5">Total</span>
+                              <span className="text-[14px] sm:text-[13px] font-black text-slate-900 tabular-nums block">
+                                ₹{formatPrice(finalLineTotal)}
                               </span>
-                            ) : (
-                              <span className="text-[9px] text-slate-400 font-medium leading-tight block">
-                                Taxable ₹{taxableVal.toFixed(2)}
-                              </span>
-                            )}
-                            {hasDiscount && (
-                              <span className="text-[9.5px] font-bold text-emerald-650 block mt-0.5 tabular-nums">
-                                Save ₹{formatPrice((item.price * item.qty) - finalLineTotal)}
-                              </span>
-                            )}
+                              {isGstReg && gstRate > 0 ? (
+                                <span className="text-[9px] text-slate-400 font-medium leading-tight block">
+                                  Taxable ₹{taxableVal.toFixed(2)} + ₹{gstVal.toFixed(2)} GST
+                                </span>
+                              ) : (
+                                <span className="text-[9px] text-slate-400 font-medium leading-tight block">
+                                  Taxable ₹{taxableVal.toFixed(2)}
+                                </span>
+                              )}
+                              {hasDiscount && (
+                                <span className="text-[9.5px] font-bold text-emerald-650 block mt-0.5 tabular-nums">
+                                  Save ₹{formatPrice((item.price * item.qty) - finalLineTotal)}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Trash / Delete Item Button */}
+                            <button
+                              onClick={() => handleDeleteRow(item.id)}
+                              className="w-10 h-10 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-slate-400 sm:text-slate-350 hover:text-red-500 hover:bg-red-50/65 bg-slate-50 sm:bg-transparent transition-all duration-150 active:scale-90 shrink-0"
+                            >
+                              <Trash2 size={15} strokeWidth={1.6} />
+                            </button>
                           </div>
                         </>
                       );
                     })()}
-
-                    {/* Trash / Delete Item Button */}
-                    <button
-                      onClick={() => handleDeleteRow(item.id)}
-                      className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-350 hover:text-red-500 hover:bg-red-50/65 transition-all duration-150 active:scale-90 shrink-0"
-                    >
-                      <Trash2 size={14} strokeWidth={1.5} />
-                    </button>
 
                   </div>
                 </div>

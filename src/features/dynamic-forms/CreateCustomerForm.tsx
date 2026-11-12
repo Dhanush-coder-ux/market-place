@@ -25,7 +25,7 @@ export const CreateCustomerForm = () => {
       {successData && (
         <div className="mt-4 p-4 bg-green-100 text-green-800 rounded">
           <h3 className="font-bold">Success! Response Data:</h3>
-          <pre className="text-sm mt-2">{JSON.stringify(successData, null, 2)}</pre>
+          <pre className="text-xs sm:text-sm mt-2 overflow-x-auto whitespace-pre-wrap break-words">{JSON.stringify(successData, null, 2)}</pre>
         </div>
       )}
     </div>

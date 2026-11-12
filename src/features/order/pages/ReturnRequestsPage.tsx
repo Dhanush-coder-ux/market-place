@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import {
-  RotateCcw, Clock, CheckCircle2, XCircle, Search, RefreshCw,
+  RotateCcw, Clock, CheckCircle2, XCircle, RefreshCw,
   Copy, Check, X, AlertCircle, ChevronLeft, ChevronRight, Eye,
   Inbox, Phone, User, Calendar, LayoutGrid, List,
   ExternalLink, IndianRupee, ListFilter, AlertTriangle, Loader2
@@ -17,6 +17,7 @@ import OrderDetailView, { type OrderDetailType } from "../components/OrdersDetai
 import { parseOrderForDetail } from "../utils/orderDetailParser";
 import SkeletonLoader from "@/components/common/SkeletonLoader";
 import { StatCard } from "@/components/common/StatsCard";
+import { SearchBar } from "@/components/ui";
 
 export const ReturnRequestsPage: React.FC = () => {
   const rawId = getShopId() || localStorage.getItem("shop_id") || SHOP_ID || "";
@@ -35,7 +36,7 @@ export const ReturnRequestsPage: React.FC = () => {
   const [isDateFilterOpen, setIsDateFilterOpen] = useState(false);
 
   // View mode (List table vs Grid cards)
-  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
+  const [viewMode, setViewMode] = useState<"list" | "grid">(() => (typeof window !== "undefined" && window.innerWidth < 768 ? "grid" : "list"));
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -490,28 +491,15 @@ export const ReturnRequestsPage: React.FC = () => {
           )}
         </div>
 
-        <div className="flex items-center gap-3">
-          {/* Search Box */}
-          <div className="relative min-w-[240px] sm:w-72">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search order ID, customer, item..."
-              className="w-full text-xs pl-8 pr-7 py-2 rounded-lg border border-slate-200 bg-white focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium placeholder:text-slate-400"
-            />
-            {searchTerm && (
-              <button
-                type="button"
-                onClick={() => setSearchTerm("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
-                title="Clear search"
-              >
-                <X size={12} />
-              </button>
-            )}
-          </div>
+        <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+          <SearchBar
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onClear={() => setSearchTerm("")}
+            placeholder="Search order ID, customer, item..."
+            size="sm"
+            className="flex-1 min-w-0 sm:w-72 sm:flex-initial"
+          />
 
           {/* List / Grid Toggle */}
           <div className="flex items-center bg-white border border-slate-200 rounded-lg p-1 shadow-xs shrink-0">
@@ -937,7 +925,7 @@ export const ReturnRequestsPage: React.FC = () => {
                 onChange={(e) => setRejectReason(e.target.value)}
                 placeholder="e.g. Return window expired, item seal broken, or policy violation..."
                 rows={3}
-                className="w-full text-xs p-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 placeholder:text-slate-400 font-medium"
+                className="w-full text-sm sm:text-xs p-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 placeholder:text-slate-400 font-medium"
               />
             </div>
 

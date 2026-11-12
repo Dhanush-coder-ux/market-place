@@ -91,8 +91,8 @@ const StoreCard = ({
       `}</style>
 
       <div
-        className="relative cursor-pointer"
-        style={{ width:370, fontFamily:"'DM Sans',sans-serif" }}
+        className="relative cursor-pointer w-full max-w-[370px] mx-auto"
+        style={{ fontFamily:"'DM Sans',sans-serif" }}
         onMouseEnter={() => setDoorOpen(true)}
         onMouseLeave={() => setDoorOpen(false)}
         onClick={() => setShowInfo(true)}
@@ -314,7 +314,7 @@ export default function App({
 }: AppProps) {
   
   return (
-    <div className="min-h-screen flex items-center justify-center">
+    <div className="py-4 sm:py-6 lg:min-h-screen flex items-center justify-center w-full">
       <StoreCard setShowInfo={setShow} shopInfo={shopInfo} />
     </div>
   );

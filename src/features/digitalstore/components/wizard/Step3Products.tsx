@@ -4,10 +4,11 @@ import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { inventoryCustomFieldsApi, inventoryApi } from "@/services/api/inventory";
 import {
-  Search, Package, Check, Settings2, Plus, Trash2,
-  Loader2, IndianRupee, Layers, Tag, BarChart2, X, ShoppingBag,
+  Package, Check, Settings2, Plus, Trash2,
+  Loader2, IndianRupee, Layers, Tag, BarChart2, ShoppingBag,
 } from "lucide-react";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
+import { SearchBar } from "@/components/ui";
 
 interface Step3Props {
   form: StoreFormData;
@@ -289,7 +290,6 @@ export default function Step3Products({ form, setForm }: Step3Props) {
       <div className="flex items-start justify-between mb-4 gap-3 shrink-0">
         <div className="min-w-0">
           <p className="text-[13px] font-bold text-slate-800">Product Catalog</p>
-          <p className="text-[11px] text-slate-500 mt-0.5">Select products to feature online and configure their online pricing.</p>
         </div>
         <div className={`flex items-center gap-1.5 shrink-0 px-3 py-1.5 rounded-full border text-[12px] font-bold transition-all
           ${selectedCount > 0 ? "bg-blue-600 text-white border-blue-600 shadow-sm" : "bg-slate-100 text-slate-500 border-slate-200"}`}
@@ -300,25 +300,14 @@ export default function Step3Products({ form, setForm }: Step3Props) {
       </div>
 
       {/* ── Search ── */}
-      <div className="relative mb-3 shrink-0">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-        <input
-          type="text"
-          placeholder="Search products by name..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full text-sm py-2.5 pl-10 pr-10 rounded-xl border border-slate-200 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all bg-white"
-        />
-        {searchTerm && (
-          <button
-            type="button"
-            onClick={() => setSearchTerm("")}
-            className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center hover:bg-slate-300 transition-colors"
-          >
-            <X size={11} className="text-slate-600" />
-          </button>
-        )}
-      </div>
+      <SearchBar
+        size="md"
+        className="mb-3 shrink-0"
+        placeholder="Search products by name..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        onClear={() => setSearchTerm("")}
+      />
 
       {/* ── Product list ── */}
       <div className="flex-1 overflow-y-auto min-h-0 rounded-xl border border-slate-200 bg-white custom-scrollbar">

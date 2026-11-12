@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { X, Search } from "lucide-react";
+import { X } from "lucide-react";
+import { SearchBar } from "@/components/ui";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
 import { CustomerData } from "../types";
@@ -236,17 +237,14 @@ const AttachCustomerModal: React.FC<AttachCustomerModalProps> = ({
 
         {/* Search Bar Input */}
         <div className="p-4 bg-slate-50/50 border-b border-slate-100 shrink-0">
-          <div className="relative">
-            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-            <input 
-              ref={searchInputRef}
-              type="text"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search by name or phone..."
-              className="w-full h-11 pl-10 pr-4 bg-white border border-slate-200 rounded-xl text-[13px] font-medium text-slate-700 placeholder:text-slate-450 focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/5 transition-all shadow-sm"
-            />
-          </div>
+          <SearchBar
+            ref={searchInputRef}
+            size="md"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            onClear={() => setSearchQuery("")}
+            placeholder="Search by name or phone..."
+          />
         </div>
 
         {/* Scrollable Customer List */}
@@ -336,15 +334,15 @@ const AttachCustomerModal: React.FC<AttachCustomerModalProps> = ({
 
 
         {/* Modal Footer Keyboard Guide */}
-        <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-4 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+        <div className="px-4 sm:px-6 py-3.5 pb-[max(14px,env(safe-area-inset-bottom))] sm:pb-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-end sm:justify-between shrink-0">
+          <div className="hidden sm:flex items-center gap-4 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
             <span className="flex items-center gap-1"><kbd className="px-1.5 py-0.5 bg-white border rounded font-mono text-[9px] text-slate-500 shadow-sm">↑↓</kbd> Navigate</span>
             <span className="flex items-center gap-1"><kbd className="px-1.5 py-0.5 bg-white border rounded font-mono text-[9px] text-slate-500 shadow-sm">Enter</kbd> Select</span>
             <span className="flex items-center gap-1"><kbd className="px-1.5 py-0.5 bg-white border rounded font-mono text-[9px] text-slate-500 shadow-sm">Esc</kbd> Cancel</span>
           </div>
           <button
             onClick={() => setIsCreateOpen(true)}
-            className="text-[11px] font-extrabold text-blue-600 hover:text-blue-700 transition-colors"
+            className="w-full sm:w-auto py-2 sm:py-0 text-[12px] sm:text-[11px] font-extrabold text-blue-600 hover:text-blue-700 transition-colors"
           >
             + Create New Customer
           </button>

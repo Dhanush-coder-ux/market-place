@@ -153,7 +153,7 @@ export function GroupedItemsDrawer({
           </div>
         </div>
         
-        <div className="px-6 py-4 border-t border-slate-100 bg-white">
+        <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-t border-slate-100 bg-white pb-[max(16px,env(safe-area-inset-bottom))]">
           <button
             onClick={onClose}
             className="w-full h-10 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-50 transition-all shadow-sm active:scale-95"
@@ -282,7 +282,80 @@ export function StockMovementsTable({ rows, loading, onViewDetails }: StockMovem
             <p className="text-xs text-slate-400 mt-1 max-w-[280px] mx-auto">This product does not have any inventory logs recorded yet.</p>
           </div>
         ) : (
-          <div className="inline-block min-w-full align-middle">
+          <>
+            {/* Mobile Cards View */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {rows.map((r, i) => {
+                const hasList = r.productsList && r.productsList.length > 1;
+                const rowKey = `m-${r.id}-${i}`;
+                const totalStocksIn = hasList
+                  ? r.productsList!.reduce((sum, p) => sum + p.receivedStocks, 0)
+                  : (r.productsList?.[0]?.receivedStocks ?? r.receivedStocks);
+                const firstProd = r.productsList?.[0];
+                const currentStockVal = (() => {
+                  const prods = r.productsList;
+                  if (!prods || prods.length === 0) {
+                    const sb = r.stocksBefore;
+                    if (sb === null || sb === undefined) return null;
+                    return sb + (r.isInc ? r.receivedStocks : -r.receivedStocks);
+                  }
+                  let total = 0;
+                  for (const p of prods) {
+                    const sb = p.stocksBefore;
+                    if (sb === null || sb === undefined) return null;
+                    total += sb + (r.isInc ? p.receivedStocks : -p.receivedStocks);
+                  }
+                  return total;
+                })();
+
+                return (
+                  <div
+                    key={rowKey}
+                    onClick={() => onViewDetails?.(r.id)}
+                    className={`p-3.5 space-y-2 border-l-[3px] ${r.source === 'purchase' ? 'border-l-indigo-400' : r.isInc ? 'border-l-emerald-400' : 'border-l-rose-400'} ${onViewDetails ? 'active:bg-slate-50 cursor-pointer' : ''}`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex flex-col gap-1 min-w-0">
+                        <TypeBadge type={r.displayType} icon={r.isInc ? ArrowUp : ArrowDown} />
+                        <span className="text-[11px] text-slate-400 font-medium">
+                          {r.date ? new Date(r.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                        </span>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className={`text-sm font-black tabular-nums ${r.isInc ? 'text-emerald-600' : 'text-rose-600'}`}>
+                          {r.isInc ? '+' : '-'}{formatStockValue(totalStocksIn)}
+                        </div>
+                        <div className="text-[10px] font-bold text-blue-600 tabular-nums">
+                          After: {currentStockVal !== null ? formatStockValue(currentStockVal) : '—'}
+                        </div>
+                      </div>
+                    </div>
+                    {firstProd?.name && (
+                      <p className="text-xs font-semibold text-slate-800 truncate">{firstProd.name}</p>
+                    )}
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {(firstProd?.variant || r.variant) && <AntBadge variant="at-variant" type="tag">V: {getVariantName(firstProd?.variant || r.variant)}</AntBadge>}
+                      {(firstProd?.batch || r.batch) && <AntBadge variant="at-batch" type="tag">B: {getBatchName(firstProd?.batch || r.batch)}</AntBadge>}
+                      {hasList && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setSelectedRecord(r); }}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-blue-50 text-blue-600 border border-blue-100"
+                        >
+                          <ChevronRight size={10} strokeWidth={3} />
+                          + {r.productsList!.length - 1} more
+                        </button>
+                      )}
+                    </div>
+                    {r.description && (
+                      <p className="text-[11px] text-slate-500 line-clamp-2">{r.description}</p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:inline-block min-w-full align-middle">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="sticky top-0 bg-slate-50/90 backdrop-blur-sm z-10 text-[9px] font-black text-slate-400 tracking-wider uppercase border-b border-slate-100 shadow-[0_1px_0_rgba(0,0,0,0.05)]">
@@ -404,6 +477,7 @@ export function StockMovementsTable({ rows, loading, onViewDetails }: StockMovem
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
       <GroupedItemsDrawer record={selectedRecord} onClose={() => setSelectedRecord(null)} type="adjustment" />
@@ -437,7 +511,85 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
             <p className="text-xs text-slate-400 mt-1 max-w-[280px] mx-auto">There are no registered supplier purchases for this product.</p>
           </div>
         ) : (
-          <div className="inline-block min-w-full align-middle">
+          <>
+            {/* Mobile Cards View (ProductPurchasesTable) */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {rows.map((r, i) => {
+                const hasList = r.productsList && r.productsList.length > 1;
+                const rowKey = `mp-${r.id}-${i}`;
+                const totalStocksIn = hasList
+                  ? r.productsList!.reduce((sum: number, p: any) => sum + p.receivedStocks, 0)
+                  : (r.productsList?.[0]?.receivedStocks ?? r.receivedStocks);
+                const firstProd = r.productsList?.[0] || {};
+                const totalStockAfterProd = (() => {
+                  const prods = r.productsList;
+                  if (!prods || prods.length === 0) {
+                    const sb = r.stocksBefore;
+                    return sb !== null && sb !== undefined ? (sb + totalStocksIn) : null;
+                  }
+                  let total = 0;
+                  for (const p of prods) {
+                    if (p.stocksBefore === null || p.stocksBefore === undefined) return null;
+                    total += p.stocksBefore + p.receivedStocks;
+                  }
+                  return total;
+                })();
+                const rawBuyPrice = firstProd.buyPrice ?? r.buyPrice;
+                const rawSellPrice = firstProd.sellPrice ?? r.sellPrice;
+
+                return (
+                  <div
+                    key={rowKey}
+                    onClick={() => onNavigateToPurchase?.(r.id)}
+                    className={`p-3.5 space-y-2 border-l-[3px] border-l-indigo-400 ${onNavigateToPurchase ? 'active:bg-indigo-50/30 cursor-pointer' : ''}`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[11px] font-black text-indigo-600 font-mono">{r.uiId || r.id}</span>
+                          {r.invoiceNo && r.invoiceNo !== '—' && <span className="text-[10px] font-mono text-slate-400">• {r.invoiceNo}</span>}
+                        </div>
+                        <p className="text-xs font-bold text-slate-800 truncate mt-0.5">{r.description.replace('Supplier: ', '')}</p>
+                        <p className="text-[11px] text-slate-400">{r.date ? new Date(r.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className={`text-sm font-black tabular-nums ${r.type === 'RETURN' ? 'text-rose-600' : 'text-emerald-600'}`}>
+                          {r.type === 'RETURN' ? '-' : '+'}{formatStockValue(totalStocksIn)}
+                        </div>
+                        <div className="text-[10px] font-bold text-blue-600 tabular-nums">
+                          After: {totalStockAfterProd !== null ? formatStockValue(totalStockAfterProd) : '—'}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {(firstProd.variant || r.variant) && <AntBadge variant="at-variant" type="tag">V: {getVariantName(firstProd.variant || r.variant)}</AntBadge>}
+                        {(firstProd.batch || r.batch) && <AntBadge variant="at-batch" type="tag">B: {getBatchName(firstProd.batch || r.batch)}</AntBadge>}
+                        {hasList && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setSelectedRecord(r); }}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-indigo-50 text-indigo-600 border border-indigo-100"
+                          >
+                            <ChevronRight size={10} strokeWidth={3} />
+                            + {r.productsList!.length - 1} more
+                          </button>
+                        )}
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">{r.paymentMethod}</span>
+                    </div>
+                    {!hasList && (rawBuyPrice !== undefined || rawSellPrice !== undefined) && (
+                      <div className="grid grid-cols-2 gap-2 pt-1.5 border-t border-slate-100 text-[11px]">
+                        <div><span className="text-slate-400">Buy:</span> <span className="font-bold text-slate-700">{rawBuyPrice !== undefined ? `₹${Number(rawBuyPrice).toFixed(2).replace(/\.00$/, '')}` : '—'}</span></div>
+                        <div><span className="text-slate-400">Sell:</span> <span className="font-bold text-emerald-700">{rawSellPrice !== undefined ? `₹${Number(rawSellPrice).toFixed(2).replace(/\.00$/, '')}` : '—'}</span></div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:inline-block min-w-full align-middle">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="sticky top-0 bg-slate-50/90 backdrop-blur-sm z-10 text-[9px] font-black text-slate-400 tracking-wider uppercase border-b border-slate-100 shadow-[0_1px_0_rgba(0,0,0,0.05)]">
@@ -638,6 +790,7 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
       <GroupedItemsDrawer record={selectedRecord} onClose={() => setSelectedRecord(null)} type="purchase" />
@@ -672,7 +825,72 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
             <p className="text-xs text-slate-400 mt-1 max-w-[280px] mx-auto">There are no logged purchase acquisitions for this vendor.</p>
           </div>
         ) : (
-          <div className="inline-block min-w-full align-middle">
+          <>
+            {/* Mobile Cards View (SupplierPurchasesTable) */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {rows.map((r, i) => {
+                const hasList = r.productsList && r.productsList.length > 1;
+                const rowKey = `ms-${r.purchaseId}-${i}`;
+                const totalStocksIn = hasList
+                  ? r.productsList!.reduce((sum: number, p: any) => sum + p.receivedStocks, 0)
+                  : (r.productsList?.[0]?.receivedStocks ?? r.receivedStocks);
+                const firstProd = r.productsList?.[0] || {};
+                const currentOutstanding = r.outstandingAmount ?? Math.max(0, (r.totalCost || 0) - (r.amountPaid || 0));
+
+                return (
+                  <div
+                    key={rowKey}
+                    onClick={() => onNavigateToPurchase?.(r.purchaseId)}
+                    className={`p-3.5 space-y-2 border-l-[3px] border-l-indigo-400 ${onNavigateToPurchase ? 'active:bg-indigo-50/30 cursor-pointer' : ''}`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[11px] font-black text-indigo-600 font-mono">{r.uiId}</span>
+                          {(r.type === 'RETURN' || r.type === 'PURCHASE_RETURN') && <AntBadge variant="tx-sales-return" type="tag">Return</AntBadge>}
+                        </div>
+                        <p className="text-xs font-bold text-slate-800 truncate mt-0.5">{firstProd.productName || r.productName}</p>
+                        <p className="text-[11px] text-slate-400">
+                          {r.purchaseDate ? new Date(r.purchaseDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                          {r.invoiceNo && r.invoiceNo !== '—' ? ` • Inv: ${r.invoiceNo}` : ''}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="text-sm font-black text-slate-800 tabular-nums">₹{Number(r.totalCost || 0).toLocaleString("en-IN")}</div>
+                        <div className={`text-[10px] font-bold tabular-nums ${r.type === 'RETURN' ? 'text-rose-600' : 'text-emerald-600'}`}>
+                          {r.type === 'RETURN' ? '-' : '+'}{totalStocksIn} units
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-1.5 border-t border-slate-100 text-[11px]">
+                      <div className="flex items-center gap-2">
+                        <span className="text-emerald-600 font-bold">Paid: ₹{Number(r.amountPaid || 0).toLocaleString("en-IN")}</span>
+                        {currentOutstanding > 0 && <span className="text-rose-600 font-bold">Due: ₹{Number(currentOutstanding).toLocaleString("en-IN")}</span>}
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        {hasList && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setSelectedRecord(r); }}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-indigo-50 text-indigo-600 border border-indigo-100"
+                          >
+                            +{r.productsList!.length - 1} more
+                          </button>
+                        )}
+                        <PaymentStatusBadge
+                          status={r.paymentStatus || r.payment_status}
+                          outstanding={currentOutstanding}
+                          grandTotal={r.grandTotal ?? ((Number(r.totalCost || 0) + Number(r.gstAmount || 0) + Number(r.deliveryCharge || 0) + Number(r.otherCharge || 0)) || undefined)}
+                          amountPaid={r.amountPaid}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:inline-block min-w-full align-middle">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="sticky top-0 bg-slate-50/90 backdrop-blur-sm z-10 text-[9px] font-black text-slate-400 tracking-wider uppercase border-b border-slate-100 shadow-[0_1px_0_rgba(0,0,0,0.05)]">
@@ -849,6 +1067,7 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
       <GroupedItemsDrawer record={selectedRecord} onClose={() => setSelectedRecord(null)} type="supplier_purchase" />
@@ -898,7 +1117,76 @@ export function CustomerPurchasesTable({ rows, loading, onNavigateToSale }: Cust
             <p className="text-xs text-slate-400 mt-1 max-w-[280px] mx-auto">When this customer makes a purchase, it will appear here.</p>
           </div>
         ) : (
-          <div className="inline-block min-w-full align-middle">
+          <>
+            {/* Mobile Cards View (CustomerPurchasesTable) */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {rows.map((order, i) => {
+                const date = order.created_at || order.date
+                  ? new Date(order.created_at || order.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                  : '—';
+                let total = Number(order.calculation_infos?.total ?? order.total_sellprice ?? order.item_infos?.total_order_amount ?? order.grand_total ?? order.total_amount ?? order.total ?? 0);
+                if (Array.isArray(order.returns) && order.returns.length > 0) {
+                  let totalRefunds = 0;
+                  order.returns.forEach((ret: any) => { totalRefunds += Number(ret.total_return_cost ?? ret.total_cost ?? 0); });
+                  total = Math.max(0, total - totalRefunds);
+                }
+                const products = order.items || order.products || order.datas?.items || order.datas?.products || [];
+                const itemCount = order.item_infos?.total_order_qty ?? order.total_quantity ?? order.datas?.total_quantity ?? products.length;
+                const unit = products[0]?.product?.unit || products[0]?.unit || products[0]?.datas?.unit || (itemCount === 1 ? "Item" : "Units");
+                const invoiceId = order.ui_id ? `Order ${order.ui_id}` : `${order.id.slice(0, 8).toUpperCase()}`;
+
+                return (
+                  <div
+                    key={`mc-${order.id}-${i}`}
+                    onClick={() => onNavigateToSale?.(order.id)}
+                    className={`p-3.5 space-y-2 border-l-[3px] border-l-indigo-400 ${onNavigateToSale ? 'active:bg-indigo-50/30 cursor-pointer' : ''}`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <span className="text-xs font-black text-slate-800 font-mono">{invoiceId}</span>
+                        <p className="text-[11px] text-slate-400 mt-0.5">{date} • {order.type || "NORMAL"}</p>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-sm font-black text-slate-900 tabular-nums block">₹{total.toLocaleString('en-IN')}</span>
+                        <LocalStatusBadge status={order.status || "Pending"} />
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-slate-100">
+                      <span className="px-2 py-0.5 rounded bg-slate-100 text-[10px] font-bold text-slate-600">{itemCount} {unit}</span>
+                      {products.length > 0 && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedRecord({
+                              uiId: order.ui_id || order.id.slice(0, 8).toUpperCase(),
+                              type: order.type === 'Return' ? 'RETURN' : order.type,
+                              productsList: products.map((p: any) => {
+                                const calcItem = order.calculation_infos?.items?.find((ci: any) => ci.product_id === p.product_id || ci.product_id === p.inventory_id);
+                                return {
+                                  name: p.product?.name || p.name || p.product_name || p.datas?.product_name || p.datas?.name || calcItem?.name || "Unknown Item",
+                                  receivedStocks: p.quantity || p.qty || calcItem?.qty || 0,
+                                  sellPrice: p.sellprice || p.sell_price || p.price || calcItem?.price || 0,
+                                  variant: p.variant || p.variant_details || p.variant_infos?.variant_name,
+                                  batch: p.batch || p.batch_details || p.batch_infos?.batch_name,
+                                  serials: p.serials || p.serial_info?.serial_numbers || (p.serialno_infos ? p.serialno_infos.map((x: any) => x.name) : undefined),
+                                };
+                              })
+                            });
+                          }}
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-extrabold bg-indigo-50 text-indigo-600 border border-indigo-100"
+                        >
+                          <ChevronRight size={10} strokeWidth={3} />
+                          View Items ({products.length})
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:inline-block min-w-full align-middle">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="sticky top-0 bg-slate-50/90 backdrop-blur-sm z-10 text-[9px] font-black text-slate-400 tracking-wider uppercase border-b border-slate-100 shadow-[0_1px_0_rgba(0,0,0,0.05)]">
@@ -1046,6 +1334,7 @@ export function CustomerPurchasesTable({ rows, loading, onNavigateToSale }: Cust
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
       <GroupedItemsDrawer record={selectedRecord} onClose={() => setSelectedRecord(null)} type="purchase" />
@@ -1075,7 +1364,46 @@ export function CustomerCollectionsTable({ rows, loading }: CustomerCollectionsT
             <p className="text-xs text-slate-400 mt-1 max-w-[280px] mx-auto">When you record a payment for this customer, it will appear here.</p>
           </div>
         ) : (
-          <div className="inline-block min-w-full align-middle">
+          <>
+            {/* Mobile Cards View (CustomerCollectionsTable) */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {rows.map((h, i) => {
+                const date = h.created_at
+                  ? new Date(h.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                  : '—';
+                const paymentInfosArray = Array.isArray(h.payment_infos) ? h.payment_infos : [];
+                const calculatedCleared = paymentInfosArray.reduce((acc: number, p: any) => acc + Number(p.amount || 0), 0);
+                const rawCleared = h.cleared_amount ?? h.additional_infos?.paid_amount ?? (calculatedCleared > 0 ? calculatedCleared : (h.cleared_infos ? (Number(h.cleared_infos.outstanding_before || 0) - Number(h.cleared_infos.outstanding_after || 0)) : 0));
+                const clearedAmount = Math.max(0, Number(rawCleared || 0));
+                const refIdRaw = h.invoice_no || h.ref_no || h.entity_id || h.id;
+                const refId = refIdRaw ? String(refIdRaw).replace(/^#+/, '') : String(h.id).padStart(3, '0');
+                const outstandingBefore = Number(h.cleared_infos?.outstanding_before ?? h.outstanding_before ?? 0);
+                const outstandingAfter = Number(h.cleared_infos?.outstanding_after ?? h.outstanding_after ?? 0);
+
+                return (
+                  <div key={`mcol-${h.id}-${i}`} className="p-3.5 space-y-2 border-l-[3px] border-l-emerald-500">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <span className="text-xs font-black text-slate-800 font-mono">{refId}</span>
+                        <p className="text-[11px] text-slate-400 mt-0.5">{date}</p>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-sm font-black text-slate-900 tabular-nums block">₹{clearedAmount.toLocaleString('en-IN')}</span>
+                        <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border bg-emerald-50 text-emerald-600 border-emerald-100">Cleared</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs pt-1 border-t border-slate-100">
+                      <span className="text-slate-500 line-through">₹{outstandingBefore.toLocaleString('en-IN')}</span>
+                      <ArrowRight className="w-3.5 h-3.5 text-slate-500" />
+                      <span className="font-bold text-emerald-700">₹{outstandingAfter.toLocaleString('en-IN')}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:inline-block min-w-full align-middle">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="sticky top-0 bg-slate-50/90 backdrop-blur-sm z-10 text-[9px] font-black text-slate-400 tracking-wider uppercase border-b border-slate-100 shadow-[0_1px_0_rgba(0,0,0,0.05)]">
@@ -1160,6 +1488,7 @@ export function CustomerCollectionsTable({ rows, loading }: CustomerCollectionsT
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
     </div>

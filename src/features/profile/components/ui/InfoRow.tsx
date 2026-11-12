@@ -43,7 +43,7 @@ const InfoRow: React.FC<InfoRowProps> = ({
         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none mb-0.5">
           {label}
         </p>
-        <p className="text-sm font-semibold text-slate-700 truncate">{displayVal}</p>
+        <p className="text-sm font-semibold text-slate-700 break-words sm:truncate">{displayVal}</p>
       </div>
       {suffix && <div className="shrink-0">{suffix}</div>}
     </div>

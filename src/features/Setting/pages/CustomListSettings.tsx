@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Plus, X, Tag, Ruler, Pencil, Check, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { Plus, X, Tag, Ruler, Pencil, Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { ReusableSelect, SearchBar } from "@/components/ui";
 import { SHOP_ID } from "@/services/endpoints";
 import { utilityApi } from "@/services/api/utility";
 import { useToast } from "@/context/ToastContext";
@@ -55,9 +56,6 @@ export const CustomListSettings: React.FC<CustomListSettingsProps> = ({ type }) 
   const [subUnits, setSubUnits] = useState<{ name: string; factor: string }[]>([]);
 
   const title = type === "categories" ? "Product Categories" : "Measurement Units";
-  const desc = type === "categories"
-    ? "Manage the categories available when creating products."
-    : "Manage the measurement units (kg, pcs, box) available for products.";
   const Icon = type === "categories" ? Tag : Ruler;
   const singular = type === "categories" ? "category" : "unit";
 
@@ -239,10 +237,7 @@ export const CustomListSettings: React.FC<CustomListSettingsProps> = ({ type }) 
           <div className="p-2.5 bg-blue-50 border border-blue-100 rounded-lg shadow-sm">
             <Icon className="w-5 h-5 text-blue-600" />
           </div>
-          <div>
-            <h2 className="text-[15px] font-bold text-slate-800 leading-tight">{title}</h2>
-            <p className="text-xs text-slate-500 mt-0.5">{desc}</p>
-          </div>
+          <h2 className="text-[15px] font-semibold text-slate-800 leading-tight">{title}</h2>
         </div>
       </div>
 
@@ -374,24 +369,14 @@ export const CustomListSettings: React.FC<CustomListSettingsProps> = ({ type }) 
             </h3>
 
             {/* Search filter */}
-            <div className="relative flex-1 max-w-xs">
-              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={`Search ${singular}s...`}
-                className="w-full pl-8 pr-7 py-1 bg-white border border-slate-200 rounded-lg text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100 transition-all shadow-sm"
-              />
-              {search && (
-                <button
-                  onClick={() => setSearch("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
-                >
-                  <X size={12} />
-                </button>
-              )}
-            </div>
+            <SearchBar
+              size="sm"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onClear={() => setSearch("")}
+              placeholder={`Search ${singular}s...`}
+              className="flex-1 max-w-xs"
+            />
           </div>
 
           {loading ? (
@@ -441,21 +426,21 @@ export const CustomListSettings: React.FC<CustomListSettingsProps> = ({ type }) 
                     <>
                       <span className="text-sm font-semibold text-slate-700">{item.name}</span>
                       {!item.isDefault && (
-                        <div className="flex items-center gap-0.5 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center gap-1 ml-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={() => {
                               setEditingId(item.id);
                               setEditValue(item.name);
                             }}
                             disabled={saving}
-                            className="p-1 rounded-md text-slate-400 hover:bg-blue-100 hover:text-blue-600 disabled:opacity-40 transition-colors"
+                            className="p-2 sm:p-1 rounded-md text-slate-400 hover:bg-blue-100 hover:text-blue-600 disabled:opacity-40 transition-colors"
                           >
                             <Pencil className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => handleDelete(item)}
                             disabled={saving}
-                            className="p-1 rounded-md text-slate-400 hover:bg-rose-100 hover:text-rose-600 disabled:opacity-40 transition-colors"
+                            className="p-2 sm:p-1 rounded-md text-slate-400 hover:bg-rose-100 hover:text-rose-600 disabled:opacity-40 transition-colors"
                           >
                             <X className="w-3.5 h-3.5" />
                           </button>
@@ -472,21 +457,16 @@ export const CustomListSettings: React.FC<CustomListSettingsProps> = ({ type }) 
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-slate-200/70 mt-4">
             <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
               <span>Per page:</span>
-              <select
-                value={pageSize}
-                onChange={(e) => {
-                  const newSize = Number(e.target.value);
-                  setPageSize(newSize);
+              <ReusableSelect
+                size="sm"
+                value={String(pageSize)}
+                onValueChange={(val) => {
+                  setPageSize(Number(val));
                   setPage(1);
                 }}
-                className="h-7 px-2 bg-white border border-slate-200 rounded-md text-xs font-bold text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-sm"
-              >
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-                <option value={200}>200</option>
-                <option value={500}>500</option>
-              </select>
+                options={[25, 50, 100, 200, 500].map((n) => ({ label: String(n), value: String(n) }))}
+                className="w-20 h-8 text-xs"
+              />
               <span className="text-slate-300">•</span>
               <span>
                 Page <strong className="text-slate-800">{page}</strong>

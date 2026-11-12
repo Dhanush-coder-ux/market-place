@@ -87,7 +87,7 @@ export default function Step2DeliveryHours({ form, setForm }: Step2Props) {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300 h-[450px] overflow-y-auto pr-2 custom-scrollbar">
+    <div className="space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-right-4 duration-300 max-h-[60dvh] sm:h-[450px] overflow-y-auto pr-1 sm:pr-2 custom-scrollbar">
       {/* Operating Hours Section */}
       <section>
         <div className="flex items-center gap-2 mb-4">
@@ -99,7 +99,7 @@ export default function Step2DeliveryHours({ form, setForm }: Step2Props) {
             const hourConfig = form.operatingHours.find(h => h.day === dayName);
             const isOpen = !!hourConfig;
             return (
-              <div key={dayName} className="flex items-center justify-between p-3 border border-slate-200 rounded-xl bg-white">
+              <div key={dayName} className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2.5 p-3 border border-slate-200 rounded-xl bg-white">
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => {
@@ -118,7 +118,7 @@ export default function Step2DeliveryHours({ form, setForm }: Step2Props) {
                   </span>
                 </div>
                 {isOpen ? (
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto pl-12 sm:pl-0">
                     <input 
                       type="time" 
                       value={hourConfig.open_at.replace('+00:00', '')} 
@@ -132,7 +132,7 @@ export default function Step2DeliveryHours({ form, setForm }: Step2Props) {
                           operatingHours: prev.operatingHours.map(h => h.day === dayName ? { ...h, open_at: formatted } : h)
                         }));
                       }}
-                      className="text-xs p-1.5 border border-slate-200 rounded-lg outline-none focus:border-blue-500 w-24"
+                      className="text-xs p-1.5 border border-slate-200 rounded-lg outline-none focus:border-blue-500 min-w-[96px] flex-1 sm:flex-initial sm:w-24"
                     />
                     <span className="text-slate-400 text-xs">to</span>
                     <input 
@@ -147,7 +147,7 @@ export default function Step2DeliveryHours({ form, setForm }: Step2Props) {
                           operatingHours: prev.operatingHours.map(h => h.day === dayName ? { ...h, close_at: formatted } : h)
                         }));
                       }}
-                      className="text-xs p-1.5 border border-slate-200 rounded-lg outline-none focus:border-blue-500 w-24"
+                      className="text-xs p-1.5 border border-slate-200 rounded-lg outline-none focus:border-blue-500 min-w-[96px] flex-1 sm:flex-initial sm:w-24"
                     />
                   </div>
                 ) : (

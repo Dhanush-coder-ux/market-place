@@ -132,34 +132,34 @@ export default function Shop() {
       <style>{STYLES}</style>
 
       {/* 1. HERO TEXT SECTION */}
-      <div className="flex flex-col items-center text-center mb-12 max-w-3xl">
-        <div className="title-reveal inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-white text-xs font-bold   mb-6">
+      <div className="flex flex-col items-center text-center mb-8 sm:mb-12 px-4 max-w-3xl">
+        <div className="title-reveal inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 backdrop-blur-md border border-white/30 text-white text-xs font-bold mb-4 sm:mb-6">
           <Store size={14} /> Management Console
         </div>
 
-        <h1 className="title-reveal text-5xl md:text-7xl font-black text-white leading-tight mb-6">
+        <h1 className="title-reveal text-3xl sm:text-5xl md:text-7xl font-black text-white leading-tight mb-4 sm:mb-6">
           Your <span className="text-amber-200">Digital Empire</span> <br/> Starts Here
         </h1>
 
-        <p className="title-reveal text-sky-50 text-lg md:text-xl font-medium opacity-90 max-w-xl">
+        <p className="title-reveal text-sky-50 text-base sm:text-lg md:text-xl font-medium opacity-90 max-w-xl">
           Manage your storefronts, track live orders, and scale your business from the clouds.
         </p>
       </div>
 
       {/* 2. INTERACTIVE CARDS SECTION */}
-      <div className="w-full max-w-6xl flex  md:gap-4 lg:gap-8 px-4 items-start justify-center">
+      <div className="w-full max-w-6xl flex flex-col lg:flex-row gap-6 md:gap-4 lg:gap-8 px-4 pb-24 lg:pb-12 items-center lg:items-start justify-center">
         
         {/* The Main Store Card */}
-        <div className="title-reveal" style={{ animationDelay: "0.4s" }}>
+        <div className="title-reveal w-full max-w-[370px]" style={{ animationDelay: "0.4s" }}>
           <App shopInfo={shopInfo} setShow={setShowInfo}/>
         </div>
 
         {/* The Fly-out Info Panel */}
         {showInfo && (
-          <div className="title-reveal flex flex-col overflow-hidden bg-white border border-white/10 rounded-lg md:rounded-r-3xl md:rounded-l-none shadow-2xl"
-               style={{ width: 340, height: 520, animationDelay: "0.1s" }}>
+          <div className="title-reveal flex flex-col overflow-hidden bg-white border border-white/10 rounded-xl md:rounded-r-3xl lg:rounded-l-none shadow-2xl w-full max-w-[370px] lg:w-[340px] lg:min-h-[520px]"
+               style={{ animationDelay: "0.1s" }}>
             
-            <div className="p-8">
+            <div className="p-5 sm:p-8">
               <div className="flex justify-between items-start mb-6">
                 <div className="w-14 h-14 rounded-lg bg-blue-600 flex items-center justify-center text-2xl font-black text-white">
                   {shopInfo.shopName[0]}

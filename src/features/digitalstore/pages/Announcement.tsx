@@ -468,7 +468,7 @@ export default function AnnouncementsPage() {
       <div style={{ fontFamily: "Inter, sans-serif" }}>
 
         {/* ── Page Header ────────────────────────────────────────── */}
-        <div className="mb-5 flex items-center justify-between">
+        <div className="mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold text-slate-900">Announcements</h2>
             <p className="text-sm text-slate-500 mt-0.5">
@@ -477,8 +477,8 @@ export default function AnnouncementsPage() {
           </div>
 
           {/* Stat pills + tab switcher */}
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 text-[12px] text-slate-500">
+          <div className="flex flex-wrap items-center justify-between sm:justify-end gap-3">
+            <div className="flex flex-wrap items-center gap-2 text-[12px] text-slate-500">
               <span className="flex items-center gap-1">
                 <CheckCircle2 size={12} className="text-emerald-500" />
                 {publishedCount} published
@@ -848,8 +848,8 @@ export default function AnnouncementsPage() {
               </span>
             </div>
 
-            {/* Table header */}
-            <div className="grid grid-cols-[1fr_110px_140px_110px] gap-4 px-5 py-2.5 border-b border-slate-100 bg-slate-50/40">
+            {/* Table header (desktop only) */}
+            <div className="hidden md:grid grid-cols-[1fr_110px_140px_110px] gap-4 px-5 py-2.5 border-b border-slate-100 bg-slate-50/40">
               {["Message", "Type", "Status", "Actions"].map((h) => (
                 <span key={h} className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">
                   {h}
@@ -870,7 +870,7 @@ export default function AnnouncementsPage() {
               filteredHistory.map((item, idx) => (
                 <div
                   key={item.id}
-                  className={`grid grid-cols-[1fr_110px_140px_110px] gap-4 px-5 py-3.5 items-center hover:bg-slate-50/70 transition-colors ${
+                  className={`flex flex-col md:grid md:grid-cols-[1fr_110px_140px_110px] gap-3 md:gap-4 px-4 sm:px-5 py-3.5 md:items-center hover:bg-slate-50/70 transition-colors ${
                     idx < filteredHistory.length - 1 ? "border-b border-slate-100" : ""
                   }`}
                   style={{ animation: `ann-fadeIn 0.15s ease ${idx * 0.03}s both` }}
@@ -878,7 +878,7 @@ export default function AnnouncementsPage() {
                   {/* Message */}
                   <div>
                     <p className="text-sm font-medium text-slate-800 line-clamp-2 leading-snug">{item.text}</p>
-                    <p className="text-[11px] text-slate-400 mt-1 flex items-center gap-1.5">
+                    <p className="text-[11px] text-slate-400 mt-1 flex flex-wrap items-center gap-1.5">
                       <span>{timeAgo(item.date)}</span>
                       <span>·</span>
                       <span>{fmtDate(item.date)}</span>
@@ -893,41 +893,46 @@ export default function AnnouncementsPage() {
                     </p>
                   </div>
 
-                  <div>
-                    <TypeBadge type={item.type} />
-                  </div>
+                  {/* Mobile inline badges + actions row; desktop grid columns via md:contents */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 md:contents pt-2 border-t border-slate-100 md:border-0 md:pt-0">
+                    <div className="flex flex-wrap items-center gap-2 md:contents">
+                      <div>
+                        <TypeBadge type={item.type} />
+                      </div>
 
-                  <div>
-                    <StatusBadge
-                      status={item.status}
-                      scheduleAt={item.schedule_at}
-                      expireAt={item.expire_at}
-                    />
-                  </div>
+                      <div>
+                        <StatusBadge
+                          status={item.status}
+                          scheduleAt={item.schedule_at}
+                          expireAt={item.expire_at}
+                        />
+                      </div>
+                    </div>
 
-                  {/* Actions */}
-                  <div className="flex gap-1.5">
-                    <button
-                      onClick={() => handleEdit(item)}
-                      title="Edit"
-                      className="w-7 h-7 rounded-lg border border-slate-200 bg-white flex items-center justify-center text-slate-400 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-all cursor-pointer"
-                    >
-                      <Edit3 size={12} />
-                    </button>
-                    <button
-                      onClick={() => handleDuplicate(item)}
-                      title="Duplicate"
-                      className="w-7 h-7 rounded-lg border border-slate-200 bg-white flex items-center justify-center text-slate-400 hover:border-emerald-300 hover:text-emerald-600 hover:bg-emerald-50 transition-all cursor-pointer"
-                    >
-                      <Copy size={12} />
-                    </button>
-                    <button
-                      onClick={() => setDeleteTarget(item)}
-                      title="Delete"
-                      className="w-7 h-7 rounded-lg border border-slate-200 bg-white flex items-center justify-center text-slate-400 hover:border-red-300 hover:text-red-500 hover:bg-red-50 transition-all cursor-pointer"
-                    >
-                      <Trash2 size={12} />
-                    </button>
+                    {/* Actions */}
+                    <div className="flex gap-1.5">
+                      <button
+                        onClick={() => handleEdit(item)}
+                        title="Edit"
+                        className="w-9 h-9 md:w-7 md:h-7 rounded-lg border border-slate-200 bg-white flex items-center justify-center text-slate-400 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-all cursor-pointer"
+                      >
+                        <Edit3 size={13} />
+                      </button>
+                      <button
+                        onClick={() => handleDuplicate(item)}
+                        title="Duplicate"
+                        className="w-9 h-9 md:w-7 md:h-7 rounded-lg border border-slate-200 bg-white flex items-center justify-center text-slate-400 hover:border-emerald-300 hover:text-emerald-600 hover:bg-emerald-50 transition-all cursor-pointer"
+                      >
+                        <Copy size={13} />
+                      </button>
+                      <button
+                        onClick={() => setDeleteTarget(item)}
+                        title="Delete"
+                        className="w-9 h-9 md:w-7 md:h-7 rounded-lg border border-slate-200 bg-white flex items-center justify-center text-slate-400 hover:border-red-300 hover:text-red-500 hover:bg-red-50 transition-all cursor-pointer"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))

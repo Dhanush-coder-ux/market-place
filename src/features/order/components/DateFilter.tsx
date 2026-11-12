@@ -195,16 +195,16 @@ export function DateFilter({ onApply, onClose, isOpen }: DateFilterProps) {
         </div>
       </div>
 
-      <div className="flex">
+      <div className="flex flex-col md:flex-row">
         {/* Presets */}
-        <div className="w-40 border-r border-slate-100 p-3 flex-shrink-0">
-          <p className="text-[10px] font-bold text-slate-400   mb-2 px-2 flex items-center gap-1.5">
+        <div className="w-full md:w-40 border-b md:border-b-0 md:border-r border-slate-100 p-2.5 md:p-3 flex-shrink-0">
+          <p className="text-[10px] font-bold text-slate-400 mb-2 px-1 md:px-2 flex items-center gap-1.5">
             <Zap size={9} strokeWidth={3} /> Quick
           </p>
-          <div className="flex flex-col gap-1">
+          <div className="flex md:flex-col gap-1 overflow-x-auto md:overflow-visible pb-1 md:pb-0 scrollbar-none">
             {PRESETS.map((preset, i) => (
               <button key={preset.label} onClick={() => handlePreset(preset, i)}
-                className={`px-3 py-2 rounded-lg text-left text-[12px] font-semibold transition-all duration-150 w-full ${activePreset === i ? "bg-indigo-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-50 hover:text-indigo-600"}`}>
+                className={`px-3 py-1.5 md:py-2 rounded-lg text-left text-[12px] font-semibold transition-all duration-150 shrink-0 md:w-full ${activePreset === i ? "bg-indigo-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-50 hover:text-indigo-600"}`}>
                 {preset.label}
               </button>
             ))}
@@ -212,35 +212,38 @@ export function DateFilter({ onApply, onClose, isOpen }: DateFilterProps) {
         </div>
 
         {/* Calendars */}
-        <div className="flex-1 p-4 min-w-0">
-          <div className="flex items-center gap-2 mb-4 bg-slate-50 rounded-lg px-4 py-2.5">
+        <div className="flex-1 p-3 sm:p-4 min-w-0">
+          <div className="flex items-center gap-2 mb-4 bg-slate-50 rounded-lg px-3 sm:px-4 py-2.5">
             <div className="flex-1 text-center">
               <p className="text-[10px] font-bold text-slate-400   mb-0.5">Start</p>
-              <p className={`text-sm font-black tracking-tight ${startDate ? "text-indigo-600" : "text-slate-300"}`}>
+              <p className={`text-xs sm:text-sm font-black tracking-tight ${startDate ? "text-indigo-600" : "text-slate-300"}`}>
                 {startDate ? formatDate(startDate) : "Not selected"}
               </p>
             </div>
             <ArrowRight size={14} strokeWidth={2.5} className="text-slate-300 flex-shrink-0" />
             <div className="flex-1 text-center">
               <p className="text-[10px] font-bold text-slate-400   mb-0.5">End</p>
-              <p className={`text-sm font-black tracking-tight ${endDate ? "text-indigo-600" : "text-slate-300"}`}>
+              <p className={`text-xs sm:text-sm font-black tracking-tight ${endDate ? "text-indigo-600" : "text-slate-300"}`}>
                 {endDate ? formatDate(endDate) : "Not selected"}
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
             <div>
               <div className="flex items-center justify-between mb-3">
-                <button onClick={goLeft} className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-slate-100 text-slate-500 transition-colors">
+                <button onClick={goLeft} className="w-8 h-8 md:w-7 md:h-7 rounded-lg flex items-center justify-center hover:bg-slate-100 text-slate-500 transition-colors">
                   <ChevronLeft size={15} strokeWidth={2.5} />
                 </button>
                 <span className="text-[13px] font-black text-slate-800 tracking-tight">{MONTHS[leftMonth]} {leftYear}</span>
-                <div className="w-7 h-7" />
+                <button onClick={goRight} className="md:hidden w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-100 text-slate-500 transition-colors">
+                  <ChevronRight size={15} strokeWidth={2.5} />
+                </button>
+                <div className="hidden md:block w-7 h-7" />
               </div>
               <CalendarGrid year={leftYear} month={leftMonth} startDate={startDate} endDate={endDate} hoverDate={hoverDate} onDayClick={handleDayClick} onDayHover={setHoverDate} />
             </div>
-            <div>
+            <div className="hidden md:block">
               <div className="flex items-center justify-between mb-3">
                 <div className="w-7 h-7" />
                 <span className="text-[13px] font-black text-slate-800 tracking-tight">{MONTHS[rightMonth]} {rightYear}</span>
@@ -270,29 +273,6 @@ export function DateFilter({ onApply, onClose, isOpen }: DateFilterProps) {
         </div>
       </div>
     </FloatingFormCard>
-  );
-}
-
-export default function App() {
-  const [applied, setApplied] = useState<DateRange | null>(null);
-  const [isFilterOpen, setIsFilterOpen] = useState<boolean>(true);
-
-  return (
-    <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-6 gap-4">
-      {applied && (
-        <div className="bg-white rounded-lg px-5 py-3 shadow-sm border border-slate-100 text-sm font-semibold text-slate-700">
-          ✅ Applied: <span className="text-indigo-600">{formatDate(applied.startDate)}</span> → <span className="text-indigo-600">{formatDate(applied.endDate)}</span>
-        </div>
-      )}
-      <DateFilter
-        isOpen={isFilterOpen}
-        onApply={(range) => {
-          setApplied(range);
-          setIsFilterOpen(false);
-        }}
-        onClose={() => setIsFilterOpen(false)}
-      />
-    </div>
   );
 }
 

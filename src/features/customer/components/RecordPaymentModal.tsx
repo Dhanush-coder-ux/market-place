@@ -428,17 +428,17 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
       onClose={handleClose}
       title={`Collect Payment: ${customer?.name || 'Customer'}`}
       footer={
-        <div className="flex items-center justify-end gap-3 w-full">
+        <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 sm:gap-3 w-full">
           <button
             onClick={handleClose}
-            className="px-5 py-2.5 rounded-lg text-xs font-semibold text-slate-500 hover:bg-white border border-transparent hover:border-slate-200 transition-all"
+            className="w-full sm:w-auto px-5 py-2.5 rounded-lg text-xs font-semibold text-slate-500 hover:bg-white border border-slate-200 sm:border-transparent hover:border-slate-200 transition-all text-center"
           >
             Cancel
           </button>
           <button
             onClick={handleSavePayment}
             disabled={isClearing || !selectedOrder || !clearAmount || parseFloat(clearAmount) <= 0 || parseFloat(clearAmount) > maxAllowed}
-            className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-md shadow-blue-200 disabled:opacity-50 transition-all active:scale-95"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-md shadow-blue-200 disabled:opacity-50 transition-all active:scale-95"
           >
             {isClearing ? (
               <><Loader2 className="w-4 h-4 animate-spin" /> Processing...</>
@@ -516,7 +516,7 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
               </button>
             </div>
 
-            <div className="flex gap-8 px-1">
+            <div className="flex flex-wrap gap-4 sm:gap-8 px-1">
               <div>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Outstanding Balance</p>
                 <p className="text-lg font-bold text-rose-500 tabular-nums">₹{invoiceOutstanding.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
@@ -529,7 +529,7 @@ export function RecordPaymentModal({ show, onClose, customer, onSuccess }: Recor
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
                 <ReusableSelect
                   label="Payment Method"

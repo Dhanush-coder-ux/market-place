@@ -234,7 +234,7 @@ const GRNCardView = () => {
   const { getData, loading, error, clearError } = useApi();
   const [purchases, setPurchases] = useState<PurchaseRecord[]>([]);
   const [search, setSearch] = useState("");
-  const [viewMode, setViewMode] = useState<ViewMode>("vertical");
+  const [viewMode, setViewMode] = useState<ViewMode>(() => (typeof window !== "undefined" && window.innerWidth < 768 ? "grid" : "vertical"));
   const [selectedGRN, setSelectedGRN] = useState<ReturnType<typeof toGrnShape> | null>(null);
   const [viewingGRN, setViewingGRN] = useState<ReturnType<typeof toGrnShape> | null>(null);
   const [refreshKey] = useState(0);
@@ -253,8 +253,8 @@ const GRNCardView = () => {
   useEffect(() => {
     if (selectedGRN) {
       setBottomActions(
-        <div className="flex items-center justify-between w-full animate-in fade-in slide-in-from-right-4 duration-300">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 w-full animate-in fade-in slide-in-from-right-4 duration-300">
+          <div className="flex items-center gap-2.5 sm:gap-3">
             <div className="w-7 h-7 rounded-md bg-blue-500 text-white flex items-center justify-center text-[10px] font-black shrink-0">
               <FileText size={14} />
             </div>
@@ -263,7 +263,7 @@ const GRNCardView = () => {
               <p className="text-[10px] font-semibold text-slate-400 font-mono">{selectedGRN.supplier}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             <button
               onClick={() => setSelectedGRN(null)}
               className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 font-semibold text-[11px] transition-colors"

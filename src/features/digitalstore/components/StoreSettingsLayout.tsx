@@ -269,11 +269,11 @@ export function StoreSettingsLayout({ shop }: { shop: any }) {
   const pct  = Math.round((done / checks.length) * 100);
 
   return (
-    <div className="flex flex-col md:flex-row min-h-[600px] bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div className="flex flex-col md:flex-row md:min-h-[600px] bg-white rounded-xl border border-slate-200 overflow-hidden mb-20 md:mb-0">
 
-      {/* ── Left Sidebar ── */}
+      {/* ── Left Sidebar (Horizontal pill bar on mobile, sidebar on md+) ── */}
       <nav className="w-full md:w-56 border-b md:border-b-0 md:border-r border-slate-200 bg-slate-50/60 shrink-0">
-        <div className="p-3 space-y-0.5">
+        <div className="p-2.5 md:p-3 flex md:flex-col gap-1.5 md:gap-0.5 overflow-x-auto no-scrollbar">
           {sidebarItems.map((item) => {
             const isActive   = activeSection === item.id;
             const isDanger   = item.id === "danger";
@@ -281,14 +281,14 @@ export function StoreSettingsLayout({ shop }: { shop: any }) {
               <button
                 key={item.id}
                 onClick={() => setActiveSection(item.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all duration-150 group ${
+                className={`shrink-0 md:w-full flex items-center gap-2 md:gap-3 px-3 py-2 md:py-2.5 rounded-lg text-left transition-all duration-150 group whitespace-nowrap ${
                   isActive
                     ? isDanger
-                      ? "bg-red-50 text-red-600 border-l-2 border-red-500"
-                      : "bg-white text-blue-600 border-l-2 border-blue-600 shadow-sm"
+                      ? "bg-red-50 text-red-600 md:border-l-2 border-red-500 ring-1 md:ring-0 ring-red-200"
+                      : "bg-white text-blue-600 md:border-l-2 border-blue-600 shadow-sm ring-1 md:ring-0 ring-blue-100"
                     : isDanger
-                      ? "text-red-500 hover:bg-red-50/60 border-l-2 border-transparent"
-                      : "text-slate-600 hover:bg-white hover:text-slate-800 border-l-2 border-transparent"
+                      ? "text-red-500 hover:bg-red-50/60 md:border-l-2 border-transparent"
+                      : "text-slate-600 hover:bg-white hover:text-slate-800 md:border-l-2 border-transparent"
                 }`}
               >
                 <item.icon
@@ -299,7 +299,7 @@ export function StoreSettingsLayout({ shop }: { shop: any }) {
                       : isDanger ? "text-red-400" : "text-slate-400 group-hover:text-slate-600"
                   }`}
                 />
-                <span className="text-sm font-medium">{item.label}</span>
+                <span className="text-xs md:text-sm font-medium">{item.label}</span>
               </button>
             );
           })}
@@ -307,7 +307,7 @@ export function StoreSettingsLayout({ shop }: { shop: any }) {
       </nav>
 
       {/* ── Right Content ── */}
-      <div className="flex-1 p-6 overflow-y-auto">
+      <div className="flex-1 p-4 sm:p-6 overflow-y-auto">
 
         {/* ── Store Details ── */}
         {activeSection === "details" && (
@@ -712,18 +712,18 @@ export function StoreSettingsLayout({ shop }: { shop: any }) {
                   <label className="block text-[11px] font-medium text-slate-500 mb-1.5">
                     Type <code className="bg-red-50 text-red-500 px-1 rounded">DELETE</code> to confirm
                   </label>
-                  <div className="flex gap-3">
+                  <div className="flex flex-col sm:flex-row gap-3">
                     <input
                       type="text"
                       value={confirmDelete}
                       onChange={(e) => setConfirmDelete(e.target.value)}
-                      className="h-9 px-3 bg-slate-50 border border-red-200 rounded-lg text-sm text-slate-700 outline-none focus:border-red-400 focus:ring-2 focus:ring-red-50 transition-all"
+                      className="h-10 sm:h-9 px-3 w-full sm:w-auto bg-slate-50 border border-red-200 rounded-lg text-sm text-slate-700 outline-none focus:border-red-400 focus:ring-2 focus:ring-red-50 transition-all"
                       placeholder="DELETE"
                     />
                     <button
                       onClick={handleDeleteStore}
                       disabled={deleting || confirmDelete !== "DELETE"}
-                      className="h-9 px-4 bg-red-600 hover:bg-red-700 disabled:opacity-40 text-white text-sm font-semibold rounded-lg transition-all inline-flex items-center gap-2 cursor-pointer disabled:cursor-not-allowed"
+                      className="h-10 sm:h-9 px-4 w-full sm:w-auto justify-center bg-red-600 hover:bg-red-700 disabled:opacity-40 text-white text-sm font-semibold rounded-lg transition-all inline-flex items-center gap-2 cursor-pointer disabled:cursor-not-allowed"
                     >
                       <Trash2 size={13} />
                       {deleting ? "Deleting…" : "Permanently Delete"}

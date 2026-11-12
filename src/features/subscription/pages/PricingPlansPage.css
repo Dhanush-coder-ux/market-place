@@ -9,7 +9,7 @@
   --pos:#12995A; --pos-bg:#E3F7EC; --pos-bd:#8CDCB4; --pos-tx:#0E6B41;
   --warn:#B5761C; --warn-bg:#FEF4D8; --warn-bd:#F3CE79; --warn-tx:#8B5A15;
   --coral:#CE5028; --coral-bg:#FCE9E1; --coral-bd:#F3BCA4; --coral-tx:#7E3318;
-  --font-d:'Space Grotesk', .plans-billing-page sans-serif; --font-b:'Inter', .plans-billing-page sans-serif; --font-m:'IBM Plex Mono', .plans-billing-page monospace;
+  --font-d:'Inter', sans-serif; --font-b:'Inter', sans-serif; --font-m:'IBM Plex Mono', monospace;
   --r:13px; --r-s:9px; --r-p:999px;
   --sh:0 1px 3px rgba(19, .plans-billing-page 24, .plans-billing-page 34, .plans-billing-page .05), .plans-billing-page 0 1px 2px rgba(19, .plans-billing-page 24, .plans-billing-page 34, .plans-billing-page .03);
   --sh-m:0 4px 18px -6px rgba(19, .plans-billing-page 24, .plans-billing-page 34, .plans-billing-page .13), .plans-billing-page 0 1px 3px rgba(19, .plans-billing-page 24, .plans-billing-page 34, .plans-billing-page .05);

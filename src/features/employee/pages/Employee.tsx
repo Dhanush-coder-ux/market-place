@@ -1,8 +1,8 @@
-import { Search, Filter, Users, ExternalLink, Eye, Pencil, MoreVertical, Trash2, Mail, RefreshCw } from 'lucide-react';
+import { Filter, Users, ExternalLink, Eye, Pencil, MoreVertical, Trash2, Mail, RefreshCw } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { StatCard } from '@/components/common/StatsCard';
 import SkeletonLoader from "@/components/common/SkeletonLoader";
-import { GradientButton } from '@/components/ui/GradientButton';
+import { GradientButton, SearchBar, Button } from '@/components/ui';
 import { useApi } from '@/context/ApiContext';
 import { ENDPOINTS, SHOP_ID } from '@/services/endpoints';
 import type { EmployeeRecord } from '@/types/api';
@@ -279,24 +279,25 @@ export default function Employee() {
       )}
 
       {/* Toolbar */}
-      <div className="bg-white border border-slate-100 rounded-lg p-2.5 px-3.5 flex flex-wrap items-center gap-2 shadow-sm mt-2">
-        <div className="relative w-80 shrink-0">
-          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-          <input
-            type="text"
-            placeholder="Search employee name, role…"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full h-8 pl-8 pr-3 text-[12px] font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-md placeholder:text-slate-400 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
-          />
-        </div>
-        <button
+      <div className="bg-white border border-slate-200/80 rounded-xl p-2.5 px-3 sm:px-3.5 flex flex-wrap items-center gap-2 shadow-xs mt-2">
+        <SearchBar
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          onClear={() => setSearchTerm("")}
+          placeholder="Search employee name, role…"
+          size="sm"
+          className="w-full sm:w-72 md:w-80 shrink-0"
+        />
+        <Button
+          type="button"
+          variant="outline"
           onClick={() => setIsFilterOpen(true)}
-          className={`h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0 ${Boolean(fromDate || toDate) ? "border-blue-200 text-blue-600 bg-blue-50/50" : "border-slate-200 text-slate-650 bg-white hover:bg-slate-50"}`}
+          className={Boolean(fromDate || toDate) ? "border-blue-200 text-blue-600 bg-blue-50/60" : ""}
         >
-          <Filter size={13} />
-          {Boolean(fromDate || toDate) && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />}
-        </button>
+          <Filter size={14} />
+          Filters
+          {Boolean(fromDate || toDate) && <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />}
+        </Button>
         <ColumnPicker
           availableKeys={availableKeys}
           selectedKeys={selectedKeys}
@@ -342,7 +343,108 @@ export default function Employee() {
 
       {/* Table Section */}
       <div className="bg-white rounded-lg shadow-sm border border-slate-100 min-w-0 overflow-hidden flex flex-col flex-1 min-h-0 mt-2">
-        <div className="overflow-x-auto overflow-y-auto flex-1 pf-scroll">
+        {/* Mobile Card View */}
+        <div className="md:hidden flex-1 overflow-y-auto p-2.5 space-y-2.5">
+          {filteredEmployees.length === 0 ? (
+            <div className="py-16 text-center text-slate-400 font-medium italic text-sm">No employees matching your filters.</div>
+          ) : (
+            filteredEmployees.map((emp) => {
+              const empId = String(emp.employee_id || emp.id);
+              const isSelected = selectedEmployees.has(empId);
+              const role = (emp.datas as any)?.role || (emp as any).role;
+              const email = (emp.datas as any)?.email || (emp as any).email;
+              const phone = (emp.datas as any)?.mobile_number || (emp as any).mobile_number || (emp.datas as any)?.phone;
+
+              return (
+                <div
+                  key={`mob-emp-${empId}`}
+                  onClick={() => navigate(`/employee/${empId}`)}
+                  className={`rounded-xl border p-3 transition-all active:scale-[0.99] cursor-pointer ${
+                    isSelected ? "border-blue-400 bg-blue-50/30" : "border-slate-200 bg-white shadow-xs"
+                  }`}
+                >
+                  <div className="flex items-start gap-2.5">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleSelectEmployee(empId)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="mt-1 rounded border-slate-300 text-blue-600 focus:ring-blue-500/20 w-4 h-4 shrink-0"
+                    />
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 border border-blue-100 flex items-center justify-center font-bold text-sm shrink-0">
+                      {String(emp.name || "E").charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-bold text-slate-900 truncate">{emp.name || "Unknown"}</p>
+                          {role && (
+                            <span className="inline-block mt-0.5 text-[10px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
+                              {String(role)}
+                            </span>
+                          )}
+                        </div>
+                        {emp.accepted ? (
+                          <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border bg-emerald-50 text-emerald-600 border-emerald-100">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            Accepted
+                          </span>
+                        ) : (
+                          <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border bg-amber-50 text-amber-600 border-amber-100">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                            Pending
+                          </span>
+                        )}
+                      </div>
+                      {(phone || email) && (
+                        <div className="mt-1 text-[11px] text-slate-500 space-y-0.5">
+                          {phone && <p className="font-medium text-slate-600">{String(phone)}</p>}
+                          {email && <p className="truncate text-slate-400">{String(email)}</p>}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mt-2.5 pt-2 border-t border-slate-100 flex flex-wrap items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                    {!emp.accepted && (
+                      <button
+                        type="button"
+                        onClick={() => handleResendVerification(emp)}
+                        className="h-8 px-2.5 rounded-lg bg-blue-50 text-blue-700 text-[11px] font-semibold flex items-center gap-1"
+                      >
+                        <Mail size={12} /> Resend
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/employee/${empId}`)}
+                      className="h-8 px-2.5 rounded-lg bg-emerald-50 text-emerald-700 text-[11px] font-semibold flex items-center gap-1"
+                    >
+                      <Eye size={13} /> View
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/employee/${empId}/edit`)}
+                      className="h-8 px-2.5 rounded-lg bg-amber-50 text-amber-700 text-[11px] font-semibold flex items-center gap-1"
+                    >
+                      <Pencil size={12} /> Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setEmployeeToDelete(emp); setIsDeleteDialogOpen(true); }}
+                      className="h-8 w-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center"
+                      title="Delete Employee"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        <div className="hidden md:block overflow-x-auto overflow-y-auto flex-1 pf-scroll">
           <table className="w-full text-left border-collapse relative">
             <thead className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0]">
               <tr>

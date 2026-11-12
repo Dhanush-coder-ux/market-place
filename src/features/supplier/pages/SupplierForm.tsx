@@ -13,6 +13,7 @@ import {
   Layers
 } from "lucide-react";
 import Input from "@/components/ui/Input";
+import { Textarea } from "@/components/ui";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import { useApi } from "@/context/ApiContext";
@@ -407,7 +408,7 @@ const SupplierForm = () => {
         <div className="md:col-span-8 space-y-8">
           
           {/* Identity Box */}
-          <div className="bg-white rounded-lg border border-slate-200 p-8 shadow-sm space-y-8 relative overflow-hidden">
+          <div className="bg-white rounded-lg border border-slate-200 p-4 sm:p-6 md:p-8 shadow-sm space-y-6 sm:space-y-8 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50/50 rounded-full -mr-16 -mt-16" />
             <div className="flex items-center gap-3 border-b border-slate-50 pb-6">
               <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
@@ -482,7 +483,7 @@ const SupplierForm = () => {
           </div>
 
           {/* Contact & Location Box */}
-          <div className="bg-white rounded-lg border border-slate-200 p-8 shadow-sm space-y-8">
+          <div className="bg-white rounded-lg border border-slate-200 p-4 sm:p-6 md:p-8 shadow-sm space-y-6 sm:space-y-8">
             <div className="flex items-center gap-3 border-b border-slate-50 pb-6">
               <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
                 <Globe size={20} />
@@ -542,14 +543,13 @@ const SupplierForm = () => {
                   placeholder="000 000"
                 />
               </div>
-              <div className="md:col-span-2 space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 ml-1">Street Address <span className="normal-case font-normal text-slate-400">(optional)</span></label>
-                <textarea
+              <div className="md:col-span-2">
+                <Textarea
+                  label="Street Address (optional)"
                   name="address"
                   value={formData.address}
                   onChange={handleChange}
                   rows={3}
-                  className="w-full bg-slate-50 border border-slate-100 rounded-lg px-4 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-100 md:transition-all placeholder:text-slate-300 resize-none"
                   placeholder="Enter full address details..."
                 />
               </div>
@@ -561,16 +561,13 @@ const SupplierForm = () => {
         <div className="md:col-span-4 space-y-8">
           
           {/* Tax Info Box */}
-          <div className="bg-white rounded-lg border border-slate-200 p-8 shadow-sm space-y-8 relative overflow-hidden">
+          <div className="bg-white rounded-lg border border-slate-200 p-4 sm:p-6 md:p-8 shadow-sm space-y-6 sm:space-y-8 relative overflow-hidden">
             <div className="absolute bottom-0 right-0 w-24 h-24 bg-blue-50 rounded-full -mr-8 -mb-8 blur-2xl" />
             <div className="flex items-center gap-3 border-b border-slate-50 pb-6">
               <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center text-blue-600">
                 <Tag size={20} />
               </div>
-              <div>
-                <h3 className="text-[10px] font-black   text-slate-800">Tax Information</h3>
-                <p className="text-[11px] font-bold text-slate-400">Compliance details</p>
-              </div>
+              <h3 className="text-xs font-semibold text-slate-800 uppercase tracking-wider">Tax Information</h3>
             </div>
 
             <div className="space-y-6">
@@ -593,32 +590,28 @@ const SupplierForm = () => {
           </div>
 
           {/* Notes Box */}
-          <div className="bg-white rounded-lg border border-slate-200 p-8 shadow-sm space-y-6">
+          <div className="bg-white rounded-lg border border-slate-200 p-4 sm:p-6 md:p-8 shadow-sm space-y-5 sm:space-y-6">
             <div className="flex items-center gap-3 border-b border-slate-50 pb-4">
               <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400">
                 <FileText size={16} />
               </div>
-              <h3 className="text-[10px] font-black text-slate-800">Internal Notes <span className="normal-case font-normal text-slate-400">(optional)</span></h3>
+              <h3 className="text-xs font-semibold text-slate-800 uppercase tracking-wider">Internal Notes <span className="normal-case font-normal text-slate-400">(optional)</span></h3>
             </div>
-            <textarea
+            <Textarea
               name="notes"
               value={formData.notes}
               onChange={handleChange}
               rows={5}
-              className="w-full bg-slate-50 border border-slate-100 rounded-lg px-4 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-100 md:transition-all placeholder:text-slate-300 resize-none"
               placeholder="Additional comments about this partner..."
             />
           </div>
-          <div className="bg-white rounded-lg border border-slate-200 p-8 shadow-sm space-y-6">
+          <div className="bg-white rounded-lg border border-slate-200 p-4 sm:p-6 md:p-8 shadow-sm space-y-5 sm:space-y-6">
             <div className="flex items-center justify-between border-b border-slate-50 pb-4">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-[#286038]/10 flex items-center justify-center text-[#286038]">
                   <Layers size={16} />
                 </div>
-                <div>
-                  <h3 className="text-[10px] font-black text-slate-800 uppercase tracking-wide">Custom Fields</h3>
-                  <p className="text-[11px] font-bold text-slate-400">Additional supplier attributes</p>
-                </div>
+                <h3 className="text-xs font-semibold text-slate-800 uppercase tracking-wider">Custom Fields</h3>
               </div>
               <button
                 type="button"
@@ -669,7 +662,7 @@ const SupplierForm = () => {
                       </div>
                     </div>
                     {field.type === 'boolean' ? (
-                      <div className="flex items-center gap-8 h-10 px-4 rounded-lg border border-slate-200 bg-slate-50/30">
+                      <div className="flex flex-wrap items-center gap-4 sm:gap-8 min-h-10 h-auto py-2 px-4 rounded-lg border border-slate-200 bg-slate-50/30">
                         <label className="inline-flex items-center gap-2 cursor-pointer select-none">
                           <input
                             type="checkbox"

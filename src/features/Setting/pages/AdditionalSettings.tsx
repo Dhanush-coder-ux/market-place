@@ -37,7 +37,7 @@ export const AdditionalSettings = ({
   initialData = [],
   onSave,
   title = "Custom Configurations",
-  description = "Manage dynamic key-value pairs for your environment.",
+  description: _description = "Manage dynamic key-value pairs for your environment.",
   availableSelectOptions = [],
 }: AdditionalSettingsProps) => {
   const [settings, setSettings] = useState<SettingRow[]>(
@@ -207,10 +207,7 @@ const dropdownOptions = selectedCategory
             <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
               <Settings2 size={20} />
             </div>
-            <div>
-              <h2 className="text-[15px] font-semibold text-slate-800">{title}</h2>
-              <p className="text-xs text-slate-500 mt-0.5">{description}</p>
-            </div>
+            <h2 className="text-[15px] font-semibold text-slate-800">{title}</h2>
           </div>
           <Button
             onClick={addSetting}
@@ -221,7 +218,8 @@ const dropdownOptions = selectedCategory
           </Button>
           <button
             onClick={addSetting}
-            className="w-9 h-9 flex items-center justify-center bg-blue-50 text-blue-600 rounded-lg md:hidden"
+            aria-label="Add row"
+            className="w-10 h-10 flex items-center justify-center bg-blue-50 text-blue-600 rounded-lg md:hidden shrink-0"
           >
             <Plus size={18} />
           </button>
@@ -309,7 +307,7 @@ const dropdownOptions = selectedCategory
 
       {/* Mobile Fixed Action Bar */}
       {isMobile && (
-        <div className="fixed bottom-[72px] left-0 right-0 px-4 pt-4 pb-4 bg-white/95 backdrop-blur-3xl border-t border-slate-200 z-[100] flex gap-3 shadow-[0_-15px_45px_rgba(0,0,0,0.12)]">
+        <div className="fixed bottom-[calc(60px+env(safe-area-inset-bottom))] left-0 right-0 px-4 py-3 bg-white/95 backdrop-blur-3xl border-t border-slate-200 z-[100] flex gap-3 shadow-[0_-15px_45px_rgba(0,0,0,0.12)]">
           <Button
             onClick={() => onSave?.(settings)}
             className="flex-1 bg-blue-600 hover:bg-blue-700 text-white h-12 rounded-lg font-bold shadow-lg shadow-blue-200 flex items-center justify-center gap-2"

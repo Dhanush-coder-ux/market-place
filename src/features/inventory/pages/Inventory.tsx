@@ -38,7 +38,7 @@ import { StatCard } from "@/components/common/StatsCard";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
-import { ReusableSelect } from "@/components/ui/ReusableSelect";
+import { ReusableSelect, SearchBar, Button } from "@/components/ui";
 import { AntBadge } from "@/components/ui/AntBadge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 // --- Types (unchanged) ---
@@ -1231,8 +1231,8 @@ const InventoryPage = () => {
   useEffect(() => {
     if (selectedItems.size > 1) {
       setBottomActions(
-        <div className="flex items-center justify-between w-full animate-in fade-in slide-in-from-right-4 duration-300">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 w-full animate-in fade-in slide-in-from-right-4 duration-300">
+          <div className="flex items-center gap-2.5 sm:gap-3">
             <div className="w-7 h-7 rounded-md bg-blue-500 text-white flex items-center justify-center text-[10px] font-black shrink-0">
               <Package size={14} />
             </div>
@@ -1240,7 +1240,7 @@ const InventoryPage = () => {
               <p className="text-[12px] font-bold text-slate-800 leading-tight">Selected {selectedItems.size} Products</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             <button
               onClick={() => navigate(`/stock-adjustment`)}
               className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-[11px] transition-colors"
@@ -1502,28 +1502,29 @@ const InventoryPage = () => {
       )}
 
       {/* Toolbar */}
-      <div className="bg-white border border-slate-100 rounded-lg p-2.5 px-3.5 flex flex-wrap items-center gap-2 shadow-sm mt-2">
-        <div className="relative w-80 shrink-0">
-          <Search
-            size={13}
-            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-          />
-          <input
-            type="text"
-            placeholder="Search by name, barcode, category…"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-8 pl-8 pr-3 text-[12px] font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-md placeholder:text-slate-400 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
-          />
-        </div>
-        <button
+      <div className="bg-white border border-slate-200/80 rounded-xl p-2.5 px-3 sm:px-3.5 flex flex-wrap items-center gap-2 shadow-xs mt-2">
+        <SearchBar
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          onClear={() => setSearchQuery("")}
+          placeholder="Search by name, barcode, category…"
+          size="sm"
+          className="w-full sm:w-72 md:w-80 shrink-0"
+        />
+        <Button
+          type="button"
+          variant="outline"
           onClick={() => setIsFilterOpen(true)}
-          className={`h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0 ${activeFiltersCount > 0 ? "border-blue-200 text-blue-600 bg-blue-50/50" : "border-slate-200 text-slate-650 bg-white hover:bg-slate-50"}`}
+          className={activeFiltersCount > 0 ? "border-blue-200 text-blue-600 bg-blue-50/60" : ""}
         >
-          <Filter size={13} />
+          <Filter size={14} />
           Filters
-          {activeFiltersCount > 0 && <span className="ml-1 px-1.5 py-0.5 bg-blue-600 text-white rounded-full text-[9px] font-black">{activeFiltersCount}</span>}
-        </button>
+          {activeFiltersCount > 0 && (
+            <span className="ml-0.5 px-1.5 py-0.5 bg-blue-600 text-white rounded-full text-[10px] font-bold">
+              {activeFiltersCount}
+            </span>
+          )}
+        </Button>
 
         {searchQuery && (
           <span className="text-[11px] text-slate-400 font-medium ml-1 shrink-0">
@@ -1672,7 +1673,141 @@ const InventoryPage = () => {
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto overflow-y-auto flex-1">
+          <>
+          {/* Mobile Card View */}
+          <div className="md:hidden flex-1 overflow-y-auto p-2.5 space-y-2.5">
+            {filteredInventory.length === 0 ? (
+              <div className="py-16 flex flex-col items-center gap-2 text-center">
+                <Search size={18} className="text-slate-300" />
+                <p className="text-[12px] font-medium text-slate-400">
+                  {searchQuery ? (
+                    <>No results for <span className="text-slate-600">"{searchQuery}"</span></>
+                  ) : "No matching inventory items"}
+                </p>
+              </div>
+            ) : (
+              filteredInventory.map((item: InventoryItem, index) => {
+                const itemAny: any = item;
+                const iDatas: any = item.datas || {};
+                const imgRaw = itemAny.image_url || iDatas.image_url || itemAny.images?.[0];
+                const imgSrc = Array.isArray(imgRaw) ? imgRaw[0] : imgRaw;
+                const stockAnalysis = analyzeProductStock(item);
+                const stockQty = Number(item.stocks ?? iDatas.stocks ?? 0);
+                const statusBadge = stockAnalysis.hasOutOfStock
+                  ? { label: "Out of Stock", cls: "bg-red-50 text-red-700 border-red-200" }
+                  : stockAnalysis.hasLowStock
+                  ? { label: "Low Stock", cls: "bg-amber-50 text-amber-700 border-amber-200" }
+                  : { label: "In Stock", cls: "bg-emerald-50 text-emerald-700 border-emerald-200" };
+                const isSelected = selectedItems.has(item.id);
+                const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+
+                return (
+                  <div
+                    key={`mob-inv-${item.id}`}
+                    ref={isMobile && index === filteredInventory.length - 1 ? lastElementRef : null}
+                    onClick={() => navigate(`/product/${item.id}`)}
+                    className={`rounded-xl border p-3 transition-all active:scale-[0.99] cursor-pointer ${
+                      isSelected ? "border-blue-400 bg-blue-50/30" : "border-slate-200 bg-white shadow-xs"
+                    }`}
+                  >
+                    <div className="flex items-start gap-2.5">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelectItem(item.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="mt-1 rounded border-slate-300 text-blue-600 focus:ring-blue-500/20 w-4 h-4 shrink-0"
+                      />
+                      <div className="w-11 h-11 rounded-lg bg-slate-100 border border-slate-200/70 flex items-center justify-center overflow-hidden shrink-0">
+                        {typeof imgSrc === "string" && imgSrc ? (
+                          <img src={imgSrc} alt={item.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <Package size={18} className="text-slate-400" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-[13px] font-bold text-slate-900 leading-snug line-clamp-2">{item.name || "Unnamed Item"}</p>
+                          <span className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold border ${statusBadge.cls}`}>
+                            {statusBadge.label}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1.5 mt-1 text-[11px] text-slate-500">
+                          {(itemAny.sku || itemAny.ui_id) && (
+                            <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-[10px] text-slate-600">
+                              {itemAny.sku || itemAny.ui_id}
+                            </span>
+                          )}
+                          {(itemAny.category_infos?.name || iDatas.category || item.category) && (
+                            <span className="bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded text-[10px] font-semibold">
+                              {itemAny.category_infos?.name || iDatas.category || item.category}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-2.5 pt-2 border-t border-slate-100 grid grid-cols-3 gap-2 text-[11px]">
+                      <div>
+                        <span className="text-[9px] font-bold uppercase text-slate-400 block">Sell Price</span>
+                        <span className="font-bold text-slate-900 tabular-nums">
+                          {item.sell_price != null ? `₹${Number(item.sell_price).toLocaleString("en-IN")}` : "—"}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[9px] font-bold uppercase text-slate-400 block">Location</span>
+                        <span className="font-semibold text-slate-600 truncate block">
+                          {(item as any).storage_location_infos?.storage_location || (item as any).storage_location || iDatas.storage_location || "—"}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[9px] font-bold uppercase text-slate-400 block">Stock</span>
+                        <span className={`font-bold tabular-nums ${
+                          stockAnalysis.hasOutOfStock ? "text-red-600" : stockAnalysis.hasLowStock ? "text-amber-600" : "text-emerald-700"
+                        }`}>
+                          {stockQty} {itemAny.unit || ""}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="mt-2.5 pt-2 border-t border-slate-100 flex flex-wrap items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/product/${item.id}`)}
+                        className="h-8 px-2.5 rounded-lg bg-emerald-50 text-emerald-700 text-[11px] font-semibold flex items-center gap-1"
+                      >
+                        <Eye size={13} /> View
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/stock-adjustment`, { state: { product: item } })}
+                        className="h-8 px-2.5 rounded-lg bg-blue-50 text-blue-700 text-[11px] font-semibold flex items-center gap-1"
+                      >
+                        <RefreshCw size={12} /> Adjust
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/stock-movement`, { state: { product: item } })}
+                        className="h-8 px-2.5 rounded-lg bg-slate-100 text-slate-700 text-[11px] font-semibold flex items-center gap-1"
+                      >
+                        <History size={12} /> History
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/purchase/add`, { state: { product: item } })}
+                        className="h-8 px-2.5 rounded-lg bg-amber-50 text-amber-700 text-[11px] font-semibold flex items-center gap-1"
+                      >
+                        <Plus size={12} /> Restock
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+            {loadingMore && <div className="py-4 text-center text-xs text-slate-500">Loading more...</div>}
+          </div>
+
+          <div className="hidden md:block overflow-x-auto overflow-y-auto flex-1">
             <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
 
               {/* Sticky header */}
@@ -1745,7 +1880,7 @@ const InventoryPage = () => {
                     onSelect={(prod) => toggleSelectItem(prod.id)}
                     isExpanded={expandedRows.has(item.id)}
                     toggleExpand={toggleExpand}
-                    innerRef={index === filteredInventory.length - 1 ? lastElementRef : null}
+                    innerRef={!(typeof window !== "undefined" && window.innerWidth < 768) && index === filteredInventory.length - 1 ? lastElementRef : null}
                   />
                 ))}
               </tbody>
@@ -1763,6 +1898,7 @@ const InventoryPage = () => {
               </div>
             )}
           </div>
+          </>
         )}
 
         {/* Footer row count */}

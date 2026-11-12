@@ -265,19 +265,19 @@ const ProfileForm: React.FC = () => {
   if (loading && id) return <div className="py-20 text-center"><Loader /></div>;
 
   return (
-    <div className="min-h-screen bg-slate-50/50 font-sans">
+    <div className="bg-slate-50/50 font-sans pb-24 md:pb-8">
       <NavigationBlocker data={formData} isLoading={loadingData} isSubmitting={submitting} />
       <div className="mx-auto space-y-4 relative">
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* BOX 1: IDENTITY (Spans 6 cols) */}
           <div className="w-full bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all hover:shadow-md h-full">
-            <div className="px-6 py-4 bg-gradient-to-r from-blue-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
+            <div className="px-4 sm:px-6 py-4 bg-gradient-to-r from-blue-50/50 to-transparent border-b border-slate-100 flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
                 <Store size={18} />
               </div>
               <h2 className="text-xs font-bold text-slate-800">Shop Identity</h2>
             </div>
-            <div className="p-8 space-y-6">
+            <div className="p-4 sm:p-6 md:p-8 space-y-6">
               <div className="flex flex-col md:flex-row gap-6">
                 <div className="w-full md:w-32 shrink-0">
                   <ImageUpload
@@ -340,7 +340,7 @@ const ProfileForm: React.FC = () => {
               </div>
               <h2 className="text-xs font-bold text-slate-800">Legal & Tax</h2>
             </div>
-            <div className="p-8 space-y-6">
+            <div className="p-4 sm:p-6 md:p-8 space-y-6">
               <label className="flex items-center gap-3 cursor-pointer group p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
                 <input
                   type="checkbox"
@@ -457,7 +457,7 @@ const ProfileForm: React.FC = () => {
               </div>
               <h2 className="text-xs font-bold text-slate-800">Contact & Location</h2>
             </div>
-            <div className="p-8 space-y-6">
+            <div className="p-4 sm:p-6 md:p-8 space-y-6">
               <div className="space-y-1.5">
                 <label className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 ml-1">
                   Pick Location on Map

@@ -482,9 +482,6 @@ export const ProfileSettingsPage = () => {
                 <activeItem.icon size={13} />
                 {activeItem.label}
               </span>
-              <span className="text-[12px] text-slate-400 font-medium">
-                — {activeItem.description}
-              </span>
             </div>
           )}
 
@@ -497,12 +494,12 @@ export const ProfileSettingsPage = () => {
 
       {/* ── GST Downgrade Confirmation Dialog ── */}
       {showGstConfirm && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4">
           <div
             className="fixed inset-0 bg-black/40"
             onClick={() => !gstConfirmLoading && setShowGstConfirm(false)}
           />
-          <div className="relative w-full max-w-[420px] bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden">
+          <div className="relative w-full max-w-[420px] max-h-[90dvh] flex flex-col bg-white rounded-t-2xl sm:rounded-xl shadow-xl border border-slate-200 overflow-hidden pb-[env(safe-area-inset-bottom)] sm:pb-0">
 
             {/* Header */}
             <div className="px-5 py-4 border-b border-slate-100 flex items-start gap-3">
@@ -590,14 +587,14 @@ export const ProfileSettingsPage = () => {
 
       {/* ── GST Enable / Edit GSTIN Dialog ── */}
       {showGstRegisterModal && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4">
           <div
             className="fixed inset-0 bg-black/40 backdrop-blur-[2px] transition-opacity"
             onClick={() => !gstRegisterLoading && setShowGstRegisterModal(false)}
           />
-          <div className="relative w-full max-w-[480px] bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="relative w-full max-w-[480px] max-h-[90dvh] flex flex-col bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             {/* Header */}
-            <div className="px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-blue-50/80 via-indigo-50/30 to-white flex items-start gap-3.5">
+            <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-100 bg-gradient-to-r from-blue-50/80 via-indigo-50/30 to-white flex items-start gap-3.5 shrink-0">
               <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center flex-shrink-0 shadow-sm text-white">
                 <Percent size={18} />
               </div>
@@ -621,7 +618,7 @@ export const ProfileSettingsPage = () => {
             </div>
 
             {/* Form body */}
-            <div className="p-6 space-y-4">
+            <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
@@ -710,7 +707,7 @@ export const ProfileSettingsPage = () => {
             </div>
 
             {/* Actions */}
-            <div className="px-6 py-4 bg-slate-50/70 border-t border-slate-100 flex items-center justify-end gap-2.5">
+            <div className="px-4 sm:px-6 py-3.5 sm:py-4 pb-[max(14px,env(safe-area-inset-bottom))] sm:pb-4 bg-slate-50/70 border-t border-slate-100 flex items-center justify-end gap-2.5 shrink-0">
               <button
                 type="button"
                 onClick={() => setShowGstRegisterModal(false)}

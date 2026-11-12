@@ -561,8 +561,81 @@ const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
         </div>
       </div>
 
-      {/* Table */}
-      <div className="border border-slate-200 rounded-lg overflow-hidden">
+      {/* Mobile Card List for Variant Combinations */}
+      <div className="md:hidden space-y-2.5">
+        {combinations.map((combo) => (
+          <div
+            key={combo.id}
+            className={`border border-slate-200 rounded-xl p-3 bg-white space-y-2.5 ${!combo.active ? "opacity-50" : ""}`}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex flex-wrap gap-1">
+                {attrKeys.map((k) => (
+                  <span key={k} className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-700">
+                    {combo.attributes[k]}
+                  </span>
+                ))}
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={combo.active}
+                onClick={() => update(combo.id, "active", !combo.active)}
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ${combo.active ? "bg-blue-500" : "bg-slate-200"}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200 ${combo.active ? "translate-x-4" : "translate-x-0"}`} />
+              </button>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-400 mb-0.5">SKU</label>
+                <input
+                  className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-mono focus:outline-none focus:border-blue-400"
+                  placeholder="SKU-001"
+                  value={combo.sku}
+                  onChange={(e) => update(combo.id, "sku", e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-400 mb-0.5">Price (₹)</label>
+                <input
+                  type="number"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs focus:outline-none focus:border-blue-400"
+                  placeholder={basePriceStr || "0"}
+                  value={combo.price}
+                  onChange={(e) => update(combo.id, "price", e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-400 mb-0.5">Stock</label>
+                <input
+                  type="number"
+                  min="0"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs focus:outline-none focus:border-blue-400"
+                  placeholder="0"
+                  value={combo.stock}
+                  onChange={(e) => update(combo.id, "stock", e.target.value)}
+                />
+              </div>
+            </div>
+            {supportsSerials && (
+              <button
+                type="button"
+                onClick={() => setSerialsFor(combo)}
+                className="w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-slate-600 border border-slate-200 rounded-lg hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-all"
+              >
+                <ScanLine size={11} />
+                {combo.serials.length > 0
+                  ? <span className="font-mono text-blue-600">{combo.serials.filter((s) => s.status === "available").length} {serialLabel}s avail.</span>
+                  : `Add ${serialLabel}s`}
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop Table */}
+      <div className="hidden md:block border border-slate-200 rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm border-collapse min-w-[680px]">
             <thead>

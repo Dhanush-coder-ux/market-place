@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Mail, Pencil, User, MapPin, Phone, Trash2,
-  Store, Database, AlertCircle, Layers, Check, X as XIcon, Search,
+  Store, Database, AlertCircle, Layers, Check, X as XIcon,
   Banknote, CreditCard, QrCode, Building2
 } from "lucide-react";
 import {
@@ -10,6 +10,7 @@ import {
   ProfileHeaderCard
 } from "@/components/common/SuperUI";
 import { AntBadge } from "@/components/ui/AntBadge";
+import { SearchBar } from "@/components/ui";
 import Loader from "@/components/common/Loader";
 
 import { useApi } from "@/context/ApiContext";
@@ -820,24 +821,14 @@ export default function SupplierDetail() {
             return (
               <div className="space-y-4 animate-in fade-in duration-300 h-full overflow-y-auto">
                 <div className="flex items-center justify-between gap-3 bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
-                  <div className="relative flex-1 max-w-sm">
-                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input
-                      type="text"
-                      value={ledgerSearch}
-                      onChange={(e) => setLedgerSearch(e.target.value)}
-                      placeholder="Search invoice no., ref no., payment mode..."
-                      className="w-full pl-9 pr-8 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
-                    />
-                    {ledgerSearch && (
-                      <button
-                        onClick={() => setLedgerSearch("")}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                      >
-                        <XIcon size={12} />
-                      </button>
-                    )}
-                  </div>
+                  <SearchBar
+                    size="sm"
+                    value={ledgerSearch}
+                    onChange={(e) => setLedgerSearch(e.target.value)}
+                    onClear={() => setLedgerSearch("")}
+                    placeholder="Search invoice no., ref no., payment mode..."
+                    className="flex-1 max-w-sm"
+                  />
                   <span className="text-[11px] font-bold text-slate-500 bg-slate-50 border border-slate-100 px-2.5 py-1 rounded-md">
                     {filteredHistory.length} Recorded Payment{filteredHistory.length !== 1 ? 's' : ''}
                   </span>
@@ -1094,7 +1085,7 @@ export default function SupplierDetail() {
                   <label className="block text-xs font-semibold text-slate-600 mb-1.5">
                     Payment Method
                   </label>
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {[
                       { id: 'CASH', label: 'Cash', icon: Banknote, activeClass: 'bg-emerald-50 border-emerald-300 text-emerald-700 ring-2 ring-emerald-500/20' },
                       { id: 'CARD', label: 'Card', icon: CreditCard, activeClass: 'bg-blue-50 border-blue-300 text-blue-700 ring-2 ring-blue-500/20' },

@@ -637,17 +637,12 @@ export default function DeliveryPreferences({ shopId, initialOptions, onStatusCh
     <div className="mx-auto py-6 px-1 space-y-5" style={{ fontFamily: "Inter, Poppins, sans-serif" }}>
       {/* ── Page Header ── */}
       {!onStatusChange && (
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "#eff6ff", color: "#3b82f6" }}>
-                <Truck size={18} strokeWidth={2.5} />
-              </div>
-              <h1 className="text-[20px] font-extrabold text-slate-800 tracking-tight">Delivery Options</h1>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "#eff6ff", color: "#3b82f6" }}>
+              <Truck size={18} strokeWidth={2.5} />
             </div>
-            <p className="text-[13px] text-slate-400 ml-12">
-              Configure shipping fees, distance-based incremental charges, and estimated delivery times for each shipping option.
-            </p>
+            <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">Delivery Options</h1>
           </div>
         </div>
       )}
@@ -673,18 +668,18 @@ export default function DeliveryPreferences({ shopId, initialOptions, onStatusCh
       </div>
 
       {/* ── Save Button ── */}
-      <div className="flex items-center justify-between pt-2">
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
         {saveSuccess && (
           <span className="text-xs font-bold text-emerald-600 flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl animate-in fade-in">
             <Check size={14} strokeWidth={3} />
             Delivery preferences saved successfully!
           </span>
         )}
-        <div className="ml-auto">
+        <div className="sm:ml-auto w-full sm:w-auto">
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className={`flex items-center gap-2 px-7 py-2.5 rounded-xl text-[13.5px] font-bold text-white transition-all shadow-md ${
+            className={`w-full sm:w-auto justify-center flex items-center gap-2 px-7 py-2.5 rounded-xl text-[13.5px] font-bold text-white transition-all shadow-md ${
               isSaving
                 ? "opacity-70 cursor-not-allowed bg-blue-400"
                 : "bg-blue-600 hover:bg-blue-700 active:scale-98 cursor-pointer"

@@ -678,11 +678,11 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
         </div>
 
         {/* ── Modal Footer Controls ── */}
-        <div className="px-5 py-3.5 border-t border-slate-100 bg-white flex flex-wrap items-center justify-between gap-2 shrink-0">
-          <div className="flex items-center gap-2 text-xs text-slate-500">
+        <div className="px-3.5 sm:px-5 py-3.5 pb-[max(14px,env(safe-area-inset-bottom))] border-t border-slate-100 bg-white flex flex-wrap items-center justify-between gap-2 shrink-0">
+          <div className="flex items-center gap-2 text-xs text-slate-500 min-w-0 max-w-full">
             <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
             {printersList.length > 1 ? (
-              <div className="flex items-center gap-1.5 min-w-[210px]">
+              <div className="flex items-center gap-1.5 min-w-0 flex-1">
                 <span className="font-semibold text-slate-600 text-xs shrink-0">Send to:</span>
                 <ReusableSelect
                   value={targetPrinterId}

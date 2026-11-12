@@ -313,7 +313,7 @@ export const ReturnRequestDetailDrawer: React.FC<ReturnRequestDetailDrawerProps>
 
         {/* Footer Actions (Only if PENDING) */}
         {isPending && (
-          <div className="p-4 border-t border-slate-200 bg-white flex items-center gap-3">
+          <div className="p-4 pb-[max(16px,env(safe-area-inset-bottom))] border-t border-slate-200 bg-white flex items-center gap-3">
             <button
               type="button"
               onClick={() => handleOpenConfirm("REJECTED")}

@@ -136,6 +136,18 @@ export const inventoryApi = {
   },
 
   /**
+   * Batch fetch product+inventory records by IDs.
+   * Backend: POST /inventories/by/ids
+   */
+  getInventoriesByIds: async (shopId: string, ids: string[], includeSerialno = false) => {
+    return await apiClient.post(`${INV}/by/ids`, {
+      shop_id: shopId,
+      id: ids,
+      include_serialno: includeSerialno,
+    });
+  },
+
+  /**
    * Search inventories for autocomplete / SearchSelect components.
    * API response shape: { detail: { msg, status_code, success }, data: [ ...items ] }
    * Returns a normalized list with {id, name, stocks, sell_price, buy_price, barcode, unit}.

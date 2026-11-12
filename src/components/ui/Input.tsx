@@ -1,13 +1,23 @@
 import React, { useId } from "react";
 import { Info } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-interface CustomInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+export interface CustomInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size"> {
   label?: string;
   required?: boolean;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
   tooltip?: string;
+  error?: string;
+  inputSize?: "sm" | "md" | "lg";
+  containerClassName?: string;
 }
+
+const SIZE_CLASSES: Record<"sm" | "md" | "lg", string> = {
+  sm: "h-9 px-3 text-xs",
+  md: "h-10 px-3.5 text-sm",
+  lg: "h-11 px-4 text-sm",
+};
 
 const Input: React.FC<CustomInputProps> = ({
   label,
@@ -15,7 +25,10 @@ const Input: React.FC<CustomInputProps> = ({
   leftIcon,
   rightIcon,
   tooltip,
+  error,
+  inputSize = "md",
   className = "",
+  containerClassName = "",
   id: manualId,
   ...props
 }) => {
@@ -23,12 +36,12 @@ const Input: React.FC<CustomInputProps> = ({
   const id = manualId || generatedId;
 
   return (
-    <div className="flex flex-col gap-1.5 w-full">
+    <div className={cn("flex flex-col gap-1.5 w-full", containerClassName)}>
       {label && (
         <div className="flex items-center gap-1.5 ml-0.5">
           <label
             htmlFor={id}
-            className="text-xs font-semibold text-slate-600"
+            className="text-xs font-medium text-slate-600"
           >
             {label}
             {required && <span className="text-red-500 ml-1">*</span>}
@@ -45,34 +58,36 @@ const Input: React.FC<CustomInputProps> = ({
         </div>
       )}
 
-      <div className="relative">
+      <div className="relative w-full">
         {leftIcon && (
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none flex items-center">
             {leftIcon}
           </div>
         )}
 
         <input
           id={id}
-          className={`
-            w-full px-4 py-3 rounded-lg border border-slate-200
-            text-sm text-slate-900 placeholder:text-slate-400
-            transition-all duration-200
-            focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none
-            ${leftIcon ? "pl-10" : ""}
-            ${rightIcon ? "pr-10" : ""}
-            ${props.disabled ? "bg-slate-50 opacity-60 cursor-not-allowed" : "bg-white"}
-            ${className}
-          `}
+          className={cn(
+            "w-full rounded-lg border border-slate-200 text-slate-900 placeholder:text-slate-400 transition-colors outline-none",
+            "focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15",
+            SIZE_CLASSES[inputSize],
+            leftIcon && "pl-9",
+            rightIcon && "pr-9",
+            error && "border-red-400 focus:border-red-500 focus:ring-red-500/15",
+            props.disabled ? "bg-slate-50 opacity-60 cursor-not-allowed" : "bg-white",
+            className
+          )}
           {...props}
         />
 
         {rightIcon && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 flex items-center">
             {rightIcon}
           </div>
         )}
       </div>
+
+      {error && <p className="text-xs text-red-500 ml-0.5">{error}</p>}
     </div>
   );
 };

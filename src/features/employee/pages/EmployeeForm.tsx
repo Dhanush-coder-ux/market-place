@@ -250,13 +250,13 @@ const EmployeeForm = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/50 font-sans">
+    <div className="bg-slate-50/50 font-sans pb-28 md:pb-8">
       <NavigationBlocker data={formData} isLoading={loadingData} isSubmitting={submitting} />
       <div className="mx-auto space-y-4 relative">
         
         {/* LIMIT ALERT BANNER */}
         {!id && limitStatus.isReached && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-900 flex items-center justify-between shadow-sm animate-in fade-in duration-300">
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-900 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm animate-in fade-in duration-300">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-lg bg-red-100 flex items-center justify-center text-red-600 shrink-0">
                 <AlertTriangle size={18} />
@@ -275,7 +275,7 @@ const EmployeeForm = () => {
             <button
               type="button"
               onClick={() => navigate("/pricing")}
-              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg flex items-center gap-2 shadow transition-all shrink-0 ml-4"
+              className="w-full sm:w-auto justify-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg flex items-center gap-2 shadow transition-all shrink-0 sm:ml-4"
             >
               <span>{limitStatus.isExpired ? "Renew Plan" : "Upgrade Plan"}</span>
               <ArrowRight size={14} />
@@ -294,7 +294,7 @@ const EmployeeForm = () => {
               </div>
               <h2 className="text-xs font-bold text-slate-800  ">Personal Identity</h2>
             </div>
-            <div className="p-8 space-y-6">
+            <div className="p-4 sm:p-6 md:p-8 space-y-5 sm:space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                   <Input 
@@ -345,7 +345,7 @@ const EmployeeForm = () => {
               </div>
               <h2 className="text-xs font-bold text-slate-800  ">Role & Joining</h2>
             </div>
-            <div className="p-8 space-y-6">
+            <div className="p-4 sm:p-6 md:p-8 space-y-5 sm:space-y-6">
               <div>
                 <ReusableSelect 
                   label="Role" 
@@ -376,7 +376,7 @@ const EmployeeForm = () => {
               </div>
               <h2 className="text-xs font-bold text-slate-800  ">Location & Financials</h2>
             </div>
-            <div className="p-8 space-y-6">
+            <div className="p-4 sm:p-6 md:p-8 space-y-5 sm:space-y-6">
               <div>
                 <Input 
                   label="Salary Range / Expectation" 

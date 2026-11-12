@@ -493,7 +493,7 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-1">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1">
                   <span className="text-[11px] text-slate-500">
                     Connects directly to USB receipt printers (Epson, TVS, Rongta, Xprinter, etc.).
                   </span>
@@ -501,7 +501,7 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
                     type="button"
                     onClick={handlePairUsb}
                     disabled={isConnecting}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                    className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-sm transition-all cursor-pointer disabled:opacity-50"
                   >
                     {isConnecting ? (
                       <RotateCw size={13} className="animate-spin" />

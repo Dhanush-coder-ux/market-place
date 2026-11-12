@@ -3,12 +3,13 @@ import { useParams, useNavigate } from "react-router-dom";
 import {
   Mail, Pencil, User, Phone, Trash2,
   CreditCard, Database, MapPin, Tag, FileText,
-  Layers, Check, X as XIcon, Search, Calendar
+  Layers, Check, X as XIcon, Calendar
 } from "lucide-react";
 import {
   fmt, SectionCard, FormInput, FormTextarea
 } from "./CustomerDetailComponents";
 import { Modal, ProfileHeaderCard } from "@/components/common/SuperUI";
+import { SearchBar } from "@/components/ui";
 import { BiLogoWhatsapp } from "react-icons/bi";
 import { useApi } from "@/context/ApiContext";
 import { useBusinessApi } from "@/context/BusinessApiContext";
@@ -428,12 +429,12 @@ export default function CustomerDetail() {
 
         {/* Tabs Navigation & Quick Stats Grid (pinned) */}
         <div className="flex-none px-1 py-2 space-y-2">
-          <div className="flex gap-2 p-1 bg-slate-100/50 w-fit rounded-lg border border-slate-200/50">
+          <div className="flex gap-2 p-1 bg-slate-100/50 w-fit max-w-full overflow-x-auto no-scrollbar rounded-lg border border-slate-200/50">
             {["Overview", "Sales", "Payment Ledger"].map((tab, i) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(i)}
-                className={`px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all ${activeTab === i
+                className={`px-4 py-1.5 text-[11px] font-bold rounded-lg transition-all whitespace-nowrap shrink-0 ${activeTab === i
                   ? "bg-blue-600 text-white shadow-md shadow-blue-100"
                   : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
                   }`}
@@ -447,7 +448,7 @@ export default function CustomerDetail() {
         </div>
 
         {/* Tab Panels (scrollable or flex-locked depending on active tab) */}
-        <div className={`flex-1 min-h-0 ${activeTab === 1 || activeTab === 2 ? "flex flex-col overflow-hidden" : "overflow-y-auto custom-scrollbar"} px-1 pb-6`}>
+        <div className={`flex-1 min-h-0 ${activeTab === 1 || activeTab === 2 ? "flex flex-col overflow-hidden" : "overflow-y-auto custom-scrollbar"} px-1 pb-24 md:pb-6`}>
           <div className={`animate-in fade-in slide-in-from-bottom-4 duration-500 ${activeTab === 1 || activeTab === 2 ? "flex flex-col flex-1 min-h-0 h-full" : ""}`}>
             {/* TAB 0 — General Info */}
             {activeTab === 0 && (
@@ -845,24 +846,14 @@ export default function CustomerDetail() {
               return (
                 <div className="space-y-4 animate-in fade-in duration-300 h-full overflow-y-auto">
                   <div className="flex items-center justify-between gap-3 bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
-                    <div className="relative flex-1 max-w-sm">
-                      <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                      <input
-                        type="text"
-                        value={ledgerSearch}
-                        onChange={(e) => setLedgerSearch(e.target.value)}
-                        placeholder="Search invoice no., ref no., payment mode..."
-                        className="w-full pl-9 pr-8 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
-                      />
-                      {ledgerSearch && (
-                        <button
-                          onClick={() => setLedgerSearch("")}
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                        >
-                          <XIcon size={12} />
-                        </button>
-                      )}
-                    </div>
+                    <SearchBar
+                      size="sm"
+                      value={ledgerSearch}
+                      onChange={(e) => setLedgerSearch(e.target.value)}
+                      onClear={() => setLedgerSearch("")}
+                      placeholder="Search invoice no., ref no., payment mode..."
+                      className="flex-1 max-w-sm"
+                    />
                     <span className="text-[11px] font-bold text-slate-500 bg-slate-50 border border-slate-100 px-2.5 py-1 rounded-md">
                       {filteredHistory.length} Recorded Payment{filteredHistory.length !== 1 ? 's' : ''}
                     </span>

@@ -364,7 +364,7 @@ const DigitalMain = () => {
   
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-16" style={{ fontFamily: "Inter, sans-serif" }}>
+    <div className="bg-slate-50 pb-24 md:pb-16" style={{ fontFamily: "Inter, sans-serif" }}>
 
       {showQR && <QRModal shop={shop} onClose={() => setShowQR(false)} />}
 
@@ -425,7 +425,7 @@ const DigitalMain = () => {
           </div>
 
           {/* Info row: name/details (left) + QR/Followers (right) */}
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4">
 
             {/* ── Left: all shop info stacked ── */}
             <div className="flex-1 min-w-0 space-y-1.5">
@@ -513,7 +513,7 @@ const DigitalMain = () => {
         </div>
 
         {/* ─── TAB BAR ──────────────────────────────────────────── */}
-        <div id="digital-store-tabs" className="px-6 flex items-center gap-0 border-t border-slate-100">
+        <div id="digital-store-tabs" className="px-4 sm:px-6 flex items-center gap-0 border-t border-slate-100 overflow-x-auto no-scrollbar">
           {TAB_CONFIG.map(({ tab, icon: Icon }) => {
             const isActive = activeTab === tab;
             return (

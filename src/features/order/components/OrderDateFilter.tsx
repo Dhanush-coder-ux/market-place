@@ -102,7 +102,7 @@ const OrderDateFilter: React.FC<OrderDateFilterProps> = ({ onRangeChange }) => {
   selected={dateRange}
   onSelect={handleSelect}
   defaultMonth={dateRange?.from}
-  numberOfMonths={2}
+  numberOfMonths={typeof window !== "undefined" && window.innerWidth < 768 ? 1 : 2}
   disabled={{ after: new Date() }}
   className="
     text-xs
@@ -111,8 +111,10 @@ const OrderDateFilter: React.FC<OrderDateFilterProps> = ({ onRangeChange }) => {
     [&_.rdp-caption]:text-sm pb-2
     [&_.rdp-head_row]:mb-1
     [&_.rdp-head_cell]:text-[10px]
-    [&_.rdp-day]:h-7
-    [&_.rdp-day]:w-7
+    [&_.rdp-day]:h-9
+    [&_.rdp-day]:w-9
+    sm:[&_.rdp-day]:h-7
+    sm:[&_.rdp-day]:w-7
     [&_.rdp-day]:text-xs
   "
 />
@@ -121,7 +123,7 @@ const OrderDateFilter: React.FC<OrderDateFilterProps> = ({ onRangeChange }) => {
       </div>
 
       {/* --- Sticky Footer --- */}
-      <div className="sticky bottom-0 bg-white border-t p-4 shadow-[0_-4px_10px_rgba(0,0,0,0.03)]">
+      <div className="sticky bottom-0 bg-white border-t p-4 pb-[max(16px,env(safe-area-inset-bottom))] shadow-[0_-4px_10px_rgba(0,0,0,0.03)]">
         <button 
           className="w-full bg-slate-900 hover:bg-slate-800 text-white py-3 rounded-lg font-bold transition-all active:scale-[0.98]"
           onClick={() => {/* Trigger parent filter function */}}

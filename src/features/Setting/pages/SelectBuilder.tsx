@@ -143,7 +143,7 @@ const SelectBuilder: React.FC<SelectBuilderProps> = ({ initialName, onSettingsCh
                         <span className="text-sm text-slate-700 font-semibold">{opt.value}</span>
                         <button
                           onClick={() => removeOption(opt.id)}
-                          className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-slate-300 hover:bg-rose-50 hover:text-rose-600 transition-all focus:opacity-100 shadow-sm bg-white"
+                          className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-2 sm:p-1.5 rounded-lg text-slate-400 md:text-slate-300 hover:bg-rose-50 hover:text-rose-600 transition-all focus:opacity-100 shadow-sm bg-white"
                           title="Remove option"
                         >
                           <X className="w-4 h-4" />

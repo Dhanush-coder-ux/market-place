@@ -198,34 +198,34 @@ export const RazorpayCheckoutModal: React.FC<RazorpayCheckoutModalProps> = ({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[10000] flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={() => !loading && onClose()} />
 
-      <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-lg max-h-[92dvh] flex flex-col bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         
         {/* Header */}
-        <div className="p-6 text-white relative" style={{ backgroundColor: 'var(--t-sidebar-from)' }}>
+        <div className="p-4 sm:p-6 text-white relative shrink-0" style={{ backgroundColor: 'var(--t-sidebar-from)' }}>
           <button
             onClick={onClose}
             disabled={loading}
-            className="absolute top-5 right-5 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"
+            className="absolute top-4 sm:top-5 right-4 sm:right-5 w-9 h-9 sm:w-8 sm:h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"
           >
             <X size={16} />
           </button>
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex flex-wrap items-center gap-2 mb-1 pr-10">
             <span className="px-2.5 py-0.5 rounded-full bg-white/20 text-white text-[11px] font-bold tracking-wider uppercase">
               Razorpay Checkout
             </span>
             <span className="text-white/70 text-xs">• 256-Bit SSL Encrypted</span>
           </div>
-          <h2 className="text-2xl font-black tracking-tight">Complete Subscription</h2>
+          <h2 className="text-xl sm:text-2xl font-black tracking-tight">Complete Subscription</h2>
           <p className="text-white/80 text-xs mt-1">
             Upgrading shop to <strong className="text-white">{selectedPlan.name}</strong> ({billingCycle})
           </p>
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-5">
+        <div className="p-4 sm:p-6 pb-[max(16px,env(safe-area-inset-bottom))] sm:pb-6 space-y-5 overflow-y-auto flex-1">
           {paymentSuccess ? (
             <div className="py-8 flex flex-col items-center justify-center text-center space-y-3">
               <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/10 animate-bounce">

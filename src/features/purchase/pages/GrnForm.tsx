@@ -168,7 +168,7 @@ const StatusBadge = ({ status }: { status: GRNStatus }) => {
 
 // ─── Header Overview ─────────────────────────────────────────────────────────
 const HeaderOverview = ({
-  title,
+  title: _title,
   reference,
   stats,
   payment,
@@ -190,21 +190,18 @@ const HeaderOverview = ({
     {/* Main Bar (Always Visible) */}
     <div className="px-6 md:px-8 py-4 flex items-center justify-between gap-6 flex-wrap lg:flex-nowrap">
       <div className="flex-1 min-w-[200px]">
-        <div className="flex items-center gap-3">
-          <h1 className="text-[17px] font-bold text-slate-800 tracking-tight">{title}</h1>
-          <div className="flex items-center gap-2">
-            {status && <StatusBadge status={status} />}
-            {id && (
-              <span className="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                Editing
-              </span>
-            )}
-          </div>
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <span className="text-xs font-semibold text-slate-700">{reference}</span>
+          {status && <StatusBadge status={status} />}
+          {id && (
+            <span className="text-[10px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full uppercase tracking-wider">
+              Editing
+            </span>
+          )}
         </div>
-        <p className="text-[12px] text-slate-400 mt-0.5 font-medium">{reference}</p>
       </div>
 
-      <div className="flex items-center gap-8 lg:gap-12">
+      <div className="flex flex-wrap items-center gap-4 sm:gap-8 lg:gap-12">
         <div className="text-center">
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Items</p>
           <p className="text-[15px] font-bold text-slate-700">{stats.totalQty}</p>
@@ -237,7 +234,7 @@ const HeaderOverview = ({
         show ? "max-h-[400px] border-t border-slate-50 opacity-100" : "max-h-0 opacity-0"
       }`}
     >
-      <div className="px-8 py-6 bg-slate-50/30 grid grid-cols-1 md:grid-cols-4 gap-8">
+      <div className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 bg-slate-50/30 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5 sm:gap-8">
         <div>
           <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mb-3">Breakdown</p>
           <div className="space-y-2">
@@ -941,7 +938,7 @@ const GrnForm = () => {
             >
               <div className="space-y-4">
                 {/* Method selector */}
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {[
                     { id: "Cash", icon: <Banknote size={16} />, label: "Cash" },
                     { id: "UPI", icon: <Smartphone size={16} />, label: "UPI" },

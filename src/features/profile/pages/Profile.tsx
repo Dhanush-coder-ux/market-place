@@ -64,18 +64,17 @@ const Profile = () => {
   const data = shop ?? normaliseShop({});
 
   return (
-    <div className="space-y-5 animate-in fade-in duration-500 pb-6">
+    <div className="space-y-5 animate-in fade-in duration-500 pb-24 md:pb-8">
 
       {/* Page Title */}
       <Title
         icon={<UserCheck2 size={20} />}
         title="Shop Profile"
-        subtitle="Manage your shop identity and business information"
         actions={
           <div className="flex items-center gap-2">
             <Link
               to="/profile/add"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold shadow-md shadow-blue-200 hover:bg-blue-700 transition-all hover:-translate-y-0.5 active:scale-95"
+              className="h-9 inline-flex items-center gap-2 px-4 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 transition-colors"
             >
               <Edit3 size={14} />
               Edit Profile
@@ -83,7 +82,7 @@ const Profile = () => {
             <button
               type="button"
               onClick={handleLogout}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-red-100 text-red-500 text-xs font-bold hover:bg-red-50 transition-all hover:-translate-y-0.5 active:scale-95"
+              className="h-9 inline-flex items-center gap-2 px-4 rounded-lg bg-white border border-red-200 text-red-600 text-xs font-semibold hover:bg-red-50 transition-colors"
             >
               <LogOut size={14} />
               Logout

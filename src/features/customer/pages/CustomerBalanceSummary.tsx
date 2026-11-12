@@ -1,12 +1,12 @@
 import {
-  Users, Search, Filter, Trash2, Edit3,
+  Users, Filter, Trash2, Edit3,
   Eye, Banknote, Wallet, ExternalLink
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useHeader } from "@/context/HeaderContext";
 import { StatCard } from "@/components/common/StatsCard";
 
-import { GradientButton } from "@/components/ui/GradientButton";
+import { GradientButton, SearchBar, Button } from "@/components/ui";
 import { useBusinessApi } from "@/context/BusinessApiContext";
 import { SHOP_ID } from "@/services/endpoints";
 import type { CustomerRecord } from "@/types/api";
@@ -199,37 +199,31 @@ export default function CustomerBalanceSummary() {
         </div>
       )}
 
-      <div className="bg-white border border-slate-100 rounded-lg p-2.5 px-3.5 flex flex-nowrap items-center gap-2 shadow-sm overflow-x-auto scrollbar-none mt-2">
-        <div className="relative w-80 shrink-0">
-          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-          <input
-            type="text"
-            placeholder="Search customer…"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full h-8 pl-8 pr-3 text-[12px] font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-md placeholder:text-slate-400 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
-          />
-        </div>
-        
+      <div className="bg-white border border-slate-200/80 rounded-xl p-2.5 px-3 sm:px-3.5 flex flex-wrap items-center gap-2 shadow-xs mt-2">
+        <SearchBar
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          onClear={() => setSearchTerm("")}
+          placeholder="Search customer…"
+          size="sm"
+          className="w-full sm:w-72 md:w-80 shrink-0"
+        />
 
-        <button
+        <Button
           type="button"
+          variant="outline"
           onClick={() => setIsFilterOpen(true)}
-          className={`h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0 ${
-            activeFilters > 0
-              ? "border-blue-200 text-blue-600 bg-blue-50"
-              : "border-slate-200 text-slate-650 bg-white hover:bg-slate-50"
-          }`}
+          className={activeFilters > 0 ? "border-blue-200 text-blue-600 bg-blue-50/60" : ""}
           title="Filters"
         >
-          <Filter size={13} />
+          <Filter size={14} />
           Filters
           {activeFilters > 0 && (
-            <span className="ml-1 px-1.5 py-0.5 bg-blue-600 text-white rounded-full text-[9px] font-black">
+            <span className="ml-0.5 px-1.5 py-0.5 bg-blue-600 text-white rounded-full text-[10px] font-bold">
               {activeFilters}
             </span>
           )}
-        </button>
+        </Button>
 
         <ColumnPicker
           availableKeys={availableKeys}
@@ -275,7 +269,97 @@ export default function CustomerBalanceSummary() {
       </RightSidebarFilter>
 
       <div className="bg-white rounded-b-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col flex-1 min-h-0 mt-2">
-        <div className="overflow-x-auto overflow-y-auto flex-1 min-h-0 pf-scroll">
+        {/* Mobile Card View */}
+        <div className="md:hidden flex-1 overflow-y-auto p-2.5 space-y-2.5">
+          {filteredCustomers.length === 0 ? (
+            <div className="py-16 text-center text-slate-400 italic font-medium text-sm">No customers found.</div>
+          ) : (
+            filteredCustomers.map((c) => {
+              const phone = (c as any).contact_infos?.mobile_number || c.mobile_number;
+              const email = (c as any).contact_infos?.email || c.email;
+              const outstanding = Number(c.outstanding_infos?.amount ?? c.outstanding ?? c.datas?.outstanding_balance ?? 0);
+              const creditLimit = Number((c as any).credit_infos?.limit ?? c.credit_limit ?? c.datas?.credit_limit ?? 0);
+              const hasCredit = c.can_have_credit ?? c.datas?.can_have_credit ?? false;
+
+              return (
+                <div
+                  key={`mob-cbal-${c.id}`}
+                  onClick={() => navigate(`/customers/${c.id}`)}
+                  className="rounded-xl border border-slate-200 bg-white p-3 shadow-xs active:scale-[0.99] transition-all cursor-pointer"
+                >
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-white text-sm font-bold shrink-0">
+                      {String(c.name || "?")[0].toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-[13px] font-bold text-slate-800 truncate">{String(c.name || "Untitled")}</p>
+                        <span className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                          hasCredit ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-slate-50 text-slate-400 border-slate-200"
+                        }`}>
+                          {hasCredit ? "Credit On" : "No Credit"}
+                        </span>
+                      </div>
+                      {phone && <p className="text-[11px] font-semibold text-slate-500 mt-0.5">{String(phone)}</p>}
+                      {email && <p className="text-[11px] text-slate-400 truncate">{String(email)}</p>}
+                    </div>
+                  </div>
+
+                  <div className="mt-2.5 pt-2 border-t border-slate-100 grid grid-cols-2 gap-2 text-[11px]">
+                    <div>
+                      <span className="text-[9px] font-bold uppercase text-slate-400 block">Credit Limit</span>
+                      <span className="font-bold text-slate-700 tabular-nums">
+                        ₹{creditLimit.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[9px] font-bold uppercase text-slate-400 block">Outstanding</span>
+                      <span className={`font-bold tabular-nums ${outstanding > 0 ? "text-rose-600" : "text-emerald-600"}`}>
+                        ₹{outstanding.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-2.5 pt-2 border-t border-slate-100 flex flex-wrap items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={() => { setSelectedCustomerForPayment(c); setShowPaymentModal(true); }}
+                      disabled={outstanding <= 0}
+                      className={`h-8 px-2.5 rounded-lg text-[11px] font-semibold flex items-center gap-1 ${
+                        outstanding > 0 ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-400 cursor-not-allowed"
+                      }`}
+                    >
+                      <Banknote size={13} /> Pay
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/customers/${c.id}`)}
+                      className="h-8 px-2.5 rounded-lg bg-blue-50 text-blue-700 text-[11px] font-semibold flex items-center gap-1"
+                    >
+                      <Eye size={13} /> View
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/customers/${c.id}/edit`)}
+                      className="h-8 px-2.5 rounded-lg bg-slate-100 text-slate-700 text-[11px] font-semibold flex items-center gap-1"
+                    >
+                      <Edit3 size={12} /> Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setCustomerToDelete(c); setIsDeleteDialogOpen(true); }}
+                      className="h-8 w-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        <div className="hidden md:block overflow-x-auto overflow-y-auto flex-1 min-h-0 pf-scroll">
           <table className="w-full text-left border-collapse">
             <thead className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-sm shadow-sm">
               <tr className="text-slate-400 text-[10px] font-bold border-b border-slate-100">

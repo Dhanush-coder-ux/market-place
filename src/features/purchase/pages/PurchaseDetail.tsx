@@ -247,7 +247,7 @@ const PurchaseReturnDialog = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
@@ -255,9 +255,9 @@ const PurchaseReturnDialog = ({
       />
 
       {/* Dialog */}
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+      <div className="relative bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92dvh] sm:max-h-[90dvh] flex flex-col overflow-hidden pb-[env(safe-area-inset-bottom)] sm:pb-0">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-rose-50 to-white flex-none">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-100 bg-gradient-to-r from-rose-50 to-white flex-none">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center">
               <RotateCcw size={15} className="text-rose-600" />
@@ -500,7 +500,7 @@ const PurchaseReturnDialog = ({
                       <label className="text-[10px] font-black text-emerald-800 uppercase tracking-wider block mb-1.5">
                         Payment Method
                       </label>
-                      <div className="grid grid-cols-4 gap-1.5">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                         {[
                           { id: "CASH", label: "Cash" },
                           { id: "UPI", label: "UPI" },

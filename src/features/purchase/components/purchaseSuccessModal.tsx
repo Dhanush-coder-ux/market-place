@@ -22,16 +22,16 @@ export default function PurchaseSuccessModal({
   if (!open) return null;
 
   return createPortal(
-     <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="w-full max-w-lg overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl animate-in zoom-in-95 duration-300">
+     <div className="fixed inset-0 z-[99999] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm sm:p-4">
+      <div className="w-full max-w-lg max-h-[92dvh] overflow-y-auto rounded-t-2xl sm:rounded-3xl border border-slate-200 bg-white shadow-2xl animate-in zoom-in-95 duration-300">
 
         {/* Header */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-emerald-50 via-white to-blue-50 p-8 border-b border-slate-100">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100 border border-emerald-200">
-            <CheckCircle2 className="h-10 w-10 text-emerald-600" />
+        <div className="relative overflow-hidden bg-gradient-to-r from-emerald-50 via-white to-blue-50 p-5 sm:p-8 border-b border-slate-100">
+          <div className="mx-auto flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-full bg-emerald-100 border border-emerald-200">
+            <CheckCircle2 className="h-8 w-8 sm:h-10 sm:w-10 text-emerald-600" />
           </div>
 
-          <h2 className="mt-5 text-center text-2xl font-black text-slate-800">
+          <h2 className="mt-4 sm:mt-5 text-center text-xl sm:text-2xl font-black text-slate-800">
             Purchase Saved Successfully
           </h2>
 
@@ -41,7 +41,7 @@ export default function PurchaseSuccessModal({
         </div>
 
         {/* Details */}
-        <div className="p-6">
+        <div className="p-4 sm:p-6 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:pb-6">
           <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 space-y-3">
             <div className="flex justify-between">
               <span className="text-slate-500 text-sm">

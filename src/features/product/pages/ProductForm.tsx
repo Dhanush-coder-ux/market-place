@@ -180,7 +180,7 @@ const InputField: React.FC<InputFieldProps> = ({ label, required, hint, leftEl, 
       {leftEl && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">{leftEl}</span>}
       <input
         {...rest}
-        className={`pf-input w-full px-3 py-2.5 text-sm border border-slate-200 rounded-lg bg-white text-slate-800 placeholder-slate-300 ${leftEl ? "pl-8" : ""} ${rightEl ? "pr-14" : ""} ${error ? "border-red-300 bg-red-50/30" : ""} ${rest.disabled ? "bg-slate-50 cursor-not-allowed" : ""} ${className}`}
+        className={`pf-input w-full h-10 px-3.5 text-sm border border-slate-200 rounded-lg bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 transition-colors ${leftEl ? "pl-8" : ""} ${rightEl ? "pr-14" : ""} ${error ? "border-red-400 bg-red-50/30" : ""} ${rest.disabled ? "bg-slate-50 cursor-not-allowed" : ""} ${className}`}
       />
       {rightEl && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-semibold">{rightEl}</span>}
     </div>
@@ -189,21 +189,18 @@ const InputField: React.FC<InputFieldProps> = ({ label, required, hint, leftEl, 
 );
 
 /* Section Card Wrapper */
-const SectionCard: React.FC<{ icon: React.ReactNode; iconBg: string; title: string; subtitle?: string; children: React.ReactNode; extra?: React.ReactNode }> = ({ icon, iconBg, title, subtitle, children, extra }) => (
-  <div className="pf-card bg-white rounded-xl border border-slate-200 overflow-hidden">
-    <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+const SectionCard: React.FC<{ icon: React.ReactNode; iconBg: string; title: string; subtitle?: string; children: React.ReactNode; extra?: React.ReactNode }> = ({ icon, iconBg, title, children, extra }) => (
+  <div className="pf-card bg-white rounded-xl border border-slate-200/80 overflow-hidden">
+    <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
       <div className="flex items-center gap-3">
-        <div className={`w-9 h-9 rounded-xl ${iconBg} flex items-center justify-center shrink-0`}>
+        <div className={`w-8 h-8 rounded-lg ${iconBg} flex items-center justify-center shrink-0`}>
           {icon}
         </div>
-        <div>
-          <h2 className="text-sm font-bold text-slate-800">{title}</h2>
-          {subtitle && <p className="text-[11px] text-slate-400 mt-0.5">{subtitle}</p>}
-        </div>
+        <h2 className="text-sm font-semibold text-slate-800">{title}</h2>
       </div>
       {extra}
     </div>
-    <div className="p-6">
+    <div className="p-5 sm:p-6">
       {children}
     </div>
   </div>
@@ -1676,7 +1673,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                       tooltip="The display name shown on invoices and your catalog."
                     />
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {/* Category */}
                       <div>
                         <Label text="Category" required tooltip="Organize your products into categories for easier filtering." />
@@ -1798,8 +1795,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                           {i === 0 && (
                             <span className="absolute bottom-0 left-0 right-0 text-center bg-black/40 text-white text-[8px] font-bold py-0.2">COVER</span>
                           )}
-                          <button type="button" onClick={() => removeExistingImage(i)} className="absolute top-0.5 right-0.5 bg-white/90 p-0.5 rounded-full text-red-500 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">
-                            <X size={10} />
+                          <button type="button" onClick={() => removeExistingImage(i)} aria-label="Remove image" className="absolute top-0.5 right-0.5 bg-white/95 p-1 rounded-full text-red-500 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity shadow-sm">
+                            <X size={11} />
                           </button>
                         </div>
                       ))}
@@ -1812,8 +1809,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                             {coverIdx === 0 && (
                               <span className="absolute bottom-0 left-0 right-0 text-center bg-black/40 text-white text-[8px] font-bold py-0.2">COVER</span>
                             )}
-                            <button type="button" onClick={() => removeSelectedImage(i)} className="absolute top-0.5 right-0.5 bg-white/90 p-0.5 rounded-full text-red-500 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm">
-                              <X size={10} />
+                            <button type="button" onClick={() => removeSelectedImage(i)} aria-label="Remove image" className="absolute top-0.5 right-0.5 bg-white/95 p-1 rounded-full text-red-500 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity shadow-sm">
+                              <X size={11} />
                             </button>
                           </div>
                         );
@@ -2092,7 +2089,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                       />
                       <InputField
                         customHeader={
-                          <div className="flex items-center justify-between mb-1.5">
+                          <div className="flex flex-wrap items-center justify-between gap-1.5 mb-1.5">
                             <div className="flex items-center gap-1">
                               <span className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
                                 Discount {discountType === "price" ? "(₹)" : "(%)"}
@@ -2288,7 +2285,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                       />
                       <InputField
                         customHeader={
-                          <div className="flex items-center justify-between mb-1.5">
+                          <div className="flex flex-wrap items-center justify-between gap-1.5 mb-1.5">
                             <div className="flex items-center gap-1">
                               <span className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
                                 Discount {discountType === "price" ? "(₹)" : "(%)"}
@@ -2562,7 +2559,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         </div>
                       </div>
                       {field.type === 'boolean' ? (
-                        <div className="flex items-center gap-8 h-10 px-4 rounded-lg border border-slate-200 bg-slate-50/30">
+                        <div className="flex flex-wrap items-center gap-4 sm:gap-8 min-h-10 h-auto py-2 px-4 rounded-lg border border-slate-200 bg-slate-50/30">
                           {(() => {
                             const curVal = customFieldValues[field.id] ?? (field.field_name ? customFieldValues[field.field_name] : undefined);
                             const boolVal = isBoolTrue(curVal);

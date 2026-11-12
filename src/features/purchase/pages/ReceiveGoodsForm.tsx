@@ -171,7 +171,7 @@ const PaymentBtn = ({
 );
 
 const HeaderOverview = ({
-  title,
+  title: _title,
   reference,
   stats,
   show,
@@ -188,20 +188,19 @@ const HeaderOverview = ({
   <div className="bg-white border-b border-slate-100 overflow-hidden transition-all duration-300 ease-in-out">
     <div className="px-6 md:px-8 py-4 flex items-center justify-between gap-6 flex-wrap lg:flex-nowrap">
       <div className="flex-1 min-w-[200px]">
-        <div className="flex items-center gap-3">
-          <h1 className="text-[17px] font-bold text-slate-800 tracking-tight">{title}</h1>
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <span className="text-xs font-semibold text-slate-700">{reference || "No PO Selected"}</span>
           {poStatus && (
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider ${
               poStatus === 'Completed' ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'
             }`}>
               {poStatus}
             </span>
           )}
         </div>
-        <p className="text-[12px] text-slate-400 mt-0.5 font-medium">{reference || "No PO Selected"}</p>
       </div>
 
-      <div className="flex items-center gap-6 md:gap-8 lg:gap-10">
+      <div className="flex flex-wrap items-center gap-4 sm:gap-6 md:gap-8 lg:gap-10">
         <div className="text-center">
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Ordered</p>
           <p className="text-[15px] font-bold text-slate-700">{stats.totalOrdered}</p>
@@ -237,7 +236,7 @@ const HeaderOverview = ({
         show ? "max-h-[400px] border-t border-slate-50 opacity-100" : "max-h-0 opacity-0"
       }`}
     >
-      <div className="px-8 py-6 bg-slate-50/30 grid grid-cols-1 md:grid-cols-4 gap-8">
+      <div className="px-4 sm:px-6 md:px-8 py-4 sm:py-6 bg-slate-50/30 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5 sm:gap-8">
         <div>
           <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mb-3">Quantity Stats</p>
           <div className="space-y-2">
@@ -968,7 +967,7 @@ const ReceiveGoodForm = () => {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-8 pr-4">
+                <div className="flex flex-wrap items-center gap-4 sm:gap-8 sm:pr-4">
                   <div className="flex flex-col">
                     <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Ordered Date</span>
                     <span className="text-[13px] font-bold text-slate-600">{poSummary.date}</span>
@@ -1303,9 +1302,9 @@ const BatchSelectionModal = ({ item, onClose, onSave }: { item: POProduct, onClo
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 animate-in zoom-in-95 duration-200 overflow-hidden">
-        <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+    <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center bg-slate-900/40 backdrop-blur-sm sm:p-4">
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-md max-h-[90dvh] flex flex-col border border-slate-200 animate-in zoom-in-95 duration-200 overflow-hidden pb-[env(safe-area-inset-bottom)] sm:pb-0">
+        <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100 shadow-sm">
               <Zap size={16} />
@@ -1336,7 +1335,7 @@ const BatchSelectionModal = ({ item, onClose, onSave }: { item: POProduct, onClo
                 <FieldLabel required>Batch Number</FieldLabel>
                 <Input value={batchNum} onChange={e => setBatchNum(e.target.value)} placeholder="Enter batch identifier..." className="!rounded-lg !text-xs !font-bold" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <FieldLabel>MFG Date</FieldLabel>
                   <Input type="date" value={mfg} onChange={e => setMfg(e.target.value)} className="!rounded-lg !text-xs !font-bold" />

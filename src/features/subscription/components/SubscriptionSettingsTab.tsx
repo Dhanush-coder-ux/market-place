@@ -7,6 +7,7 @@ import { shopApi } from "@/services/api/shop";
 import { SubscriptionData, TransactionItem } from "../types";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/context/ToastContext";
+import Table from "@/components/common/Table";
 
 export const SubscriptionSettingsTab: React.FC = () => {
   const [subData, setSubData] = useState<SubscriptionData | null>(null);
@@ -262,44 +263,63 @@ export const SubscriptionSettingsTab: React.FC = () => {
           <h3 className="text-sm font-bold text-slate-800">Billing & Payment History</h3>
         </div>
 
-        {transactions.length === 0 ? (
-          <div className="p-8 text-center text-slate-400 text-xs">
-            No payment transactions recorded yet. Free trial active.
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-400 font-bold border-b border-slate-100">
-                <tr>
-                  <th className="px-6 py-3">Order / Receipt</th>
-                  <th className="px-6 py-3">Plan</th>
-                  <th className="px-6 py-3">Amount</th>
-                  <th className="px-6 py-3">Status</th>
-                  <th className="px-6 py-3">Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {transactions.map((tx) => (
-                  <tr key={tx.id} className="hover:bg-slate-50/50">
-                    <td className="px-6 py-3.5 font-mono text-slate-600">{tx.receipt || tx.razorpay_order_id}</td>
-                    <td className="px-6 py-3.5 font-semibold text-slate-800 capitalize">{tx.plan_id}</td>
-                    <td className="px-6 py-3.5 font-bold text-slate-900">₹{tx.amount.toLocaleString()}</td>
-                    <td className="px-6 py-3.5">
-                      <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] uppercase ${
-                        tx.status === "paid" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
-                      }`}>
-                        {tx.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-3.5 text-slate-500">
-                      {tx.created_at ? new Date(tx.created_at).toLocaleDateString() : "N/A"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <div className="p-4">
+          <Table
+            data={transactions}
+            emptyMessage="No payment transactions recorded yet. Free trial active."
+            pagination={{ pageSize: 10 }}
+            columns={[
+              {
+                key: "receipt",
+                label: "Order / Receipt",
+                render: (tx) => (
+                  <span className="font-mono text-xs text-slate-600">
+                    {tx.receipt || tx.razorpay_order_id}
+                  </span>
+                ),
+              },
+              {
+                key: "plan_id",
+                label: "Plan",
+                render: (tx) => (
+                  <span className="font-semibold text-slate-800 capitalize">{tx.plan_id}</span>
+                ),
+              },
+              {
+                key: "amount",
+                label: "Amount",
+                align: "right",
+                render: (tx) => (
+                  <span className="font-semibold text-slate-900">₹{tx.amount.toLocaleString()}</span>
+                ),
+              },
+              {
+                key: "status",
+                label: "Status",
+                render: (tx) => (
+                  <span
+                    className={`px-2 py-0.5 rounded-full font-semibold text-[10px] uppercase ${
+                      tx.status === "paid"
+                        ? "bg-emerald-50 text-emerald-700"
+                        : "bg-amber-50 text-amber-700"
+                    }`}
+                  >
+                    {tx.status}
+                  </span>
+                ),
+              },
+              {
+                key: "created_at",
+                label: "Date",
+                render: (tx) => (
+                  <span className="text-slate-500">
+                    {tx.created_at ? new Date(tx.created_at).toLocaleDateString() : "N/A"}
+                  </span>
+                ),
+              },
+            ]}
+          />
+        </div>
       </div>
     </div>
   );

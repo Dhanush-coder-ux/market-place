@@ -1,7 +1,6 @@
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
-  Search,
   X, ArrowUp, ArrowDown,
   User, TrendingUp, TrendingDown, Activity,
   Filter,
@@ -9,7 +8,7 @@ import {
   ChevronRight, Eye, Trash2
 } from "lucide-react";
 
-import { GradientButton } from "@/components/ui/GradientButton";
+import { GradientButton, SearchBar, Button } from "@/components/ui";
 import { StatCard } from "@/components/common/StatsCard";
 import { TypeBadge } from "@/components/common/SuperUI";
 import { AntBadge } from "@/components/ui/AntBadge";
@@ -899,33 +898,28 @@ export default function StockMovementPage() {
       )}
 
       {/* ── Filter & Search Section ── */}
-      <div className="bg-white border border-slate-100 rounded-lg p-2.5 px-3.5 flex flex-nowrap items-center gap-2 shadow-sm overflow-x-auto scrollbar-none mt-2">
-        <div className="relative w-80 shrink-0">
-          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search product, SKU, movement ID…"
-            className="w-full h-8 pl-8 pr-3 text-[12px] font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-md placeholder:text-slate-400 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
-          />
-        </div>
-
-
+      <div className="bg-white border border-slate-200/80 rounded-xl p-2.5 px-3 sm:px-3.5 flex flex-wrap items-center gap-2 shadow-xs mt-2">
+        <SearchBar
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          onClear={() => setSearch("")}
+          placeholder="Search product, SKU, movement ID…"
+          size="sm"
+          className="w-full sm:w-72 md:w-80 shrink-0"
+        />
 
         <div className="flex items-center gap-2 shrink-0">
-          <button
+          <Button
             type="button"
+            variant="outline"
             onClick={() => setIsFilterOpen(true)}
-            className={`h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0 ${Boolean(dateFrom || dateTo)
-              ? "border-blue-200 text-[var(--mv-sales-tx)] bg-[var(--mv-sales-bg)]"
-              : "border-slate-200 text-slate-650 bg-white hover:bg-slate-50"
-              }`}
+            className={Boolean(dateFrom || dateTo) ? "border-blue-200 text-[var(--mv-sales-tx)] bg-[var(--mv-sales-bg)]" : ""}
             title="Filters"
           >
-            <Filter size={13} />
-            {(Boolean(dateFrom || dateTo)) && <span className="w-1.5 h-1.5 rounded-full bg-[var(--mv-sales-bg)] animate-pulse" />}
-          </button>
+            <Filter size={14} />
+            Filters
+            {(Boolean(dateFrom || dateTo)) && <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />}
+          </Button>
 
           <ColumnPicker
             availableKeys={availableKeys}
@@ -970,8 +964,101 @@ export default function StockMovementPage() {
 
       {/* ── Table Section ── */}
       <div className="bg-white border border-slate-100 rounded-lg shadow-sm min-w-0 overflow-hidden flex flex-col flex-1 min-h-0 mt-2">
+        {/* Mobile Card View */}
+        <div className="md:hidden flex-1 overflow-y-auto p-2.5 space-y-2.5">
+          {pageData.length === 0 ? (
+            <div className="py-16 text-center text-sm text-slate-400 font-medium">No movements found.</div>
+          ) : (
+            pageData.map((m, idx) => {
+              const hasList = m.productsList && m.productsList.length > 1;
+              const firstProd = m.productsList?.[0] || {};
+              const totalQty = hasList ? m.productsList!.reduce((sum, p) => sum + p.qty, 0) : m.qty;
+              const currentStockVal = (() => {
+                const prods = m.productsList;
+                if (!prods || prods.length === 0) {
+                  const sb = m.stocks_before;
+                  if (sb === undefined || sb === null) return null;
+                  return sb + (firstProd.qty ?? m.qty);
+                }
+                let total = 0;
+                for (const p of prods) {
+                  const sb = p.stocks_before;
+                  if (sb === undefined || sb === null) return null;
+                  total += sb + p.qty;
+                }
+                return total;
+              })();
+              const isSelected = selectedMovements.has(m.id);
+              const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+
+              return (
+                <div
+                  key={`mob-mvt-${m.id}-${idx}`}
+                  ref={isMobile && idx === pageData.length - 1 ? lastElementRef : null}
+                  onClick={() => setSelected(m)}
+                  className={`rounded-xl border p-3 transition-all active:scale-[0.99] cursor-pointer ${
+                    isSelected ? "border-blue-400 bg-blue-50/30" : "border-slate-200 bg-white shadow-xs"
+                  }`}
+                >
+                  <div className="flex items-start gap-2.5">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleSelectMovement(m.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="mt-1 rounded border-slate-300 text-blue-600 focus:ring-blue-500/20 w-4 h-4 shrink-0"
+                    />
+                    <div className={`w-9 h-9 rounded-lg bg-gradient-to-br flex items-center justify-center text-white text-xs font-black shrink-0 ${totalQty > 0 ? "from-emerald-500 to-emerald-400" : "from-rose-500 to-rose-400"}`}>
+                      {(hasList ? firstProd.name : m.product)?.[0]?.toUpperCase() || "—"}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-[13px] font-bold text-slate-900 leading-snug line-clamp-2">
+                          {hasList ? firstProd.name : m.product}
+                        </p>
+                        <TypeBadge type={m.type} />
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1 text-[10px] text-slate-500">
+                        <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded">#{m.id}</span>
+                        <span>{fmtDate(m.date)} · {fmtTime(m.date)}</span>
+                        {hasList && (
+                          <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-bold">
+                            +{m.productsList!.length - 1} items
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                    <div>
+                      <span className="text-[9px] font-bold uppercase text-slate-400 block">Qty Change</span>
+                      <span className={`text-[13px] font-black tabular-nums ${totalQty > 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                        {totalQty > 0 ? `+${formatStockValue(totalQty)}` : formatStockValue(totalQty)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[9px] font-bold uppercase text-slate-400 block">After Stock</span>
+                      <span className="font-bold text-slate-800 tabular-nums">
+                        {currentStockVal !== null ? formatStockValue(currentStockVal) : "—"}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setSelected(m); }}
+                      className="h-8 px-2.5 rounded-lg bg-emerald-50 text-emerald-700 text-[11px] font-semibold flex items-center gap-1"
+                    >
+                      <Eye size={13} /> Details
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
         <div
-          className="overflow-auto flex-1 scrollbar-thin scrollbar-thumb-slate-200"
+          className="hidden md:block overflow-auto flex-1 scrollbar-thin scrollbar-thumb-slate-200"
         >
           <table className="w-full text-left border-collapse table-fixed">
             <thead className="sticky top-0 z-20 bg-slate-50 border-b border-slate-200">
@@ -1062,7 +1149,7 @@ export default function StockMovementPage() {
                 return (
                   <React.Fragment key={rowKey}>
                     <tr
-                      ref={idx === pageData.length - 1 ? lastElementRef : null}
+                      ref={!(typeof window !== "undefined" && window.innerWidth < 768) && idx === pageData.length - 1 ? lastElementRef : null}
                       className={`group transition-all cursor-default border-b border-slate-100 last:border-b-0 ${selectedMovements.has(m.id) ? "bg-[var(--mv-sales-bg)] border-l-[var(--mv-sales-dot)]" : "hover:bg-blue-50/30 even:bg-slate-50/20"}`}
                     >
                       <td className="px-4 py-3 align-middle border-r border-slate-100 text-center">

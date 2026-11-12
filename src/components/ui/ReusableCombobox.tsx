@@ -40,7 +40,7 @@ export function ReusableCombobox({
           role="combobox"
           aria-expanded={open}
           className={cn(
-            "w-full justify-between rounded-lg border-gray-200 h-12 px-4 hover:bg-gray-50 hover:border-blue-400 transition-all shadow-sm font-medium",
+            "w-full justify-between rounded-lg border-slate-200 bg-white h-10 px-3.5 text-sm hover:bg-slate-50 hover:border-slate-300 transition-colors shadow-none font-medium",
             className
           )}
         >

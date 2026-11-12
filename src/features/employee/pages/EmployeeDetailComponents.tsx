@@ -45,15 +45,15 @@ export function Modal({ show, onClose, title, children, className = "max-w-lg" }
 
   if (!show) return null;
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4">
       <div
         className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px] animate-in fade-in duration-300"
         onClick={onClose}
       />
       <div
-        className={`relative bg-white w-full ${className} rounded-lg shadow-2xl overflow-y-auto modal-content border border-slate-100 animate-in zoom-in-95 duration-200`}
+        className={`relative bg-white w-full ${className} rounded-t-2xl sm:rounded-lg shadow-2xl max-h-[90dvh] flex flex-col overflow-hidden modal-content border border-slate-100 animate-in zoom-in-95 duration-200`}
       >
-        <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+        <div className="px-4 sm:px-6 py-3.5 sm:py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
           <h3 className="text-sm font-black text-slate-800  ">{title}</h3>
           <button
             onClick={onClose}
@@ -62,7 +62,7 @@ export function Modal({ show, onClose, title, children, className = "max-w-lg" }
             <X size={18} />
           </button>
         </div>
-        <div className="p-6">{children}</div>
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1 pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:pb-6">{children}</div>
       </div>
     </div>
   );

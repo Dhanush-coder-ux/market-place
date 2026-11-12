@@ -63,6 +63,7 @@ export const Navbar = () => {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
 
   // ── PWA Desktop/Mobile App Installation ─────────────────────────────────────
   const { isInstalled, promptInstall, isModalOpen, setIsModalOpen, isPromptReady } = usePWAInstall();
@@ -177,16 +178,17 @@ export const Navbar = () => {
     navigate(path);
     setSearchQuery("");
     setIsSearchOpen(false);
+    setIsMobileSearchOpen(false);
   };
 
   return (
     <>
-      <div className="sticky top-0 z-40 w-full flex items-center justify-between px-4 lg:px-6 bg-white/80 backdrop-blur-md border-b border-slate-200/60 shadow-sm h-14">
+      <div className="sticky top-0 z-40 w-full flex items-center justify-between gap-2 px-3 sm:px-4 lg:px-6 bg-white/90 backdrop-blur-md border-b border-slate-200/60 shadow-sm min-h-14 pt-[env(safe-area-inset-top)]">
 
         {/* Shop Selector */}
-        <div ref={shopMenuRef} className="relative mr-4 z-50">
+        <div ref={shopMenuRef} className="relative z-50 min-w-0">
           <div
-            className="flex items-center h-9 px-2.5 gap-2 cursor-pointer bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors duration-150"
+            className="flex items-center h-9 px-2 sm:px-2.5 gap-2 cursor-pointer bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors duration-150 max-w-[165px] sm:max-w-[240px]"
             onClick={() => setIsShopMenuOpen((v) => !v)}
           >
             {/* Shop avatar */}
@@ -200,7 +202,7 @@ export const Navbar = () => {
               )}
             </div>
 
-            <div className="flex-1 min-w-[100px] flex items-center gap-1 hidden sm:flex">
+            <div className="flex-1 min-w-0 flex items-center gap-1">
               <div className="min-w-0 flex-1 flex flex-col">
                 <span className="text-[12px] font-bold text-slate-700 truncate leading-tight">
                   {selectedShop.name}
@@ -221,7 +223,7 @@ export const Navbar = () => {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -6, scale: 0.97 }}
                 transition={{ duration: 0.13 }}
-                className="absolute top-full left-0 mt-1.5 w-[235px] bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden"
+                className="absolute top-full left-0 mt-1.5 w-[235px] max-w-[calc(100vw-24px)] bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden"
               >
                 <div className="px-1.5 pt-1.5 pb-1">
                   <div className="flex items-center justify-between px-2 py-1.5">
@@ -355,8 +357,17 @@ export const Navbar = () => {
         </div>
 
         {/* RIGHT - Actions */}
-        <div className="flex items-center gap-2 sm:gap-4">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <button
+              type="button"
+              onClick={() => setIsMobileSearchOpen(true)}
+              className="md:hidden w-9 h-9 flex items-center justify-center rounded-full bg-slate-100/80 text-slate-600 active:scale-95 transition-all"
+              title="Quick Navigation Search"
+            >
+              <Search className="w-4 h-4" />
+            </button>
+
             {!isInstalled && (
               <button
                 type="button"
@@ -365,7 +376,7 @@ export const Navbar = () => {
                   background: `linear-gradient(135deg, var(--t-primary, #286038), var(--t-sidebar-via, #103020))`,
                   boxShadow: `0 2px 8px var(--t-btn-shadow, rgba(40, 96, 56, 0.25))`,
                 }}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-white font-semibold text-xs hover:opacity-95 hover:shadow-md transition-all active:scale-95 cursor-pointer shrink-0 border border-white/20"
+                className="flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-full text-white font-semibold text-xs hover:opacity-95 hover:shadow-md transition-all active:scale-95 cursor-pointer shrink-0 border border-white/20"
                 title="Download / Install inventQ as Desktop App"
               >
                 <Download size={13} strokeWidth={2.5} />
@@ -375,7 +386,7 @@ export const Navbar = () => {
 
             <Link to="/notifications" className="group">
               <button 
-                className="relative flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 backdrop-blur-md hover:bg-blue-500/20 text-blue-600 rounded-full transition-all duration-300 ease-out shadow-sm overflow-hidden border border-blue-500/20"
+                className="relative flex items-center gap-2 px-2.5 sm:px-3 py-1.5 bg-blue-500/10 backdrop-blur-md hover:bg-blue-500/20 text-blue-600 rounded-full transition-all duration-300 ease-out shadow-sm overflow-hidden border border-blue-500/20 min-h-9"
                 title="View Notifications"
               >
                 <div className="relative flex shrink-0 items-center justify-center">
@@ -386,7 +397,7 @@ export const Navbar = () => {
                     </span>
                   )}
                 </div>
-                <div className={`flex flex-col items-start transition-all duration-500 ease-out overflow-hidden whitespace-nowrap ${isIslandExpanded ? 'w-[180px] opacity-100' : 'w-0 opacity-0 group-hover:w-[180px] group-hover:opacity-100'}`}>
+                <div className={`hidden sm:flex flex-col items-start transition-all duration-500 ease-out overflow-hidden whitespace-nowrap ${isIslandExpanded ? 'w-[180px] opacity-100' : 'w-0 opacity-0 group-hover:w-[180px] group-hover:opacity-100'}`}>
                   <span className="text-[9px] font-extrabold text-blue-500/80 uppercase tracking-wider leading-none mb-0.5">
                     {latestNotification ? "New Alert" : (unreadCount > 0 ? `${unreadCount} Unread` : "Notifications")}
                   </span>
@@ -397,13 +408,78 @@ export const Navbar = () => {
               </button>
             </Link>
             <Link to={"/settings"}>
-              <button className="p-2 text-slate-400 md:hover:bg-slate-100 md:hover:text-slate-700 rounded-full md:transition-colors group">
+              <button className="w-9 h-9 flex items-center justify-center text-slate-500 md:hover:bg-slate-100 md:hover:text-slate-700 rounded-full md:transition-colors group active:scale-95">
                 <Settings className="w-5 h-5 md:group-hover:rotate-45 md:transition-transform md:duration-300" />
               </button>
             </Link>
           </div>
         </div>
       </div>
+
+      {/* Mobile Quick Navigation Search Sheet */}
+      <AnimatePresence>
+        {isMobileSearchOpen && (
+          <div className="fixed inset-0 z-[100] md:hidden flex flex-col justify-start">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs"
+              onClick={() => setIsMobileSearchOpen(false)}
+            />
+            <motion.div
+              initial={{ y: -20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -20, opacity: 0 }}
+              transition={{ duration: 0.16 }}
+              className="relative z-10 bg-white border-b border-slate-200 shadow-xl rounded-b-2xl pt-[max(12px,env(safe-area-inset-top))] px-3.5 pb-4 space-y-3"
+            >
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="text"
+                    autoFocus
+                    placeholder="Jump to any page..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsMobileSearchOpen(false)}
+                  className="px-3 py-2 text-xs font-bold text-slate-500 hover:text-slate-800"
+                >
+                  Cancel
+                </button>
+              </div>
+
+              <div className="max-h-[55vh] overflow-y-auto divide-y divide-slate-100">
+                {(searchQuery ? filteredRoutes : SEARCHABLE_ROUTES.slice(0, 8)).map((route) => {
+                  const Icon = route.icon;
+                  return (
+                    <button
+                      key={route.path}
+                      onClick={() => handleNavigate(route.path)}
+                      className="w-full flex items-center justify-between px-2.5 py-2.5 text-sm text-slate-700 hover:bg-slate-50 active:bg-blue-50 rounded-lg transition-colors"
+                    >
+                      <span className="flex items-center gap-3 font-medium">
+                        <Icon size={16} className="text-slate-400" />
+                        {route.name}
+                      </span>
+                      <ArrowRight size={14} className="text-slate-300" />
+                    </button>
+                  );
+                })}
+                {searchQuery && filteredRoutes.length === 0 && (
+                  <p className="py-6 text-center text-xs text-slate-400">No matching pages found</p>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Dynamic CSS animations */}
       <style>{`

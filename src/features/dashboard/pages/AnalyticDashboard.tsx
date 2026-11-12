@@ -714,31 +714,24 @@ const AnalyticsDashboard = () => {
   }, [stats, supplierNameMap]);
 
   return (
-    <div className="min-h-screen bg-slate-50/50 p-4 md:p-6 lg:p-8 font-sans">
-      <div className="max-w-[1600px] mx-auto space-y-6">
+    <div className="min-h-screen bg-slate-50/50 p-3 sm:p-4 md:p-6 lg:p-8 pb-20 md:pb-8 font-sans">
+      <div className="max-w-[1600px] mx-auto space-y-4 sm:space-y-6">
 
         {/* ── HEADER ── */}
         <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
-          <div className="p-5 md:px-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="p-4 sm:p-5 md:px-6 flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
             <div>
-              <h1 className="text-xl md:text-2xl font-semibold text-slate-700 tracking-tight">Dashboard</h1>
-              <p className="text-xs font-semibold text-slate-400 mt-0.5">
-                {activeRange === "all"
-                  ? "All Time Overview"
-                  : dateRange?.start && dateRange?.end
-                  ? `${dateRange.start.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} — ${dateRange.end.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`
-                  : "All Time Overview"}
-              </p>
+              <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">Dashboard</h1>
             </div>
 
             {/* Time filters & Actions */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <div className="bg-slate-100 p-1 rounded-xl flex items-center gap-1">
+            <div className="flex items-center gap-2 flex-wrap w-full md:w-auto">
+              <div className="bg-slate-100 p-1 rounded-xl flex items-center gap-1 overflow-x-auto max-w-full scrollbar-none">
                 {(["today", "month", "year", "all", "custom"] as RangeKey[]).map((r) => (
                   <button
                     key={r}
                     onClick={() => setActiveRange(r)}
-                    className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    className={`px-3 sm:px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all shrink-0 ${
                       activeRange === r
                         ? "bg-white text-slate-600 shadow-xs"
                         : "text-slate-500 hover:text-slate-700"
@@ -773,14 +766,14 @@ const AnalyticsDashboard = () => {
 
           {/* Custom date inputs */}
           {activeRange === "custom" && (
-            <div className="px-6 pb-4 flex items-center gap-3 animate-in fade-in">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-slate-400" />
+            <div className="px-4 sm:px-6 pb-4 flex flex-wrap items-center gap-2 sm:gap-3 animate-in fade-in">
+              <div className="flex items-center gap-2 flex-1 sm:flex-initial min-w-[140px]">
+                <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
                 <input
                   type="date"
                   value={customStart}
                   onChange={(e) => setCustomStart(e.target.value)}
-                  className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                  className="w-full sm:w-auto px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
                 />
               </div>
               <span className="text-xs text-slate-400">to</span>
@@ -788,16 +781,16 @@ const AnalyticsDashboard = () => {
                 type="date"
                 value={customEnd}
                 onChange={(e) => setCustomEnd(e.target.value)}
-                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                className="flex-1 sm:flex-initial min-w-[130px] px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
               />
             </div>
           )}
 
           {/* Filters Bar */}
-          <div className="px-6 py-3 border-t border-slate-100 flex items-center gap-4 bg-slate-50/50 flex-wrap">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-slate-500">Supplier:</span>
-              <div className="w-48">
+          <div className="px-4 sm:px-6 py-3 border-t border-slate-100 flex items-center gap-3 sm:gap-4 bg-slate-50/50 flex-wrap">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <span className="text-xs font-medium text-slate-500 shrink-0">Supplier:</span>
+              <div className="flex-1 sm:w-48">
                 <ReusableSelect
                   value={selectedSupplier}
                   onValueChange={setSelectedSupplier}
@@ -1114,7 +1107,7 @@ const AnalyticsDashboard = () => {
           {/* Sales by Payment */}
           <div className="xl:col-span-1">
             <SectionCard title="Sales by Payment">
-              <div className="p-5 flex flex-col justify-between h-[340px]">
+              <div className="p-4 sm:p-5 flex flex-col justify-between min-h-[340px] h-auto">
                 <div className="h-[180px] w-full min-w-0 flex items-center justify-center">
                   <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={180}>
                     <PieChart>
@@ -1202,27 +1195,27 @@ const AnalyticsDashboard = () => {
                 )}
 
                 {/* Bottom quick stats */}
-                <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-3 gap-3">
-                  <div className="text-center p-3 bg-slate-50 rounded-xl">
+                <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-3 gap-2 sm:gap-3">
+                  <div className="text-center p-2.5 sm:p-3 bg-slate-50 rounded-xl min-w-0">
                     <div className="mb-1 flex justify-center">
                       <BarChart2 className="w-4 h-4 text-slate-500" />
                     </div>
-                    <p className="text-xs font-medium text-slate-700">{grossMargin.toFixed(1)}%</p>
-                    <p className="text-[10px] font-semibold text-slate-400">Gross Margin</p>
+                    <p className="text-xs font-medium text-slate-700 truncate">{grossMargin.toFixed(1)}%</p>
+                    <p className="text-[10px] font-semibold text-slate-400 truncate">Gross Margin</p>
                   </div>
-                  <div className="text-center p-3 bg-slate-50 rounded-xl">
+                  <div className="text-center p-2.5 sm:p-3 bg-slate-50 rounded-xl min-w-0">
                     <div className="mb-1 flex justify-center">
                       <ShoppingCart className="w-4 h-4 text-slate-500" />
                     </div>
-                    <p className="text-xs font-medium text-slate-700">{totalOrders}</p>
-                    <p className="text-[10px] font-semibold text-slate-400">Total Orders</p>
+                    <p className="text-xs font-medium text-slate-700 truncate">{totalOrders}</p>
+                    <p className="text-[10px] font-semibold text-slate-400 truncate">Total Orders</p>
                   </div>
-                  <div className="text-center p-3 bg-slate-50 rounded-xl">
+                  <div className="text-center p-2.5 sm:p-3 bg-slate-50 rounded-xl min-w-0">
                     <div className="mb-1 flex justify-center">
                       <TrendingUp className="w-4 h-4 text-emerald-500" />
                     </div>
-                    <p className="text-xs font-medium text-slate-700">{fmtShort(aov)}</p>
-                    <p className="text-[10px] font-semibold text-slate-400">AOV</p>
+                    <p className="text-xs font-medium text-slate-700 truncate">{fmtShort(aov)}</p>
+                    <p className="text-[10px] font-semibold text-slate-400 truncate">AOV</p>
                   </div>
                 </div>
               </div>

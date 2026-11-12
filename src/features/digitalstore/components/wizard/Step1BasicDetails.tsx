@@ -325,7 +325,7 @@ export default function Step1BasicDetails({ form, setForm, errors, setErrors }: 
         {/* GST Registration */}
         <div className="mb-4">
           <FieldLabel>GST Registration Status</FieldLabel>
-          <div className="flex rounded-xl border border-slate-200 overflow-hidden bg-slate-50 p-1 gap-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 rounded-xl border border-slate-200 overflow-hidden bg-slate-50 p-1 gap-1">
             <button
               type="button"
               onClick={() => setForm((prev) => ({ ...prev, gstRegistered: true }))}

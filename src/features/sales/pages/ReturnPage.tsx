@@ -1,10 +1,10 @@
-import { ReusableSelect } from "@/components/ui/ReusableSelect";
+import { ReusableSelect, SearchBar } from "@/components/ui";
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import {
   ArrowLeft, Package, AlertCircle, CheckCircle2,
   ChevronRight, Minus, Plus, ArrowRight, RefreshCw, Banknote,
-  Check, Loader2, Search, X
+  Check, Loader2, X
 } from "lucide-react";
 import { SHOP_ID, ENDPOINTS } from "@/services/endpoints";
 import { useApi } from "@/context/ApiContext";
@@ -356,10 +356,10 @@ const ReturnPageContent: React.FC<{ sale: SaleRecord; productMap: Record<string,
         </div>
 
       ) : isExchangeStep2 ? (
-        /* ── Exchange Step 2: Side-by-side ── */
-        <div className="flex flex-1 min-h-0 overflow-hidden">
+        /* ── Exchange Step 2: Side-by-side (stacked on mobile) ── */
+        <div className="flex flex-col md:flex-row flex-1 min-h-0 overflow-y-auto md:overflow-hidden">
           {/* LEFT: Items to return */}
-          <div className="w-[42%] min-w-[300px] flex flex-col border-r border-slate-200 bg-white">
+          <div className="w-full md:w-[42%] md:min-w-[300px] flex flex-col border-b md:border-b-0 md:border-r border-slate-200 bg-white shrink-0 md:shrink">
             <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-slate-50/60 to-white flex-shrink-0">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Left — Items to Return</p>
               <p className="text-[14px] font-black text-slate-800">What is the customer returning?</p>
@@ -420,16 +420,16 @@ const ReturnPageContent: React.FC<{ sale: SaleRecord; productMap: Record<string,
                         {item.unit_infos?.sub_units?.length > 0 && (
                           <div className="flex items-center gap-2">
                             <span className="text-[10px] text-slate-400 w-12 shrink-0">Unit</span>
-                            <select
+                            <ReusableSelect
+                              size="sm"
                               value={state.itemUnits[item.id] || item.entered_unit || item.unit}
-                              onChange={e => m.setUnit(item.id, e.target.value)}
-                              className="h-8 px-2 text-[11px] border border-slate-200 rounded-lg bg-white text-slate-700 outline-none focus:border-blue-500 font-semibold"
-                            >
-                              <option value={item.unit}>{item.unit}</option>
-                              {item.unit_infos.sub_units.map((su: any) => (
-                                <option key={su.name} value={su.name}>{su.name}</option>
-                              ))}
-                            </select>
+                              onValueChange={val => m.setUnit(item.id, val)}
+                              options={[
+                                { label: item.unit, value: item.unit },
+                                ...item.unit_infos.sub_units.map((su: any) => ({ label: su.name, value: su.name })),
+                              ]}
+                              className="h-8 text-[11px] w-28"
+                            />
                           </div>
                         )}
                         <div className="flex items-center gap-2">
@@ -460,13 +460,14 @@ const ReturnPageContent: React.FC<{ sale: SaleRecord; productMap: Record<string,
             </div>
             {/* Search */}
             <div className="px-4 pt-4 pb-2 bg-white border-b border-slate-100 flex-shrink-0">
-              <div className="relative">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input type="text" placeholder={selectedItems.length === 0 ? "Select items to return first…" : "Search replacement catalog…"}
-                  value={exchSearch} disabled={selectedItems.length === 0}
-                  onChange={e => setExchSearch(e.target.value)}
-                  className="w-full h-10 pl-9 pr-4 text-[13px] bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-blue-400 transition-all placeholder:text-slate-400 disabled:opacity-50 disabled:cursor-not-allowed" />
-              </div>
+              <SearchBar
+                size="sm"
+                placeholder={selectedItems.length === 0 ? "Select items to return first…" : "Search replacement catalog…"}
+                value={exchSearch}
+                disabled={selectedItems.length === 0}
+                onChange={e => setExchSearch(e.target.value)}
+                onClear={() => setExchSearch("")}
+              />
             </div>
             {/* Catalog */}
             <div className="flex-1 overflow-y-scroll p-4 space-y-2">
@@ -677,16 +678,16 @@ const ReturnPageContent: React.FC<{ sale: SaleRecord; productMap: Record<string,
                       {item.unit_infos?.sub_units?.length > 0 && (
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] text-slate-400 w-12">Unit</span>
-                          <select
+                          <ReusableSelect
+                            size="sm"
                             value={state.itemUnits[item.id] || item.entered_unit || item.unit}
-                            onChange={e => m.setUnit(item.id, e.target.value)}
-                            className="h-8 px-2 text-[11px] border border-slate-200 rounded-lg bg-white text-slate-700 outline-none focus:border-blue-500 font-semibold"
-                          >
-                            <option value={item.unit}>{item.unit}</option>
-                            {item.unit_infos.sub_units.map((su: any) => (
-                              <option key={su.name} value={su.name}>{su.name}</option>
-                            ))}
-                          </select>
+                            onValueChange={val => m.setUnit(item.id, val)}
+                            options={[
+                              { label: item.unit, value: item.unit },
+                              ...item.unit_infos.sub_units.map((su: any) => ({ label: su.name, value: su.name })),
+                            ]}
+                            className="h-8 text-[11px] w-28"
+                          />
                         </div>
                       )}
                       <div className="flex items-center gap-2">

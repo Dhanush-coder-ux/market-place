@@ -365,3 +365,25 @@
   padding-top: 16px;
   border-top: 1px solid var(--fr-border);
 }
+
+@media (max-width: 640px) {
+  .fs-card,
+  .afr-card {
+    padding: 14px;
+    border-radius: 12px;
+  }
+
+  .fs-header,
+  .afr-section-header {
+    gap: 10px;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+  }
+
+  .fs-icon,
+  .afr-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+  }
+}

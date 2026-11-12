@@ -73,23 +73,23 @@ export const ShopProfileForm: React.FC<ShopProfileFormProps> = ({ editPath }) =>
   return (
     <>
       <NavigationBlocker data={{ name, tagline, description, visibleOnline, address, logoUrl, bannerUrl }} isSubmitting={saving} />
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden animate-in fade-in slide-in-from-right-2 duration-300 h-full">
-      <div className="px-6 py-5 border-b border-slate-50 bg-gradient-to-r from-slate-50/80 to-white flex justify-between items-center">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center">
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden animate-in fade-in slide-in-from-right-2 duration-300 h-full mb-20 md:mb-0">
+      <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-50 bg-gradient-to-r from-slate-50/80 to-white flex flex-wrap justify-between items-center gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
             <Store size={17} className="text-blue-600" />
           </div>
-          <div>
+          <div className="min-w-0">
             <h3 className="text-sm font-bold text-slate-800">Shop Profile</h3>
             <p className="text-[11px] text-slate-400 font-medium mt-0.5">
               Update your shop's core details and visibility.
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           <button
             onClick={() => navigate(editPath || `/create-shop?id=${SHOP_ID}`)}
-            className="h-9 px-4 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-all flex items-center gap-2 shadow-sm cursor-pointer"
+            className="h-10 sm:h-9 px-4 w-full sm:w-auto justify-center bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-all flex items-center gap-2 shadow-sm cursor-pointer"
           >
             <Edit className="w-4 h-4" />
             Edit Shop Details

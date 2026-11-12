@@ -1,64 +1,72 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React from "react";
+import { Link } from "react-router-dom";
+import { cn } from "@/lib/utils";
 
-// Extend types to include both Link and Button attributes
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'outline' | 'danger' | 'ghost';
+  variant?: "primary" | "outline" | "danger" | "ghost";
+  size?: "sm" | "md" | "lg";
   children: React.ReactNode;
   icon?: React.ReactNode;
   path?: string;
-  iconPosition?: 'left' | 'right';
+  iconPosition?: "left" | "right";
 }
 
+const SIZE_CLASSES: Record<"sm" | "md" | "lg", string> = {
+  sm: "h-8 px-3 text-xs gap-1.5",
+  md: "h-9 px-4 text-xs sm:text-[13px] gap-2",
+  lg: "h-10 px-5 text-sm gap-2",
+};
+
 export const GradientButton: React.FC<ButtonProps> = ({
-  variant = 'primary',
+  variant = "primary",
+  size = "md",
   children,
   icon,
-  className = '',
+  className = "",
   path,
-  iconPosition = 'left',
+  iconPosition = "left",
   ...props
 }) => {
-  // Enhanced base styles with focus outlines and smooth scaling
-  const baseStyles = "group inline-flex items-center justify-center gap-2.5 px-5 py-2.5 rounded-lg font-semibold text-[14px] whitespace-nowrap overflow-hidden transition-all duration-300 ease-out active:scale-[0.97] disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
+  const baseStyles =
+    "group inline-flex items-center justify-center rounded-lg font-semibold whitespace-nowrap overflow-hidden transition-all duration-200 ease-out active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 cursor-pointer";
 
-  // Ultra-premium modern variants with micro-interactions
   const variants = {
-    primary: "text-white hover:-translate-y-0.5 hover:bg-[position:right_center]",
-    
-    outline: "bg-white border border-slate-200 text-slate-700 shadow-[0_1px_2px_rgba(0,0,0,0.05)] hover:border-slate-300 hover:text-slate-900 hover:bg-slate-50 hover:shadow-md hover:-translate-y-0.5 focus-visible:ring-slate-300",
-    
-    danger: "bg-gradient-to-r from-rose-50 to-red-50 text-red-600 border border-red-200 hover:from-rose-500 hover:to-red-600 hover:text-white hover:border-transparent hover:shadow-[0_6px_16px_rgba(225,29,72,0.3)] hover:-translate-y-0.5 focus-visible:ring-red-500",
-    
-    ghost: "bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-slate-300",
+    primary: "text-white hover:brightness-105",
+    outline:
+      "bg-white border border-slate-200 text-slate-700 shadow-xs hover:border-slate-300 hover:text-slate-900 hover:bg-slate-50 focus-visible:ring-slate-300",
+    danger:
+      "bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white hover:border-red-600 focus-visible:ring-red-500",
+    ghost:
+      "bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-slate-300",
   };
 
-  // Theme-aware inline styles for primary variant
-  const themeStyles: React.CSSProperties = variant === 'primary' ? {
-    background: `linear-gradient(to right, var(--t-primary), var(--t-secondary, var(--t-primary)))`,
-    boxShadow: `0 4px 12px var(--t-btn-shadow)`,
-  } : {};
+  const themeStyles: React.CSSProperties =
+    variant === "primary"
+      ? {
+          background: `linear-gradient(to right, var(--t-primary), var(--t-secondary, var(--t-primary)))`,
+          boxShadow: `0 2px 8px var(--t-btn-shadow)`,
+        }
+      : {};
 
-  const combinedClasses = `${baseStyles} ${variants[variant]} ${className}`;
+  const combinedClasses = cn(
+    baseStyles,
+    SIZE_CLASSES[size],
+    variants[variant],
+    className
+  );
 
-  // Reusable content structure with animated icon support
   const content = (
     <>
-      {icon && iconPosition === 'left' && (
-        <span className="shrink-0 transition-transform duration-300 group-hover:scale-110">
-          {icon}
-        </span>
+      {icon && iconPosition === "left" && (
+        <span className="shrink-0 flex items-center">{icon}</span>
       )}
       <span className="truncate">{children}</span>
-      {icon && iconPosition === 'right' && (
-        <span className="shrink-0 transition-transform duration-300 group-hover:scale-110">
-          {icon}
-        </span>
+      {icon && iconPosition === "right" && (
+        <span className="shrink-0 flex items-center">{icon}</span>
       )}
     </>
   );
 
-  // Render as Link if path exists, otherwise render as Button
   if (path) {
     return (
       <Link to={path} className={combinedClasses} style={themeStyles}>
@@ -73,4 +81,3 @@ export const GradientButton: React.FC<ButtonProps> = ({
     </button>
   );
 };
-

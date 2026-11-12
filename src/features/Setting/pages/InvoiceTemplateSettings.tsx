@@ -60,10 +60,10 @@ export const InvoiceTemplateSettings: React.FC = () => {
   const hasChanges = activeTemplate !== savedTemplate;
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col md:flex-row h-[80vh] max-h-[900px] min-h-[600px]">
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col md:flex-row md:h-[80vh] md:max-h-[900px] md:min-h-[600px] mb-20 md:mb-0">
       {/* Left Column: Template Selection */}
-      <div className="w-full md:w-5/12 lg:w-1/3 bg-white border-r border-slate-200 flex flex-col">
-        <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center sticky top-0 z-20">
+      <div className="w-full md:w-5/12 lg:w-1/3 bg-white border-b md:border-b-0 md:border-r border-slate-200 flex flex-col">
+        <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-100 bg-slate-50/50 flex flex-wrap justify-between items-center gap-3 sticky top-0 z-20">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center">
               <LayoutTemplate size={17} className="text-blue-600" />
@@ -130,12 +130,12 @@ export const InvoiceTemplateSettings: React.FC = () => {
       </div>
 
       {/* Right Column: Live Preview */}
-      <div className="w-full md:w-7/12 lg:w-2/3 bg-slate-100 flex flex-col items-center overflow-y-auto custom-scrollbar relative">
-         <div className="sticky top-0 w-full px-6 py-4 bg-gradient-to-b from-slate-100 via-slate-100/90 to-transparent z-10 flex flex-col items-center pointer-events-none">
+      <div className="w-full md:w-7/12 lg:w-2/3 bg-slate-100 flex flex-col items-center overflow-y-auto custom-scrollbar relative min-h-[360px]">
+         <div className="sticky top-0 w-full px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-b from-slate-100 via-slate-100/90 to-transparent z-10 flex flex-col items-center pointer-events-none">
            <h4 className="text-[13px] font-semibold text-slate-700 bg-white/80 backdrop-blur px-4 py-1.5 rounded-full shadow-sm border border-slate-200/50">Live Invoice Preview</h4>
          </div>
-         <div className="pb-12 pt-4 px-8 w-full flex justify-center">
-            <div className="shadow-xl shadow-slate-300/50 rounded-lg overflow-hidden pointer-events-none ring-1 ring-slate-200/50 bg-white">
+         <div className="pb-12 pt-4 px-4 sm:px-8 w-full overflow-x-auto flex justify-start md:justify-center">
+            <div className="shadow-xl shadow-slate-300/50 rounded-lg overflow-hidden pointer-events-none ring-1 ring-slate-200/50 bg-white shrink-0">
               <InvoiceRenderer templateId={activeTemplate} {...mockData} scale={1} />
             </div>
          </div>

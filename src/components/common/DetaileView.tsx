@@ -11,16 +11,16 @@ const DetailView: React.FC<DetailViewProps> = ({
   onDelete,
 }) => {
   return (
-    <div className="max-w-5xl mx-auto p-6 space-y-8 animate-in fade-in duration-500">
+    <div className="max-w-5xl mx-auto p-3 sm:p-6 space-y-6 sm:space-y-8 animate-in fade-in duration-500">
       
       {/* --- header --- */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-gray-100 pb-6">
-        <div>
-          <h2 className="text-3xl font-bold text-gray-900 tracking-tight">{title}</h2>
-          {subtitle && <p className="text-gray-500 mt-1">{subtitle}</p>}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-gray-100 pb-4 sm:pb-6">
+        <div className="min-w-0">
+          <h2 className="text-xl sm:text-3xl font-bold text-gray-900 tracking-tight break-words">{title}</h2>
+          {subtitle && <p className="text-sm text-gray-500 mt-1">{subtitle}</p>}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {onEdit && (
             <button
               onClick={onEdit}

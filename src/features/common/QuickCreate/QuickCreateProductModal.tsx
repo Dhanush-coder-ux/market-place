@@ -430,7 +430,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
                 </button>
               </div>
               {showBarcodeGen && (
-                <div className="absolute bottom-full right-0 mb-2 w-60 p-3 bg-white border border-slate-200 shadow-2xl rounded-xl z-[100]">
+                <div className="absolute bottom-full right-0 mb-2 w-60 max-w-[calc(100vw-2rem)] p-3 bg-white border border-slate-200 shadow-2xl rounded-xl z-[100]">
                   <h4 className="text-xs font-bold text-slate-800 mb-2 flex items-center gap-1.5"><Barcode size={12} className="text-indigo-500" />Generate Barcode</h4>
                   <div className="space-y-2">
                     <input

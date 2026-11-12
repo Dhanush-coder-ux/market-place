@@ -673,7 +673,7 @@ const Billing = () => {
               </div>
 
               {/* Floating Bottom Checkout Bar for Mobile Items Tab */}
-              <div className="shrink-0 mt-2 mb-[calc(50px+env(safe-area-inset-bottom))] lg:mb-0 bg-white rounded-2xl border border-slate-200/90 p-3 shadow-lg flex items-center justify-between gap-3">
+              <div className="shrink-0 mt-2 mb-[env(safe-area-inset-bottom)] lg:mb-0 bg-white rounded-2xl border border-slate-200/90 p-3 shadow-lg flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Grand Total</span>
                   <span className="text-lg font-black text-slate-900 tabular-nums leading-none">

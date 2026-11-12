@@ -469,29 +469,31 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
           </span>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <div className="flex flex-wrap items-center gap-2">
             <input
-              className="h-9 px-3 text-xs border border-slate-200 rounded-lg w-32 font-mono focus:ring-2 focus:ring-blue-100 outline-none"
+              className="h-9 px-3 text-xs border border-slate-200 rounded-lg w-28 sm:w-32 font-mono focus:ring-2 focus:ring-blue-100 outline-none"
               placeholder="barcode base"
               value={barcodeBase}
               onChange={e => setbarcodeBase(e.target.value)}
             />
             <button type="button" onClick={() => regenAllbarcodes(barcodeBase)}
-              className="flex items-center gap-2 h-9 px-4 text-[10px] font-black uppercase tracking-wider text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all">
+              className="flex items-center gap-2 h-9 px-3 sm:px-4 text-[10px] font-black uppercase tracking-wider text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all">
               <RefreshCw size={12} /> Auto Generate
             </button>
           </div>
-          <div className="h-6 w-[1px] bg-slate-200 mx-1" />
-          <button type="button" onClick={() => bulkToggleAll(true)}
-            className="h-9 px-4 text-[10px] font-black uppercase tracking-wider text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-lg hover:bg-emerald-100 transition-all">
-            All On
-          </button>
-          <button type="button" onClick={() => bulkToggleAll(false)}
-            disabled={combinations.length <= 1}
-            className="h-9 px-4 text-[10px] font-black uppercase tracking-wider text-slate-500 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all disabled:opacity-30 disabled:cursor-not-allowed">
-            All Off
-          </button>
+          <div className="hidden sm:block h-6 w-[1px] bg-slate-200 mx-1" />
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => bulkToggleAll(true)}
+              className="h-9 px-3.5 sm:px-4 text-[10px] font-black uppercase tracking-wider text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-lg hover:bg-emerald-100 transition-all">
+              All On
+            </button>
+            <button type="button" onClick={() => bulkToggleAll(false)}
+              disabled={combinations.length <= 1}
+              className="h-9 px-3.5 sm:px-4 text-[10px] font-black uppercase tracking-wider text-slate-500 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition-all disabled:opacity-30 disabled:cursor-not-allowed">
+              All Off
+            </button>
+          </div>
         </div>
       </div>
 

@@ -872,9 +872,9 @@ export const InventoryItemsCard = ({
 
       <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
         {/* Card Header */}
-        <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
+        <div className="px-4 sm:px-5 py-3 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <div className={`w-8 h-8 rounded-lg bg-${themeColor}-50 flex items-center justify-center text-${themeColor}-600 border border-${themeColor}-100`}>
+            <div className={`w-8 h-8 rounded-lg bg-${themeColor}-50 flex items-center justify-center text-${themeColor}-600 border border-${themeColor}-100 shrink-0`}>
               <Package size={16} />
             </div>
             <div>
@@ -882,9 +882,9 @@ export const InventoryItemsCard = ({
               <p className="text-[11px] text-slate-400">Add products to this {typeText.toLowerCase()}</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
             {type === "PURCHASE" && gstMode && setGstMode && (
-              <div className="flex flex-col items-end gap-1">
+              <div className="flex flex-col items-start sm:items-end gap-1">
                 <div className="flex bg-slate-100 rounded-lg p-0.5 shrink-0 border border-slate-200/55 shadow-inner h-8 items-center select-none">
                   <button
                     type="button"
@@ -908,12 +908,12 @@ export const InventoryItemsCard = ({
                   </button>
                 </div>
                 {gstMode === "inclusive" ? (
-                  <span className="flex items-center gap-1 text-[10px] font-medium text-amber-600 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-full">
+                  <span className="hidden sm:flex items-center gap-1 text-[10px] font-medium text-amber-600 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-full">
                     <Info size={10} />
                     GST is already included in the item's cost price
                   </span>
                 ) : (
-                  <span className="flex items-center gap-1 text-[10px] font-medium text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full">
+                  <span className="hidden sm:flex items-center gap-1 text-[10px] font-medium text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full">
                     <Info size={10} />
                     GST will be added on top of the item's base cost price
                   </span>
@@ -923,7 +923,7 @@ export const InventoryItemsCard = ({
 
             <button
               onClick={addProduct}
-              className={`flex items-center gap-1.5 px-3 h-8 rounded-lg bg-${themeColor}-600 text-white text-[11px] font-medium shadow-sm hover:bg-${themeColor}-700 transition-all active:scale-95`}
+              className={`flex items-center gap-1.5 px-3 h-9 sm:h-8 rounded-lg bg-${themeColor}-600 text-white text-[11px] font-medium shadow-sm hover:bg-${themeColor}-700 transition-all active:scale-95 shrink-0`}
             >
               <Plus size={14} />
               Add Item
@@ -931,8 +931,271 @@ export const InventoryItemsCard = ({
           </div>
         </div>
 
-        {/* Product Table */}
-        <div className="overflow-x-auto custom-scrollbar w-full" style={{ position: 'relative' }}>
+        {/* Mobile Card View (< md) */}
+        <div className="md:hidden divide-y divide-slate-200">
+          {products.map((product, index) => {
+            const q = Number(product.quantity) || 0;
+            const baseCost = Number(product.costPrice) || 0;
+            const gstRate = Number(product.taxGst) || 0;
+            const hasProduct = !!product.name;
+            const rowBaseCost = gstMode === "inclusive" ? baseCost / (1 + gstRate / 100) : baseCost;
+            const rowGstPerUnit = gstMode === "inclusive" ? baseCost - rowBaseCost : baseCost * (gstRate / 100);
+            const rowTotal = q * rowBaseCost;
+            const rowGrandTotal = q * (rowBaseCost + rowGstPerUnit);
+            const allocTotal = stats?.allocations?.[index]?.alloc || 0;
+            const allocPerUnit = q > 0 ? allocTotal / q : 0;
+            const landedCostPerUnit = isGstRegistered ? (rowBaseCost + allocPerUnit) : (rowBaseCost + rowGstPerUnit + allocPerUnit);
+            const landedCostTotal = q * landedCostPerUnit;
+            const costForSp = isGstRegistered ? rowBaseCost : (rowBaseCost + rowGstPerUnit);
+            const netCostForSp = costForSp + allocPerUnit;
+            const rawEnteredSp = Number(product.sellingPrice) || 0;
+            const rowMrp = Number(product.mrp || (product as any).datas?.mrp) || 0;
+            let sellingPriceInclusive = rawEnteredSp;
+            if (product.marginType === "percent" && Number(product.marginPercent) > 0) {
+              const m = Number(product.marginPercent);
+              const computedBase = m < 100 ? netCostForSp / (1 - m / 100) : netCostForSp * (1 + m / 100);
+              sellingPriceInclusive = Math.round(computedBase * (1 + gstRate / 100) * 100) / 100;
+            } else if (product.marginType === "amount" && Number(product.marginAmount) > 0) {
+              const computedBase = netCostForSp + Number(product.marginAmount);
+              sellingPriceInclusive = Math.round(computedBase * (1 + gstRate / 100) * 100) / 100;
+            }
+            const spTax = calculateTaxSplit(sellingPriceInclusive, gstRate);
+            const spTaxableValue = spTax.taxableValue;
+            const profitAmount = Math.round((spTaxableValue - landedCostPerUnit) * 100) / 100;
+            const marginPercent = spTaxableValue > 0 ? ((profitAmount / spTaxableValue) * 100) : 0;
+            const isExceedingMrp = rowMrp > 0 && sellingPriceInclusive > rowMrp;
+            const isExpanded = expandedSettings.has(index) || expandedBreakdown.has(index);
+            const subUnits = product.unit_infos?.sub_units || [];
+            const hasSubUnits = subUnits.length > 0;
+            const baseUnit = product.unit_infos?.name || product.unit || "pc";
+            const allUnits = hasSubUnits ? [{ name: baseUnit, factor: 1 }, ...subUnits] : [{ name: baseUnit, factor: 1 }];
+            const currentUnit = product.selectedUnit || baseUnit;
+
+            return (
+              <div key={product.id} className="p-3.5 space-y-3 bg-white">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <span className={`w-6 h-6 rounded-md flex items-center justify-center text-[11px] font-bold shrink-0 ${hasProduct ? `bg-${themeColor}-600 text-white` : "bg-slate-100 text-slate-500"}`}>
+                      {index + 1}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <SearchSelect
+                        labelKey="name"
+                        valueKey="id"
+                        fetchOptions={async (qStr) => await inventoryApi.searchInventories(qStr, undefined, true)}
+                        options={product.inventory_id ? [{ id: product.inventory_id, name: product.name }] as any[] : []}
+                        value={product.inventory_id}
+                        onCreateNew={(query) => {
+                          if (openQuickCreate) {
+                            openQuickCreate("PRODUCT", (newProduct: any) => executeProductSelect(index, newProduct.id, newProduct), { name: query });
+                          } else if (onAddNewProduct) {
+                            onAddNewProduct(query);
+                          }
+                        }}
+                        onChange={(val, opt) => executeProductSelect(index, val, opt)}
+                        placeholder="Find or add product..."
+                        className="!h-10 text-sm"
+                        entityName="Product"
+                        getPopupContainer={() => document.body}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => toggleBreakdown(index)}
+                      className={`p-2 rounded-lg transition-all ${expandedBreakdown.has(index) ? "bg-slate-800 text-white" : "text-slate-400 hover:bg-slate-100"}`}
+                      title="Cost breakdown"
+                    >
+                      <Info size={15} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => toggleSettings(index)}
+                      className={`p-2 rounded-lg transition-all ${expandedSettings.has(index) ? `bg-${themeColor}-600 text-white` : "text-slate-400 hover:bg-slate-100"}`}
+                      title="Settings"
+                    >
+                      <Settings size={15} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeProduct(index)}
+                      disabled={products.length === 1}
+                      className="p-2 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 disabled:opacity-25 transition-all"
+                      title="Remove item"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                </div>
+
+                {hasProduct && (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {product.variant && (
+                      <AntBadge variant="at-variant" type="tag" className="!text-[9px] !px-2 !py-0.5 !font-medium">
+                        {typeof product.variant === "object" && product.variant !== null ? (product.variant.variant_name || product.variant.name) : product.variant}
+                      </AntBadge>
+                    )}
+                    {product.batchTracking && (
+                      <span
+                        onClick={() => toggleSettings(index)}
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-medium border cursor-pointer ${product.batchNum ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-rose-50 text-rose-600 border-rose-200"}`}
+                      >
+                        <Package size={9} /> {product.batchNum ? `Batch: ${typeof product.batchNum === "object" && product.batchNum !== null ? (product.batchNum.batch_name || product.batchNum.name) : product.batchNum}` : "Batch Required"}
+                      </span>
+                    )}
+                    {product.serialTracking && (
+                      <span
+                        onClick={() => toggleSettings(index)}
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-medium border cursor-pointer ${(product.serialNumbers?.split(",").filter(Boolean).length || 0) >= q ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-rose-50 text-rose-600 border-rose-200"}`}
+                      >
+                        <Check size={9} /> {(product.serialNumbers?.split(",").filter(Boolean).length || 0)}/{q} Serials
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Qty ({currentUnit}) *</label>
+                    <div className="flex items-center gap-1.5">
+                      <Input
+                        type="number"
+                        value={product.quantity as any}
+                        onChange={(e) => handleProductChange(index, "quantity", e.target.value ? Number(e.target.value) : "")}
+                        className="!h-9 !text-xs font-medium rounded-lg border-slate-200 text-center !px-2"
+                      />
+                      {hasSubUnits && (
+                        <UnitDropdown
+                          units={allUnits}
+                          current={currentUnit}
+                          onChange={(u) => handleProductChange(index, "selectedUnit", u)}
+                        />
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">{type === "PURCHASE" ? "Buy Price" : "Material Cost"} *</label>
+                    <Input
+                      type="number"
+                      value={typeof product.costPrice === "number" ? parseFloat(product.costPrice.toFixed(2)) : (product.costPrice as any)}
+                      onChange={(e) => {
+                        let val = e.target.value;
+                        if (val.length > 1 && val.startsWith("0") && val[1] !== ".") val = val.replace(/^0+/, "");
+                        handleProductChange(index, "costPrice", val);
+                      }}
+                      className="!h-9 !text-xs font-medium rounded-lg border-slate-200 !pl-7 !pr-2"
+                      leftIcon={<span className="text-[10px] text-slate-400 font-medium absolute left-1">₹</span>}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Tax GST %</label>
+                    <input
+                      type="number"
+                      value={product.taxGst ?? ""}
+                      onChange={(e) => handleProductChange(index, "taxGst", e.target.value ? Number(e.target.value) : 0)}
+                      className={`w-full h-9 px-2.5 rounded-lg border border-slate-200 text-xs font-medium text-center outline-none ${product.inventory_id ? "bg-slate-50 opacity-60 cursor-not-allowed" : "bg-white"}`}
+                      min="0"
+                      max="100"
+                      disabled={!!product.inventory_id}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Margin / Sell Price</label>
+                    <div className="flex items-center gap-1.5">
+                      <div className="flex bg-slate-100 rounded-lg p-0.5 shrink-0">
+                        {["percent", "amount", "sellingPrice"].map((m) => (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => handleProductChange(index, "marginType", m)}
+                            className={`w-6 h-7 flex items-center justify-center rounded-md text-[9px] font-medium transition-all ${product.marginType === m ? "bg-white text-blue-600 shadow-sm" : "text-slate-400"}`}
+                          >
+                            {m === "percent" ? "%" : m === "amount" ? "₹" : "SP"}
+                          </button>
+                        ))}
+                      </div>
+                      <Input
+                        type="number"
+                        value={(() => {
+                          const val = product.marginType === "percent" ? product.marginPercent : product.marginType === "amount" ? product.marginAmount : product.sellingPrice;
+                          return typeof val === "number" ? parseFloat(val.toFixed(2)) : val;
+                        })() as any}
+                        onChange={(e) => {
+                          let val = e.target.value;
+                          if (val.length > 1 && val.startsWith("0") && val[1] !== ".") val = val.replace(/^0+/, "");
+                          handleProductChange(index, product.marginType === "percent" ? "marginPercent" : product.marginType === "amount" ? "marginAmount" : "sellingPrice", val);
+                        }}
+                        className="!h-9 !text-xs font-medium !w-full"
+                        placeholder={product.marginType === "sellingPrice" ? "Price" : "Margin"}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Live summary strip */}
+                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-100 text-[11px]">
+                  <div>
+                    <span className="text-[9px] uppercase text-slate-400 block">Subtotal</span>
+                    <span className="font-semibold text-slate-800 tabular-nums">₹{rowGrandTotal.toFixed(2)}</span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] uppercase text-slate-400 block">Landed /u</span>
+                    <span className="font-semibold text-slate-800 tabular-nums">₹{landedCostPerUnit.toFixed(2)}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[9px] uppercase text-slate-400 block">Est. SP</span>
+                    <span className={`font-bold tabular-nums ${isExceedingMrp ? "text-rose-600" : "text-emerald-700"}`}>₹{sellingPriceInclusive.toFixed(2)}</span>
+                  </div>
+                </div>
+
+                {isExpanded && (
+                  <div className="pt-2 border-t border-slate-100 space-y-3 bg-slate-50/70 -mx-3.5 px-3.5 py-3">
+                    {(type !== "PURCHASE" || purchaseType !== "PO_CREATE") && product.batchTracking && (
+                      <div className="bg-white p-3 rounded-lg border border-amber-200 space-y-2">
+                        <span className="text-[11px] font-medium text-amber-900 flex items-center gap-1.5"><Package size={12} className="text-amber-500" /> Batch Details</span>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          <Input label="Batch #" value={product.batchNum} onChange={(e) => handleProductChange(index, "batchNum", e.target.value)} disabled={product.batchNumReadOnly} className="!h-9 !text-xs" />
+                          <Input label="Mfg Date" type="date" value={product.manufacturingDate} onChange={(e) => handleProductChange(index, "manufacturingDate", e.target.value)} disabled={product.batchNumReadOnly} className="!h-9 !text-xs" />
+                          <Input label="Expiry Date" type="date" value={product.expiryDate} onChange={(e) => handleProductChange(index, "expiryDate", e.target.value)} disabled={product.batchNumReadOnly} className="!h-9 !text-xs" />
+                        </div>
+                      </div>
+                    )}
+                    {(type !== "PURCHASE" || purchaseType !== "PO_CREATE") && product.serialTracking && (
+                      <div className="bg-white p-3 rounded-lg border border-blue-200">
+                        <InlineSerialManager
+                          serials={(product.serialNumbers || "").split(",").filter(Boolean)}
+                          serialLabel="Serial"
+                          onUpdate={(next) => handleProductChange(index, "serialNumbers", next.join(","))}
+                          limit={q}
+                          existingSerials={product.existingSerials}
+                          validationType="increase"
+                          onValidationError={(msg) => showToast(msg, "error")}
+                        />
+                      </div>
+                    )}
+                    {expandedSettings.has(index) && (
+                      <div className="bg-white p-3 rounded-lg border border-slate-200">
+                        <Input label="Storage Location" value={product.storageLoc} onChange={(e) => handleProductChange(index, "storageLoc", e.target.value)} placeholder="e.g. Rack A1" className="!h-9 !text-xs" />
+                      </div>
+                    )}
+                    {expandedBreakdown.has(index) && (
+                      <div className="bg-white p-3 rounded-lg border border-slate-200 text-xs space-y-1">
+                        <div className="flex justify-between"><span className="text-slate-500">Row Base</span><span>₹{rowTotal.toFixed(2)}</span></div>
+                        <div className="flex justify-between"><span className="text-slate-500">Allocated</span><span>₹{allocTotal.toFixed(2)}</span></div>
+                        <div className="flex justify-between"><span className="text-slate-500">Total Landed</span><span>₹{landedCostTotal.toFixed(2)}</span></div>
+                        <div className="flex justify-between font-semibold"><span>Profit / Unit</span><span className="text-emerald-600">₹{profitAmount.toFixed(2)} ({marginPercent.toFixed(1)}%)</span></div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Product Table (Desktop md+) */}
+        <div className="hidden md:block overflow-x-auto custom-scrollbar w-full" style={{ position: 'relative' }}>
           <table className="min-w-[1410px] w-full border-collapse whitespace-nowrap" style={{ tableLayout: 'fixed' }}>
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-200 sticky top-0 z-10">

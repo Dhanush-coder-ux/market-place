@@ -231,20 +231,19 @@ const NavigationDialog = ({
                   placeholder="Search pages..."
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  autoFocus
-                  className="w-full pl-9 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#286038]/20 focus:border-[#286038] text-slate-700 placeholder:text-slate-400"
+                  className="w-full pl-9 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-[var(--t-primary,#286038)] text-slate-700 placeholder:text-slate-400"
                 />
               </div>
             </div>
 
             {/* Nav list */}
-            <div className="flex-1 overflow-y-auto px-4 pb-10 space-y-6 bg-slate-50/30">
+            <div className="flex-1 overflow-y-auto px-4 pb-[max(32px,env(safe-area-inset-bottom))] space-y-5 bg-slate-50/30">
               {filteredGroups.map((group) => (
                 <div key={group.label} className="space-y-2">
                   <p className="text-[10px] font-bold text-slate-400 tracking-[0.15em] mb-2 px-1 uppercase">
                     {group.label}
                   </p>
-                  <div className="bg-white rounded-lg border border-slate-200/60 shadow-sm overflow-hidden divide-y divide-slate-100">
+                  <div className="bg-white rounded-xl border border-slate-200/60 shadow-sm overflow-hidden divide-y divide-slate-100">
                     {group.items.map((item: any, idx: number) => {
                       if (item.type === "sub-header") {
                         return (
@@ -262,17 +261,19 @@ const NavigationDialog = ({
                         <button
                           key={item.path}
                           onClick={() => item.path && handleNav(item.path)}
-                          className={`w-full flex items-center justify-between px-4 py-3.5 text-sm transition-all active:scale-[0.98] ${
+                          style={isActive ? { color: "var(--t-primary, #286038)", backgroundColor: "color-mix(in srgb, var(--t-primary, #286038) 10%, transparent)" } : undefined}
+                          className={`w-full flex items-center justify-between px-4 py-3 min-h-[48px] text-sm transition-all active:scale-[0.98] ${
                             isActive
-                              ? "bg-[#286038]/10 text-[#286038]"
+                              ? "font-semibold"
                               : "text-slate-600 hover:bg-slate-50"
                           }`}
                         >
                           <div className="flex items-center gap-3.5">
                             <div
+                              style={isActive ? { backgroundColor: "var(--t-primary, #286038)" } : undefined}
                               className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors ${
                                 isActive
-                                  ? "bg-[#286038] text-white shadow-md shadow-[#286038]/20"
+                                  ? "text-white shadow-sm"
                                   : "bg-slate-100 text-slate-500"
                               }`}
                             >
@@ -290,7 +291,8 @@ const NavigationDialog = ({
                             <motion.span 
                               initial={{ scale: 0.8, opacity: 0 }}
                               animate={{ scale: 1, opacity: 1 }}
-                              className="text-[10px] font-bold bg-[#286038] text-white px-2.5 py-1 rounded-lg"
+                              style={{ backgroundColor: "var(--t-primary, #286038)" }}
+                              className="text-[10px] font-bold text-white px-2.5 py-1 rounded-lg"
                             >
                               ACTIVE
                             </motion.span>
@@ -331,9 +333,14 @@ const MobileBottomBar = () => {
   const navigate = useNavigate();
   const [dialogOpen, setDialogOpen] = useState(false);
 
+  const isNavItemActive = (path: string | null) => {
+    if (!path) return false;
+    if (path === "/") return pathname === "/" || pathname === "/dashboard";
+    return pathname === path || pathname.startsWith(path + "/");
+  };
+
   const isMoreActive =
-    !TOP_NAV.slice(0, -1).some((n) => n.path === pathname) &&
-    pathname !== "/" &&
+    !TOP_NAV.slice(0, -1).some((n) => isNavItemActive(n.path)) &&
     dialogOpen === false;
 
   return (
@@ -346,13 +353,13 @@ const MobileBottomBar = () => {
       <nav
         className="fixed bottom-0 left-0 right-0 z-[70] md:hidden bg-white/95 backdrop-blur-xl border-t border-slate-200/80 shadow-[0_-4px_24px_rgba(0,0,0,0.08)]"
       >
-        <div className="flex items-center justify-around px-2 pt-2 pb-[max(8px,env(safe-area-inset-bottom))]">
+        <div className="flex items-center justify-around px-1.5 pt-1.5 pb-[max(8px,env(safe-area-inset-bottom))]">
           {TOP_NAV.map((item) => {
             const isMore = item.path === null;
             const Icon = item.icon;
             const isActive = isMore
               ? isMoreActive
-              : pathname === item.path;
+              : isNavItemActive(item.path);
 
             return (
               <button
@@ -364,13 +371,14 @@ const MobileBottomBar = () => {
                     navigate(item.path!);
                   }
                 }}
-                className="relative flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-colors cursor-pointer"
+                className="relative flex flex-col items-center justify-center gap-0.5 min-w-[56px] px-2.5 py-1.5 rounded-xl transition-colors cursor-pointer active:scale-95"
               >
                 {/* Active pill indicator */}
                 {isActive && (
                   <motion.div
                     layoutId="bottomBarIndicator"
-                    className="absolute inset-0 bg-[#286038]/10 rounded-lg"
+                    style={{ backgroundColor: "color-mix(in srgb, var(--t-primary, #286038) 12%, transparent)" }}
+                    className="absolute inset-0 rounded-xl"
                     transition={{ duration: 0.2 }}
                   />
                 )}
@@ -378,8 +386,9 @@ const MobileBottomBar = () => {
                 <div className="relative z-10">
                   {isMore ? (
                     <span
+                      style={isMoreActive ? { color: "var(--t-primary, #286038)" } : undefined}
                       className={`transition-colors ${
-                        isMoreActive ? "text-[#286038]" : "text-slate-400"
+                        isMoreActive ? "" : "text-slate-400"
                       }`}
                     >
                       <MoreIcon />
@@ -388,9 +397,10 @@ const MobileBottomBar = () => {
                     Icon && (
                       <Icon
                         size={20}
-                        strokeWidth={isActive ? 2 : 1.75}
+                        strokeWidth={isActive ? 2.2 : 1.75}
+                        style={isActive ? { color: "var(--t-primary, #286038)" } : undefined}
                         className={`transition-colors ${
-                          isActive ? "text-[#286038]" : "text-slate-400"
+                          isActive ? "" : "text-slate-400"
                         }`}
                       />
                     )
@@ -398,8 +408,9 @@ const MobileBottomBar = () => {
                 </div>
 
                 <span
+                  style={isActive ? { color: "var(--t-primary, #286038)" } : undefined}
                   className={`relative z-10 text-[10px] font-medium transition-colors leading-none ${
-                    isActive ? "text-[#286038] font-semibold" : "text-slate-400"
+                    isActive ? "font-semibold" : "text-slate-400"
                   }`}
                 >
                   {item.name}

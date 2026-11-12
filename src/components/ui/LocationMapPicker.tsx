@@ -200,8 +200,8 @@ const LocationMapPicker: React.FC<LocationMapPickerProps> = ({ lat, lng, onChang
   return (
     <div className="space-y-3">
       <div className="relative">
-        <div className="flex gap-2">
-          <div className="relative flex-1">
+        <div className="flex flex-col sm:flex-row gap-2">
+          <div className="relative flex-1 min-w-0">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             <input
               type="text"
@@ -209,7 +209,7 @@ const LocationMapPicker: React.FC<LocationMapPickerProps> = ({ lat, lng, onChang
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               placeholder="Search for a location..."
-              className="w-full pl-9 pr-4 py-2.5 text-sm border border-slate-200 rounded-lg bg-white text-slate-800 placeholder-slate-300 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/10 transition-all"
+              className="w-full pl-9 pr-8 py-2.5 text-sm border border-slate-200 rounded-lg bg-white text-slate-800 placeholder-slate-300 focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/10 transition-all"
             />
             {searchQuery && (
               <button type="button" onClick={() => { setSearchQuery(""); setSearchResults([]); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
@@ -217,16 +217,18 @@ const LocationMapPicker: React.FC<LocationMapPickerProps> = ({ lat, lng, onChang
               </button>
             )}
           </div>
-          <button type="button" onClick={handleSearch} disabled={searching}
-            className="px-4 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2 disabled:opacity-60">
-            {searching ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
-            Search
-          </button>
-          <button type="button" onClick={handleGeolocate} disabled={geolocating} title="Use my location"
-            className="px-4 py-2.5 border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-indigo-200 hover:text-indigo-600 text-slate-700 transition-all flex items-center gap-2 font-medium shadow-sm active:scale-95 whitespace-nowrap disabled:opacity-70 disabled:cursor-not-allowed">
-            {geolocating ? <Loader2 size={15} className="text-indigo-500 animate-spin" /> : <Navigation size={15} className="text-indigo-500" />}
-            <span className="text-sm hidden sm:inline">{geolocating ? "Locating..." : "Use My Location"}</span>
-          </button>
+          <div className="flex gap-2 shrink-0">
+            <button type="button" onClick={handleSearch} disabled={searching}
+              className="flex-1 sm:flex-initial justify-center px-4 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2 disabled:opacity-60">
+              {searching ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+              Search
+            </button>
+            <button type="button" onClick={handleGeolocate} disabled={geolocating} title="Use my location"
+              className="flex-1 sm:flex-initial justify-center px-3.5 py-2.5 border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-indigo-200 hover:text-indigo-600 text-slate-700 transition-all flex items-center gap-2 font-medium shadow-sm active:scale-95 whitespace-nowrap disabled:opacity-70 disabled:cursor-not-allowed">
+              {geolocating ? <Loader2 size={15} className="text-indigo-500 animate-spin" /> : <Navigation size={15} className="text-indigo-500" />}
+              <span className="text-xs sm:text-sm">{geolocating ? "Locating..." : "My Location"}</span>
+            </button>
+          </div>
         </div>
         {geoError && (
           <div className="absolute top-full left-0 mt-2 flex items-center gap-2 text-xs font-semibold text-red-600 bg-red-50 px-3 py-2 rounded-lg border border-red-100 shadow-sm z-50">

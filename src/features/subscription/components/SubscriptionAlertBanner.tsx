@@ -35,13 +35,13 @@ export const SubscriptionAlertBanner: React.FC = () => {
   }
 
   return (
-    <div className="bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white px-4 py-2.5 flex items-center justify-between shadow-lg z-[80] flex-none border-b border-red-700/60 animate-in slide-in-from-top duration-300">
-      <div className="flex items-center gap-3">
-        <div className="p-1 rounded-full bg-white/20 flex items-center justify-center flex-none">
-          <AlertTriangle size={16} className="text-amber-200 animate-pulse" />
+    <div className="bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white px-3 sm:px-4 py-2.5 flex flex-wrap items-center justify-between gap-2.5 shadow-lg z-[80] flex-none border-b border-red-700/60 animate-in slide-in-from-top duration-300">
+      <div className="flex items-start sm:items-center gap-2.5 min-w-0 flex-1 basis-[220px]">
+        <div className="p-1 rounded-full bg-white/20 flex items-center justify-center flex-none mt-0.5 sm:mt-0">
+          <AlertTriangle size={15} className="text-amber-200 animate-pulse" />
         </div>
-        <div className="text-xs">
-          <span className="font-black uppercase tracking-wider bg-red-900/50 px-2 py-0.5 rounded text-[10px] mr-2">
+        <div className="text-xs leading-snug min-w-0">
+          <span className="font-black uppercase tracking-wider bg-red-900/50 px-2 py-0.5 rounded text-[10px] mr-2 inline-block">
             Plan Expired
           </span>
           <span className="font-medium text-white/95">
@@ -49,11 +49,11 @@ export const SubscriptionAlertBanner: React.FC = () => {
           </span>
         </div>
       </div>
-      <div className="flex items-center gap-2 flex-none">
+      <div className="flex items-center gap-2 flex-none w-full sm:w-auto">
         <button
           type="button"
           onClick={() => navigate("/pricing")}
-          className="bg-white text-red-700 hover:bg-rose-50 font-bold px-3.5 py-1.5 rounded-lg text-xs shadow transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+          className="w-full sm:w-auto justify-center bg-white text-red-700 hover:bg-rose-50 font-bold px-3.5 py-2 sm:py-1.5 rounded-lg text-xs shadow transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
         >
           <span>Renew Subscription</span>
           <ArrowRight size={13} />

@@ -24,7 +24,7 @@ export const VersionUpdatePrompt: React.FC = () => {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 20, scale: 0.95 }}
         transition={{ duration: 0.3, ease: 'easeOut' }}
-        className="fixed bottom-6 right-6 z-[9999] max-w-md w-[calc(100vw-3rem)] pointer-events-auto"
+        className="fixed bottom-20 md:bottom-6 right-4 sm:right-6 z-[9999] max-w-md w-[calc(100vw-2rem)] sm:w-[calc(100vw-3rem)] pointer-events-auto"
       >
         <div className="relative overflow-hidden rounded-2xl bg-white border border-slate-200 shadow-2xl shadow-emerald-950/20 p-5">
           {/* Subtle accent backdrop */}

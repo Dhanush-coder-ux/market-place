@@ -55,6 +55,8 @@ export interface TableColumn {
   key: string;
   label: string;
   className?: string;
+  headerClassName?: string;
+  align?: "left" | "center" | "right";
   render?: (value: any, row: any) => ReactNode;
 }
 export type TableProps = {

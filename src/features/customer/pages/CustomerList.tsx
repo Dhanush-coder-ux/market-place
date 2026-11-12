@@ -1,7 +1,7 @@
 import { useRef, useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Search, Users, Filter,
+  Users, Filter,
   AlertCircle, CreditCard,
   Loader2, Eye, Pencil, MoreVertical, Trash2, Plus, FileUp, RefreshCw
 } from "lucide-react";
@@ -10,7 +10,7 @@ import ActionMenu, { ActionMenuItem, ActionMenuDivider } from "@/components/comm
 import SkeletonLoader from "@/components/common/SkeletonLoader";
 import { RecordPaymentModal } from "@/features/customer/components/RecordPaymentModal";
 import { useHeader } from "@/context/HeaderContext";
-import { GradientButton } from "@/components/ui/GradientButton";
+import { GradientButton, SearchBar, Button } from "@/components/ui";
 import { useBusinessApi } from "@/context/BusinessApiContext";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
@@ -275,30 +275,27 @@ const CustomerList = () => {
 
       {/* ── Search & Filter Bar ── */}
       <div className="flex items-center gap-2 flex-wrap">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search customers..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="w-full h-9 pl-9 pr-3 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-55 transition-all placeholder:text-slate-400"
-          />
-        </div>
+        <SearchBar
+          value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
+          onClear={() => setSearchTerm("")}
+          placeholder="Search customers..."
+          size="sm"
+          className="w-full sm:flex-1 sm:min-w-[200px] sm:max-w-sm"
+        />
 
-        <button
+        <Button
+          type="button"
+          variant="outline"
           onClick={() => setIsFilterOpen(true)}
-          className={`h-9 px-3 flex items-center gap-1.5 rounded-lg border text-xs font-bold transition-all active:scale-95 ${activeFilters > 0
-            ? "border-blue-200 bg-blue-50 text-blue-600"
-            : "border-slate-200 bg-white text-slate-500 hover:bg-slate-55"
-            }`}
+          className={activeFilters > 0 ? "border-blue-200 bg-blue-50/60 text-blue-600" : ""}
         >
-          <Filter size={13} />
+          <Filter size={14} />
           Filters
           {activeFilters > 0 && (
-            <span className="ml-1 px-1.5 py-0.5 bg-blue-600 text-white rounded-full text-[9px] font-black">{activeFilters}</span>
+            <span className="ml-0.5 px-1.5 py-0.5 bg-blue-600 text-white rounded-full text-[10px] font-bold">{activeFilters}</span>
           )}
-        </button>
+        </Button>
 
         <span className="font-mono text-[11px] font-medium text-slate-400 shrink-0">{filteredCustomers.length} {totalCount > 0 ? `/ ${totalCount}` : ''}</span>
       </div>
@@ -363,7 +360,121 @@ const CustomerList = () => {
 
       {/* ── Table Card ── */}
       <div className="bg-white rounded-lg shadow-sm border border-slate-100 min-w-0 overflow-hidden flex flex-col flex-1 min-h-0 mt-1">
-        <div className="overflow-auto flex-1 scrollbar-thin scrollbar-thumb-slate-100">
+        {/* Mobile Card View */}
+        <div className="md:hidden flex-1 overflow-y-auto p-2.5 space-y-2.5">
+          {filteredCustomers.length === 0 ? (
+            <div className="py-16 text-center text-sm text-slate-400 font-medium">
+              No customers found matching your filters.
+            </div>
+          ) : (
+            filteredCustomers.map((c: any, idx: number) => {
+              const isLast = idx === filteredCustomers.length - 1;
+              const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+              const isSelected = selectedCustomers.has(c.id);
+              const name = c.name || "Unknown";
+              const outstanding = c.outstanding_infos?.amount ?? c.outstanding ?? 0;
+              const customerEmail = c.contact_infos?.email || c.email || "";
+              const customerPhone = c.contact_infos?.mobile_number || c.mobile_number || "";
+              const customerCreditLimit = c.credit_infos?.limit ?? c.credit_limit ?? 0;
+              const createdDate = c.created_at ? new Date(c.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+
+              return (
+                <div
+                  key={`mob-cust-${c.id}`}
+                  ref={isLast && isMobile ? lastElementRef : undefined}
+                  onClick={() => navigate(`/customers/${c.id}`)}
+                  className={`rounded-xl border p-3 transition-all active:scale-[0.99] cursor-pointer ${
+                    isSelected ? "border-blue-400 bg-blue-50/30" : "border-slate-200 bg-white shadow-xs"
+                  }`}
+                >
+                  <div className="flex items-start gap-2.5">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleSelectCustomer(c.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="mt-1 rounded border-slate-300 text-blue-600 focus:ring-blue-500/20 w-4 h-4 shrink-0"
+                    />
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 border border-blue-100 flex items-center justify-center font-bold text-sm shrink-0">
+                      {String(name).charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-bold text-slate-900 truncate">{name}</p>
+                          <p className="text-[10px] font-mono text-slate-400">{c.ui_id || c.id?.slice(0, 8)} · {createdDate}</p>
+                        </div>
+                        <span className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                          c.can_have_credit ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-slate-50 text-slate-400 border-slate-200"
+                        }`}>
+                          {c.can_have_credit ? "Credit On" : "No Credit"}
+                        </span>
+                      </div>
+                      {(customerPhone || customerEmail) && (
+                        <div className="mt-1 text-[11px] text-slate-500 space-y-0.5">
+                          {customerPhone && <p className="font-medium text-slate-600">{customerPhone}</p>}
+                          {customerEmail && <p className="truncate text-slate-400">{customerEmail}</p>}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mt-2.5 pt-2 border-t border-slate-100 grid grid-cols-2 gap-2 text-[11px]">
+                    <div>
+                      <span className="text-[9px] font-bold uppercase text-slate-400 block">Credit Limit</span>
+                      <span className="font-bold text-slate-800 font-mono">{fmt(customerCreditLimit)}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[9px] font-bold uppercase text-slate-400 block">Outstanding</span>
+                      <span className={`font-bold font-mono ${outstanding > 0 ? "text-rose-600" : "text-emerald-600"}`}>
+                        {fmt(outstanding)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-2.5 pt-2 border-t border-slate-100 flex flex-wrap items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCustomerForPayment(c)}
+                      className="h-8 px-2.5 rounded-lg bg-indigo-50 text-indigo-700 text-[11px] font-semibold flex items-center gap-1"
+                    >
+                      <CreditCard size={12} /> Payment
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/customers/${c.id}`)}
+                      className="h-8 px-2.5 rounded-lg bg-emerald-50 text-emerald-700 text-[11px] font-semibold flex items-center gap-1"
+                    >
+                      <Eye size={13} /> View
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/customers/${c.id}/edit`)}
+                      className="h-8 px-2.5 rounded-lg bg-amber-50 text-amber-700 text-[11px] font-semibold flex items-center gap-1"
+                    >
+                      <Pencil size={12} /> Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteCustomer(c.id)}
+                      className="h-8 w-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center"
+                      title="Delete"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+          {loadingMore && (
+            <div className="py-4 text-center">
+              <Loader2 size={16} className="animate-spin text-blue-500 mx-auto" />
+            </div>
+          )}
+        </div>
+
+        <div className="hidden md:block overflow-auto flex-1 scrollbar-thin scrollbar-thumb-slate-100">
           <table className="w-full text-left min-w-[700px] border-collapse relative">
             <thead className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0]">
               <tr>
@@ -414,7 +525,7 @@ const CustomerList = () => {
                   return (
                     <tr
                       key={c.id}
-                      ref={isLast ? lastElementRef : undefined}
+                      ref={isLast && !(typeof window !== "undefined" && window.innerWidth < 768) ? lastElementRef : undefined}
                       className={`group transition-all cursor-default ${isSelected ? "bg-blue-50 border-l-2 border-l-blue-500" : "hover:bg-slate-50/60"}`}
                     >
                       <td className="px-4 py-4 border-b border-slate-200 w-10 text-center">

@@ -850,38 +850,38 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
         }}
       >
         {/* ── Header ── */}
-        <div className="relative flex items-center justify-between px-6 py-4 shrink-0 border-b border-slate-200 bg-white">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center">
+        <div className="relative flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 shrink-0 border-b border-slate-200 bg-white">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
               <FileSpreadsheet className="text-slate-600" size={18} />
             </div>
-            <div>
-              <h2 className="text-slate-900 font-semibold text-[15px] leading-tight">Import {meta.label}</h2>
-              <p className="text-slate-500 text-[12px]">Bulk import from Excel spreadsheet</p>
+            <div className="min-w-0">
+              <h2 className="text-slate-900 font-semibold text-sm sm:text-[15px] leading-tight truncate">Import {meta.label}</h2>
+              <p className="text-slate-500 text-[11px] sm:text-[12px] truncate">Bulk import from Excel spreadsheet</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-md hover:bg-slate-100 flex items-center justify-center text-slate-500 transition-colors"
+            className="w-8 h-8 rounded-md hover:bg-slate-100 flex items-center justify-center text-slate-500 transition-colors shrink-0"
           >
             <X size={16} />
           </button>
         </div>
 
         {step !== "submitting" && (
-          <div className="px-6 pt-4 pb-3 border-b border-slate-100 shrink-0">
+          <div className="px-4 sm:px-6 pt-3 pb-2.5 sm:pt-4 sm:pb-3 border-b border-slate-100 shrink-0 overflow-x-auto scrollbar-hide">
             <StepIndicator current={step} />
           </div>
         )}
 
         {/* ── Body ── */}
-        <div className="flex-1 min-h-0 flex overflow-hidden">
+        <div className={`flex-1 min-h-0 flex ${step === "mapping" ? "flex-col lg:flex-row" : ""} overflow-hidden`}>
 
           {/* ═══ INTRO STEP ═══ */}
           {step === "intro" && (
-            <div className="flex-1 p-6 overflow-y-auto space-y-5">
+            <div className="flex-1 p-4 sm:p-6 overflow-y-auto space-y-4 sm:space-y-5">
               {entityType === "inventory" && (
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3.5 flex items-center justify-between gap-3 shadow-sm">
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
                   <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
                       <CheckCheck size={16} />
@@ -894,19 +894,19 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowStockConfirmModal(true)}
-                    className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition-all shadow-sm shrink-0 flex items-center gap-1.5"
+                    className="w-full sm:w-auto px-3 py-2 sm:py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition-all shadow-sm shrink-0 flex items-center justify-center gap-1.5"
                   >
                     <CheckCheck size={13} />
                     All stocks imported successfully
                   </button>
                 </div>
               )}
-              <div className="rounded-xl border border-slate-100 bg-slate-50 p-4 space-y-3">
+              <div className="rounded-xl border border-slate-100 bg-slate-50 p-3.5 sm:p-4 space-y-3">
                 <div className="flex items-center gap-2">
                   <Table2 size={15} className="text-slate-500" />
                   <span className="text-[13px] font-bold text-slate-700">Required columns for {meta.label}</span>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {columns.map((col) => (
                     <div key={col.key} className="flex items-center gap-2">
                       <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${col.required ? "bg-red-400" : "bg-slate-300"}`} />
@@ -1010,7 +1010,7 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
           {step === "mapping" && (
             <>
               {/* Left: Full data table */}
-              <div className="flex-1 min-w-0 border-r border-slate-100 flex flex-col overflow-hidden">
+              <div className="flex-1 min-w-0 min-h-[200px] border-b lg:border-b-0 lg:border-r border-slate-100 flex flex-col overflow-hidden">
                 <DataTable
                   rows={rows}
                   columns={columns}
@@ -1025,7 +1025,7 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
               </div>
 
               {/* Right: Mapping panel / stats */}
-              <div className="w-80 shrink-0 flex flex-col overflow-hidden border-l border-slate-100">
+              <div className="w-full lg:w-80 shrink-0 max-h-[42vh] lg:max-h-none flex flex-col overflow-hidden border-t lg:border-t-0 lg:border-l border-slate-100">
                 {/* File info bar */}
                 <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 shrink-0">
                   <div className="flex items-center justify-between mb-2">
@@ -1179,7 +1179,7 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
         </div>
 
         {/* ── Footer ── */}
-        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between shrink-0">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-slate-100 bg-slate-50/50 flex flex-wrap items-center justify-between gap-2 shrink-0">
           {/* Left nav */}
           <div>
             {step === "upload" && (

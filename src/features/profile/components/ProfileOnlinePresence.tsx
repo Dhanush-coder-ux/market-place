@@ -33,7 +33,7 @@ const ProfileOnlinePresence: React.FC<ProfileOnlinePresenceProps> = ({
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none mb-0.5">
                 Website
               </p>
-              <p className="text-xs font-semibold text-blue-600 truncate max-w-[150px]">
+              <p className="text-xs font-semibold text-blue-600 truncate">
                 {website || "Not set"}
               </p>
             </div>

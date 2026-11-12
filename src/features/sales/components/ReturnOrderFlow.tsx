@@ -477,19 +477,16 @@ const ItemSelector: React.FC<{ items: SaleItem[]; returnItems: Record<string, nu
                         {item.unit_infos?.sub_units?.length > 0 && (
                           <div className="flex items-center gap-2 mt-1">
                             <span className="text-[10px] text-slate-400">Unit</span>
-                            <select
+                            <ReusableSelect
+                              size="sm"
                               value={itemUnits[item.id] || item.entered_unit || item.unit}
-                              onChange={e => {
-                                const selectedUnit = e.target.value;
-                                onUnitChange(item.id, selectedUnit);
-                              }}
-                              className="h-7 px-2 text-[10px] border border-slate-200 roundedbg-white text-slate-700 outline-none focus:border-blue-500 font-semibold"
-                            >
-                              <option value={item.unit}>{item.unit}</option>
-                              {item.unit_infos.sub_units.map((su: any) => (
-                                <option key={su.name} value={su.name}>{su.name}</option>
-                              ))}
-                            </select>
+                              onValueChange={selectedUnit => onUnitChange(item.id, selectedUnit)}
+                              options={[
+                                { label: item.unit, value: item.unit },
+                                ...item.unit_infos.sub_units.map((su: any) => ({ label: su.name, value: su.name })),
+                              ]}
+                              className="h-7 text-[10px] w-28"
+                            />
                           </div>
                         )}
                       </div>
@@ -1858,15 +1855,15 @@ export const ReturnModal: React.FC<ReturnFlowProps> = (props) => {
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 sm:p-6 overflow-hidden">
+    <div className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center sm:p-6 overflow-hidden">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200"
         onClick={props.onClose}
       />
 
-      {/* Centered Popup */}
-      <div className="relative w-full max-w-[550px] max-h-[90vh] flex flex-col bg-white rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 ease-out z-[1001]">
+      {/* Centered Popup / Mobile Bottom Sheet */}
+      <div className="relative w-full max-w-[550px] max-h-[92dvh] sm:max-h-[90dvh] flex flex-col bg-white rounded-t-2xl sm:rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 ease-out z-[1001] pb-[env(safe-area-inset-bottom)] sm:pb-0">
         <ReturnFlow {...props} isInline={false} onExpand={handleExpand} />
       </div>
     </div>,

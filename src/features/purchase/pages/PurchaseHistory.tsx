@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import {
-  Search,
   Calendar,
   Building2,
   Package,
@@ -34,7 +33,7 @@ import { SHOP_ID } from "@/services/endpoints";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import SkeletonLoader from "@/components/common/SkeletonLoader";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { GradientButton } from "@/components/ui/GradientButton";
+import { GradientButton, SearchBar, Button } from "@/components/ui";
 
 
 /* ================= TYPES ================= */
@@ -1031,7 +1030,7 @@ const PurchaseHistory = () => {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  const [viewMode, setViewMode] = useState<ViewMode>("vertical");
+  const [viewMode, setViewMode] = useState<ViewMode>(() => (typeof window !== "undefined" && window.innerWidth < 768 ? "grid" : "vertical"));
 
   const [filterVendor, setFilterVendor] = useState("");
   const [fromDate, setFromDate] = useState("");
@@ -1080,8 +1079,8 @@ const PurchaseHistory = () => {
   useEffect(() => {
     if (selectedPurchases.size > 1) {
       setBottomActions(
-        <div className="flex items-center justify-between w-full animate-in fade-in slide-in-from-right-4 duration-300">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 w-full animate-in fade-in slide-in-from-right-4 duration-300">
+          <div className="flex items-center gap-2.5 sm:gap-3">
             <div className="w-7 h-7 rounded-md bg-blue-500 text-white flex items-center justify-center text-[10px] font-black shrink-0">
               <ReceiptText size={14} />
             </div>
@@ -1284,35 +1283,31 @@ const PurchaseHistory = () => {
         )}
 
         {/* ── Toolbar ── */}
-        <div className="bg-white border border-slate-100 rounded-lg p-1.5 px-2.5 flex flex-nowrap items-center gap-1.5 shadow-sm overflow-x-auto scrollbar-none">
-          <div className="relative w-80 shrink-0">
-            <Search
-              size={13}
-              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-            />
-            <input
-              className="w-full h-8 pl-8 pr-3 text-[12px] font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-md placeholder:text-slate-400 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
-              placeholder="Search PO number or vendor…"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
+        <div className="bg-white border border-slate-200/80 rounded-xl p-2.5 sm:p-2 sm:px-3 flex flex-wrap items-center gap-2 shadow-xs">
+          <SearchBar
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onClear={() => setSearchTerm("")}
+            placeholder="Search PO number or vendor…"
+            size="sm"
+            className="w-full sm:w-72 md:w-80 shrink-0"
+          />
 
-          <button
+          <Button
             type="button"
+            variant="outline"
             onClick={() => setIsFilterOpen(true)}
-            className={`h-8 px-3 rounded-md border text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all shadow-sm shrink-0 ${activeFiltersCount > 0
-              ? "border-blue-200 text-blue-600 bg-blue-50/50"
-              : "border-slate-200 text-slate-650 bg-white hover:bg-slate-50"
-              }`}
+            className={activeFiltersCount > 0 ? "border-blue-200 text-blue-600 bg-blue-50/60" : ""}
             title="Filters"
           >
-            <Filter size={13} />
+            <Filter size={14} />
             Filters
             {activeFiltersCount > 0 && (
-              <span className="ml-1 px-1.5 py-0.5 bg-blue-600 text-white rounded-full text-[9px] font-black">{activeFiltersCount}</span>
+              <span className="ml-0.5 px-1.5 py-0.5 bg-blue-600 text-white rounded-full text-[10px] font-bold">
+                {activeFiltersCount}
+              </span>
             )}
-          </button>
+          </Button>
 
           {searchTerm && (
             <span className="text-[11px] text-slate-400 font-medium ml-1 shrink-0">
@@ -1476,8 +1471,8 @@ const PurchaseHistory = () => {
             <p className="text-xs mt-1">Try adjusting your filters</p>
           </div>
         ) : viewMode === "grid" ? (
-          <div className="overflow-x-auto overflow-y-auto bg-white border border-slate-100 rounded-lg shadow-sm p-4 flex-1 min-h-0">
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          <div className="overflow-y-auto bg-white border border-slate-100 rounded-lg shadow-sm p-2.5 sm:p-4 flex-1 min-h-0">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-5">
               {filtered.map((po, index) => (
                 <div key={po.id} ref={index === filtered.length - 1 ? lastElementRef : null}>
                   <GridCard po={po} selected={selectedPurchases.has(po.id)} onClick={() => handleCardClick(po)} />

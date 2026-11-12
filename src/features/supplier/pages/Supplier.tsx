@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { Search, Building2, Phone, ExternalLink, Filter, ChevronRight, Eye, Pencil, Trash2, MoreVertical, Plus, FileUp, RefreshCw } from "lucide-react";
+import { Building2, Phone, ExternalLink, Filter, ChevronRight, Eye, Pencil, Trash2, MoreVertical, Plus, FileUp, RefreshCw } from "lucide-react";
 import ExcelImportModal from "@/components/common/ExcelImportModal";
-import { GradientButton } from "@/components/ui/GradientButton";
+import { GradientButton, ReusableSelect, SearchBar, Button } from "@/components/ui";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
@@ -14,7 +14,6 @@ import { ColumnPicker } from "@/components/common/ColumnPicker";
 import { StatCard } from "@/components/common/StatsCard";
 import { useQuickCreate } from "@/features/common/QuickCreate/QuickCreateContext";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
-import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import SkeletonLoader from "@/components/common/SkeletonLoader";
 import ActionMenu, { ActionMenuItem } from "@/components/common/ActionMenu";
 import { getSupplierOutstanding } from "../type";
@@ -272,17 +271,17 @@ const Supplier = () => {
   useEffect(() => {
     if (selectedSupplier) {
       setBottomActions(
-        <div className="flex items-center justify-between w-full animate-in fade-in slide-in-from-right-4 duration-300">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 w-full animate-in fade-in slide-in-from-right-4 duration-300">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             <div className="w-7 h-7 rounded-md bg-blue-500 text-white flex items-center justify-center text-[10px] font-black shrink-0">
               {(String(selectedSupplier.name || 'S')).charAt(0).toUpperCase()}
             </div>
-            <div>
-              <p className="text-[12px] font-bold text-slate-800 leading-tight">{String(selectedSupplier.name)}</p>
+            <div className="min-w-0">
+              <p className="text-[12px] font-bold text-slate-800 leading-tight truncate">{String(selectedSupplier.name)}</p>
               <p className="text-[10px] font-semibold text-slate-400 font-mono">ID: {selectedSupplier.ui_id || selectedSupplier.id?.slice(0, 8)}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             <button
               onClick={() => setSelectedSupplier(null)}
               className="h-8 px-3 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 font-semibold text-[11px] transition-colors"
@@ -509,34 +508,28 @@ const Supplier = () => {
       )}
 
       {/* Toolbar */}
-      <div className="bg-white border border-slate-100 rounded-lg p-2.5 px-3.5 flex flex-nowrap items-center gap-2 shadow-sm overflow-x-auto scrollbar-none mt-2">
-        <div className="relative w-80 shrink-0">
-          <Search
-            size={13}
-            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-          />
-          <input
-            type="text"
-            placeholder="Search supplier…"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full h-8 pl-8 pr-3 text-[12px] font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-md placeholder:text-slate-400 focus:outline-none focus:border-slate-300 focus:bg-white transition-colors"
-          />
-        </div>
-        
-        <button
+      <div className="bg-white border border-slate-200/80 rounded-xl p-2.5 px-3 sm:px-3.5 flex flex-wrap items-center gap-2 shadow-xs mt-2">
+        <SearchBar
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          onClear={() => setSearchTerm("")}
+          placeholder="Search supplier…"
+          size="sm"
+          className="w-full sm:w-72 md:w-80 shrink-0"
+        />
+
+        <Button
+          type="button"
+          variant="outline"
           onClick={() => setIsFilterOpen(true)}
-          className={`h-8 px-3 flex items-center gap-1.5 rounded-md border text-xs font-semibold transition-all active:scale-95 shrink-0 ${activeFilters > 0
-            ? "border-blue-200 bg-blue-50 text-blue-600"
-            : "border-slate-200 bg-white text-slate-655 hover:bg-slate-50"
-            }`}
+          className={activeFilters > 0 ? "border-blue-200 bg-blue-50/60 text-blue-600" : ""}
         >
-          <Filter size={13} />
+          <Filter size={14} />
           Filters
           {activeFilters > 0 && (
-            <span className="ml-1 px-1.5 py-0.5 bg-blue-600 text-white rounded-full text-[9px] font-black">{activeFilters}</span>
+            <span className="ml-0.5 px-1.5 py-0.5 bg-blue-600 text-white rounded-full text-[10px] font-bold">{activeFilters}</span>
           )}
-        </button>
+        </Button>
 
         <ColumnPicker
           availableKeys={availableKeys}
@@ -652,7 +645,85 @@ const Supplier = () => {
 
       {/* Table Section */}
       <div className="bg-white rounded-lg shadow-sm border border-slate-100 min-w-0 overflow-hidden flex flex-col flex-1 min-h-0 mt-2">
-        <div className="overflow-x-auto overflow-y-auto flex-1 pf-scroll">
+        {/* Mobile Card View */}
+        <div className="md:hidden flex-1 overflow-y-auto p-2.5 space-y-2.5">
+          {filteredSuppliers.length === 0 ? (
+            <div className="py-16 text-center text-slate-400 font-medium italic text-sm">No suppliers matching your filters.</div>
+          ) : (
+            filteredSuppliers.map((sup: any) => {
+              if (!sup) return null;
+              const isSelected = selectedSupplier?.id === sup.id;
+              const outstanding = getSupplierOutstanding(sup);
+              const phone = sup.contact_infos?.mobile_number || sup.mobile_number || sup.contact_person_infos?.mobile_number;
+              const email = sup.contact_infos?.email || sup.email || sup.contact_person_infos?.email;
+              const city = sup.location_infos?.city || sup.datas?.address?.city || sup.additional_infos?.city;
+              const gst = sup.gst_no;
+
+              return (
+                <div
+                  key={`mob-sup-${sup.id}`}
+                  onClick={() => navigate(`/supplier/${sup.id}`)}
+                  className={`rounded-xl border p-3 transition-all active:scale-[0.99] cursor-pointer ${
+                    isSelected ? "border-blue-400 bg-blue-50/30" : "border-slate-200 bg-white shadow-xs"
+                  }`}
+                >
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-100 flex items-center justify-center font-bold text-sm shrink-0">
+                      {String(sup.name || "S").charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-bold text-slate-900 truncate">{sup.name || "Unnamed Supplier"}</p>
+                          <p className="text-[10px] font-mono text-slate-400">{sup.ui_id || sup.id?.slice(0, 8)}{city ? ` · ${city}` : ""}</p>
+                        </div>
+                        <span className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                          outstanding > 0 ? "bg-rose-50 text-rose-700 border-rose-200" : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                        }`}>
+                          {outstanding > 0 ? `Due ₹${outstanding.toLocaleString("en-IN")}` : "Cleared"}
+                        </span>
+                      </div>
+                      {(phone || email || gst) && (
+                        <div className="mt-1 text-[11px] text-slate-500 space-y-0.5">
+                          {phone && <p className="font-medium text-slate-600">{phone}</p>}
+                          {email && <p className="truncate text-slate-400">{email}</p>}
+                          {gst && <p className="text-[10px] font-mono text-slate-500">GST: {gst}</p>}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/supplier/${sup.id}`)}
+                      className="h-8 px-2.5 rounded-lg bg-emerald-50 text-emerald-700 text-[11px] font-semibold flex items-center gap-1"
+                    >
+                      <Eye size={13} /> View
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/supplier/${sup.id}/edit`)}
+                      className="h-8 px-2.5 rounded-lg bg-amber-50 text-amber-700 text-[11px] font-semibold flex items-center gap-1"
+                    >
+                      <Pencil size={12} /> Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setSupplierToDelete(sup); setIsDeleteDialogOpen(true); }}
+                      className="h-8 w-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center"
+                      title="Delete Supplier"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        <div className="hidden md:block overflow-x-auto overflow-y-auto flex-1 pf-scroll">
           <table className="w-full text-left border-collapse relative">
             <thead className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0]">
               <tr>

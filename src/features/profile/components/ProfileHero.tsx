@@ -36,7 +36,7 @@ const ProfileHero: React.FC<ProfileHeroProps> = ({
       <div className="absolute top-0 right-0 w-72 h-72 bg-blue-500/10 rounded-full -mr-24 -mt-24 blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-48 h-48 bg-purple-500/10 rounded-full -ml-16 -mb-16 blur-3xl pointer-events-none" />
 
-      <div className="relative p-6 md:p-8">
+      <div className="relative p-4 sm:p-6 md:p-8">
         {/* Top Row: Logo + Identity + Toggle */}
         <div className="flex flex-col sm:flex-row sm:items-start gap-5">
 

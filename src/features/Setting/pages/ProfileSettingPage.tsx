@@ -16,6 +16,10 @@ import {
   Check,
   ShieldCheck,
   Printer,
+  Settings,
+  Keyboard,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { ActivityLogPage } from "@/features/Setting/pages/ActivityLogPage";
 import { CustomListSettings } from "@/features/Setting/pages/CustomListSettings";
@@ -26,6 +30,7 @@ import { useSearchParams } from "react-router-dom";
 import { InvoiceTemplateSettings } from "@/features/Setting/pages/InvoiceTemplateSettings";
 import { ThemeSwitcher } from "@/features/Setting/components/ThemeSwitcher";
 import { PrinterSettingsTab } from "@/features/Setting/pages/PrinterSettingsTab";
+import { KeyboardShortcutsSettings } from "@/features/Setting/pages/KeyboardShortcutsSettings";
 import { usePurchaseSettings } from "@/context/PurchaseContext";
 import { shopApi } from "@/services/api/shop";
 import { SHOP_ID, getShopId } from "@/services/endpoints";
@@ -81,6 +86,13 @@ const MENU_ITEMS = [
     accent: "rose",
   },
   {
+    id: "shortcuts",
+    label: "Keyboard Shortcuts",
+    icon: Keyboard,
+    description: "Hotkeys & quick navigation",
+    accent: "emerald",
+  },
+  {
     id: "subscription",
     label: "Plans & Billing",
     icon: CreditCard,
@@ -103,6 +115,7 @@ export const ProfileSettingsPage = () => {
   const [searchParams] = useSearchParams();
   const initialTab = searchParams.get("tab") || "shopprofile";
   const [activeTab, setActiveTab] = useState(initialTab);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   React.useEffect(() => {
     const tabParam = searchParams.get("tab");
@@ -268,10 +281,12 @@ export const ProfileSettingsPage = () => {
 
       case "dropdowns":
         return wrapper(
-          <div className="space-y-5">
+          <div className="space-y-6">
             <BusinessCategorySettings />
-            <CustomListSettings type="categories" />
-            <CustomListSettings type="units" />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+              <CustomListSettings type="categories" />
+              <CustomListSettings type="units" />
+            </div>
           </div>
         );
 
@@ -417,6 +432,9 @@ export const ProfileSettingsPage = () => {
       case "printers":
         return <PrinterSettingsTab />;
 
+      case "shortcuts":
+        return <KeyboardShortcutsSettings />;
+
       default:
         return (
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-16 flex flex-col items-center justify-center text-center animate-in fade-in zoom-in-95 duration-300 min-h-[400px]">
@@ -444,53 +462,129 @@ export const ProfileSettingsPage = () => {
   // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex flex-col h-full overflow-hidden animate-in fade-in duration-400">
+    <div className="flex flex-col md:flex-row h-full min-h-[calc(100vh-140px)] bg-white rounded-2xl border border-slate-200/90 overflow-hidden shadow-xs animate-in fade-in duration-300">
+      
+      {/* ── Left Secondary Navigation Sidebar (Settings Nav) ── */}
+      <aside className={`w-full ${isSidebarOpen ? "md:w-64 lg:w-72" : "md:w-[68px]"} border-b md:border-b-0 md:border-r border-slate-200/80 bg-slate-50/70 flex flex-col shrink-0 transition-all duration-200 ease-in-out`}>
+        
+        {/* Header */}
+        <div className={`p-3 md:p-3.5 border-b border-slate-200/80 bg-white flex items-center ${isSidebarOpen ? "justify-between" : "justify-center"}`}>
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-100">
+              <Settings size={17} />
+            </div>
+            {isSidebarOpen && (
+              <div className="min-w-0">
+                <h2 className="text-xs sm:text-sm font-semibold text-slate-800 truncate">Settings</h2>
+                <p className="text-[10px] text-slate-400 font-medium truncate">Preferences & Configuration</p>
+              </div>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="hidden md:flex w-7 h-7 rounded-lg items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+            title={isSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+          >
+            {isSidebarOpen ? <ChevronLeft size={15} /> : <ChevronRight size={15} />}
+          </button>
+        </div>
 
-
-      <div className="flex flex-col gap-6 flex-1 min-h-0">
-        {/* ── Tabs ── */}
-        <div className="flex gap-2 overflow-x-auto pb-1 px-2 shrink-0 custom-scrollbar w-full border-b border-slate-100">
+        {/* Menu items list */}
+        <div className="p-2 flex md:flex-col gap-1 overflow-x-auto md:overflow-y-auto no-scrollbar md:custom-scrollbar flex-1">
           {MENU_ITEMS.map((item) => {
             const isActive = activeTab === item.id;
             const Icon = item.icon;
             return (
-              <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl border-b-2 text-[13px] font-bold whitespace-nowrap shrink-0 transition-all ${isActive
-                  ? ""
-                  : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+              <div key={item.id} className="relative group shrink-0 md:w-full">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab(item.id)}
+                  className={`w-full flex items-center gap-3 py-2 rounded-xl text-left transition-all duration-150 cursor-pointer ${
+                    isSidebarOpen ? "px-3" : "px-0 md:justify-center"
+                  } ${
+                    isActive
+                      ? "bg-white text-emerald-950 font-semibold shadow-xs border border-slate-200/90 ring-1 ring-emerald-500/20"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-white/80 border border-transparent"
                   }`}
-                style={isActive ? { borderColor: 'var(--t-primary)', color: 'var(--t-primary)', backgroundColor: 'var(--t-primary-lighter)' } : undefined}
-              >
-                <Icon size={15} />
-                {item.label}
-              </button>
+                >
+                  <div
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                      isActive
+                        ? "bg-emerald-600 text-white"
+                        : "bg-slate-100 text-slate-500 group-hover:bg-slate-200 group-hover:text-slate-700"
+                    }`}
+                  >
+                    <Icon size={16} />
+                  </div>
+                  {isSidebarOpen && (
+                    <div className="min-w-0 hidden md:block flex-1">
+                      <div className="text-xs font-semibold leading-tight text-slate-800">{item.label}</div>
+                      <div className="text-[10px] text-slate-400 font-normal truncate mt-0.5">
+                        {item.description}
+                      </div>
+                    </div>
+                  )}
+                  {/* On mobile: show label */}
+                  <span className="text-xs font-medium md:hidden whitespace-nowrap px-1">{item.label}</span>
+                </button>
+
+                {/* Tooltip on hover when sidebar is collapsed */}
+                {!isSidebarOpen && (
+                  <div className="absolute left-[calc(100%+8px)] top-1/2 -translate-y-1/2 z-50 hidden md:group-hover:flex flex-col whitespace-nowrap bg-slate-900/95 text-white px-2.5 py-1.5 rounded-lg shadow-xl border border-white/10 pointer-events-none animate-in fade-in zoom-in-95 duration-150">
+                    <span className="text-xs font-semibold text-white">{item.label}</span>
+                    <span className="text-[10px] text-slate-300 font-normal">{item.description}</span>
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
 
-        {/* ── Content Panel ── */}
-        <section className="flex-1 min-w-0 min-h-0 flex flex-col">
-          {/* Panel header (Title context) */}
-          {activeItem && activeTab !== "activity" && (
-            <div className="flex items-center gap-2 shrink-0 mb-4 px-2">
-              <span
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold border ${accentClasses[activeItem.accent].badge
-                  } border-current/20`}
-              >
-                <activeItem.icon size={13} />
-                {activeItem.label}
-              </span>
+        {/* Sidebar Footer */}
+        <div className="p-2.5 border-t border-slate-200/80 bg-white/70 hidden md:flex items-center justify-center text-[10.5px] text-slate-400">
+          {isSidebarOpen ? (
+            <div className="flex items-center justify-between w-full px-1">
+              <span>InventQ Cloud POS</span>
+              <span className="font-mono text-[10px] font-medium text-slate-500">v2.5.8</span>
             </div>
+          ) : (
+            <span className="font-mono text-[10px] font-medium text-slate-400">v2.5</span>
           )}
+        </div>
+      </aside>
 
-          {/* Full height scrollable content area */}
-          <div className={`flex-1 ${activeTab === "activity" ? "min-h-0 pb-0" : "overflow-y-auto px-2 pb-6 custom-scrollbar"}`}>
-            {renderContent()}
-          </div>
-        </section>
-      </div>
+      {/* ── Right Content Area (Selected Setting Nav Contents) ── */}
+      <main className="flex-1 min-w-0 flex flex-col bg-white overflow-hidden">
+        
+        {/* Context Header */}
+        {activeItem && (
+          <header className="px-5 sm:px-6 py-4 border-b border-slate-100 bg-white flex items-center justify-between gap-4 shrink-0">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${accentClasses[activeItem.accent].icon}`}>
+                <activeItem.icon size={16} />
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-sm sm:text-base font-bold text-slate-900 truncate">
+                  {activeItem.label}
+                </h1>
+                <p className="text-[11px] text-slate-400 font-medium truncate">
+                  {activeItem.description}
+                </p>
+              </div>
+            </div>
+
+            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border ${accentClasses[activeItem.accent].badge} border-current/20 shrink-0 hidden sm:inline-flex`}>
+              <span>Active</span>
+            </span>
+          </header>
+        )}
+
+        {/* Scrollable Content Body */}
+        <div className={`flex-1 ${activeTab === "activity" ? "min-h-0 p-0" : "overflow-y-auto p-4 sm:p-6 custom-scrollbar"}`}>
+          {renderContent()}
+        </div>
+      </main>
 
       {/* ── GST Downgrade Confirmation Dialog ── */}
       {showGstConfirm && createPortal(

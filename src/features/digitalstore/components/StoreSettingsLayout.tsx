@@ -9,7 +9,6 @@ import {
   Save,
   Trash2,
   CheckCircle2,
-  AlertCircle,
   PowerOff,
 } from "lucide-react";
 import { shopApi } from "@/services/api/shop";
@@ -18,17 +17,38 @@ import OperatingHours from "../pages/OperatingHours";
 import DeliveryPreferences from "../pages/Deliveryinfo";
 import { useToast } from "@/context/ToastContext";
 
-type SettingSection = "details" | "hours" | "delivery" | "returns" | "vacation" | "danger";
+export type SettingSection = "details" | "hours" | "delivery" | "returns" | "vacation" | "danger";
 
-interface SidebarItem {
+export interface SidebarItem {
   id: SettingSection;
   label: string;
   icon: React.ElementType;
   description: string;
 }
 
-export function StoreSettingsLayout({ shop }: { shop: any }) {
-  const [activeSection, setActiveSection] = useState<SettingSection>("details");
+export const SETTING_SIDEBAR_ITEMS: SidebarItem[] = [
+  { id: "details",  label: "Store Details",  icon: Store,         description: "Name, logo, contact info" },
+  { id: "hours",    label: "Store Hours",    icon: Clock,         description: "Open / close schedule" },
+  { id: "delivery", label: "Delivery",       icon: Truck,         description: "Zones, charges, lead time" },
+  { id: "returns",  label: "Return & Refund Policy", icon: RotateCcw, description: "Default return window & rules" },
+  { id: "vacation", label: "Vacation Mode",  icon: Palmtree,      description: "Temporarily pause orders" },
+  { id: "danger",   label: "Danger Zone",    icon: AlertTriangle, description: "Deactivate or delete store" },
+];
+
+export function StoreSettingsLayout({
+  shop,
+  activeSection: controlledSection,
+  onSectionChange: setControlledSection,
+  hideInternalNav = false,
+}: {
+  shop: any;
+  activeSection?: SettingSection;
+  onSectionChange?: (section: SettingSection) => void;
+  hideInternalNav?: boolean;
+}) {
+  const [internalSection, setInternalSection] = useState<SettingSection>("details");
+  const activeSection = controlledSection !== undefined ? controlledSection : internalSection;
+  const setActiveSection = setControlledSection || setInternalSection;
   const { showToast } = useToast();
   const [turningOff, setTurningOff] = useState(false);
 
@@ -189,14 +209,7 @@ export function StoreSettingsLayout({ shop }: { shop: any }) {
   const [confirmDelete, setConfirmDelete] = useState("");
   const [deleting, setDeleting] = useState(false);
 
-  const sidebarItems: SidebarItem[] = [
-    { id: "details",  label: "Store Details",  icon: Store,         description: "Name, logo, contact info" },
-    { id: "hours",    label: "Store Hours",    icon: Clock,         description: "Open / close schedule" },
-    { id: "delivery", label: "Delivery",       icon: Truck,         description: "Zones, charges, lead time" },
-    { id: "returns",  label: "Return & Refund Policy", icon: RotateCcw, description: "Default return window & rules" },
-    { id: "vacation", label: "Vacation Mode",  icon: Palmtree,      description: "Temporarily pause orders" },
-    { id: "danger",   label: "Danger Zone",    icon: AlertTriangle, description: "Deactivate or delete store" },
-  ];
+  const sidebarItems = SETTING_SIDEBAR_ITEMS;
 
   const handleSaveVacation = async () => {
     if (!shop?.id) {
@@ -256,142 +269,55 @@ export function StoreSettingsLayout({ shop }: { shop: any }) {
     }, 1500);
   };
 
-  // Store completeness checks (kept for metadata display)
-  const checks = [
-    { label: "Logo uploaded",      done: !!shop?.logo_url },
-    { label: "Banner uploaded",    done: !!shop?.banner_url },
-    { label: "Description added",  done: !!shop?.description },
-    { label: "Address set",        done: !!shop?.address?.full_address && shop?.address.full_address !== "Not specified" },
-    { label: "Store visible online", done: !!shop?.visible_online },
-    { label: "Category selected",  done: shop?.categories && shop?.categories.length > 0 },
-  ];
-  const done = checks.filter((c) => c.done).length;
-  const pct  = Math.round((done / checks.length) * 100);
+
 
   return (
-    <div className="flex flex-col md:flex-row md:min-h-[600px] bg-white rounded-xl border border-slate-200 overflow-hidden mb-20 md:mb-0">
+    <div className={`bg-white rounded-2xl border border-slate-200/90 overflow-hidden shadow-xs ${hideInternalNav ? "w-full" : "flex flex-col md:flex-row md:min-h-[600px] mb-20 md:mb-0"}`}>
 
       {/* ── Left Sidebar (Horizontal pill bar on mobile, sidebar on md+) ── */}
-      <nav className="w-full md:w-56 border-b md:border-b-0 md:border-r border-slate-200 bg-slate-50/60 shrink-0">
-        <div className="p-2.5 md:p-3 flex md:flex-col gap-1.5 md:gap-0.5 overflow-x-auto no-scrollbar">
-          {sidebarItems.map((item) => {
-            const isActive   = activeSection === item.id;
-            const isDanger   = item.id === "danger";
-            return (
-              <button
-                key={item.id}
-                onClick={() => setActiveSection(item.id)}
-                className={`shrink-0 md:w-full flex items-center gap-2 md:gap-3 px-3 py-2 md:py-2.5 rounded-lg text-left transition-all duration-150 group whitespace-nowrap ${
-                  isActive
-                    ? isDanger
-                      ? "bg-red-50 text-red-600 md:border-l-2 border-red-500 ring-1 md:ring-0 ring-red-200"
-                      : "bg-white text-blue-600 md:border-l-2 border-blue-600 shadow-sm ring-1 md:ring-0 ring-blue-100"
-                    : isDanger
-                      ? "text-red-500 hover:bg-red-50/60 md:border-l-2 border-transparent"
-                      : "text-slate-600 hover:bg-white hover:text-slate-800 md:border-l-2 border-transparent"
-                }`}
-              >
-                <item.icon
-                  size={15}
-                  className={`shrink-0 ${
+      {!hideInternalNav && (
+        <nav className="w-full md:w-56 border-b md:border-b-0 md:border-r border-slate-200 bg-slate-50/60 shrink-0">
+          <div className="p-2.5 md:p-3 flex md:flex-col gap-1.5 md:gap-0.5 overflow-x-auto no-scrollbar">
+            {sidebarItems.map((item) => {
+              const isActive   = activeSection === item.id;
+              const isDanger   = item.id === "danger";
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveSection(item.id)}
+                  className={`shrink-0 md:w-full flex items-center gap-2 md:gap-3 px-3 py-2 md:py-2.5 rounded-lg text-left transition-all duration-150 group whitespace-nowrap ${
                     isActive
-                      ? isDanger ? "text-red-500" : "text-blue-500"
-                      : isDanger ? "text-red-400" : "text-slate-400 group-hover:text-slate-600"
+                      ? isDanger
+                        ? "bg-red-50 text-red-600 md:border-l-2 border-red-500 ring-1 md:ring-0 ring-red-200"
+                        : "bg-white text-blue-600 md:border-l-2 border-blue-600 shadow-sm ring-1 md:ring-0 ring-blue-100"
+                      : isDanger
+                        ? "text-red-500 hover:bg-red-50/60 md:border-l-2 border-transparent"
+                        : "text-slate-600 hover:bg-white hover:text-slate-800 md:border-l-2 border-transparent"
                   }`}
-                />
-                <span className="text-xs md:text-sm font-medium">{item.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </nav>
+                >
+                  <item.icon
+                    size={15}
+                    className={`shrink-0 ${
+                      isActive
+                        ? isDanger ? "text-red-500" : "text-blue-500"
+                        : isDanger ? "text-red-400" : "text-slate-400 group-hover:text-slate-600"
+                    }`}
+                  />
+                  <span className="text-xs md:text-sm font-medium">{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+      )}
 
       {/* ── Right Content ── */}
-      <div className="flex-1 p-4 sm:p-6 overflow-y-auto">
+      <div className={`flex-1 overflow-y-auto ${hideInternalNav ? "p-4 sm:p-6 lg:p-7" : "p-4 sm:p-6"}`}>
 
         {/* ── Store Details ── */}
         {activeSection === "details" && (
           <div className="animate-in fade-in duration-200">
-            <div className="mb-6">
-              <h2 className="text-base font-semibold text-slate-900">Store Details</h2>
-              <p className="text-sm text-slate-500 mt-0.5">
-                Manage your store's public information, branding, and business settings.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-              {/* Form */}
-              <div className="lg:col-span-7">
-                <ShopProfileForm editPath="/setup-digital-store?mode=edit" />
-              </div>
-
-              {/* Sidebar info */}
-              <div className="lg:col-span-5 space-y-4">
-                {/* Profile completeness */}
-                <div className="bg-white rounded-xl border border-slate-200 p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <h3 className="text-sm font-semibold text-slate-800">Profile completeness</h3>
-                      <p className="text-[11px] text-slate-400 mt-0.5">Complete your profile for better visibility</p>
-                    </div>
-                    <span className="text-sm font-bold text-blue-600">{pct}%</span>
-                  </div>
-                  <div className="w-full bg-slate-100 rounded-full h-1 mb-4 overflow-hidden">
-                    <div
-                      className="h-1 rounded-full transition-all duration-700"
-                      style={{ width: `${pct}%`, background: pct === 100 ? "#16a34a" : "#2563eb" }}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    {checks.map((c) => (
-                      <div key={c.label} className="flex items-center gap-2">
-                        {c.done ? (
-                          <CheckCircle2 size={13} className="text-emerald-500 shrink-0" />
-                        ) : (
-                          <AlertCircle size={13} className="text-slate-300 shrink-0" />
-                        )}
-                        <span className={`text-[12px] ${c.done ? "text-slate-600" : "text-slate-400"}`}>
-                          {c.label}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Metadata */}
-                <div className="bg-white rounded-xl border border-slate-200 p-4">
-                  <h3 className="text-sm font-semibold text-slate-800 mb-3">Store Metadata</h3>
-                  <div className="space-y-2 text-[12px]">
-                    <div className="flex justify-between py-1.5 border-b border-slate-100">
-                      <span className="text-slate-500">Business Type</span>
-                      <span className="font-medium text-slate-700">{shop?.business_infos?.type || "—"}</span>
-                    </div>
-                    <div className="flex justify-between py-1.5 border-b border-slate-100">
-                      <span className="text-slate-500">Currency</span>
-                      <span className="font-medium text-slate-700">{shop?.business_infos?.currency || "INR"}</span>
-                    </div>
-                    <div className="flex justify-between py-1.5 border-b border-slate-100">
-                      <span className="text-slate-500">GST Status</span>
-                      <span className="font-medium text-slate-700">
-                        {shop?.business_infos?.gst_infos?.registered
-                          ? `Registered (${shop.business_infos.gst_infos.number || "—"})`
-                          : "Not Registered"}
-                      </span>
-                    </div>
-                    <div className="flex justify-between py-1.5 border-b border-slate-100">
-                      <span className="text-slate-500">Member Since</span>
-                      <span className="font-medium text-slate-700">{shop?.created_at?.slice(0, 10)}</span>
-                    </div>
-                    <div className="flex justify-between py-1.5">
-                      <span className="text-slate-500">Store ID</span>
-                      <span className="font-mono text-[10px] text-slate-400 truncate max-w-[140px]" title={shop?.id}>
-                        {shop?.id}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <ShopProfileForm editPath="/setup-digital-store?mode=edit" />
           </div>
         )}
 

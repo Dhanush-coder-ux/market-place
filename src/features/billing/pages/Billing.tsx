@@ -14,9 +14,11 @@ import AttachCustomerModal from "../components/AttachCustomerModal";
 import { usePurchaseSettings } from "@/context/PurchaseContext";
 import InvoicePreviewModal from "../components/InvoicePreviewModal";
 import { BillingSuccessModal } from "../components/BillingSuccessModal";
+import { BillingLoadingModal } from "../components/BillingLoadingModal";
 import { NavigationBlocker } from "@/components/common/NavigationBlocker";
 import { calculateBillTotals, BillTotals, formatINR } from "@/utils/pricing";
 import { getPrinterConfig, attemptSilentBluetoothReconnect } from "../utils/printerService";
+import { useRegisterShortcut } from "@/hooks/useKeyboardShortcuts";
 
 // ─── Helper to map serial names to object IDs ─────────────────────────────────
 const mapSerialsToInfos = (item: any) => {
@@ -95,6 +97,13 @@ const Billing = () => {
   // ── Attach/Create Customer Modal State
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [showInvoicePreview, setShowInvoicePreview] = useState(false);
+  const [billingLoadingState, setBillingLoadingState] = useState<{
+    isOpen: boolean;
+    type: "BILL" | "INVOICE";
+  }>({
+    isOpen: false,
+    type: "BILL",
+  });
   const [mobileTab, setMobileTab] = useState<"items" | "payment">("items");
 
   // ── Checkout Success Details State
@@ -323,18 +332,6 @@ const Billing = () => {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [items]);
 
-  // F4 shortcut to open customer attachment modal
-  useEffect(() => {
-    const handleF4Key = (e: KeyboardEvent) => {
-      if (e.key === "F4") {
-        e.preventDefault();
-        setIsCustomerModalOpen(true);
-      }
-    };
-    window.addEventListener("keydown", handleF4Key);
-    return () => window.removeEventListener("keydown", handleF4Key);
-  }, []);
-
   // ── Add item to Order Cart (called on every item change from BillingTable)
   // We add items to the cart when confirmed at checkout, not on every UI change.
   // (Items are already tracked locally in `items` state)
@@ -381,6 +378,10 @@ const Billing = () => {
 
     isSubmittingRef.current = true;
     setIsCheckoutLoading(true);
+    setBillingLoadingState({
+      isOpen: true,
+      type: billingType,
+    });
     try {
       // Guarantee all current bill items are synced to this cart session in Redis
       await Promise.all(
@@ -538,7 +539,7 @@ const Billing = () => {
           (typeof res?.data === "string" ? res.data : undefined) ||
           undefined;
 
-        showToast("Order confirmed successfully", "success");
+        showToast(isInvoice ? "Invoice generated successfully" : "Order confirmed successfully", "success");
 
         setSuccessDetails({
           items: [...items],
@@ -552,6 +553,12 @@ const Billing = () => {
           phone: phone || "",
           orderId: resolvedOrderId,
         });
+
+        if (isInvoice) {
+          setShowInvoicePreview(true);
+        } else {
+          setShowInvoicePreview(false);
+        }
       }
     } catch (err: any) {
       console.error("Order confirmation failed:", err);
@@ -565,8 +572,41 @@ const Billing = () => {
     } finally {
       isSubmittingRef.current = false;
       setIsCheckoutLoading(false);
+      setBillingLoadingState((prev) => ({ ...prev, isOpen: false }));
     }
   }, [items, customerData, initCartSession, showToast, totalAmount, gstAmount, finalAmount, billTotals, billDiscount, customerName, phone, includeGst, isCheckoutLoading, showInvoicePreview, handleNextBill]);
+
+  // ── Register billing keyboard shortcuts
+  useRegisterShortcut("bill_attach_customer", () => {
+    setIsCustomerModalOpen(true);
+  }, []);
+
+  useRegisterShortcut("bill_new", () => {
+    handleNextBill();
+    showToast("New bill session started", "info");
+  }, [handleNextBill, showToast]);
+
+  useRegisterShortcut("bill_complete", () => {
+    const filledItems = items.filter(i => !!i.name);
+    if (filledItems.length === 0) {
+      showToast("Cannot complete empty bill. Please add products first.", "warning");
+      return;
+    }
+    handleConfirmOrder(payments, includeGst, "COMPLETED", "BILL");
+  }, [items, payments, includeGst, handleConfirmOrder, showToast]);
+
+  useRegisterShortcut("bill_print", () => {
+    if (successDetails) {
+      window.print();
+    } else {
+      setShowInvoicePreview(true);
+    }
+  }, [successDetails]);
+
+  useRegisterShortcut("close_overlay", () => {
+    if (isCustomerModalOpen) setIsCustomerModalOpen(false);
+    if (showInvoicePreview) setShowInvoicePreview(false);
+  }, [isCustomerModalOpen, showInvoicePreview]);
 
   // ── Resizable Sidebar Logic
   const [sidebarWidth, setSidebarWidth] = useState(400);
@@ -824,6 +864,12 @@ const Billing = () => {
             setShowInvoicePreview(false);
             setSuccessDetails(null);
           }}
+        />
+
+        {/* Lottie Animation Loading Dialog for Complete Bill & Complete Invoice */}
+        <BillingLoadingModal
+          isOpen={billingLoadingState.isOpen}
+          type={billingLoadingState.type}
         />
 
 

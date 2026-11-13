@@ -4,8 +4,9 @@ import { useNavigate, useParams, useLocation } from "react-router-dom";
 import {
   ArrowLeft, Package, AlertCircle, CheckCircle2,
   ChevronRight, Minus, Plus, ArrowRight, RefreshCw, Banknote,
-  Check, Loader2, X
+  Check, Loader2, X, Layers
 } from "lucide-react";
+import { AntBadge } from "@/components/ui/AntBadge";
 import { SHOP_ID, ENDPOINTS } from "@/services/endpoints";
 import { useApi } from "@/context/ApiContext";
 import { useToast } from "@/context/ToastContext";
@@ -390,6 +391,12 @@ const ReturnPageContent: React.FC<{ sale: SaleRecord; productMap: Record<string,
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <p className="text-[12px] font-bold text-slate-800 truncate">{item.name}</p>
+                          {item.variantName && (
+                            <AntBadge variant="at-variant" type="tag" icon={<Layers size={9} />}>V: {item.variantName}</AntBadge>
+                          )}
+                          {item.batch_name && (
+                            <AntBadge variant="at-batch" type="tag">B: {item.batch_name}</AntBadge>
+                          )}
                           {item.mrp && item.mrp > (item.originalUnitPrice || item.unitPrice) ? (
                             <span className="text-[9px] text-slate-400 font-medium">MRP: <span className="line-through">{fmt(item.mrp)}</span></span>
                           ) : null}
@@ -648,6 +655,12 @@ const ReturnPageContent: React.FC<{ sale: SaleRecord; productMap: Record<string,
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <p className="text-[13px] font-bold text-slate-800">{item.name}</p>
+                        {item.variantName && (
+                          <AntBadge variant="at-variant" type="tag" icon={<Layers size={9} />}>V: {item.variantName}</AntBadge>
+                        )}
+                        {item.batch_name && (
+                          <AntBadge variant="at-batch" type="tag">B: {item.batch_name}</AntBadge>
+                        )}
                         {item.mrp && item.mrp > (item.originalUnitPrice || item.unitPrice) ? (
                           <span className="text-[9px] text-slate-400 font-medium">MRP: <span className="line-through">{fmt(item.mrp)}</span></span>
                         ) : null}
@@ -770,6 +783,12 @@ const ReturnPageContent: React.FC<{ sale: SaleRecord; productMap: Record<string,
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <p className="text-[13px] font-bold text-slate-800">{item.name}</p>
+                          {item.variantName && (
+                            <AntBadge variant="at-variant" type="tag" icon={<Layers size={9} />}>V: {item.variantName}</AntBadge>
+                          )}
+                          {item.batch_name && (
+                            <AntBadge variant="at-batch" type="tag">B: {item.batch_name}</AntBadge>
+                          )}
                           {(item.discountAmount || 0) > 0 && (
                             <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono">
                               Discount −{fmt(item.discountAmount || 0)}

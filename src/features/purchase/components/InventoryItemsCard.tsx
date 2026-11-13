@@ -195,7 +195,7 @@ export const InventoryItemsCard = ({
   removeProduct,
   onAddNewProduct,
   purchaseType,
-  gstMode = "exclusive",
+  gstMode = "inclusive",
   setGstMode,
   isUpdate = false,
 }: InventoryItemsCardProps) => {

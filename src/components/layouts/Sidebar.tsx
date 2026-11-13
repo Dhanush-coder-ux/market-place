@@ -53,7 +53,14 @@ interface SubGroupItemProps {
 // ─── Sidebar Root ─────────────────────────────────────────────────────────────
 
 const Sidebar: FC<{ links: SidebarLink[] }> = ({ links }) => {
+  const { pathname } = useLocation();
   const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    if (pathname.startsWith("/settings") || pathname.startsWith("/profile")) {
+      setIsOpen(false);
+    }
+  }, [pathname]);
   const [hoveredItem, setHoveredItem] = useState<{ link: SidebarLink; top: number } | null>(null);
   const [collapseTrigger, setCollapseTrigger] = useState(0);
   const [activeAccordion, setActiveAccordion] = useState<string | null>(null);
@@ -648,7 +655,7 @@ const SidebarItem = memo(({ link, sidebarOpen, collapseTrigger, activeAccordion,
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             transition={{ duration: 0.08 }}
-                            className="truncate"
+                            className="truncate flex-1 min-w-0"
                           >
                             {link.name}
                           </motion.span>
@@ -851,8 +858,8 @@ const AddButton: FC<{ onClick: () => void; title: string; className?: string }> 
 // ─── Tooltip (collapsed state) ────────────────────────────────────────────────
 
 const Tooltip: FC<{ label: string }> = ({ label }) => (
-  <div className="absolute left-[calc(100%+8px)] top-1/2 -translate-y-1/2 flex items-center bg-slate-800 text-white text-[11.5px] font-medium px-2.5 py-1.5 rounded-md whitespace-nowrap z-[9999] border border-white/10 shadow-lg tracking-tight opacity-0 scale-95 pointer-events-none group-hover:opacity-100 group-hover:scale-100 transition-all duration-150 delay-150">
-    {label}
+  <div className="absolute left-[calc(100%+8px)] top-1/2 -translate-y-1/2 flex items-center gap-2 bg-slate-900 text-white text-[11.5px] font-medium px-2.5 py-1.5 rounded-md whitespace-nowrap z-[9999] border border-white/10 shadow-lg tracking-tight opacity-0 scale-95 pointer-events-none group-hover:opacity-100 group-hover:scale-100 transition-all duration-150 delay-150">
+    <span>{label}</span>
   </div>
 );
 

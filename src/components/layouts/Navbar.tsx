@@ -29,6 +29,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Loader2, Check, LogOut, Download } from "lucide-react";
 import { usePWAInstall } from "@/hooks/usePWAInstall";
 import { DesktopInstallModal } from "@/components/common/DesktopInstallModal";
+import { useKeyboardShortcuts } from "@/context/KeyboardShortcutsContext";
+import KeyboardKey from "@/components/common/KeyboardKey";
 
 // -----------------------------
 // Route Config
@@ -59,10 +61,9 @@ const SEARCHABLE_ROUTES = [
 export const Navbar = () => {
   const navigate = useNavigate();
   const searchRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const { setCommandPaletteOpen } = useKeyboardShortcuts();
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
 
   // ── PWA Desktop/Mobile App Installation ─────────────────────────────────────
@@ -147,37 +148,9 @@ export const Navbar = () => {
     route.name.toLowerCase().includes(searchQuery.toLowerCase())
   ).slice(0, 5);
 
-  // Close search on outside click
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
-        setIsSearchOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault();
-        inputRef.current?.focus();
-      }
-      if (e.key === "Escape") {
-        setIsSearchOpen(false);
-        inputRef.current?.blur();
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, []);
-
   const handleNavigate = (path: string) => {
     navigate(path);
     setSearchQuery("");
-    setIsSearchOpen(false);
     setIsMobileSearchOpen(false);
   };
 
@@ -302,58 +275,18 @@ export const Navbar = () => {
           </AnimatePresence>
         </div>
 
-        {/* Search */}
-        <div className="relative flex-1 mr-3 lg:mr-6 hidden md:flex" ref={searchRef}>
-          <div className="relative group w-[180px] hover:w-[240px] focus-within:w-[350px] focus-within:!w-[350px] transition-all duration-300 ease-out">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 md:group-focus-within:text-blue-500 md:transition-colors z-10" />
-            <input
-              ref={inputRef}
-              type="text"
-              placeholder="Search the pages"
-              className="w-full pl-9 pr-4 py-1.5 bg-slate-100/70 border border-slate-200/60 rounded-md text-sm font-medium text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all shadow-sm"
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setIsSearchOpen(true);
-              }}
-              onFocus={() => setIsSearchOpen(true)}
-            />
-
-          </div>
-
-          {isSearchOpen && searchQuery && (
-            <div className="absolute top-full mt-2 w-full bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden z-50">
-              {filteredRoutes.length > 0 ? (
-                <div className="p-1.5">
-                  <p className="px-3 py-2 text-[10px] font-bold text-slate-400">
-                    Quick Navigation
-                  </p>
-                  {filteredRoutes.map((route) => (
-                    <button
-                      key={route.path}
-                      onClick={() => handleNavigate(route.path)}
-                      className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg md:hover:bg-blue-50 text-sm group md:transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-slate-700 group-hover:text-blue-700 font-semibold">
-                          {route.name}
-                        </span>
-                      </div>
-                      <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 md:group-hover:opacity-100 md:group-hover:translate-x-0 text-blue-600 md:transition-all md:duration-200" />
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <div className="p-8 text-center">
-                  <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <Search className="w-5 h-5 text-slate-300" />
-                  </div>
-                  <p className="text-sm font-semibold text-slate-700">No results found</p>
-                  <p className="text-xs text-slate-400 mt-1">Try searching for something else.</p>
-                </div>
-              )}
+        {/* Search & Command Palette trigger - Centered */}
+        <div className="relative flex-1 flex items-center justify-center px-2 sm:px-4 hidden md:flex" ref={searchRef}>
+          <div
+            onClick={() => setCommandPaletteOpen(true)}
+            className="relative group w-full max-w-[280px] lg:max-w-[340px] transition-all duration-200 ease-out cursor-pointer"
+          >
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-hover:text-emerald-600 transition-colors z-10" />
+            <div className="w-full pl-9 pr-2.5 py-1.5 bg-slate-100/70 hover:bg-slate-100 border border-slate-200/60 hover:border-slate-300 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-600 flex items-center justify-between transition-all shadow-xs select-none">
+              <span>Search pages & hotkeys...</span>
+              <KeyboardKey combo="ctrl+k" size="xs" />
             </div>
-          )}
+          </div>
         </div>
 
         {/* RIGHT - Actions */}

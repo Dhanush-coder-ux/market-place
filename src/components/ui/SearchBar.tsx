@@ -17,6 +17,10 @@ export interface SearchBarProps {
   autoFocus?: boolean;
   disabled?: boolean;
   name?: string;
+  autoComplete?: string;
+  autoCorrect?: string;
+  autoCapitalize?: string;
+  spellCheck?: boolean;
 }
 
 const SIZE_CLASSES: Record<"sm" | "md", string> = {
@@ -38,7 +42,11 @@ export const SearchBar = React.forwardRef<HTMLInputElement, SearchBarProps>(({
   rightSlot,
   autoFocus,
   disabled,
-  name = "search",
+  name,
+  autoComplete = "off",
+  autoCorrect = "off",
+  autoCapitalize = "off",
+  spellCheck = false,
 }, ref) => {
   const hasValue = Boolean(value && value.length > 0);
 
@@ -53,6 +61,12 @@ export const SearchBar = React.forwardRef<HTMLInputElement, SearchBarProps>(({
         ref={ref}
         type="text"
         name={name}
+        autoComplete={autoComplete}
+        autoCorrect={autoCorrect}
+        autoCapitalize={autoCapitalize}
+        spellCheck={spellCheck}
+        data-lpignore="true"
+        data-form-type="other"
         value={value}
         onChange={onChange}
         onKeyDown={onKeyDown}

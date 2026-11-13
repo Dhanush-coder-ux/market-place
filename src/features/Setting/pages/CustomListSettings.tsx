@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Plus, X, Tag, Ruler, Pencil, Check, ChevronLeft, ChevronRight } from "lucide-react";
-import { ReusableSelect, SearchBar } from "@/components/ui";
-import { SHOP_ID } from "@/services/endpoints";
+import { Plus, X, Tag, Ruler, Pencil, Check, Search, Loader2 } from "lucide-react";
+import { SHOP_ID, getShopId } from "@/services/endpoints";
 import { utilityApi } from "@/services/api/utility";
 import { useToast } from "@/context/ToastContext";
 
@@ -36,11 +35,11 @@ export const CustomListSettings: React.FC<CustomListSettingsProps> = ({ type }) 
   const { showToast } = useToast();
   const [items, setItems] = useState<ListItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Pagination & Search State
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(50);
   const [search, setSearch] = useState("");
   const [hasMore, setHasMore] = useState(false);
 
@@ -59,27 +58,60 @@ export const CustomListSettings: React.FC<CustomListSettingsProps> = ({ type }) 
   const Icon = type === "categories" ? Tag : Ruler;
   const singular = type === "categories" ? "category" : "unit";
 
-  const fetchData = useCallback(async (targetPage = page, targetPageSize = pageSize) => {
-    setLoading(true);
-    try {
-      const res = type === "categories"
-        ? await utilityApi.getShopCategories(SHOP_ID, { limit: String(targetPageSize), offset: String(targetPage) })
-        : await utilityApi.getShopUnits(SHOP_ID, { limit: String(targetPageSize), offset: String(targetPage) });
+  const fetchData = useCallback(
+    async (targetPage = 1, append = false) => {
+      if (append) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+      }
+      try {
+        const activeShopId = getShopId() || SHOP_ID;
+        const res =
+          type === "categories"
+            ? await utilityApi.getShopCategories(activeShopId, {
+                limit: "50",
+                offset: String(targetPage),
+              })
+            : await utilityApi.getShopUnits(activeShopId, {
+                limit: "50",
+                offset: String(targetPage),
+              });
 
-      const norm = normalizeItems(res);
-      setItems(norm);
-      setHasMore(norm.length === targetPageSize);
-    } catch {
-      setItems([]);
-      setHasMore(false);
-    } finally {
-      setLoading(false);
-    }
-  }, [type, page, pageSize]);
+        const norm = normalizeItems(res);
+        setItems((prev) => {
+          if (append) {
+            const existingIds = new Set(prev.map((i) => i.id));
+            const newUnique = norm.filter((i) => !existingIds.has(i.id));
+            return [...prev, ...newUnique];
+          }
+          return norm;
+        });
+        setHasMore(norm.length === 50);
+        setPage(targetPage);
+      } catch {
+        if (!append) setItems([]);
+        setHasMore(false);
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
+      }
+    },
+    [type]
+  );
 
   useEffect(() => {
-    fetchData();
+    fetchData(1, false);
   }, [fetchData]);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, clientHeight, scrollHeight } = e.currentTarget;
+    if (scrollTop + clientHeight >= scrollHeight - 35) {
+      if (!loading && !loadingMore && hasMore) {
+        fetchData(page + 1, true);
+      }
+    }
+  };
 
   const resetForm = () => {
     setName("");
@@ -100,28 +132,32 @@ export const CustomListSettings: React.FC<CustomListSettingsProps> = ({ type }) 
   const handleAdd = async () => {
     const trimmedName = name.trim();
     if (!trimmedName || saving) return;
-    if (items.some((item) => item.name.toLowerCase() === trimmedName.toLowerCase())) return;
+    if (items.some((item) => item.name.toLowerCase() === trimmedName.toLowerCase())) {
+      showToast(`A ${singular} with the name "${trimmedName}" already exists.`, "error");
+      return;
+    }
 
     setSaving(true);
     try {
+      const activeShopId = getShopId() || SHOP_ID;
       if (type === "categories") {
         await utilityApi.createShopCategory({
-          shop_id: SHOP_ID,
+          shop_id: activeShopId,
           name: trimmedName,
           description: description.trim() || undefined,
           is_active: true,
         });
       } else {
         const formattedSubUnits = subUnits
-          .filter(su => su.name.trim() && su.factor.trim())
-          .map(su => ({
+          .filter((su) => su.name.trim() && su.factor.trim())
+          .map((su) => ({
             name: su.name.trim(),
             factor: parseFloat(su.factor),
           }))
-          .filter(su => !isNaN(su.factor) && su.factor > 0);
+          .filter((su) => !isNaN(su.factor) && su.factor > 0);
 
         await utilityApi.createShopUnit({
-          shop_id: SHOP_ID,
+          shop_id: activeShopId,
           name: trimmedName,
           short_name: shortName.trim() || trimmedName,
           description: description.trim() || undefined,
@@ -129,8 +165,11 @@ export const CustomListSettings: React.FC<CustomListSettingsProps> = ({ type }) 
           sub_units: formattedSubUnits.length > 0 ? formattedSubUnits : undefined,
         });
       }
+      showToast(`${singular.charAt(0).toUpperCase() + singular.slice(1)} added successfully`, "success");
       resetForm();
-      await fetchData();
+      await fetchData(1, false);
+    } catch (e: any) {
+      showToast(e?.message || `Failed to add ${singular}`, "error");
     } finally {
       setSaving(false);
     }
@@ -141,14 +180,15 @@ export const CustomListSettings: React.FC<CustomListSettingsProps> = ({ type }) 
 
     setSaving(true);
     try {
+      const activeShopId = getShopId() || SHOP_ID;
       if (type === "categories") {
-        await utilityApi.deleteShopCategory({ id: itemToRemove.id, shop_id: SHOP_ID });
+        await utilityApi.deleteShopCategory({ id: itemToRemove.id, shop_id: activeShopId });
       } else {
-        await utilityApi.deleteShopUnit({ id: itemToRemove.id, shop_id: SHOP_ID });
+        await utilityApi.deleteShopUnit({ id: itemToRemove.id, shop_id: activeShopId });
       }
-      await fetchData();
+      showToast(`${singular.charAt(0).toUpperCase() + singular.slice(1)} deleted`, "success");
+      await fetchData(1, false);
     } catch (err: any) {
-      // Parse the error message from common API response shapes
       let apiMsg = "";
       const detail = err?.response?.data?.detail;
       if (detail && typeof detail === "object" && detail.description) {
@@ -166,7 +206,6 @@ export const CustomListSettings: React.FC<CustomListSettingsProps> = ({ type }) 
           "";
       }
 
-      // Provide a friendly, context-aware message
       const lower = apiMsg.toLowerCase();
       let friendly: string;
       if (
@@ -179,11 +218,11 @@ export const CustomListSettings: React.FC<CustomListSettingsProps> = ({ type }) 
         lower.includes("foreign key") ||
         lower.includes("constraint")
       ) {
-        friendly = `"${itemToRemove.name}" cannot be deleted because one or more products are tagged with this category. Remove the category from all products in the Dropdown Settings tab first, then try again.`;
+        friendly = `"${itemToRemove.name}" cannot be deleted because one or more products are tagged with this ${singular}. Remove it from products first.`;
       } else if (apiMsg) {
         friendly = `Could not delete "${itemToRemove.name}": ${apiMsg}`;
       } else {
-        friendly = `Could not delete "${itemToRemove.name}". It may be in use by a product or dropdown setting. Please check the Dropdown Settings tab and remove any references first.`;
+        friendly = `Could not delete "${itemToRemove.name}". It may be in use by an existing product.`;
       }
 
       showToast(friendly, "error");
@@ -201,23 +240,25 @@ export const CustomListSettings: React.FC<CustomListSettingsProps> = ({ type }) 
 
     setSaving(true);
     try {
+      const activeShopId = getShopId() || SHOP_ID;
       if (type === "categories") {
         await utilityApi.updateShopCategory({
           id: item.id,
-          shop_id: SHOP_ID,
+          shop_id: activeShopId,
           name: trimmed,
         });
       } else {
         await utilityApi.updateShopUnit({
           id: item.id,
-          shop_id: SHOP_ID,
+          shop_id: activeShopId,
           name: trimmed,
           short_name: item.shortName || trimmed,
         });
       }
-      await fetchData();
-    } catch {
-      // Handle error implicitly
+      showToast(`${singular.charAt(0).toUpperCase() + singular.slice(1)} updated`, "success");
+      await fetchData(1, false);
+    } catch (e: any) {
+      showToast(e?.message || `Failed to update ${singular}`, "error");
     } finally {
       setSaving(false);
       setEditingId(null);
@@ -227,281 +268,299 @@ export const CustomListSettings: React.FC<CustomListSettingsProps> = ({ type }) 
   const filteredItems = items.filter((item) => {
     if (!search.trim()) return true;
     const q = search.toLowerCase();
-    return item.name.toLowerCase().includes(q) || (item.shortName && item.shortName.toLowerCase().includes(q));
+    return (
+      item.name.toLowerCase().includes(q) ||
+      (item.shortName && item.shortName.toLowerCase().includes(q))
+    );
   });
 
   return (
-    <div className="bg-white md:rounded-lg border-y md:border border-slate-200 shadow-sm overflow-hidden">
-      <div className="p-6 border-b border-slate-100 bg-slate-50/30 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-blue-50 border border-blue-100 rounded-lg shadow-sm">
-            <Icon className="w-5 h-5 text-blue-600" />
+    <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs flex flex-col h-[520px] overflow-hidden">
+      
+      {/* ── Card Header ── */}
+      <div className="p-4 sm:p-5 border-b border-slate-100 bg-white shrink-0">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-100 flex items-center justify-center shrink-0">
+              <Icon size={16} />
+            </div>
+            <div className="flex items-center gap-2 min-w-0">
+              <h3 className="text-sm sm:text-base font-bold text-slate-900 truncate">
+                {title}
+              </h3>
+              <span className="px-2 py-0.5 text-[10px] font-black bg-slate-100 text-slate-600 rounded-full shrink-0">
+                {items.length}
+              </span>
+            </div>
           </div>
-          <h2 className="text-[15px] font-semibold text-slate-800 leading-tight">{title}</h2>
+
+          <button
+            type="button"
+            onClick={() => setIsFormOpen(!isFormOpen)}
+            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-xl text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 transition-all shadow-2xs cursor-pointer shrink-0 active:scale-98"
+          >
+            {isFormOpen ? <X size={13} /> : <Plus size={13} />}
+            <span>{isFormOpen ? "Cancel" : `Add ${singular}`}</span>
+          </button>
+        </div>
+
+        {/* ── Search Bar with Search Icon (Recent Activity Style) ── */}
+        <div className="relative mt-3">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={`Search ${type === "categories" ? "categories" : "units"}...`}
+            className="w-full h-9 pl-9 pr-8 bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 rounded-xl text-xs placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all shadow-2xs"
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer"
+            >
+              <X size={12} />
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="p-6 space-y-6">
-        {isFormOpen ? (
-          <div className="bg-slate-50/70 border border-slate-200 rounded-xl p-5 shadow-sm transition-all">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-sm font-bold text-slate-800">Add New {singular}</h3>
-              <button onClick={resetForm} className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-md hover:bg-slate-200">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">Name <span className="text-rose-500">*</span></label>
-                  <input
-                    type="text"
-                    className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder={`e.g. ${type === "categories" ? "Electronics" : "Kilogram"}`}
-                  />
-                </div>
-                {type === "units" && (
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1.5">Short Name <span className="text-rose-500">*</span></label>
-                    <input
-                      type="text"
-                      className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm"
-                      value={shortName}
-                      onChange={(e) => setShortName(e.target.value)}
-                      placeholder="e.g. kg"
-                    />
-                  </div>
-                )}
-              </div>
-
-              {type === "units" && (
-                <div className="pt-3 border-t border-slate-200 mt-2">
-                  <div className="flex justify-between items-center mb-3">
-                    <label className="block text-xs font-semibold text-slate-600">Sub Units (Optional)</label>
-                    <button
-                      onClick={addSubUnit}
-                      className="text-[11px] px-2 py-1 bg-blue-50 text-blue-600 font-bold hover:bg-blue-100 hover:text-blue-700 rounded transition-colors flex items-center gap-1 border border-blue-200"
-                    >
-                      <Plus className="w-3 h-3" /> Add Sub Unit
-                    </button>
-                  </div>
-
-                  {subUnits.length === 0 ? (
-                    <div className="text-xs text-slate-400 italic bg-white border border-slate-200 border-dashed rounded-lg p-3 text-center">
-                      No sub units added. Click the button above to add one.
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {subUnits.map((su, index) => (
-                        <div key={index} className="flex gap-2 items-center bg-white p-2 rounded-lg border border-slate-200 shadow-sm">
-                          <input
-                            type="text"
-                            className="flex-1 h-8 px-2.5 bg-slate-50 border border-slate-200 rounded text-xs placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
-                            placeholder="Name (e.g. Gram)"
-                            value={su.name}
-                            onChange={(e) => updateSubUnit(index, "name", e.target.value)}
-                          />
-                          <input
-                            type="number"
-                            className="w-24 md:w-32 h-8 px-2.5 bg-slate-50 border border-slate-200 rounded text-xs placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
-                            placeholder="Factor (e.g. 1000)"
-                            value={su.factor}
-                            onChange={(e) => updateSubUnit(index, "factor", e.target.value)}
-                          />
-                          <button
-                            onClick={() => removeSubUnit(index)}
-                            className="p-1 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded transition-colors"
-                            title="Remove Sub Unit"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="pt-4 flex justify-end gap-2 border-t border-slate-200 mt-4">
-                <button
-                  onClick={resetForm}
-                  className="h-9 px-4 text-xs font-bold text-slate-600 hover:bg-slate-200 bg-slate-100 rounded-lg transition-colors border border-slate-200"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleAdd}
-                  disabled={
-                    !name.trim() ||
-                    (type === "units" && !shortName.trim()) ||
-                    saving ||
-                    (type === "units" && subUnits.some(su => !su.name.trim() || !su.factor.trim() || isNaN(parseFloat(su.factor)) || parseFloat(su.factor) <= 0))
-                  }
-                  className="h-9 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:text-slate-500 text-white text-xs font-bold rounded-lg transition-all flex items-center gap-2 shadow-sm"
-                >
-                  Save {singular}
-                </button>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="flex">
+      {/* ── Inline Add Form (if opened) ── */}
+      {isFormOpen && (
+        <div className="p-4 bg-emerald-50/40 border-b border-emerald-100 space-y-3 shrink-0 animate-in fade-in slide-in-from-top-1 duration-200">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-emerald-950 uppercase tracking-wider">
+              New {singular} Details
+            </span>
             <button
-              onClick={() => setIsFormOpen(true)}
-              className="h-10 px-4 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-all flex items-center gap-2 shadow-sm"
+              type="button"
+              onClick={resetForm}
+              className="text-slate-400 hover:text-slate-600 p-1 rounded"
             >
-              <Plus className="w-4 h-4" />
-              Add New {singular}
+              <X size={13} />
             </button>
           </div>
-        )}
 
-        <div className="bg-slate-50/50 rounded-xl border border-slate-100 p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-            <h3 className="text-xs font-bold text-slate-700 tracking-wide flex items-center gap-2">
-              Current {title}
-              <span className="inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-black bg-slate-200 text-slate-600 rounded-full">
-                {items.length}
-              </span>
-            </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                Name <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                autoFocus
+                className="w-full h-8 px-3 bg-white border border-slate-200 rounded-lg text-xs placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 transition-all shadow-2xs"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={`e.g. ${type === "categories" ? "Electronics" : "Kilogram"}`}
+                onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+              />
+            </div>
 
-            {/* Search filter */}
-            <SearchBar
-              size="sm"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onClear={() => setSearch("")}
-              placeholder={`Search ${singular}s...`}
-              className="flex-1 max-w-xs"
-            />
+            {type === "units" && (
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                  Short Code / Symbol <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  className="w-full h-8 px-3 bg-white border border-slate-200 rounded-lg text-xs placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 transition-all shadow-2xs uppercase"
+                  value={shortName}
+                  onChange={(e) => setShortName(e.target.value)}
+                  placeholder="e.g. kg, pcs, box"
+                  onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+                />
+              </div>
+            )}
           </div>
 
-          {loading ? (
-            <div className="py-12 text-center bg-white border border-slate-100 rounded-lg">
-              <div className="w-6 h-6 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-2" />
-              <p className="text-xs text-slate-400 font-medium">Loading {title.toLowerCase()}...</p>
-            </div>
-          ) : filteredItems.length === 0 ? (
-            <div className="py-8 text-center bg-white border border-slate-100 rounded-lg">
-              <p className="text-[13px] font-medium text-slate-400">
-                {search ? `No ${singular}s matching "${search}" on this page.` : "No items added yet."}
-              </p>
-            </div>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {filteredItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="group flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-lg shadow-sm hover:border-blue-200 hover:bg-blue-50 transition-all"
+          {type === "units" && (
+            <div className="pt-2 border-t border-emerald-100/70">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-bold text-slate-600">Sub Units (Optional)</span>
+                <button
+                  type="button"
+                  onClick={addSubUnit}
+                  className="text-[10px] px-2 py-0.5 bg-white text-emerald-800 font-bold hover:bg-emerald-100 rounded-md border border-emerald-200 flex items-center gap-1 shadow-2xs cursor-pointer"
                 >
-                  {editingId === item.id ? (
-                    <div className="flex items-center gap-1">
+                  <Plus size={10} /> Add Sub Unit
+                </button>
+              </div>
+
+              {subUnits.length > 0 && (
+                <div className="space-y-1.5 max-h-24 overflow-y-auto custom-scrollbar pr-1">
+                  {subUnits.map((su, idx) => (
+                    <div key={idx} className="flex gap-2 items-center bg-white p-1.5 rounded-lg border border-slate-200 shadow-2xs">
                       <input
                         type="text"
-                        autoFocus
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleEditSave(item)}
-                        className="h-6 w-24 px-1 text-sm font-semibold text-slate-700 bg-white border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="flex-1 h-7 px-2 bg-slate-50 border border-slate-200 rounded text-xs placeholder:text-slate-400 focus:outline-none focus:border-emerald-500"
+                        placeholder="Name (e.g. Gram)"
+                        value={su.name}
+                        onChange={(e) => updateSubUnit(idx, "name", e.target.value)}
+                      />
+                      <input
+                        type="number"
+                        className="w-24 h-7 px-2 bg-slate-50 border border-slate-200 rounded text-xs placeholder:text-slate-400 focus:outline-none focus:border-emerald-500"
+                        placeholder="Factor (1000)"
+                        value={su.factor}
+                        onChange={(e) => updateSubUnit(idx, "factor", e.target.value)}
                       />
                       <button
-                        onClick={() => handleEditSave(item)}
-                        disabled={saving}
-                        className="p-1 rounded-md text-emerald-600 hover:bg-emerald-100 disabled:opacity-40 transition-colors"
+                        type="button"
+                        onClick={() => removeSubUnit(idx)}
+                        className="p-1 text-slate-400 hover:text-rose-500"
                       >
-                        <Check className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => setEditingId(null)}
-                        disabled={saving}
-                        className="p-1 rounded-md text-slate-400 hover:bg-slate-100 disabled:opacity-40 transition-colors"
-                      >
-                        <X className="w-3.5 h-3.5" />
+                        <X size={12} />
                       </button>
                     </div>
-                  ) : (
-                    <>
-                      <span className="text-sm font-semibold text-slate-700">{item.name}</span>
-                      {!item.isDefault && (
-                        <div className="flex items-center gap-1 ml-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={() => {
-                              setEditingId(item.id);
-                              setEditValue(item.name);
-                            }}
-                            disabled={saving}
-                            className="p-2 sm:p-1 rounded-md text-slate-400 hover:bg-blue-100 hover:text-blue-600 disabled:opacity-40 transition-colors"
-                          >
-                            <Pencil className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(item)}
-                            disabled={saving}
-                            className="p-2 sm:p-1 rounded-md text-slate-400 hover:bg-rose-100 hover:text-rose-600 disabled:opacity-40 transition-colors"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      )}
-                    </>
-                  )}
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
           )}
 
-          {/* Pagination Controls */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-slate-200/70 mt-4">
-            <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
-              <span>Per page:</span>
-              <ReusableSelect
-                size="sm"
-                value={String(pageSize)}
-                onValueChange={(val) => {
-                  setPageSize(Number(val));
-                  setPage(1);
-                }}
-                options={[25, 50, 100, 200, 500].map((n) => ({ label: String(n), value: String(n) }))}
-                className="w-20 h-8 text-xs"
-              />
-              <span className="text-slate-300">•</span>
-              <span>
-                Page <strong className="text-slate-800">{page}</strong>
-                {items.length > 0 && (
-                  <span className="text-slate-400 ml-1">
-                    ({items.length} items loaded)
-                  </span>
-                )}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-1.5">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1 || loading}
-                className="h-8 px-3 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1 shadow-sm active:scale-95"
-              >
-                <ChevronLeft size={14} /> Prev
-              </button>
-
-              <div className="h-8 px-3 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 text-xs font-black flex items-center justify-center min-w-[32px]">
-                {page}
-              </div>
-
-              <button
-                onClick={() => setPage((p) => p + 1)}
-                disabled={!hasMore || loading}
-                className="h-8 px-3 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1 shadow-sm active:scale-95"
-              >
-                Next <ChevronRight size={14} />
-              </button>
-            </div>
+          <div className="flex items-center justify-end gap-2 pt-1">
+            <button
+              type="button"
+              onClick={resetForm}
+              className="h-7 px-3 text-xs font-semibold text-slate-600 hover:bg-white bg-slate-100 rounded-lg border border-slate-200 cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleAdd}
+              disabled={
+                !name.trim() ||
+                (type === "units" && !shortName.trim()) ||
+                saving
+              }
+              className="h-7 px-3.5 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer"
+            >
+              {saving ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+              <span>Save {singular}</span>
+            </button>
           </div>
         </div>
+      )}
+
+      {/* ── Scrollable Items Container (Scrollable Pagination) ── */}
+      <div
+        onScroll={handleScroll}
+        className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-4 space-y-3"
+      >
+        {loading && items.length === 0 ? (
+          <div className="py-16 text-center flex flex-col items-center justify-center gap-2">
+            <Loader2 size={24} className="text-emerald-600 animate-spin" />
+            <p className="text-xs text-slate-400 font-medium">Loading {title.toLowerCase()}...</p>
+          </div>
+        ) : filteredItems.length === 0 ? (
+          <div className="py-16 text-center flex flex-col items-center justify-center gap-2">
+            <Search size={22} className="text-slate-300 stroke-[1.5]" />
+            <p className="text-xs font-semibold text-slate-500">
+              {search ? `No ${singular}s matching "${search}"` : `No ${type} added yet.`}
+            </p>
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="text-xs font-bold text-emerald-700 hover:underline cursor-pointer"
+              >
+                Clear Search Filter
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2 pt-0.5 pb-2">
+            {filteredItems.map((item) => (
+              <div
+                key={item.id}
+                className="group inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 hover:bg-emerald-50/70 border border-slate-200/90 hover:border-emerald-200 rounded-xl shadow-2xs transition-all text-xs font-bold text-slate-800"
+              >
+                {editingId === item.id ? (
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="text"
+                      autoFocus
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleEditSave(item)}
+                      className="h-6 w-24 px-1.5 text-xs font-bold text-slate-800 bg-white border border-emerald-400 rounded-md focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleEditSave(item)}
+                      disabled={saving}
+                      className="p-1 rounded text-emerald-700 hover:bg-emerald-100 cursor-pointer"
+                    >
+                      <Check size={12} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingId(null)}
+                      disabled={saving}
+                      className="p-1 rounded text-slate-400 hover:bg-slate-200 cursor-pointer"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <span className="truncate max-w-[160px]">{item.name}</span>
+                    {item.shortName && (
+                      <span className="text-[10px] font-mono font-bold text-emerald-800 bg-emerald-100/60 px-1 py-0.2 rounded border border-emerald-200/50">
+                        {item.shortName}
+                      </span>
+                    )}
+
+                    {!item.isDefault && (
+                      <div className="flex items-center gap-0.5 ml-1 opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingId(item.id);
+                            setEditValue(item.name);
+                          }}
+                          disabled={saving}
+                          title="Rename"
+                          className="p-1 rounded text-slate-400 hover:text-emerald-700 hover:bg-white transition-colors cursor-pointer"
+                        >
+                          <Pencil size={11} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(item)}
+                          disabled={saving}
+                          title="Delete"
+                          className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-white transition-colors cursor-pointer"
+                        >
+                          <X size={11} />
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── Scrollable Pagination Loader at Bottom ── */}
+        {loadingMore && (
+          <div className="py-2.5 text-center text-xs text-slate-500 font-medium flex items-center justify-center gap-2">
+            <Loader2 size={13} className="text-emerald-600 animate-spin" />
+            <span>Loading more {type}...</span>
+          </div>
+        )}
+
+        {!hasMore && items.length > 0 && !search && (
+          <div className="py-3 text-center text-[10px] text-slate-400 font-semibold uppercase tracking-wider border-t border-slate-100 mt-2">
+            All {items.length} {type} loaded
+          </div>
+        )}
       </div>
+
     </div>
   );
 };

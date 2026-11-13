@@ -1,17 +1,22 @@
-import React, { useState, useMemo } from "react";
+import React, { useMemo } from "react";
 import {
   Banknote, Clock, CreditCard, User, X, Search, ArrowLeft
 } from "lucide-react";
 import { BillingItem, CustomerData } from "../types";
-import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { BillTotals, formatINR } from "@/utils/pricing";
+import KeyboardKey from "@/components/common/KeyboardKey";
 
 type PaymentMode = "cash" | "upi" | "credit" | "card";
 
 interface BillingHeaderProps {
   items: BillingItem[];
   customerData: CustomerData | null;
-  onConfirmOrder: (payments: { mode: string, amount: number }[], includeGst: boolean, status: string) => void;
+  onConfirmOrder: (
+    payments: { mode: string, amount: number }[],
+    includeGst: boolean,
+    status: string,
+    billingType?: "BILL" | "INVOICE"
+  ) => void;
   isSubmitting: boolean;
   // Lifted state from parent
   includeGst: boolean;
@@ -25,7 +30,7 @@ interface BillingHeaderProps {
   onPaymentsChange: (payments: { mode: PaymentMode; amount: number }[]) => void;
   onAddCustomerClick: () => void;
   onDetachCustomer: () => void;
-  onGenerateInvoice: () => void;
+  onGenerateInvoice?: () => void;
   onBackToItems?: () => void;
 }
 
@@ -50,11 +55,8 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
   payments, onPaymentsChange,
   onAddCustomerClick,
   onDetachCustomer,
-  onGenerateInvoice,
   onBackToItems
 }) => {
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-
   const totalQty = useMemo(() => items.reduce((s, i) => s + (i.qty || 0), 0), [items]);
   const filledItems = useMemo(() => items.filter(i => !!i.name).length, [items]);
   const isCreditAllowed = customerData ? customerData.outstanding < customerData.creditLimit : false;
@@ -103,18 +105,17 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
       alert("Please select a customer to generate an invoice. Invoices are only available for registered or selected customers.");
       return;
     }
-    onGenerateInvoice();
+    if (balanceAmount > 0.01) {
+      alert("Please pay the full balance amount first.");
+      return;
+    }
+    onConfirmOrder(payments, includeGst, "COMPLETED", "INVOICE");
   };
 
   const handleQuickCheckout = () => {
     if (totalQty === 0) return alert("Cart is empty");
     if (balanceAmount > 0.01) return alert("Please pay the full balance amount first.");
-    setShowConfirmDialog(true);
-  };
-
-  const handleConfirmCheckout = () => {
-    onConfirmOrder(payments, includeGst, "COMPLETED");
-    setShowConfirmDialog(false);
+    onConfirmOrder(payments, includeGst, "COMPLETED", "BILL");
   };
 
   // Credit-related derived values
@@ -485,41 +486,30 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
           <button
             onClick={handleQuickCheckout}
             disabled={totalQty === 0 || balanceAmount > 0.01 || isSubmitting}
-            className={`flex-1 h-11 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-200 ${totalQty === 0 || balanceAmount > 0.01 || isSubmitting
+            title="Complete & Save Bill (Ctrl + Enter)"
+            className={`flex-1 h-11 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 ${totalQty === 0 || balanceAmount > 0.01 || isSubmitting
                 ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed shadow-none"
                 : "text-blue-500 border-blue-400 border-2 hover:bg-blue-500 hover:text-white shadow-md shadow-slate-900/10 active:scale-97 cursor-pointer"
               }`}
           >
-            {isSubmitting ? "..." : "Complete Bill"}
+            <span>{isSubmitting ? "..." : "Complete Bill"}</span>
+            {!isSubmitting && <KeyboardKey combo="ctrl+enter" size="xs" className="opacity-75 group-hover:opacity-100" />}
           </button>
 
           <button
             onClick={handleGenerateInvoice}
             disabled={totalQty === 0 || isSubmitting || !customerData}
             title={!customerData ? "Select a customer (F4) to enable invoice generation" : "Complete and generate A4 tax invoice"}
-            className={`flex-1 h-11 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-200 ${totalQty === 0 || isSubmitting || !customerData
+            className={`flex-1 h-11 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 ${totalQty === 0 || isSubmitting || !customerData
                 ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed shadow-none"
                 : "text-blue-500 border-blue-400 border-2 hover:bg-blue-500 hover:text-white shadow-lg shadow-blue-500/20 active:scale-97 cursor-pointer"
               }`}
           >
-            Complete Invoice
+            <span>Complete Invoice</span>
           </button>
         </div>
 
       </div>
-
-      {/* Generate Bill Confirmation Dialog */}
-      <ConfirmDialog
-        isOpen={showConfirmDialog}
-        onClose={() => setShowConfirmDialog(false)}
-        onConfirm={handleConfirmCheckout}
-        title="Complete Bill"
-        description={`Are you sure you want to complete a bill of ₹${formatPrice(finalAmount)}? This will complete and record the order.`}
-        confirmText="Complete"
-        cancelText="Cancel"
-        loading={isSubmitting}
-        type="info"
-      />
     </>
   );
 };

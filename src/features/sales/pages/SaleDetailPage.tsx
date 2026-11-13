@@ -277,7 +277,7 @@ type SaleItem = {
   effectiveUnitPrice?: number;
   finalInclusive?: number;
   taxableValue?: number;
-  gstRate: number; gstAmount: number; totalAmount: number;
+  gstRate: number; gstAmount: number; unitGstAmount?: number; totalAmount: number;
   cgst?: number;
   sgst?: number;
   status?: string; serial_numbers?: string[];
@@ -474,6 +474,7 @@ const generateItems = (
     }
 
     const basePrice = taxableValue / (qty || 1);
+    const unitGstAmount = qty > 0 ? (gstAmount / qty) : gstAmount;
     const cgst = calc?.cgst !== undefined ? Number(calc.cgst) : gstAmount / 2;
     const sgst = calc?.sgst !== undefined ? Number(calc.sgst) : gstAmount / 2;
     const totalAmount = finalInclusive;
@@ -503,6 +504,7 @@ const generateItems = (
       taxableValue,
       gstRate,
       gstAmount,
+      unitGstAmount,
       cgst,
       sgst,
       totalAmount,
@@ -1490,6 +1492,30 @@ const SaleDetailPage: React.FC = () => {
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[var(--pay-paid-bg)] text-[var(--pay-paid-tx)] border border-[var(--pay-paid-bd)]">Paid</span>
                         )}
                       </div>
+
+                      {/* Calculation Breakdown (Original, Returned, Net) */}
+                      {(totalRefundsValue + totalExchangedReturnedValue) > 0 ? (
+                        <div className="p-3 bg-slate-50/80 rounded-xl border border-slate-200/60 space-y-2">
+                          <div className="flex justify-between items-center text-xs font-medium text-slate-500">
+                            <span>Original</span>
+                            <span className="tabular-nums font-mono text-slate-700">{fmt(baseOrderTotal)}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs font-semibold text-rose-600">
+                            <span>Returned</span>
+                            <span className="tabular-nums font-mono">- {fmt(totalRefundsValue + totalExchangedReturnedValue)}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs font-bold text-slate-900 border-t border-slate-200/80 pt-1.5 mt-0.5">
+                            <span>Net</span>
+                            <span className="tabular-nums font-mono text-slate-900">{fmt(adjustedGrandTotal)}</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex justify-between items-center text-xs font-semibold text-slate-600">
+                          <span>Total Amount</span>
+                          <span className="tabular-nums font-mono font-bold text-slate-800">{fmt(baseOrderTotal)}</span>
+                        </div>
+                      )}
+
                       <div className="flex justify-between items-center text-sm font-semibold text-slate-600 pt-1">
                         <span>Paid Amount</span>
                         <span className="tabular-nums text-slate-800">{fmt(totalPaid)}</span>
@@ -1536,7 +1562,7 @@ const SaleDetailPage: React.FC = () => {
                         <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Unit Price</th>
                         <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Discount</th>
                         <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Taxable</th>
-                        <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">GST Amount</th>
+                        <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">GST / Unit</th>
                         <th className="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] text-right">Total (Billed)</th>
                       </tr>
                     </thead>
@@ -1662,9 +1688,14 @@ const SaleDetailPage: React.FC = () => {
                             <span className="text-xs font-semibold text-slate-600 tabular-nums">{fmt(item.taxableValue)}</span>
                           </td>
                           <td className="px-4 py-4 text-right">
-                            <span className="text-xs font-bold text-slate-500 tabular-nums">{fmt(item.gstAmount)}</span>
+                            <span className="text-xs font-bold text-slate-500 tabular-nums">
+                              {fmt(item.unitGstAmount ?? (item.quantity > 0 ? item.gstAmount / item.quantity : item.gstAmount))}
+                            </span>
                             {item.gstRate > 0 && (
                               <span className="text-[10px] font-medium text-slate-400 block tabular-nums">@{item.gstRate}%</span>
+                            )}
+                            {item.quantity > 1 && (
+                              <span className="text-[9px] text-slate-400 block font-normal tabular-nums">Total: {fmt(item.gstAmount)}</span>
                             )}
                           </td>
                           <td className="px-6 py-4 text-right">
@@ -1695,7 +1726,7 @@ const SaleDetailPage: React.FC = () => {
                             <th className="px-6 py-3 text-[10px] font-black text-blue-500 uppercase tracking-[0.15em] text-center">Qty</th>
                             <th className="px-6 py-3 text-[10px] font-black text-blue-500 uppercase tracking-[0.15em] text-center">Unit</th>
                             <th className="px-6 py-3 text-[10px] font-black text-blue-500 uppercase tracking-[0.15em] text-right">Unit Price</th>
-                            <th className="px-6 py-3 text-[10px] font-black text-blue-500 uppercase tracking-[0.15em] text-right">GST Amount</th>
+                            <th className="px-6 py-3 text-[10px] font-black text-blue-500 uppercase tracking-[0.15em] text-right">GST / Unit</th>
                             <th className="px-6 py-3 text-[10px] font-black text-blue-500 uppercase tracking-[0.15em] text-right">With GST</th>
                             <th className="px-6 py-3 text-[10px] font-black text-blue-500 uppercase tracking-[0.15em] text-right">Total</th>
                           </tr>
@@ -1768,7 +1799,13 @@ const SaleDetailPage: React.FC = () => {
                                   <span className="text-xs font-bold text-slate-500 tabular-nums">{fmt(unitPriceExclGst)}</span>
                                 </td>
                                 <td className="px-6 py-4 text-right">
-                                  <span className="text-xs font-bold text-slate-500 tabular-nums">{fmt(repGst)}</span>
+                                  <span className="text-xs font-bold text-slate-500 tabular-nums">{fmt(displayQty > 0 ? repGst / displayQty : repGst)}</span>
+                                  {gstRate > 0 && (
+                                    <span className="text-[10px] font-medium text-slate-400 block tabular-nums">@{gstRate}%</span>
+                                  )}
+                                  {displayQty > 1 && (
+                                    <span className="text-[9px] text-slate-400 block font-normal tabular-nums">Total: {fmt(repGst)}</span>
+                                  )}
                                 </td>
                                 <td className="px-6 py-4 text-right">
                                   <span className="text-xs font-bold text-slate-700 tabular-nums">{fmt(unitPriceExclGst + (repGst / displayQty))}</span>
@@ -1797,7 +1834,7 @@ const SaleDetailPage: React.FC = () => {
                             <th className="px-6 py-3 text-[10px] font-black text-blue-400 uppercase tracking-[0.15em] text-center">Qty</th>
                             <th className="px-6 py-3 text-[10px] font-black text-blue-400 uppercase tracking-[0.15em] text-center">Unit</th>
                             <th className="px-6 py-3 text-[10px] font-black text-blue-400 uppercase tracking-[0.15em] text-right">Unit Price</th>
-                            <th className="px-6 py-3 text-[10px] font-black text-blue-400 uppercase tracking-[0.15em] text-right">GST Amount</th>
+                            <th className="px-6 py-3 text-[10px] font-black text-blue-400 uppercase tracking-[0.15em] text-right">GST / Unit</th>
                             <th className="px-6 py-3 text-[10px] font-black text-blue-400 uppercase tracking-[0.15em] text-right">With GST</th>
                             <th className="px-6 py-3 text-[10px] font-black text-blue-400 uppercase tracking-[0.15em] text-right">Total</th>
                           </tr>
@@ -1883,9 +1920,12 @@ const SaleDetailPage: React.FC = () => {
                                 <span className="text-xs font-bold text-slate-700 tabular-nums">{fmt(item.basePrice)}</span>
                               </td>
                               <td className="px-6 py-4 text-right">
-                                <span className="text-xs font-bold text-slate-500 tabular-nums">{fmt(item.gstAmount)}</span>
+                                <span className="text-xs font-bold text-slate-500 tabular-nums">{fmt(item.unitGstAmount ?? (item.quantity > 0 ? item.gstAmount / item.quantity : item.gstAmount))}</span>
                                 {item.gstRate > 0 && (
                                   <span className="text-[10px] font-medium text-slate-400 block tabular-nums">@{item.gstRate}%</span>
+                                )}
+                                {item.quantity > 1 && (
+                                  <span className="text-[9px] text-slate-400 block font-normal tabular-nums">Total: {fmt(item.gstAmount)}</span>
                                 )}
                               </td>
                               <td className="px-6 py-4 text-right">

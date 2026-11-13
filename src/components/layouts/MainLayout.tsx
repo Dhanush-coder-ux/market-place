@@ -10,6 +10,9 @@ import Title from "../common/Title"
 import { sidebarLinks } from "@/utils/constants";
 import { useHeader } from "@/context/HeaderContext";
 import MobileBottomBar from "./MobileBottomBar";
+import { KeyboardShortcutsProvider } from "@/context/KeyboardShortcutsContext";
+import { CommandPalette } from "../common/CommandPalette";
+import { ShortcutsCheatSheetModal } from "../common/ShortcutsCheatSheetModal";
 
 const getPageHeaderInfo = (pathname: string) => {
   const routes: Record<string, { title: string; icon?: any }> = {
@@ -235,7 +238,7 @@ const isDetailsRoute = (pathname: string) => {
 };
 
 
-const MainLayout = () => {
+const MainLayoutContent = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { actions, bottomActions } = useHeader();
@@ -362,7 +365,19 @@ const MainLayout = () => {
 
       {/* Mobile Bottom Navigation Bar - at layout root so it is truly fixed to viewport (hidden on clean mode & full-screen mobile POS) */}
       {!hideNav && <MobileBottomBar />}
+
+      {/* Global Command Palette & Shortcuts Cheat Sheet Modal */}
+      <CommandPalette />
+      <ShortcutsCheatSheetModal />
     </div>
+  );
+};
+
+export const MainLayout = () => {
+  return (
+    <KeyboardShortcutsProvider>
+      <MainLayoutContent />
+    </KeyboardShortcutsProvider>
   );
 };
 

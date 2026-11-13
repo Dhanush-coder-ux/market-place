@@ -13,10 +13,11 @@ import {
   Pencil,
   MoreVertical,
   Printer,
-  Share2,
   XCircle,
   Trash2,
-  RotateCw
+  RotateCw,
+  RotateCcw,
+  Banknote
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useHeader } from "@/context/HeaderContext";
@@ -34,6 +35,8 @@ import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import SkeletonLoader from "@/components/common/SkeletonLoader";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { GradientButton, SearchBar, Button } from "@/components/ui";
+import { SupplierRecordPaymentModal } from "@/features/supplier/components/SupplierRecordPaymentModal";
+import { PurchaseReturnDialog } from "./PurchaseDetail";
 
 
 /* ================= TYPES ================= */
@@ -615,6 +618,13 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
   const [drawerRecord, setDrawerRecord] = useState<any | null>(null);
   const [poToCancel, setPoToCancel] = useState<DirectPurchaseData | null>(null);
   const [poToDelete, setPoToDelete] = useState<DirectPurchaseData | null>(null);
+  const [returnPurchase, setReturnPurchase] = useState<DirectPurchaseData | null>(null);
+  const [paymentModalState, setPaymentModalState] = useState<{
+    show: boolean;
+    supplierId?: string;
+    supplierName?: string;
+    purchase?: DirectPurchaseData | null;
+  }>({ show: false });
 
   return (
     <div className="bg-white border border-slate-100 rounded-lg shadow-sm overflow-hidden flex flex-col flex-1 min-h-0">
@@ -809,12 +819,29 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
                             Print / Share
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => showToast("Record payment initiated!", "info")}
+                            onClick={() => {
+                              const sId = po.supplierId || (po as any).supplier_id || (po as any).supplier?.id || (po as any).supplierDetails?.id;
+                              setPaymentModalState({
+                                show: true,
+                                supplierId: sId,
+                                supplierName: po.vendor,
+                                purchase: po,
+                              });
+                            }}
                             className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer outline-none"
                           >
-                            <Share2 size={13} />
+                            <Banknote size={13} className="text-emerald-600" />
                             Record Payment
                           </DropdownMenuItem>
+                          {po.status?.toUpperCase() !== 'DRAFT' && po.status?.toUpperCase() !== 'CANCELED' && po.status?.toUpperCase() !== 'CANCELLED' && (
+                            <DropdownMenuItem
+                              onClick={() => setReturnPurchase(po)}
+                              className="flex items-center gap-2 w-full px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer outline-none"
+                            >
+                              <RotateCcw size={13} className="text-rose-600" />
+                              Return Purchase
+                            </DropdownMenuItem>
+                          )}
                           {po.status?.toUpperCase() === 'DRAFT' ? (
                             <>
                               <DropdownMenuSeparator className="border-t border-slate-100 my-1 h-0 bg-transparent" />
@@ -857,6 +884,30 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
         </span>
       </div>
       <GroupedItemsDrawer record={drawerRecord} onClose={() => setDrawerRecord(null)} type="purchase" />
+      <SupplierRecordPaymentModal
+        show={paymentModalState.show}
+        onClose={() => setPaymentModalState({ show: false, purchase: null })}
+        supplierId={paymentModalState.supplierId}
+        supplierName={paymentModalState.supplierName}
+        initialPurchase={paymentModalState.purchase}
+        initialPurchaseId={paymentModalState.purchase?.id}
+        onSuccess={() => {
+          onRefresh?.();
+        }}
+      />
+      {returnPurchase && (
+        <PurchaseReturnDialog
+          isOpen={!!returnPurchase}
+          onClose={() => setReturnPurchase(null)}
+          onSuccess={() => {
+            setReturnPurchase(null);
+            onRefresh?.();
+          }}
+          purchaseId={returnPurchase.id}
+          shopId={SHOP_ID}
+          outstanding={returnPurchase.outstanding ?? 0}
+        />
+      )}
             <ConfirmDialog
         isOpen={!!poToDelete}
         onClose={() => setPoToDelete(null)}

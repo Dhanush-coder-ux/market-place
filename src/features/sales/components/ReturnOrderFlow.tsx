@@ -5,8 +5,9 @@ import { useNavigate } from "react-router-dom";
 import {
   X, Package, AlertCircle, CheckCircle2,
   ChevronRight, Minus, Plus, ArrowRight, RefreshCw, Banknote,
-  Gift, ArrowLeft, Check, Loader2, Hash, Search, Maximize2
+  Gift, ArrowLeft, Check, Loader2, Hash, Search, Maximize2, Layers
 } from "lucide-react";
+import { AntBadge } from "@/components/ui/AntBadge";
 import { SHOP_ID, ENDPOINTS } from "@/services/endpoints";
 import { OrderResponse } from "@/features/order/types";
 import { orderApi } from "@/services/api/order";
@@ -33,6 +34,13 @@ export interface SaleItem {
   imageColor: string; status?: string; stocks_before?: number; serial_numbers?: string[]; serialno_id?: string;
   unit: string; entered_unit: string; entered_qty: number; unit_infos?: any;
   gst?: string | number;
+  variant_id?: string | null;
+  variant_name?: string | null;
+  variantName?: string | null;
+  variant?: any;
+  batch_id?: string | null;
+  batch_name?: string | null;
+  batch?: any;
 }
 export interface SelectedReturnItem extends SaleItem { returnQty: number; exchangeItems?: any[]; selectedSerials?: any[]; }
 interface ReturnErrors { reason?: string; items?: string; settlement?: string; serials?: string; }
@@ -60,7 +68,6 @@ const ITEM_COLORS = ["#dbeafe", "#dcfce7", "#fef3c7", "#fce7f3", "#ede9fe", "#ff
 const generateItems = (sale: SaleRecord, productMap: Record<string, string> = {}): SaleItem[] => {
   const calcInfos = (sale as any)?.calculation_infos || (sale as any)?.calculations || {};
   const calcItems = calcInfos?.items || [];
-  const isExclusive = calcInfos?.include_gst === true && calcInfos?.gst_type !== "INCLUSIVE";
 
   return (sale.items || []).map((item, i) => {
     const rawName = (item as any).inventory_name || (item as any).name || (item as any).product_name || (item as any).product?.name || (item as any).inventory_infos?.name || (item as any).datas?.product_name || (item as any).datas?.name || productMap[item.inventory_id || (item as any).product_id] || item.barcode || `Item ${i + 1}`;
@@ -138,13 +145,31 @@ const generateItems = (sale: SaleRecord, productMap: Record<string, string> = {}
       finalOrigUnitPrice = originalUnitPrice / enteredFactor;
     }
 
-    if (isExclusive) {
-      const gstRate = parseFloat(String(item.gst || "0").replace('%', '')) || 0;
-      if (gstRate > 0) {
-        finalUnitPrice = finalUnitPrice + (finalUnitPrice * gstRate) / 100;
-        finalOrigUnitPrice = finalOrigUnitPrice + (finalOrigUnitPrice * gstRate) / 100;
-      }
-    }
+    // lineBilledTotal is already inclusive of GST as billed to the customer; do not add GST again.
+
+    const vName = (item as any).variant_infos?.variant_name ||
+                  (item as any).variant_infos?.name ||
+                  (item as any).variant_name ||
+                  (item as any).variantName ||
+                  (typeof (item as any).variant === 'string' ? (item as any).variant : ((item as any).variant?.variant_name || (item as any).variant?.name)) ||
+                  (item as any).product_variant_infos?.variant_name ||
+                  (item as any).product_variant_infos?.name ||
+                  calcItem?.variant_name ||
+                  calcItem?.variantName ||
+                  calcItem?.variant ||
+                  null;
+
+    const bName = (item as any).batch_infos?.batch_name ||
+                  (item as any).batch_infos?.batch_no ||
+                  (item as any).batch_infos?.name ||
+                  (item as any).batch_name ||
+                  (item as any).batchName ||
+                  (item as any).batch_no ||
+                  (typeof (item as any).batch === 'string' ? (item as any).batch : ((item as any).batch?.batch_name || (item as any).batch?.name)) ||
+                  calcItem?.batch_name ||
+                  calcItem?.batch_no ||
+                  calcItem?.batch ||
+                  null;
 
     return {
       id: item.id,
@@ -163,7 +188,12 @@ const generateItems = (sale: SaleRecord, productMap: Record<string, string> = {}
       imageColor: ITEM_COLORS[i % ITEM_COLORS.length],
       status: item.status,
       variant_id: item.variant_id,
+      variant_name: vName,
+      variantName: vName,
+      variant: vName,
       batch_id: item.batch_id,
+      batch_name: bName,
+      batch: bName,
       serialno_id: item.serialno_id,
       serial_numbers: Array.isArray((item as any).serialno_infos) && (item as any).serialno_infos.length > 0 ? (item as any).serialno_infos : (item.serial_numbers || []),
       stocks_before: (item as any).stocks_before,
@@ -416,6 +446,12 @@ const ItemSelector: React.FC<{ items: SaleItem[]; returnItems: Record<string, nu
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <p className="text-xs font-semibold text-slate-800">{item.name}</p>
+                        {item.variantName && (
+                          <AntBadge variant="at-variant" type="tag" icon={<Layers size={9} />}>V: {item.variantName}</AntBadge>
+                        )}
+                        {item.batch_name && (
+                          <AntBadge variant="at-batch" type="tag">B: {item.batch_name}</AntBadge>
+                        )}
                         {item.mrp && item.mrp > (item.originalUnitPrice || item.unitPrice) ? (
                           <span className="text-[9px] text-slate-400 font-medium">
                             MRP: <span className="line-through">{fmt(item.mrp)}</span>
@@ -1113,9 +1149,6 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
   const [allExchProducts, setAllExchProducts] = useState<any[]>([]);  // full catalog
   const [exchProducts, setExchProducts] = useState<any[]>([]);         // filtered view
   const [loadingExch, setLoadingExch] = useState(false);
-  const calcInfos = (sale as any)?.calculation_infos || (sale as any)?.calculations || {};
-  const isExclusive = calcInfos?.include_gst === true;
-  // const gstType = isExclusive ? "EXCLUSIVE" : "NONE";
 
   // Body scroll lock (only for modal)
   useEffect(() => {
@@ -1245,9 +1278,7 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
         setIsProductModalOpen(true);
       } else {
         const baseRootPrice = mapped.price || 0;
-        const exGstRate = isExclusive ? (parseFloat(String(mapped.gst || "0").replace('%', '')) || 0) : 0;
-        let displayPrice = baseRootPrice;
-        if (isExclusive && exGstRate > 0) { displayPrice += baseRootPrice * (exGstRate / 100); }
+        const displayPrice = baseRootPrice;
 
         const isTracked = (mapped as any).isStockTracked !== false && (mapped as any).have_tracking !== false;
         m.addExchangeProduct("__global__", {
@@ -1502,7 +1533,12 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                                   {exList.map((ex: any) => (
                                     <div key={ex.exchangeId} className="flex items-center justify-between bg-white border border-emerald-100 rounded-md p-2.5 shadow-sm">
                                       <div className="flex-1 min-w-0 pr-3">
-                                        <p className="text-[12px] font-bold text-slate-800">{ex.name}</p>
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                          <p className="text-[12px] font-bold text-slate-800">{ex.name}</p>
+                                          {(ex.variant_name || ex.variantName || ex.variant?.name) && (
+                                            <AntBadge variant="at-variant" type="tag" icon={<Layers size={9} />}>V: {ex.variant_name || ex.variantName || ex.variant?.name}</AntBadge>
+                                          )}
+                                        </div>
                                         <div className="flex items-center gap-2 mt-1">
                                           {!ex.requireSerial ? (
                                             <QuantityStepper
@@ -1521,8 +1557,8 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                                         </div>
                                         {(() => {
                                           const finalPrice = ex.price || ex.sell_price || 0;
-                                          const gstRate = isExclusive ? (parseFloat(String(ex.gst || "0").replace('%', '')) || 0) : 0;
-                                          if (!isExclusive || gstRate <= 0) {
+                                          const gstRate = parseFloat(String(ex.gst || "0").replace('%', '')) || 0;
+                                          if (gstRate <= 0) {
                                             return null;
                                           }
                                           const taxable = finalPrice / (1 + (gstRate / 100));
@@ -1593,9 +1629,7 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                                   }
                                   
                                   const baseRootPrice = ep.price || 0;
-                                  const exGstRate = isExclusive ? (parseFloat(String(ep.gst || ep.datas?.gst || "0").replace('%', '')) || 0) : 0;
-                                  let displayPrice = baseRootPrice;
-                                  if (isExclusive && exGstRate > 0) { displayPrice += baseRootPrice * (exGstRate / 100); }
+                                  const displayPrice = baseRootPrice;
                                   return (
                                     <div key={ep.id ?? ep._id ?? ep.name} onClick={() => inStock && handleExchangeClick(ep)} className={`flex items-center gap-3 p-3 px-4 border rounded-lg transition-all duration-200 cursor-pointer ${sel ? "bg-blue-50 border-blue-500 shadow-md scale-[0.99]" : !inStock ? "opacity-50 grayscale cursor-not-allowed border-slate-100" : "bg-white border-slate-100 hover:border-blue-400 hover:shadow-lg"}`}>
                                       <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center flex-shrink-0 transition-colors"><Package size={16} className="text-slate-400" /></div>
@@ -1739,6 +1773,12 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1.5 flex-wrap">
                                 <p className="text-[13px] font-bold text-slate-800">{item.name}</p>
+                                {item.variantName && (
+                                  <AntBadge variant="at-variant" type="tag" icon={<Layers size={9} />}>V: {item.variantName}</AntBadge>
+                                )}
+                                {item.batch_name && (
+                                  <AntBadge variant="at-batch" type="tag">B: {item.batch_name}</AntBadge>
+                                )}
                                 {(item.discountAmount || 0) > 0 && (
                                   <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono">
                                     Discount −{fmt(item.discountAmount || 0)}
@@ -1747,8 +1787,12 @@ export const ReturnFlow: React.FC<ReturnFlowProps> = ({ sale, onClose, onRefresh
                               </div>
                               <p className="font-mono text-[10px] text-slate-400 uppercase tracking-wider font-bold mt-0.5">{item.sku} · qty {item.returnQty} {selectedUnit}</p>
                               {item.exchangeItems && item.exchangeItems.map((ex: any) => (
-                                <p key={ex.exchangeId} className="text-[11px] text-blue-600 font-black mt-1 flex items-center gap-1.5">
-                                  <ArrowRight size={10} /> {ex.name} (Qty: {ex.quantity || ex.qty || 1})
+                                <p key={ex.exchangeId} className="text-[11px] text-blue-600 font-black mt-1 flex items-center gap-1.5 flex-wrap">
+                                  <ArrowRight size={10} /> {ex.name}
+                                  {(ex.variant_name || ex.variantName || ex.variant?.name) && (
+                                    <AntBadge variant="at-variant" type="tag" icon={<Layers size={9} />}>V: {ex.variant_name || ex.variantName || ex.variant?.name}</AntBadge>
+                                  )}
+                                  <span className="text-slate-500 font-bold">(Qty: {ex.quantity || ex.qty || 1})</span>
                                 </p>
                               ))}
                             </div>

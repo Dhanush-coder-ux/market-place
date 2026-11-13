@@ -5,6 +5,7 @@ import { ReusableSelect, SearchBar } from "@/components/ui";
 import { v4 as uuidv4 } from "uuid";
 import { BillingItem, ProductVariant, cleanVariantLabel, formatVariantLabel } from "../types";
 import ProductSelectionModal from "./ProductSelectionModel";
+import { BillingItemSelectDropdown } from "./BillingItemSelectDropdown";
 import { useToast } from "@/context/ToastContext";
 import { inventoryApi } from "@/services/api/inventory";
 import { SHOP_ID } from "@/services/endpoints";
@@ -161,42 +162,99 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
         let computedStock = Number(p.stock_infos?.available_stocks ?? p.stock_infos?.physical_stocks ?? p.stocks ?? 0);
         let computedPrice = p.pricing_infos?.sell_price ?? p.sell_price ?? 0;
 
-        const rawVariants = Array.isArray(p.variants)
-          ? p.variants
-          : (typeof p.variants === "object" && p.variants !== null ? Object.values(p.variants) : (Array.isArray(p.variant_infos) ? p.variant_infos : []));
-        const batches = p.batch_infos || p.batches;
+        let rawVariants: any[] = [];
+        let variantsSource = p.variants || p.variant_infos || p.varients || p.combinations;
+        if (variantsSource && typeof variantsSource === "object" && !Array.isArray(variantsSource)) {
+          rawVariants = Object.entries(variantsSource).map(([k, v]: any) => ({
+            ...v,
+            id: v?.id || k,
+          }));
+        } else if (Array.isArray(variantsSource)) {
+          rawVariants = variantsSource;
+        }
 
-        const hasVariants = rawVariants.length > 0;
-        const hasBatches = !!(p.type_infos?.has_batch) || (batches && batches.length > 0);
+        let rawBatches: any[] = [];
+        let batchesSource = p.batch_infos || p.batches;
+        if (batchesSource && typeof batchesSource === "object" && !Array.isArray(batchesSource)) {
+          rawBatches = Object.entries(batchesSource).map(([k, b]: any) => ({
+            ...b,
+            id: b?.id || k,
+          }));
+        } else if (Array.isArray(batchesSource)) {
+          rawBatches = batchesSource;
+        }
+
+        const mappedVariants = rawVariants.map((v: any) => {
+          const combDatas = v.datas || {};
+          const variantLabel = formatVariantLabel(v, combDatas);
+
+          let vPrice = v.pricing_infos?.sell_price ?? v.sell_price ?? v.price ?? combDatas.sell_price ?? combDatas.price ?? 0;
+          if (!vPrice && Array.isArray(v.batch_infos) && v.batch_infos.length > 0) {
+            vPrice = v.batch_infos[0].pricing_infos?.sell_price ?? v.batch_infos[0].sell_price ?? 0;
+          }
+
+          let vStock = v.stock_infos?.available_stocks !== undefined
+            ? v.stock_infos?.available_stocks
+            : (v.stocks !== undefined ? v.stocks : (v.stock !== undefined ? v.stock : (combDatas.stocks !== undefined ? combDatas.stocks : undefined)));
+          if (vStock === undefined && Array.isArray(v.batch_infos) && v.batch_infos.length > 0) {
+            vStock = v.batch_infos.reduce((sum: number, b: any) => sum + Number(b.stock_infos?.available_stocks ?? b.stocks ?? b.stock_infos?.physical_stocks ?? 0), 0);
+          }
+          if (vStock === undefined) vStock = 0;
+
+          const vPricing = v.pricing_infos || combDatas.pricing_infos;
+          const vDisc = Number(vPricing?.discount_percent ?? v.discount_percent ?? combDatas.discount_percent ?? p.pricing_infos?.discount_percent ?? p.discount_percent ?? 0);
+
+          return {
+            ...v,
+            id: v.id || String(Math.random()),
+            name: variantLabel,
+            price: Number(vPrice || 0),
+            stock: Number(vStock || 0),
+            pricing_infos: vPricing,
+            discount_percent: vDisc,
+          };
+        });
+
+        const mappedBatches = rawBatches.map((b: any) => {
+          const bPrice = b.pricing_infos?.sell_price ?? b.sell_price ?? b.price ?? computedPrice ?? 0;
+          const bStock = b.stock_infos?.available_stocks !== undefined
+            ? b.stock_infos?.available_stocks
+            : (b.stocks !== undefined ? b.stocks : (b.stock !== undefined ? b.stock : (b.stock_infos?.physical_stocks ?? 0)));
+          const bName = b.batch_name || b.name || b.batch || (b.batch_no ? `Batch: ${b.batch_no}` : (b.id ? `Batch: ${String(b.id).slice(0, 8)}` : "Batch"));
+
+          return {
+            ...b,
+            id: b.id,
+            isBatchOnly: true,
+            batchId: b.id,
+            name: bName,
+            price: Number(bPrice || 0),
+            stock: Number(bStock || 0),
+            expiryDate: b.expiry_date || b.expiryDate,
+            manufacturingDate: b.manufacturing_date || b.manufacturingDate,
+            batch_no: b.batch_no || b.name || b.batch,
+          };
+        });
+
+        const hasVariants = mappedVariants.length > 0 || !!p.has_variant || !!(p.type_infos?.has_variant);
+        const hasBatches = mappedBatches.length > 0 || !!p.has_batch || !!(p.type_infos?.has_batch);
+        const isBatchProduct = !hasVariants && (hasBatches || mappedBatches.length > 0);
 
         if (hasVariants) {
-          if (computedStock === 0) {
-            computedStock = rawVariants.reduce((acc: number, v: any) => {
-              let vStock = v.stock_infos?.available_stocks !== undefined
-                ? v.stock_infos?.available_stocks
-                : (v.stocks !== undefined ? v.stocks : (v.stock !== undefined ? v.stock : undefined));
-
-              if (vStock === undefined && Array.isArray(v.batch_infos) && v.batch_infos.length > 0) {
-                vStock = v.batch_infos.reduce((sum: number, b: any) => sum + Number(b.stock_infos?.available_stocks ?? b.stocks ?? b.stock_infos?.physical_stocks ?? 0), 0);
-              }
-              return acc + Number(vStock ?? 0);
-            }, 0);
+          if (computedStock === 0 && mappedVariants.length > 0) {
+            computedStock = mappedVariants.reduce((acc: number, v: any) => acc + Number(v.stock ?? 0), 0);
           }
 
-          if ((computedPrice === 0 || computedPrice === undefined) && rawVariants.length > 0) {
-            const firstV = rawVariants[0];
-            let vPrice = firstV.pricing_infos?.sell_price ?? firstV.sell_price ?? firstV.price;
-            if (!vPrice && Array.isArray(firstV.batch_infos) && firstV.batch_infos.length > 0) {
-              vPrice = firstV.batch_infos[0].pricing_infos?.sell_price ?? firstV.batch_infos[0].sell_price;
-            }
-            computedPrice = Number(vPrice ?? 0);
+          if ((computedPrice === 0 || computedPrice === undefined) && mappedVariants.length > 0) {
+            const firstV = mappedVariants[0];
+            computedPrice = Number(firstV.price ?? 0);
           }
-        } else if (hasBatches && Array.isArray(batches)) {
+        } else if (isBatchProduct && mappedBatches.length > 0) {
           if (computedStock === 0) {
-            computedStock = batches.reduce((acc: number, b: any) => acc + Number(b.stock_infos?.available_stocks ?? b.stock_infos?.physical_stocks ?? b.stocks ?? 0), 0);
+            computedStock = mappedBatches.reduce((acc: number, b: any) => acc + Number(b.stock ?? 0), 0);
           }
-          if ((computedPrice === 0 || computedPrice === undefined) && batches.length > 0) {
-            computedPrice = batches[0].pricing_infos?.sell_price ?? batches[0].sell_price ?? 0;
+          if ((computedPrice === 0 || computedPrice === undefined) && mappedBatches.length > 0) {
+            computedPrice = mappedBatches[0].price;
           }
         }
 
@@ -209,6 +267,11 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
           barcodeDisplay: p.barcode || 'N/A',
           price: computedPrice,
           stocks: computedStock,
+          variants: mappedVariants,
+          batches: mappedBatches,
+          has_variant: hasVariants,
+          has_batch: hasBatches,
+          isBatchProduct: isBatchProduct,
           isStockTracked: p.have_tracking !== false && p.is_stock_tracked !== false && p.track_stock !== false && p.type !== "service",
           gst: parseInt(String(p.gst || p.datas?.gst || "18").replace("%", ""))
         };
@@ -223,8 +286,197 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
     }
   }, []);
 
+  // Add variant item to bill helper
+  const addVariantItemToBill = useCallback((targetProduct: any, variant: ProductVariant, quantity: number, serials?: string[]) => {
+    if (!targetProduct) return;
+
+    if (serials && serials.length > 0) {
+      const alreadyAdded = serials.find(s => items.some(item => item.serialNumbers?.includes(s)));
+      if (alreadyAdded) {
+        alert(`Serial number ${alreadyAdded} has already been added to the bill.`);
+        return;
+      }
+    }
+
+    const existingIndex = items.findIndex((item) =>
+      item.inventoryId === targetProduct.id &&
+      item.variantId === (variant.id === "default" || (variant as any).isBatchOnly ? null : variant.id) &&
+      item.batchId === (variant.batchId || targetProduct.batchId)
+    );
+
+    let updatedItems: BillingItem[];
+
+    // Find the variant within targetProduct to access its full pricing_infos if not directly on variant
+    const allVariantsList = Array.isArray(targetProduct.variants)
+      ? targetProduct.variants
+      : (Array.isArray(targetProduct.variant_infos)
+        ? targetProduct.variant_infos
+        : (typeof targetProduct.variant_infos === 'object' && targetProduct.variant_infos !== null
+          ? Object.entries(targetProduct.variant_infos).map(([k, v]: any) => ({ ...v, id: v?.id || k }))
+          : (typeof targetProduct.variants === 'object' && targetProduct.variants !== null
+            ? Object.entries(targetProduct.variants).map(([k, v]: any) => ({ ...v, id: v?.id || k }))
+            : [])));
+    let matchedVariantInParent = allVariantsList.find((v: any) => v.id === variant.id || (v as any)._id === variant.id);
+    if (!matchedVariantInParent && typeof targetProduct.variants === 'object' && targetProduct.variants !== null && targetProduct.variants[variant.id]) {
+      matchedVariantInParent = targetProduct.variants[variant.id];
+    }
+    if (!matchedVariantInParent && typeof targetProduct.variant_infos === 'object' && targetProduct.variant_infos !== null && targetProduct.variant_infos[variant.id]) {
+      matchedVariantInParent = targetProduct.variant_infos[variant.id];
+    }
+
+    const selectedBatchObj = (variant.batchId && (variant as any).batches)
+      ? (variant as any).batches.find((b: any) => b.id === variant.batchId || b.batchId === variant.batchId)
+      : null;
+
+    const variantPricing = (variant as any).pricing_infos || (variant as any).pricing_info || (variant as any).datas?.pricing_infos || matchedVariantInParent?.pricing_infos || matchedVariantInParent?.pricing_info || matchedVariantInParent?.datas?.pricing_infos;
+    const batchPricing = selectedBatchObj?.pricing_infos || selectedBatchObj?.pricing_info;
+    const prodPricing = targetProduct.pricing_infos || targetProduct.pricing_info;
+
+    const mrpCandidates = [
+      batchPricing?.mrp,
+      selectedBatchObj?.mrp,
+      variantPricing?.mrp,
+      (variant as any).mrp,
+      (variant as any).datas?.mrp,
+      matchedVariantInParent?.mrp,
+      matchedVariantInParent?.pricing_infos?.mrp,
+      prodPricing?.mrp,
+      targetProduct.mrp,
+    ];
+    let mrpVal: number | undefined = undefined;
+    for (const m of mrpCandidates) {
+      const num = Number(m);
+      if (!isNaN(num) && num > 0) {
+        mrpVal = num;
+        break;
+      }
+    }
+
+    const discountCandidates = [
+      batchPricing?.discount_percent,
+      selectedBatchObj?.discount_percent,
+      selectedBatchObj?.discount,
+      variantPricing?.discount_percent,
+      (variant as any).discount_percent,
+      (variant as any).discount,
+      (variant as any).datas?.discount_percent,
+      (variant as any).datas?.discount,
+      matchedVariantInParent?.discount_percent,
+      matchedVariantInParent?.discount,
+      matchedVariantInParent?.pricing_infos?.discount_percent,
+      prodPricing?.discount_percent,
+      targetProduct.discount_percent,
+      targetProduct.discount,
+    ];
+    let prodDiscount = 0;
+    for (const d of discountCandidates) {
+      const num = Number(d);
+      if (!isNaN(num) && num > 0) {
+        prodDiscount = num;
+        break;
+      }
+    }
+
+    const offerUntil =
+      batchPricing?.offer_valid_until ||
+      selectedBatchObj?.offer_valid_until ||
+      variantPricing?.offer_valid_until ||
+      (variant as any).offer_valid_until ||
+      matchedVariantInParent?.offer_valid_until ||
+      matchedVariantInParent?.pricing_infos?.offer_valid_until ||
+      prodPricing?.offer_valid_until ||
+      targetProduct.offer_valid_until;
+
+    if (offerUntil && new Date(offerUntil).getTime() < new Date().setHours(0, 0, 0, 0)) {
+      prodDiscount = 0;
+    }
+
+    const rawCost = Number(
+      batchPricing?.buy_price ??
+      selectedBatchObj?.buy_price ??
+      variantPricing?.buy_price ??
+      (variant as any).buy_price ??
+      (variant as any).cost_to_make ??
+      (variant as any).custom_fields?.buy_price ??
+      matchedVariantInParent?.buy_price ??
+      prodPricing?.buy_price ??
+      targetProduct.buy_price ??
+      (targetProduct as any).cost_to_make ??
+      (targetProduct as any).custom_fields?.cost_to_make ??
+      (targetProduct as any).custom_fields?.buy_price ??
+      0
+    ) || 0;
+
+    let costPriceVal: number | undefined = undefined;
+    if (rawCost > 0) {
+      const prodGst = parseInt(String((variant as any).gst || (variant as any).datas?.gst || targetProduct.gst || "0").replace(/[^0-9.]/g, "")) || 0;
+      const isGstReg = isShopGstRegistered();
+      const effectiveGstRate = isGstReg ? prodGst : 0;
+      const costGstAmt = effectiveGstRate > 0 ? Math.round((rawCost * (effectiveGstRate / 100)) * 100) / 100 : 0;
+      costPriceVal = Math.round((rawCost + costGstAmt) * 100) / 100;
+    }
+
+    if (existingIndex !== -1) {
+      updatedItems = items.map((item, idx) => {
+        if (idx === existingIndex) {
+          let newQty = item.qty + quantity;
+          if (typeof item.maxStock === 'number') {
+            newQty = Math.min(newQty, item.maxStock);
+          }
+          const newSerials = serials ? [...(item.serialNumbers || []), ...serials] : item.serialNumbers;
+          return {
+            ...item,
+            qty: newQty,
+            serialNumbers: newSerials,
+            tprice: newQty * item.price
+          };
+        }
+        return item;
+      });
+    } else {
+      updatedItems = [
+        ...items,
+        {
+          id: uuidv4(),
+          inventoryId: targetProduct.id,
+          code: targetProduct.product_barcode,
+          name: variant.id === "default" ? targetProduct.product_name : `${targetProduct.product_name} - ${cleanVariantLabel(variant.name)}`,
+          price: variant.price,
+          qty: quantity,
+          tprice: quantity * variant.price,
+          basePrice: variant.price,
+          mrp: mrpVal,
+          productDiscountPercent: prodDiscount,
+          lineDiscountMode: '₹',
+          lineDiscountValue: 0,
+          costPrice: costPriceVal,
+          serialNumbers: serials,
+          variantId: variant.id === "default" || (variant as any).isBatchOnly ? null : variant.id,
+          batchId: variant.batchId || targetProduct.batchId,
+          serialnoId: variant.serialnoId || targetProduct.serialnoId,
+          requireSerial: targetProduct.requireSerial,
+          batchTracking: targetProduct.batchTracking,
+          manufacturingDate: variant.manufacturingDate || targetProduct.manufacturingDate,
+          expiryDate: variant.expiryDate || targetProduct.expiryDate,
+          maxStock: targetProduct.isStockTracked !== false ? variant.stock : undefined,
+          gst: parseInt(String((variant as any).gst || (variant as any).datas?.gst || targetProduct.gst || "0").replace(/[^0-9.]/g, "")) || 0,
+          unitInfos: targetProduct.unitInfos,
+          selectedUnit: targetProduct.unitInfos?.name || null,
+          factor: 1,
+          _product: targetProduct,
+        }
+      ];
+    }
+
+    onItemsChange(updatedItems);
+    setModalOpen(false);
+    setPendingProduct(null);
+    setSearchQuery("");
+    setDropdownOpen(false);
+  }, [items, onItemsChange]);
+
   // Product Selection handler
-  const handleProductSelect = useCallback(async (selectedProduct: any) => {
+  const handleProductSelect = useCallback(async (selectedProduct: any, preselectedVariantId?: string) => {
     if (!selectedProduct) return;
 
     setLoading(true);
@@ -295,12 +547,20 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
         };
       });
 
-      if (mappedVariants.length === 0 && (fullProduct.type_infos?.has_batch || fullProduct.has_batch) && (Array.isArray(fullProduct.batches) && fullProduct.batches.length > 0 || Array.isArray(fullProduct.batch_infos) && fullProduct.batch_infos.length > 0)) {
-        const sourceBatches = Array.isArray(fullProduct.batch_infos) && fullProduct.batch_infos.length > 0 ? fullProduct.batch_infos : fullProduct.batches;
-        mappedVariants = sourceBatches.map((b: any) => ({
+      let rawBatches: any[] = [];
+      let batchesSource = fullProduct.batch_infos || fullProduct.batches;
+      if (batchesSource && typeof batchesSource === "object" && !Array.isArray(batchesSource)) {
+        batchesSource = Object.values(batchesSource);
+      }
+      if (Array.isArray(batchesSource)) {
+        rawBatches = batchesSource;
+      }
+
+      if (mappedVariants.length === 0 && (fullProduct.type_infos?.has_batch || fullProduct.has_batch || rawBatches.length > 0) && rawBatches.length > 0) {
+        mappedVariants = rawBatches.map((b: any) => ({
           id: b.id,
           isBatchOnly: true,
-          name: b.batch_name || b.name || b.batch || (b.batch_no ? `Batch: ${b.batch_no}` : `Batch: ${b.id.slice(0, 8)}`),
+          name: b.batch_name || b.name || b.batch || (b.batch_no ? `Batch: ${b.batch_no}` : `Batch: ${String(b.id).slice(0, 8)}`),
           price: b.pricing_infos?.sell_price || b.sell_price || fullProduct.pricing_infos?.sell_price || fullProduct.sell_price || 0,
           stock: b.stock_infos?.available_stocks || b.stocks || 0,
           serialnoId: b.serial_numbers?.id || b.serialno_infos?.[0]?.id || fullProduct.serialno_infos?.[0]?.id || fullProduct.serial_number?.id || fullProduct.serials?.id,
@@ -308,22 +568,22 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
           batchId: b.id,
           expiryDate: b.expiry_date,
           manufacturingDate: b.manufacturing_date,
+          batch_no: b.batch_no || b.name || b.batch,
         }));
       }
 
       let computedStock = Number(fullProduct.stock_infos?.available_stocks ?? fullProduct.stock_infos?.physical_stocks ?? fullProduct.stocks ?? 0);
       let computedPrice = fullProduct.pricing_infos?.sell_price ?? fullProduct.sell_price ?? 0;
 
-      const batches = fullProduct.batch_infos || fullProduct.batches;
-      const prodHasVariants = !!(fullProduct.type_infos?.has_variant) || (mappedVariants && mappedVariants.length > 0);
-      const prodHasBatches = !!(fullProduct.type_infos?.has_batch) || (batches && batches.length > 0);
+      const prodHasVariants = !!(fullProduct.type_infos?.has_variant) || (mappedVariants && mappedVariants.length > 0 && !mappedVariants[0]?.isBatchOnly);
+      const prodHasBatches = !!(fullProduct.type_infos?.has_batch) || fullProduct.has_batch || rawBatches.length > 0;
 
-      if (!prodHasVariants && prodHasBatches && Array.isArray(batches)) {
+      if (!prodHasVariants && prodHasBatches && rawBatches.length > 0) {
         if (computedStock === 0) {
-          computedStock = batches.reduce((acc: number, b: any) => acc + Number(b.stock_infos?.available_stocks ?? b.stock_infos?.physical_stocks ?? b.stocks ?? 0), 0);
+          computedStock = rawBatches.reduce((acc: number, b: any) => acc + Number(b.stock_infos?.available_stocks ?? b.stock_infos?.physical_stocks ?? b.stocks ?? 0), 0);
         }
-        if ((computedPrice === 0 || computedPrice === undefined) && batches.length > 0) {
-          computedPrice = batches[0].pricing_infos?.sell_price ?? batches[0].sell_price ?? 0;
+        if ((computedPrice === 0 || computedPrice === undefined) && rawBatches.length > 0) {
+          computedPrice = rawBatches[0].pricing_infos?.sell_price ?? rawBatches[0].sell_price ?? 0;
         }
       }
 
@@ -442,10 +702,22 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
         onItemsChange(updatedItems);
         setSearchQuery("");
         setDropdownOpen(false);
+      } else if (preselectedVariantId) {
+        const foundVariant = pMapped.variants?.find((v: any) => v.id === preselectedVariantId || (v as any)._id === preselectedVariantId);
+        setPendingProduct({
+          ...pMapped,
+          initialVariantId: foundVariant?.isBatchOnly ? undefined : preselectedVariantId,
+          initialBatchId: foundVariant?.isBatchOnly ? preselectedVariantId : undefined,
+        });
+        setModalOpen(true);
+        setSearchQuery("");
+        setDropdownOpen(false);
       } else {
         // Has variants / batch / serials -> open modal
         setPendingProduct(pMapped);
         setModalOpen(true);
+        setSearchQuery("");
+        setDropdownOpen(false);
       }
     } catch (err) {
       console.error("Failed to fetch full product details:", err);
@@ -453,7 +725,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
     } finally {
       setLoading(false);
     }
-  }, [items, onItemsChange, showToast]);
+  }, [items, onItemsChange, showToast, addVariantItemToBill]);
 
   // Instant scanner lookup trigger
   const triggerInstantLookup = useCallback(async (query: string) => {
@@ -498,14 +770,14 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Hotkey support: '/' focuses the search bar & Global Barcode Scanner Listener
+  // Hotkey support: '/' or 'F2' focuses the search bar & Global Barcode Scanner Listener
   useEffect(() => {
     let buffer = "";
     let lastKeyTime = Date.now();
 
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      // 1. Hotkey support: '/' focuses the search bar
-      if (e.key === "/" && document.activeElement !== searchInputRef.current) {
+      // 1. Hotkey support: '/' or 'F2' focuses the search bar
+      if ((e.key === "/" || e.key === "F2") && document.activeElement !== searchInputRef.current) {
         e.preventDefault();
         searchInputRef.current?.focus();
         setDropdownOpen(true);
@@ -589,104 +861,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
 
 
   const handleModalSuccess = (variant: ProductVariant, quantity: number, serials?: string[]) => {
-    if (!pendingProduct) return;
-
-    if (serials && serials.length > 0) {
-      const alreadyAdded = serials.find(s => items.some(item => item.serialNumbers?.includes(s)));
-      if (alreadyAdded) {
-        alert(`Serial number ${alreadyAdded} has already been added to the bill.`);
-        return;
-      }
-    }
-
-    const existingIndex = items.findIndex((item) =>
-      item.inventoryId === pendingProduct.id &&
-      item.variantId === (variant.id === "default" || (variant as any).isBatchOnly ? null : variant.id) &&
-      item.batchId === (variant.batchId || pendingProduct.batchId)
-    );
-
-    let updatedItems: BillingItem[];
-
-    const mrpVal = Number(pendingProduct.pricing_infos?.mrp ?? pendingProduct.mrp ?? 0) || undefined;
-    let prodDiscount = Number(pendingProduct.pricing_infos?.discount_percent ?? pendingProduct.discount_percent ?? pendingProduct.discount ?? 0);
-    const offerUntil = pendingProduct.pricing_infos?.offer_valid_until || pendingProduct.offer_valid_until;
-    if (offerUntil && new Date(offerUntil).getTime() < new Date().setHours(0, 0, 0, 0)) {
-      prodDiscount = 0;
-    }
-    const rawCost = Number(
-      pendingProduct.pricing_infos?.buy_price ??
-      pendingProduct.buy_price ??
-      (pendingProduct as any).cost_to_make ??
-      (pendingProduct as any).custom_fields?.cost_to_make ??
-      (pendingProduct as any).custom_fields?.buy_price ??
-      0
-    ) || 0;
-    let costPriceVal: number | undefined = undefined;
-    if (rawCost > 0) {
-      const prodGst = parseInt(String(pendingProduct.gst || "0").replace(/[^0-9.]/g, "")) || 0;
-      const isGstReg = isShopGstRegistered();
-      const effectiveGstRate = isGstReg ? prodGst : 0;
-      const costGstAmt = effectiveGstRate > 0 ? Math.round((rawCost * (effectiveGstRate / 100)) * 100) / 100 : 0;
-      costPriceVal = Math.round((rawCost + costGstAmt) * 100) / 100;
-    }
-
-    if (existingIndex !== -1) {
-      updatedItems = items.map((item, idx) => {
-        if (idx === existingIndex) {
-          let newQty = item.qty + quantity;
-          if (typeof item.maxStock === 'number') {
-            newQty = Math.min(newQty, item.maxStock);
-          }
-          const newSerials = serials ? [...(item.serialNumbers || []), ...serials] : item.serialNumbers;
-          return {
-            ...item,
-            qty: newQty,
-            serialNumbers: newSerials,
-            tprice: newQty * item.price
-          };
-        }
-        return item;
-      });
-    } else {
-      updatedItems = [
-        ...items,
-        {
-          id: uuidv4(),
-          inventoryId: pendingProduct.id,
-          code: pendingProduct.product_barcode,
-          name: variant.id === "default" ? pendingProduct.product_name : `${pendingProduct.product_name} - ${cleanVariantLabel(variant.name)}`,
-          price: variant.price,
-          qty: quantity,
-          tprice: quantity * variant.price,
-          basePrice: variant.price,
-          mrp: mrpVal,
-          productDiscountPercent: prodDiscount,
-          lineDiscountMode: '₹',
-          lineDiscountValue: 0,
-          costPrice: costPriceVal,
-          serialNumbers: serials,
-          variantId: variant.id === "default" || (variant as any).isBatchOnly ? null : variant.id,
-          batchId: variant.batchId || pendingProduct.batchId,
-          serialnoId: variant.serialnoId || pendingProduct.serialnoId,
-          requireSerial: pendingProduct.requireSerial,
-          batchTracking: pendingProduct.batchTracking,
-          manufacturingDate: variant.manufacturingDate || pendingProduct.manufacturingDate,
-          expiryDate: variant.expiryDate || pendingProduct.expiryDate,
-          maxStock: pendingProduct.isStockTracked !== false ? variant.stock : undefined,
-          gst: pendingProduct.gst,
-          unitInfos: pendingProduct.unitInfos,
-          selectedUnit: pendingProduct.unitInfos?.name || null,
-          factor: 1,
-          _product: pendingProduct,
-        }
-      ];
-    }
-
-    onItemsChange(updatedItems);
-    setModalOpen(false);
-    setPendingProduct(null);
-    setSearchQuery("");
-    setDropdownOpen(false);
+    addVariantItemToBill(pendingProduct, variant, quantity, serials);
   };
 
   const handleLineDiscountChange = useCallback((id: string, mode: '%' | '₹', value: number) => {
@@ -750,7 +925,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
             }}
             onClear={() => setSearchQuery("")}
             onKeyDown={handleKeyDown}
-            placeholder="Scan a barcode, or type a product name..."
+            placeholder="Scan barcode, or search product... (Press F2 or /)"
           />
 
           {/* Barcode Scanner Symbol */}
@@ -760,7 +935,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
               searchInputRef.current?.focus();
               setDropdownOpen(true);
             }}
-            title="Focus Barcode Scanner (Press / to focus)"
+            title="Focus Product Search / Barcode (F2 or /)"
             className="flex items-center justify-center w-12 h-[46px] bg-blue-50/50 text-blue-500 border border-blue-150 rounded-xl shrink-0 shadow-sm hover:bg-blue-100/50 active:scale-95 transition-all cursor-pointer"
           >
             <Barcode size={20} className="stroke-[1.8]" />
@@ -828,26 +1003,48 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                     </div>
 
                     <div className="text-right shrink-0 flex flex-col items-end">
-                      {(() => {
-                        const isGstReg = isShopGstRegistered();
-                        const price = Number(product.price) || 0;
-                        const rawGstRate = Number(product.gst) || 0;
-                        const gstRate = isGstReg ? rawGstRate : 0;
-                        const taxSplit = calculateTaxSplit(price, gstRate);
+                      {product.has_variant || (product.variants && product.variants.length > 0) ? (
+                        <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                          <BillingItemSelectDropdown
+                            type="variant"
+                            items={product.variants || []}
+                            isStockTracked={isStockTracked}
+                            onSelect={(variantId) => handleProductSelect(product, variantId)}
+                            onOpenModal={() => handleProductSelect(product)}
+                          />
+                        </div>
+                      ) : (product.isBatchProduct || product.has_batch || (product.batches && product.batches.length > 0)) ? (
+                        <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                          <BillingItemSelectDropdown
+                            type="batch"
+                            items={product.batches || []}
+                            isStockTracked={isStockTracked}
+                            onSelect={(batchId) => handleProductSelect(product, batchId)}
+                            onOpenModal={() => handleProductSelect(product)}
+                          />
+                        </div>
+                      ) : (
+                        (() => {
+                          const isGstReg = isShopGstRegistered();
+                          const price = Number(product.price) || 0;
+                          const rawGstRate = Number(product.gst) || 0;
+                          const gstRate = isGstReg ? rawGstRate : 0;
+                          const taxSplit = calculateTaxSplit(price, gstRate);
 
-                        return (
-                          <>
-                            <p className="text-[13px] font-bold text-slate-800 flex items-baseline gap-1">
-                              ₹{price.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </p>
-                            {isGstReg && gstRate > 0 && (
-                              <p className="text-[9px] text-slate-400 font-medium leading-none mt-0.5">
-                                ₹{taxSplit.taxableValue.toFixed(2)} + ₹{taxSplit.gstAmount.toFixed(2)} GST
+                          return (
+                            <>
+                              <p className="text-[13px] font-bold text-slate-800 flex items-baseline gap-1">
+                                ₹{price.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </p>
-                            )}
-                          </>
-                        );
-                      })()}
+                              {isGstReg && gstRate > 0 && (
+                                <p className="text-[9px] text-slate-400 font-medium leading-none mt-0.5">
+                                  ₹{taxSplit.taxableValue.toFixed(2)} + ₹{taxSplit.gstAmount.toFixed(2)} GST
+                                </p>
+                              )}
+                            </>
+                          );
+                        })()
+                      )}
                       <p className={`text-[9px] font-extrabold mt-1 leading-none ${isOutOfStock ? "text-red-500" : "text-emerald-500"}`}>
                         {isOutOfStock ? "Out of Stock" : !isStockTracked ? "Stock Not Tracked" : `Stock: ${product.stocks} units`}
                       </p>
@@ -1200,6 +1397,8 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
       <ProductSelectionModal
         isOpen={modalOpen}
         product={pendingProduct}
+        initialVariantId={pendingProduct?.initialVariantId}
+        initialBatchId={pendingProduct?.initialBatchId}
         onClose={() => {
           setModalOpen(false);
           setPendingProduct(null);

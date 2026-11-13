@@ -130,7 +130,7 @@ const PurchaseForm = () => {
   const [costMethod, setCostMethod] = useState("By Value");
   const [supplierDetails, setSupplierDetails] = useState<any>(null);
   const [isGstExpanded, setIsGstExpanded] = useState(false);
-  const [gstMode, setGstMode] = useState<"inclusive" | "exclusive">("exclusive");
+  const [gstMode, setGstMode] = useState<"inclusive" | "exclusive">("inclusive");
 
   // --- Calculations ---
   const stats = useMemo(() => {

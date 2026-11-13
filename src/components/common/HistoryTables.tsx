@@ -1,4 +1,4 @@
-import { ArrowUp, ArrowDown, ShoppingCart, TrendingUp, RefreshCcw, FileText, ArrowRight, Banknote, Eye, ChevronRight, X, Layers, Hash, Zap } from "lucide-react";
+import { ArrowUp, ArrowDown, ShoppingCart, TrendingUp, RefreshCcw, FileText, ArrowRight, Banknote, Eye, ChevronRight, X, Layers, Hash, Zap, RotateCw } from "lucide-react";
 import { TypeBadge } from "@/components/common/SuperUI";
 import { useState, Fragment } from "react";
 import { createPortal } from "react-dom";
@@ -799,6 +799,91 @@ export function ProductPurchasesTable({ rows, loading, onNavigateToPurchase }: P
 }
 
 
+const AmountWithReturnHover = ({
+  total,
+  returns,
+  refundAmount,
+}: {
+  total: number;
+  returns?: any[];
+  refundAmount?: number;
+}) => {
+  const totalReturn =
+    ((returns || []).reduce((sum: number, ret: any) => {
+      let rGst = Number(ret.total_gst_amount || ret.gst_amount || ret.payment_infos?.gst_amount || 0);
+      let rVal = Number(
+        ret.payment_infos?.return_value ||
+        ret.total_refund_amount ||
+        ret.refund_amount ||
+        ret.return_value ||
+        ret.totalAmount ||
+        ret.amount ||
+        ret.total_cost ||
+        ret.return_cost ||
+        0
+      );
+      if (rGst === 0 && Array.isArray(ret.items)) {
+        rGst = ret.items.reduce((s: number, itm: any) => {
+          const q = Number(itm.entered_qty || itm.quantity || 0);
+          const p = Number(itm.buy_price || itm.price || 0);
+          const g = parseFloat(String(itm.gst || itm.gst_rate || 0).replace(/[^0-9.]/g, "")) || 0;
+          return s + (q * p * (g / 100));
+        }, 0);
+      }
+      const itemsBase = Array.isArray(ret.items)
+        ? ret.items.reduce(
+            (s: number, itm: any) =>
+              s +
+              Number(itm.entered_qty || itm.quantity || 0) *
+                Number(itm.buy_price || itm.price || 0),
+            0
+          )
+        : 0;
+      if (rGst > 0 && (rVal <= itemsBase || rVal === 0)) {
+        rVal = (itemsBase || rVal) + rGst;
+      }
+      return sum + rVal;
+    }, 0) || 0) + Number(refundAmount || 0);
+
+  if (totalReturn === 0) {
+    return (
+      <span className="font-mono text-xs font-bold text-slate-700 tabular-nums">
+        ₹{total.toLocaleString("en-IN")}
+      </span>
+    );
+  }
+
+  const netAmount = Math.max(0, total - totalReturn);
+
+  return (
+    <div className="relative group inline-flex items-center gap-1.5 cursor-help">
+      <span className="font-mono text-xs font-bold text-slate-900 tabular-nums">
+        ₹{netAmount.toLocaleString("en-IN")}
+      </span>
+
+      <div className="w-3.5 h-3.5 rounded-full bg-rose-50 text-rose-500 border border-rose-200 flex items-center justify-center shrink-0">
+        <RotateCw size={8} />
+      </div>
+
+      {/* Dark Tooltip */}
+      <div className="absolute right-0 top-full mt-2 w-48 bg-slate-900 rounded-lg shadow-xl border border-slate-800 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[100] text-left flex flex-col p-3 pointer-events-none">
+        <div className="flex justify-between items-center text-xs font-medium text-slate-400 mb-1">
+          <span>Original</span>
+          <span className="tabular-nums font-mono">₹{total.toLocaleString("en-IN")}</span>
+        </div>
+        <div className="flex justify-between items-center text-xs font-medium text-rose-400 mb-1.5">
+          <span>Returned</span>
+          <span className="tabular-nums font-mono">- ₹{totalReturn.toLocaleString("en-IN")}</span>
+        </div>
+        <div className="flex justify-between items-center text-xs font-bold text-white border-t border-slate-700 pt-2 mt-0.5">
+          <span>Net</span>
+          <span className="tabular-nums font-mono">₹{netAmount.toLocaleString("en-IN")}</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ─── SUPPLIER PURCHASES TABLE ──────────────────────────────────────────────────
 interface SupplierPurchasesTableProps {
   rows: any[];
@@ -856,7 +941,9 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                         </p>
                       </div>
                       <div className="text-right shrink-0">
-                        <div className="text-sm font-black text-slate-800 tabular-nums">₹{Number(r.totalCost || 0).toLocaleString("en-IN")}</div>
+                        <div className="text-sm font-black text-slate-800 tabular-nums">
+                          <AmountWithReturnHover total={Number(r.totalCost || 0)} returns={r.returns} refundAmount={r.refundAmount} />
+                        </div>
                         <div className={`text-[10px] font-bold tabular-nums ${r.type === 'RETURN' ? 'text-rose-600' : 'text-emerald-600'}`}>
                           {r.type === 'RETURN' ? '-' : '+'}{totalStocksIn} units
                         </div>
@@ -1026,7 +1113,7 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                           {totalStockAfterSupp !== null ? totalStockAfterSupp : '—'}
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap text-xs font-bold text-slate-700">
-                          ₹{Number(r.totalCost || 0).toLocaleString("en-IN")}
+                          <AmountWithReturnHover total={Number(r.totalCost || 0)} returns={r.returns} refundAmount={r.refundAmount} />
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap text-xs font-medium text-slate-500">
                           ₹{Number(r.gstAmount || 0).toLocaleString("en-IN")}

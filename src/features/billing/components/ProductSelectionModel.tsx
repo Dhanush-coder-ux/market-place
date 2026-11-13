@@ -103,6 +103,9 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
       if (activeB.sell_price || activeB.price) {
         finalVariant.price = activeB.sell_price || activeB.price;
       }
+      if (activeB.pricing_infos || activeB.pricing_info) {
+        finalVariant.pricing_infos = activeB.pricing_infos || activeB.pricing_info;
+      }
       if (activeB.stocks !== undefined || activeB.stock !== undefined) {
         finalVariant.stock = activeB.stocks !== undefined ? activeB.stocks : activeB.stock;
       }
@@ -161,16 +164,9 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
   // Reset state when modal opens
   useEffect(() => {
     if (isOpen && product) {
-      const isEdit = (() => {
-        const hasV = normalizedVariants.length > 0 && !normalizedVariants[0].name.startsWith("Batch: ");
-        if (hasV && !initialVariantId) return false;
-        if (product.batchTracking && !initialBatchId) return false;
-        return !!initialVariantId || !!initialBatchId || !!initialSerials?.length || !!initialQuantity;
-      })();
-
       if (normalizedVariants.length > 0 && !((normalizedVariants[0] as any).isBatchOnly || normalizedVariants[0].name.startsWith("Batch: "))) {
         if (initialVariantId) {
-          const v = normalizedVariants.find(x => x.id === initialVariantId);
+          const v = normalizedVariants.find(x => x.id === initialVariantId || (x as any)._id === initialVariantId || (x as any).combination_id === initialVariantId);
           setSelectedVariant(v || null);
         } else {
           setSelectedVariant(null);
@@ -189,10 +185,23 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
       setSelectedSerials(Array.isArray(initialSerials) ? initialSerials : []);
       setQuantity(initialQuantity || 1);
 
-      // If editing, skip to the relevant step
-      if (isEdit) {
-        if (isElectronics) setStepIndex(steps.indexOf("serial"));
-        else setStepIndex(steps.indexOf("summary"));
+      // Determine starting step safely
+      if (initialVariantId) {
+        if (hasBatches && steps.includes("batch")) {
+          setStepIndex(steps.indexOf("batch"));
+        } else if (isElectronics && steps.includes("serial")) {
+          setStepIndex(steps.indexOf("serial"));
+        } else {
+          setStepIndex(0);
+        }
+      } else if (initialBatchId) {
+        if (isElectronics && steps.includes("serial")) {
+          setStepIndex(steps.indexOf("serial"));
+        } else if (steps.includes("batch")) {
+          setStepIndex(steps.indexOf("batch"));
+        } else {
+          setStepIndex(0);
+        }
       } else {
         setStepIndex(0);
       }
@@ -200,13 +209,13 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
       setVariantSearch("");
       setSerialSearch("");
     }
-  }, [isOpen, product, initialQuantity, initialSerials, initialVariantId, isElectronics, steps]);
+  }, [isOpen, product, initialQuantity, initialSerials, initialVariantId, initialBatchId, isElectronics, hasBatches, steps]);
 
   // Pre-populate or reset selected batch on change
   useEffect(() => {
     if (isOpen && product?.batchTracking && batchesToSelect.length > 0) {
       if (initialBatchId) {
-        const found = batchesToSelect.find((b: any) => (b.id === initialBatchId || b.batchId === initialBatchId));
+        const found = batchesToSelect.find((b: any) => (b.id === initialBatchId || b.batchId === initialBatchId || b._id === initialBatchId));
         if (found) {
           setSelectedBatch(found);
           return;
@@ -381,6 +390,7 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
+                    autoComplete="off"
                     placeholder="Search variants..."
                     value={variantSearch}
                     onChange={(e) => setVariantSearch(e.target.value)}
@@ -422,8 +432,13 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                               </p>
                               <p className="text-xs font-medium text-slate-400 mt-0.5">Stock: {variant.stock} units</p>
                             </div>
-                            <div className="text-right">
+                            <div className="text-right flex flex-col items-end">
                               <p className={`text-sm font-bold ${isSelected ? "text-blue-700" : "text-slate-900"}`}>{fmt(variant.price)}</p>
+                              {Number((variant as any).pricing_infos?.discount_percent ?? (variant as any).discount_percent ?? 0) > 0 && (
+                                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 mt-0.5">
+                                  {Number((variant as any).pricing_infos?.discount_percent ?? (variant as any).discount_percent)}% OFF
+                                </span>
+                              )}
                               {isSelected && <CheckCircle2 size={16} className="text-blue-500 ml-auto mt-1" />}
                             </div>
                           </button>
@@ -621,6 +636,7 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                     <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                       type="text"
+                      autoComplete="off"
                       placeholder="Search serial numbers..."
                       value={serialSearch}
                       onChange={(e) => setSerialSearch(e.target.value)}

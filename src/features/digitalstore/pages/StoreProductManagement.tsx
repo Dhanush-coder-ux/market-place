@@ -903,10 +903,10 @@ const ProductDashboard = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 gap-2.5 font-sans w-full overflow-hidden relative" style={{ fontFamily: "Inter, sans-serif" }}>
+    <div className="flex-1 flex flex-col min-h-0 gap-2.5 font-sans w-full h-full overflow-hidden relative" style={{ fontFamily: "Inter, sans-serif" }}>
 
       {/* ── Toolbar ── */}
-      <div className="bg-white rounded-xl border border-slate-200/80 px-4 py-3 flex flex-wrap items-center gap-3">
+      <div className="bg-white rounded-xl border border-slate-200/80 px-4 py-3 flex flex-wrap items-center gap-3 shrink-0">
         <SearchBar
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -978,7 +978,7 @@ const ProductDashboard = () => {
 
       {/* ── Bulk Action Bar ── */}
       {selectedIds.length > 0 && (
-        <div className="flex items-center gap-3 px-4 py-2.5 bg-blue-50 border border-blue-200 rounded-xl">
+        <div className="flex items-center gap-3 px-4 py-2.5 bg-blue-50 border border-blue-200 rounded-xl shrink-0">
           <span className="text-sm font-semibold text-blue-700">{selectedIds.length} selected</span>
           <div className="flex-1" />
           <button
@@ -1012,7 +1012,7 @@ const ProductDashboard = () => {
         <>
           {/* Select all bar */}
           {filtered.length > 0 && (
-            <div className="flex items-center gap-3 px-1">
+            <div className="flex items-center gap-3 px-1 shrink-0">
               <button
                 onClick={toggleSelectAll}
                 className="flex items-center gap-2 text-[12px] font-medium text-slate-500 hover:text-blue-600 cursor-pointer transition-colors"
@@ -1045,24 +1045,26 @@ const ProductDashboard = () => {
               <p className="text-[12px] text-slate-400">Try adjusting your filters or search term</p>
             </div>
           ) : viewMode === "grid" ? (
-            <div className="grid grid-cols-1 min-[420px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-              {filtered.map((p) => (
-                <ProductCard
-                  key={p.id}
-                  product={p}
-                  selected={selectedIds.includes(p.id)}
-                  onSelect={() => toggleSelect(p.id)}
-                  onToggleVisibility={() => toggleVisibility(p.id)}
-                  onEdit={() => handleOpenEdit(p)}
-                  actionLoading={togglingId === p.id}
-                />
-              ))}
+            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-1">
+              <div className="grid grid-cols-1 min-[420px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+                {filtered.map((p) => (
+                  <ProductCard
+                    key={p.id}
+                    product={p}
+                    selected={selectedIds.includes(p.id)}
+                    onSelect={() => toggleSelect(p.id)}
+                    onToggleVisibility={() => toggleVisibility(p.id)}
+                    onEdit={() => handleOpenEdit(p)}
+                    actionLoading={togglingId === p.id}
+                  />
+                ))}
+              </div>
             </div>
           ) : (
-            <div className="bg-white rounded-lg shadow-sm border border-slate-100 min-w-0 overflow-hidden flex flex-col flex-1 min-h-0 mt-1">
-              <div className="overflow-auto flex-1 scrollbar-thin scrollbar-thumb-slate-100">
+            <div className="bg-white rounded-xl shadow-xs border border-slate-200/80 min-w-0 overflow-hidden flex flex-col flex-1 min-h-0">
+              <div className="overflow-auto flex-1 custom-scrollbar">
                 <table className="w-full text-left min-w-[700px] border-collapse relative">
-                  <thead className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0]">
+                  <thead className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-xs border-b border-slate-200 shadow-xs">
                     <tr>
                       <th className="py-3 px-4 text-[10px] font-semibold text-slate-500 uppercase tracking-wider w-10 text-center">
                         <input
@@ -1079,7 +1081,7 @@ const ProductDashboard = () => {
                       <th className="py-3 px-4 text-[10px] font-semibold text-slate-500 uppercase tracking-wider text-right">Online SP</th>
                       <th className="py-3 px-4 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Stock</th>
                       <th className="py-3 px-4 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Visibility</th>
-                      <th className="py-3 px-4 text-[10px] font-semibold text-slate-500 uppercase tracking-wider text-right w-16 sticky right-0 bg-white shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)]">Actions</th>
+                      <th className="py-3 px-4 text-[10px] font-semibold text-slate-500 uppercase tracking-wider text-right w-16 sticky right-0 bg-slate-50/95 backdrop-blur-xs shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)]">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1101,7 +1103,7 @@ const ProductDashboard = () => {
           )}
 
           {/* ── Pagination Controls ── */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 px-4 py-3 bg-white rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-2 px-4 py-2.5 bg-white rounded-xl border border-slate-200/80 shadow-xs shrink-0">
             <div className="flex items-center gap-3 text-xs text-slate-500">
               <span>Rows per page:</span>
               <div className="w-20">

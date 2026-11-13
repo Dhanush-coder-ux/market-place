@@ -697,6 +697,7 @@ export default function SupplierDetail() {
                   storageLocation: d.storage_location || p.storage_location || '—',
                   version: p.version || d?.version || p.datas?.version || "v1",
                   returns: p.returns || d?.returns || p.purchase_returns || d?.purchase_returns || [],
+                  refundAmount: Number(p.refund_amount || d?.refund_amount || (p as any).return?.refund_amount || 0),
                   productsList: productsList
                 });
               }

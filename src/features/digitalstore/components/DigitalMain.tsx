@@ -3,13 +3,11 @@ import { createPortal } from "react-dom";
 import {
   Megaphone, Package, Settings2, AlertCircle,
   PowerOff,
-  Edit3, QrCode, Users, X, Download, ExternalLink,
-  BadgeCheck,
-  MapPin,
-  Tag,
-  Store,
+  QrCode, X, Download, ExternalLink,
   Copy,
   Check,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useToast } from "@/context/ToastContext";
 import { QRCodeSVG } from "qrcode.react";
@@ -18,7 +16,7 @@ import { inventoryApi } from "@/services/api/inventory";
 import { SHOP_ID } from "@/services/endpoints";
 import ProductDashboard from "../pages/StoreProductManagement";
 import Promotions from "../pages/Promotions";
-import { StoreSettingsLayout } from "./StoreSettingsLayout";
+import { StoreSettingsLayout, SettingSection, SETTING_SIDEBAR_ITEMS } from "./StoreSettingsLayout";
 import { useNavigate } from "react-router-dom";
 
 type TabType = "Announcements" | "Products" | "Settings";
@@ -238,11 +236,6 @@ function QRModal({ shop, onClose }: { shop: ShopData; onClose: () => void }) {
 }
 
 // ─── Tab config ────────────────────────────────────────────────────────────────
-const TAB_CONFIG: { tab: TabType; icon: React.ElementType }[] = [
-  { tab: "Announcements", icon: Megaphone },
-  { tab: "Products",      icon: Package   },
-  { tab: "Settings",      icon: Settings2 },
-];
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN COMPONENT
@@ -251,8 +244,11 @@ const DigitalMain = () => {
   const navigate  = useNavigate();
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<TabType>("Announcements");
+  const [activeSettingSection, setActiveSettingSection] = useState<SettingSection>("details");
   const [shop, setShop]           = useState<ShopData | null>(null);
   const [followersCount, setFollowersCount] = useState<number>(0);
+  const [productsCount, setProductsCount]   = useState<number>(0);
+  const [copiedStoreUrl, setCopiedStoreUrl] = useState(false);
   const [fallbackImg, setFallbackImg] = useState<string | null>(null);
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState<string | null>(null);
@@ -260,6 +256,15 @@ const DigitalMain = () => {
   const [showQR, setShowQR]       = useState(false);
   const [showTurnOffConfirm, setShowTurnOffConfirm] = useState(false);
   const [updatingVisibility, setUpdatingVisibility] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const handleCopyStoreUrl = () => {
+    const storeUrl = shop?.additional_infos?.website || `${window.location.origin}/store/${shop?.id || SHOP_ID}`;
+    navigator.clipboard.writeText(storeUrl);
+    setCopiedStoreUrl(true);
+    showToast("Store URL copied to clipboard", "success");
+    setTimeout(() => setCopiedStoreUrl(false), 2000);
+  };
 
   const handleToggleStoreVisibility = async () => {
     if (!shop) return;
@@ -328,8 +333,10 @@ const DigitalMain = () => {
           setShop(data);
 
           if (productsRes.status === "fulfilled") {
-            const prods = productsRes.value?.data ?? productsRes.value ?? [];
-            const withImg = prods.find((p: any) => p.image_url || p.image || p.datas?.image_url || p.datas?.image);
+            const prodsData = productsRes.value?.data ?? productsRes.value ?? [];
+            const prodsList = Array.isArray(prodsData) ? prodsData : (prodsData.inventories || prodsData.items || []);
+            setProductsCount(prodsList.length);
+            const withImg = prodsList.find((p: any) => p.image_url || p.image || p.datas?.image_url || p.datas?.image);
             if (withImg) setFallbackImg(withImg.image_url || withImg.image || withImg.datas?.image_url || withImg.datas?.image);
           }
 
@@ -390,289 +397,385 @@ const DigitalMain = () => {
   
 
   return (
-    <div className="bg-slate-50 pb-24 md:pb-16" style={{ fontFamily: "Inter, sans-serif" }}>
+    <div className="flex flex-col md:flex-row h-full min-h-[calc(100vh-140px)] bg-white rounded-2xl border border-slate-200/90 overflow-hidden shadow-xs animate-in fade-in duration-300" style={{ fontFamily: "Inter, sans-serif" }}>
 
       {showQR && <QRModal shop={shop} onClose={() => setShowQR(false)} />}
 
-      {/* ─── HEADER ──────────────────────────────────────────────── */}
-      <div className="bg-white border-b border-slate-200">
-
-        {/* Banner */}
-        <div className="relative h-64 sm:h-72 lg:h-80 w-full overflow-hidden bg-slate-900">
-          {shop.banner_url ? (
-            <>
-              <img src={shop.banner_url} alt="Store banner" className="w-full h-full object-cover object-center" />
-              {/* Bottom gradient scrim for smooth visual transition */}
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-slate-950/20 to-transparent" />
-              <div className="absolute top-0 inset-x-0 h-24 bg-gradient-to-b from-slate-950/30 to-transparent" />
-            </>
-          ) : (
-            <div className="w-full h-full relative overflow-hidden bg-gradient-to-r from-emerald-50/90 via-[#EAF4E6] to-[#DCEDD9]">
-              {/* Ambient radial glow highlights */}
-              <div className="absolute -top-24 -left-20 w-96 h-96 bg-emerald-200/50 rounded-full blur-3xl pointer-events-none" />
-              <div className="absolute -bottom-24 right-10 w-96 h-96 bg-[#8FBC8F]/30 rounded-full blur-3xl pointer-events-none" />
-              {/* Subtle geometric dot pattern */}
-              <div
-                className="absolute inset-0 opacity-30"
-                style={{
-                  backgroundImage: "radial-gradient(#286038 1px, transparent 1px)",
-                  backgroundSize: "24px 24px",
-                }}
-              />
-            </div>
-          )}
-
-          {/* Banner Floating Top Badges (Aligned to max-w-7xl container) */}
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-start justify-between pt-5 sm:pt-6 relative z-10">
-            <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white/95 backdrop-blur-md text-[#286038] border border-white/60 shadow-sm transition-all">
-              <Store size={13} className="text-[#286038]" />
-              <span>Digital Storefront</span>
-            </span>
-
-            <a
-              href={shop.additional_infos?.website || `${window.location.origin}/store/${shop.id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-white/95 hover:bg-white backdrop-blur-md text-slate-800 hover:text-[#286038] border border-white/60 shadow-md transition-all cursor-pointer"
-              title="Preview Public Storefront"
-            >
-              <ExternalLink size={13} />
-              <span>View Public Store</span>
-            </a>
-          </div>
-        </div>
-
-        {/* ── Profile Header Row (Spacious & Aligned) ── */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8 sm:pb-10 pt-3">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
-
-            {/* Left: Avatar + Store Info */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 sm:gap-6 min-w-0 flex-1">
-
-              {/* Store Avatar - Only the avatar has negative margin to overlap banner */}
-              <div className="-mt-14 sm:-mt-18 lg:-mt-20 relative shrink-0 z-10">
-                <div className="w-28 h-28 sm:w-36 sm:h-36 lg:w-40 lg:h-40 rounded-3xl border-4 border-white shadow-xl overflow-hidden bg-white flex items-center justify-center">
+      {/* ── Left Secondary Navigation Sidebar (Digital Store Nav) ── */}
+      <aside className={`w-full ${isSidebarOpen ? "md:w-64 lg:w-72" : "md:w-[68px]"} border-b md:border-b-0 md:border-r border-slate-200/80 bg-slate-50/70 flex flex-col shrink-0 transition-all duration-200 ease-in-out`}>
+        
+        {/* Store Profile Card Header in Sidebar */}
+        <div className={`p-3 md:p-3.5 border-b border-slate-200/80 bg-white flex flex-col ${isSidebarOpen ? "" : "items-center"}`}>
+          <div className={`flex items-center w-full ${isSidebarOpen ? "justify-between" : "justify-center"}`}>
+            <div className="flex items-center gap-2.5 min-w-0">
+              {/* Store Avatar / Logo */}
+              <div className="relative shrink-0">
+                <div className="w-9 h-9 rounded-xl border border-slate-200 bg-white flex items-center justify-center overflow-hidden shadow-xs">
                   {shop.logo_url ? (
                     <img src={shop.logo_url} alt={shop.name} className="w-full h-full object-cover" />
                   ) : fallbackImg ? (
                     <img src={fallbackImg} alt={shop.name} className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full bg-[#EAF4E6] border border-[#D5E8D0] flex items-center justify-center text-[#286038]">
-                      <span className="text-4xl sm:text-5xl font-extrabold tracking-tight">{initials}</span>
+                    <div className="w-full h-full bg-emerald-50 border border-emerald-100 flex items-center justify-center text-[#286038]">
+                      <span className="text-sm font-semibold">{initials}</span>
                     </div>
                   )}
                 </div>
-
-                {/* Online status indicator on avatar */}
-                <div
-                  className="absolute -bottom-1 -right-1 p-1 bg-white rounded-full shadow-lg"
-                  title={shop.visible_online ? "Storefront is Online" : "Storefront is Offline"}
-                >
-                  <span
-                    className={`flex items-center justify-center w-6 h-6 rounded-full ${
-                      shop.visible_online ? "bg-emerald-500" : "bg-slate-400"
-                    }`}
-                  >
-                    {shop.visible_online ? (
-                      <span className="w-2.5 h-2.5 rounded-full bg-white animate-pulse" />
-                    ) : (
-                      <span className="w-2.5 h-2.5 rounded-full bg-white/70" />
-                    )}
-                  </span>
-                </div>
+                <span
+                  className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${
+                    shop.visible_online ? "bg-emerald-500" : "bg-slate-400"
+                  }`}
+                  title={shop.visible_online ? "Live Online" : "Offline"}
+                />
               </div>
 
-              {/* Identity & Details */}
-              <div className="flex-1 min-w-0 space-y-2.5 pt-2 sm:pt-4">
-                
-                {/* Title line with badges */}
-                <div className="flex flex-wrap items-center gap-3">
-                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
+              {isSidebarOpen && (
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-xs sm:text-sm font-semibold text-slate-800 truncate leading-snug" title={shop.name}>
                     {shop.name}
-                  </h1>
-
-                  {/* GST Registered Badge */}
-                  {shop.business_infos?.gst_infos?.registered && (
-                    <span
-                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-[#1e4a2b] border border-emerald-200/90 shadow-2xs"
-                      title={shop.business_infos?.gst_infos?.number ? `GSTIN: ${shop.business_infos.gst_infos.number}` : "GST Registered Merchant"}
-                    >
-                      <BadgeCheck size={14} className="text-[#286038]" />
-                      <span>GST Registered</span>
+                  </h2>
+                  <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                    <span className={`inline-flex items-center gap-1 text-[10px] font-medium shrink-0 ${
+                      shop.visible_online ? "text-emerald-700" : "text-slate-500"
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${shop.visible_online ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`} />
+                      {shop.visible_online ? "Live Online" : "Offline"}
                     </span>
-                  )}
-
-                  {/* Status badge pill */}
-                  <span
-                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold border ${
-                      shop.visible_online
-                        ? "bg-emerald-50 text-[#1e4a2b] border-emerald-200"
-                        : "bg-slate-100 text-slate-600 border-slate-200"
-                    }`}
-                  >
-                    <span className={`w-2 h-2 rounded-full ${shop.visible_online ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`} />
-                    <span>{shop.visible_online ? "Live Online" : "Offline"}</span>
-                  </span>
-                </div>
-
-                {/* Tagline */}
-                {shop.tagline && (
-                  <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed">
-                    {shop.tagline}
-                  </p>
-                )}
-
-                {/* Description */}
-                {shop.description && (
-                  <p className="text-xs sm:text-sm text-slate-500 leading-relaxed max-w-3xl line-clamp-2">
-                    {shop.description}
-                  </p>
-                )}
-
-                {/* Meta details strip: Followers, Categories, Address */}
-                <div className="flex flex-wrap items-center gap-x-6 gap-y-2.5 text-xs sm:text-sm text-slate-500 pt-1.5">
-                  {/* Followers */}
-                  <div className="inline-flex items-center gap-2 font-medium text-slate-700">
-                    <Users size={15} className="text-slate-400" />
-                    <span>
-                      <strong className="text-slate-900 font-bold">{followersCount >= 1000 ? `${(followersCount / 1000).toFixed(1)}K` : followersCount}</strong> {followersCount === 1 ? "follower" : "followers"}
-                    </span>
-                  </div>
-
-                  {/* Categories */}
-                  {Array.isArray(shop.categories) && shop.categories.length > 0 && (
-                    <div className="inline-flex items-center gap-2 text-slate-600">
-                      <Tag size={14} className="text-slate-400" />
-                      <span className="truncate max-w-xs" title={shop.categories.join(", ")}>
-                        {shop.categories.slice(0, 3).join(", ")}{shop.categories.length > 3 ? ` +${shop.categories.length - 3}` : ""}
+                    {followersCount > 0 && (
+                      <span className="text-[10px] text-slate-400 font-medium shrink-0">
+                        • {followersCount} {followersCount === 1 ? "follower" : "followers"}
                       </span>
-                    </div>
-                  )}
-
-                  {/* Address */}
-                  {shop.address?.full_address && (
-                    <div className="inline-flex items-center gap-2 text-slate-600 truncate max-w-xs" title={shop.address.full_address}>
-                      <MapPin size={14} className="text-slate-400 shrink-0" />
-                      <span className="truncate">{shop.address.full_address}</span>
-                    </div>
-                  )}
-
-                  {/* Announcements counter */}
-                  {shop.announcements?.length > 0 && (
-                    <div className="inline-flex items-center gap-1.5 text-[#1e4a2b] font-medium bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-200">
-                      <Megaphone size={13} className="text-[#286038]" />
-                      <span>{shop.announcements.length} active {shop.announcements.length === 1 ? "announcement" : "announcements"}</span>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
-
-              </div>
-
+              )}
             </div>
 
-            {/* Right: Executive Action Bar */}
-            <div className="flex flex-wrap items-center gap-3 shrink-0 pt-4 lg:pt-0 lg:pb-1">
-              
-              {/* Online/Offline Toggle Switch Button */}
+            <button
+              type="button"
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="hidden md:flex w-7 h-7 rounded-lg items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+              title={isSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+            >
+              {isSidebarOpen ? <ChevronLeft size={15} /> : <ChevronRight size={15} />}
+            </button>
+          </div>
+
+          {/* Quick Action Pill Bar */}
+          {isSidebarOpen && (
+            <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between gap-2 w-full">
               <button
                 type="button"
                 onClick={handleToggleStoreVisibility}
                 disabled={updatingVisibility}
-                className={`inline-flex items-center gap-3 h-11 px-4.5 rounded-xl border text-xs font-semibold shadow-xs transition-all cursor-pointer ${
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10.5px] font-medium transition-all cursor-pointer border ${
                   shop.visible_online
-                    ? "bg-emerald-50/80 hover:bg-emerald-100 text-emerald-900 border-emerald-300"
-                    : "bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300"
+                    ? "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100"
+                    : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200"
                 }`}
-                title={shop.visible_online ? "Storefront is Online. Click to turn off." : "Storefront is Offline. Click to turn on."}
               >
-                <span className="flex items-center gap-2">
-                  <span className={`w-2.5 h-2.5 rounded-full ${shop.visible_online ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`} />
-                  <span className="font-semibold">{shop.visible_online ? "Online" : "Offline"}</span>
-                </span>
-                <span className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${
-                  shop.visible_online ? "bg-emerald-600" : "bg-slate-300"
-                }`}>
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
-                    shop.visible_online ? "translate-x-4.5" : "translate-x-0.5"
-                  }`} />
-                </span>
+                <span className={`w-1.5 h-1.5 rounded-full ${shop.visible_online ? "bg-emerald-600" : "bg-slate-400"}`} />
+                <span>{shop.visible_online ? "Store is Online" : "Store is Offline"}</span>
               </button>
 
-              {/* QR Code */}
-              <button
-                onClick={() => setShowQR(true)}
-                title="View Store QR Code"
-                className="inline-flex items-center gap-2 h-11 px-4.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 text-slate-700 text-xs font-semibold shadow-xs transition-all cursor-pointer"
+              <a
+                href={shop.additional_infos?.website || `${window.location.origin}/store/${shop.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10.5px] font-medium text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-200 transition-colors"
+                title="View live storefront in new tab"
               >
-                <QrCode size={15} className="text-slate-500" />
-                <span>QR Code</span>
-              </button>
-
-              {/* Edit Store Button */}
-              <button
-                onClick={() => {
-                  setActiveTab("Settings");
-                  document.getElementById("digital-store-tabs")?.scrollIntoView({ behavior: "smooth" });
-                }}
-                title="Edit Store Profile & Settings"
-                className="inline-flex items-center gap-2 h-11 px-5 text-white text-xs font-semibold rounded-xl shadow-sm transition-all cursor-pointer"
-                style={{
-                  backgroundColor: "#286038",
-                  boxShadow: "0 2px 10px rgba(40, 96, 56, 0.25)",
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#1e4a2b")}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#286038")}
-              >
-                <Edit3 size={14} />
-                <span>Edit Store</span>
-              </button>
-
+                <span>Preview</span>
+                <ExternalLink size={10} />
+              </a>
             </div>
-
-          </div>
+          )}
         </div>
 
-        {/* ─── TAB BAR ──────────────────────────────────────────── */}
-        <div className="border-t border-slate-200/90 bg-white">
-          <div id="digital-store-tabs" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-2 overflow-x-auto">
-            {TAB_CONFIG.map(({ tab, icon: Icon }) => {
-              const isActive = activeTab === tab;
-              return (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`relative flex items-center gap-2.5 px-6 py-4.5 text-sm font-semibold transition-all whitespace-nowrap cursor-pointer ${
-                    isActive ? "text-[#286038]" : "text-slate-500 hover:text-slate-800 hover:bg-slate-50/50 rounded-t-lg"
-                  }`}
-                >
-                  <Icon size={16} strokeWidth={isActive ? 2.2 : 1.8} />
-                  <span>{tab}</span>
-                  {/* badge for announcements */}
-                  {tab === "Announcements" && (shop.announcements?.length ?? 0) > 0 && (
-                    <span className={`ml-1 text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                      isActive ? "bg-emerald-100 text-[#1e4a2b]" : "bg-slate-100 text-slate-600"
-                    }`}>
+        {/* Digital Store Nav Links (Middle Column) */}
+        <div className="p-2 flex md:flex-col gap-1 overflow-x-auto md:overflow-y-auto no-scrollbar md:custom-scrollbar flex-1">
+          
+          {/* 1. Announcements */}
+          <div className="relative group shrink-0 md:w-full">
+            <button
+              type="button"
+              onClick={() => setActiveTab("Announcements")}
+              className={`w-full flex items-center gap-3 py-2 rounded-xl text-left transition-all duration-150 cursor-pointer ${
+                isSidebarOpen ? "px-3 justify-between" : "px-0 md:justify-center"
+              } ${
+                activeTab === "Announcements"
+                  ? "bg-white text-emerald-950 font-semibold shadow-xs border border-slate-200/90 ring-1 ring-emerald-500/20"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-white/80 border border-transparent"
+              }`}
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                  activeTab === "Announcements" ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-500 group-hover:bg-slate-200 group-hover:text-slate-700"
+                }`}>
+                  <Megaphone size={15} />
+                </div>
+                {isSidebarOpen && (
+                  <div className="min-w-0 hidden md:block">
+                    <div className="text-xs font-semibold leading-tight text-slate-800">Announcements</div>
+                    <div className="text-[10px] text-slate-400 font-normal truncate mt-0.5">Promos & broadcasts</div>
+                  </div>
+                )}
+                <span className="text-xs font-medium md:hidden whitespace-nowrap px-1">Announcements</span>
+              </div>
+              {isSidebarOpen && (shop.announcements?.length ?? 0) > 0 && (
+                <span className={`text-[10px] font-medium px-1.5 py-0.2 rounded-full hidden md:inline-block ${
+                  activeTab === "Announcements" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-500"
+                }`}>
+                  {shop.announcements.length}
+                </span>
+              )}
+            </button>
+
+            {!isSidebarOpen && (
+              <div className="absolute left-[calc(100%+8px)] top-1/2 -translate-y-1/2 z-50 hidden md:group-hover:flex flex-col whitespace-nowrap bg-slate-900/95 text-white px-2.5 py-1.5 rounded-lg shadow-xl border border-white/10 pointer-events-none animate-in fade-in zoom-in-95 duration-150">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-white">Announcements</span>
+                  {(shop.announcements?.length ?? 0) > 0 && (
+                    <span className="text-[9.5px] bg-emerald-500/30 text-emerald-300 px-1.5 py-0.2 rounded-full font-mono">
                       {shop.announcements.length}
                     </span>
                   )}
-                  {isActive && (
-                    <span className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#286038] rounded-full" />
+                </div>
+                <span className="text-[10px] text-slate-300 font-normal">Promos & broadcasts</span>
+              </div>
+            )}
+          </div>
+
+          {/* 2. Products */}
+          <div className="relative group shrink-0 md:w-full">
+            <button
+              type="button"
+              onClick={() => setActiveTab("Products")}
+              className={`w-full flex items-center gap-3 py-2 rounded-xl text-left transition-all duration-150 cursor-pointer ${
+                isSidebarOpen ? "px-3 justify-between" : "px-0 md:justify-center"
+              } ${
+                activeTab === "Products"
+                  ? "bg-white text-emerald-950 font-semibold shadow-xs border border-slate-200/90 ring-1 ring-emerald-500/20"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-white/80 border border-transparent"
+              }`}
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                  activeTab === "Products" ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-500 group-hover:bg-slate-200 group-hover:text-slate-700"
+                }`}>
+                  <Package size={15} />
+                </div>
+                {isSidebarOpen && (
+                  <div className="min-w-0 hidden md:block">
+                    <div className="text-xs font-semibold leading-tight text-slate-800">Products</div>
+                    <div className="text-[10px] text-slate-400 font-normal truncate mt-0.5">Digital catalog & sync</div>
+                  </div>
+                )}
+                <span className="text-xs font-medium md:hidden whitespace-nowrap px-1">Products</span>
+              </div>
+              {isSidebarOpen && productsCount > 0 && (
+                <span className={`text-[10px] font-medium px-1.5 py-0.2 rounded-full hidden md:inline-block ${
+                  activeTab === "Products" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-500"
+                }`}>
+                  {productsCount}
+                </span>
+              )}
+            </button>
+
+            {!isSidebarOpen && (
+              <div className="absolute left-[calc(100%+8px)] top-1/2 -translate-y-1/2 z-50 hidden md:group-hover:flex flex-col whitespace-nowrap bg-slate-900/95 text-white px-2.5 py-1.5 rounded-lg shadow-xl border border-white/10 pointer-events-none animate-in fade-in zoom-in-95 duration-150">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-white">Products</span>
+                  {productsCount > 0 && (
+                    <span className="text-[9.5px] bg-emerald-500/30 text-emerald-300 px-1.5 py-0.2 rounded-full font-mono">
+                      {productsCount}
+                    </span>
                   )}
-                </button>
-              );
-            })}
+                </div>
+                <span className="text-[10px] text-slate-300 font-normal">Digital catalog & sync</span>
+              </div>
+            )}
+          </div>
+
+          {/* 3. Settings */}
+          <div className="pt-2">
+            {isSidebarOpen && (
+              <div className="px-3 pb-1.5 hidden md:flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-wider text-slate-400">
+                <Settings2 size={12} className="text-slate-400" />
+                <span>Settings</span>
+              </div>
+            )}
+            {!isSidebarOpen && <div className="border-t border-slate-200/60 my-1 hidden md:block" />}
+
+            <div className="flex md:flex-col gap-1">
+              {SETTING_SIDEBAR_ITEMS.map((item) => {
+                const isCurrent = activeTab === "Settings" && activeSettingSection === item.id;
+                const isDanger = item.id === "danger";
+                const Icon = item.icon;
+                return (
+                  <div key={item.id} className="relative group shrink-0 md:w-full">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveTab("Settings");
+                        setActiveSettingSection(item.id);
+                      }}
+                      className={`w-full flex items-center gap-2.5 py-1.5 rounded-xl text-left transition-all cursor-pointer ${
+                        isSidebarOpen ? "px-3" : "px-0 md:justify-center"
+                      } ${
+                        isCurrent
+                          ? isDanger
+                            ? "bg-rose-50 text-rose-700 font-semibold border border-rose-200 shadow-2xs"
+                            : "bg-white text-emerald-950 font-semibold shadow-xs border border-slate-200/90 ring-1 ring-emerald-500/20"
+                          : isDanger
+                            ? "text-rose-500 hover:bg-rose-50/60 hover:text-rose-700 border border-transparent"
+                            : "text-slate-600 hover:text-slate-900 hover:bg-white/80 border border-transparent"
+                      }`}
+                    >
+                      <div
+                        className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                          isCurrent
+                            ? isDanger ? "bg-rose-600 text-white" : "bg-emerald-600 text-white"
+                            : isDanger ? "bg-rose-50 text-rose-500" : "bg-slate-100 text-slate-500"
+                        }`}
+                      >
+                        <Icon size={14} />
+                      </div>
+                      {isSidebarOpen && (
+                        <div className="min-w-0 hidden md:block flex-1">
+                          <div className="text-xs font-semibold leading-tight truncate text-slate-800">{item.label}</div>
+                          <div className="text-[9.5px] text-slate-400 font-normal truncate mt-0.5">{item.description}</div>
+                        </div>
+                      )}
+                      <span className="text-xs font-medium md:hidden whitespace-nowrap px-1">{item.label}</span>
+                    </button>
+
+                    {!isSidebarOpen && (
+                      <div className="absolute left-[calc(100%+8px)] top-1/2 -translate-y-1/2 z-50 hidden md:group-hover:flex flex-col whitespace-nowrap bg-slate-900/95 text-white px-2.5 py-1.5 rounded-lg shadow-xl border border-white/10 pointer-events-none animate-in fade-in zoom-in-95 duration-150">
+                        <span className={`text-xs font-semibold ${isDanger ? "text-rose-300" : "text-white"}`}>{item.label}</span>
+                        <span className="text-[10px] text-slate-300 font-normal">{item.description}</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* ─── MAIN CONTENT ──────────────────────────────────────── */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
-        <div key={activeTab} style={{ animation: "fadeIn 0.15s ease" }}>
-          {activeTab === "Announcements" && <Promotions />}
-          {activeTab === "Products"      && <ProductDashboard />}
-          {activeTab === "Settings"      && <StoreSettingsLayout shop={shop} />}
+        {/* Secondary Sidebar Footer */}
+        <div className="p-2.5 border-t border-slate-200/80 bg-white/70 hidden md:flex items-center justify-between gap-1.5">
+          {isSidebarOpen ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setShowQR(true)}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 h-8 px-2.5 rounded-lg text-[11px] font-medium text-slate-700 hover:text-emerald-700 bg-slate-50 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-200 transition-colors cursor-pointer"
+                title="Store QR Code"
+              >
+                <QrCode size={13} className="text-slate-500" />
+                <span>QR Code</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleCopyStoreUrl}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 h-8 px-2.5 rounded-lg text-[11px] font-medium text-slate-700 hover:text-emerald-700 bg-slate-50 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-200 transition-colors cursor-pointer"
+                title="Copy Store URL"
+              >
+                {copiedStoreUrl ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} className="text-slate-500" />}
+                <span>{copiedStoreUrl ? "Copied" : "Copy Link"}</span>
+              </button>
+            </>
+          ) : (
+            <div className="flex flex-col items-center gap-1.5 w-full">
+              <div className="relative group">
+                <button
+                  type="button"
+                  onClick={() => setShowQR(true)}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-emerald-700 bg-slate-100 hover:bg-emerald-50 border border-slate-200 transition-colors cursor-pointer"
+                >
+                  <QrCode size={14} />
+                </button>
+                <div className="absolute left-[calc(100%+8px)] top-1/2 -translate-y-1/2 z-50 hidden md:group-hover:flex whitespace-nowrap bg-slate-900/95 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-xl border border-white/10 pointer-events-none">
+                  Store QR Code
+                </div>
+              </div>
+
+              <div className="relative group">
+                <button
+                  type="button"
+                  onClick={handleCopyStoreUrl}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-emerald-700 bg-slate-100 hover:bg-emerald-50 border border-slate-200 transition-colors cursor-pointer"
+                >
+                  {copiedStoreUrl ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
+                </button>
+                <div className="absolute left-[calc(100%+8px)] top-1/2 -translate-y-1/2 z-50 hidden md:group-hover:flex whitespace-nowrap bg-slate-900/95 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-xl border border-white/10 pointer-events-none">
+                  {copiedStoreUrl ? "Copied!" : "Copy Store Link"}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-      </div>
+      </aside>
+
+      {/* ── Right Content Area (Selected Nav Tab Content) ── */}
+      <main className="flex-1 min-w-0 flex flex-col bg-white overflow-hidden">
+        
+        {/* Header Strip */}
+        <header className="px-5 sm:px-6 py-4 border-b border-slate-100 bg-white flex items-center justify-between gap-4 shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-100 flex items-center justify-center shrink-0">
+              {activeTab === "Announcements" && <Megaphone size={16} />}
+              {activeTab === "Products" && <Package size={16} />}
+              {activeTab === "Settings" && (
+                (() => {
+                  const currentItem = SETTING_SIDEBAR_ITEMS.find(s => s.id === activeSettingSection);
+                  const Icon = currentItem?.icon || Settings2;
+                  return <Icon size={16} />;
+                })()
+              )}
+            </div>
+
+            <div className="min-w-0">
+              <h1 className="text-sm sm:text-base font-semibold text-slate-800 truncate">
+                {activeTab === "Announcements" && "Store Announcements"}
+                {activeTab === "Products" && "Product Catalog & Sync"}
+                {activeTab === "Settings" && (
+                  SETTING_SIDEBAR_ITEMS.find(s => s.id === activeSettingSection)?.label || "Store Settings"
+                )}
+              </h1>
+              <p className="text-[11px] text-slate-400 font-medium truncate">
+                {activeTab === "Announcements" && "Manage broadcast banners and promotional messages for your digital storefront"}
+                {activeTab === "Products" && "Control products visibility, online pricing, and categories for customer ordering"}
+                {activeTab === "Settings" && (
+                  SETTING_SIDEBAR_ITEMS.find(s => s.id === activeSettingSection)?.description || "Configure digital store preferences"
+                )}
+              </p>
+            </div>
+          </div>
+        </header>
+
+        {/* Content Body */}
+        <div className={`flex-1 min-h-0 ${activeTab === "Products" ? "overflow-hidden p-3 sm:p-5 flex flex-col" : "overflow-y-auto p-4 sm:p-6 custom-scrollbar"}`}>
+          <div
+            key={`${activeTab}-${activeSettingSection}`}
+            className={activeTab === "Products" ? "flex-1 min-h-0 flex flex-col h-full" : undefined}
+            style={{ animation: "fadeIn 0.15s ease" }}
+          >
+            {activeTab === "Announcements" && <Promotions />}
+            {activeTab === "Products" && <ProductDashboard />}
+            {activeTab === "Settings" && (
+              <StoreSettingsLayout
+                shop={shop}
+                activeSection={activeSettingSection}
+                onSectionChange={setActiveSettingSection}
+                hideInternalNav={true}
+              />
+            )}
+          </div>
+        </div>
+      </main>
 
       {/* ── Confirmation Modal for Turning Off Digital Store ── */}
       {showTurnOffConfirm &&

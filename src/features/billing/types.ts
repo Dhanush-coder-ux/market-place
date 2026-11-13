@@ -22,6 +22,14 @@ export interface ProductVariant {
   expiryDate?: string;
   manufacturingDate?: string;
   batches?: any[];
+  pricing_infos?: any;
+  pricing_info?: any;
+  discount_percent?: number;
+  discount?: number;
+  mrp?: number;
+  buy_price?: number;
+  costPrice?: number;
+  [key: string]: any;
 }
 
 export interface InventoryItem {

@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   Printer, Building2, Calendar, Package,
   ReceiptText, ArrowLeft, FileText, CheckCircle2, Banknote, AlertCircle,
   RotateCcw, X, ChevronRight, Info, Minus, Plus, CornerDownLeft, Pencil
 } from "lucide-react";
-import { toDisplayData } from "./PurchaseHistory";
+import { toDisplayData, parseGst } from "./PurchaseHistory";
 import type { DirectPurchaseData } from "./PurchaseHistory";
 import { ProfileHeaderCard, SectionCard, DetailItem, InfoRow } from "@/components/common/SuperUI";
 
@@ -17,6 +17,7 @@ import SkeletonLoader from "@/components/common/SkeletonLoader";
 import { useToast } from "@/context/ToastContext";
 import { usePurchaseSettings } from "@/context/PurchaseContext";
 import { AntBadge } from "@/components/ui/AntBadge";
+import { SupplierRecordPaymentModal } from "@/features/supplier/components/SupplierRecordPaymentModal";
 
 const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 
@@ -55,36 +56,68 @@ interface ReturnItem {
   batch?: string | null;
 }
 
-interface PurchaseReturnDialogProps {
+export interface PurchaseReturnDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
   purchaseId: string;
   shopId: string;
   outstanding: number;
+  initialItems?: ReturnItem[];
 }
 
-const getVariantName = (v: any) => {
-  if (!v) return null;
-  const target = v.variant_infos || v.variant;
-  if (!target) return typeof v === 'string' ? v : null;
-  return typeof target === 'object' ? (target.variant_name || target.name) : target;
+const getVariantName = (itemOrVariant: any): string | null => {
+  if (!itemOrVariant) return null;
+  if (typeof itemOrVariant === 'string') return itemOrVariant;
+
+  const target = itemOrVariant.variant_infos ||
+                 itemOrVariant.variant_info ||
+                 itemOrVariant.product_variant_infos ||
+                 itemOrVariant.product_variant_info ||
+                 itemOrVariant.variant ||
+                 itemOrVariant;
+
+  if (typeof target === 'string') return target;
+  if (typeof target === 'object' && target !== null) {
+    if (target.variant_name) return target.variant_name;
+    if (target.variantName) return target.variantName;
+    if (target.name) return target.name;
+    if (target.title) return target.title;
+    if (target.label) return target.label;
+    if (target.combination_name) return target.combination_name;
+    if (target.variant && typeof target.variant === 'string') return target.variant;
+    if (target.variant && typeof target.variant === 'object') {
+      return target.variant.variant_name || target.variant.name || null;
+    }
+  }
+
+  return itemOrVariant.variant_name || itemOrVariant.variantName || (typeof itemOrVariant.variant === 'string' ? itemOrVariant.variant : null);
 };
 
-const getBatchName = (b: any) => {
-  if (!b) return null;
-  const target = b.batch_infos || b.batch;
-  if (!target) return typeof b === 'string' ? b : null;
-  return typeof target === 'object' ? (target.batch_name || target.name) : target;
+const getBatchName = (itemOrBatch: any): string | null => {
+  if (!itemOrBatch) return null;
+  if (typeof itemOrBatch === 'string') return itemOrBatch;
+
+  const target = itemOrBatch.batch_infos ||
+                 itemOrBatch.batch_info ||
+                 itemOrBatch.batch ||
+                 itemOrBatch;
+
+  if (typeof target === 'string') return target;
+  if (typeof target === 'object' && target !== null) {
+    return target.batch_name || target.batchName || target.batch_no || target.batchNo || target.name || null;
+  }
+  return itemOrBatch.batch_name || itemOrBatch.batch_no || null;
 };
 
-const PurchaseReturnDialog = ({
+export const PurchaseReturnDialog = ({
   isOpen,
   onClose,
   onSuccess,
   purchaseId,
   shopId,
   outstanding,
+  initialItems,
 }: PurchaseReturnDialogProps) => {
   const { postData, getData, error: apiError } = useApi();
   const { showToast } = useToast();
@@ -103,6 +136,13 @@ const PurchaseReturnDialog = ({
     setStep(1);
     setGlobalReason("");
     setPaymentMethod("CASH");
+
+    if (initialItems && initialItems.length > 0) {
+      setReturnItems(initialItems);
+      setLoadingItems(false);
+      return;
+    }
+
     setReturnItems([]);
     setLoadingItems(true);
 
@@ -128,8 +168,8 @@ const PurchaseReturnDialog = ({
               const currentStock = parseFloat(item.stocks_infos?.stocks ?? item.stock_infos?.stocks ?? item.stocks ?? item.quantity ?? 0);
               const returnedQty = parseFloat(item.returned_quantity ?? 0);
               const maxQty = Math.max(0, currentStock - returnedQty);
-              const vName = getVariantName(item.variant_infos || item.variant || item.product_variant_infos);
-              const bName = getBatchName(item.batch_infos || item.batch);
+              const vName = getVariantName(item);
+              const bName = getBatchName(item);
               const rawBuyPrice = item.buy_price ?? item.pricing_infos?.[0]?.buy_price ?? item.pricing_infos?.buy_price ?? item.rate ?? 0;
               const rawGst = item.gst ?? item.gst_rate ?? item.tax_gst ?? item.taxGst ?? item.gst_infos?.rate ?? item.gst_infos?.value ?? 0;
               const parsedGstRate = typeof rawGst === "number" ? rawGst : (parseFloat(String(rawGst).replace("%", "")) || 0);
@@ -586,6 +626,7 @@ const PurchaseDetail = () => {
   const [loading, setLoading] = useState(!po);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showReturnDialog, setShowReturnDialog] = useState(false);
+  const [showRecordPaymentModal, setShowRecordPaymentModal] = useState(false);
   const [returns, setReturns] = useState<any[]>([]);
   const [returnsLoading, setReturnsLoading] = useState(false);
   const hasRefreshedReturnsRef = useRef<Record<string, boolean>>({});
@@ -614,6 +655,15 @@ const PurchaseDetail = () => {
               }`}
           >
             Edit Purchase
+          </button>
+        )}
+        {po && Number(po.outstanding ?? 0) > 0 && po.status !== 'cancelled' && (
+          <button
+            type="button"
+            onClick={() => setShowRecordPaymentModal(true)}
+            className="px-6 h-8 rounded-lg border border-emerald-600 bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition-all flex items-center shadow-sm"
+          >
+            Record Payment
           </button>
         )}
         <button
@@ -751,12 +801,60 @@ const PurchaseDetail = () => {
     subtotal +
     totalGst;
 
+  const effectiveGrandTotal =
+    (subtotal + totalGst) > 0 ? (subtotal + totalGst) : (po.grand_total || po.total_cost || 0);
+
+  const allReturns = (po.returns && po.returns.length > 0)
+    ? po.returns
+    : (returns && returns.length > 0
+      ? returns
+      : ((po as any).purchase_returns || []));
+
+  const totalReturn = useMemo(() => {
+    const fromReturns = (allReturns || []).reduce((sum: number, r: any) => {
+      let rGst = Number(r.total_gst_amount || r.gst_amount || r.payment_infos?.gst_amount || 0);
+      let rVal = Number(
+        r.payment_infos?.return_value ||
+        r.total_refund_amount ||
+        r.refund_amount ||
+        r.return_value ||
+        r.totalAmount ||
+        r.amount ||
+        r.total_cost ||
+        r.return_cost ||
+        0
+      );
+      if (rGst === 0 && Array.isArray(r.items)) {
+        rGst = r.items.reduce((s: number, itm: any) => {
+          const q = Number(itm.entered_qty || itm.quantity || 0);
+          const p = Number(itm.buy_price || itm.price || 0);
+          const g = parseGst(itm.gst || itm.gst_rate || 0);
+          return s + (q * p * (g / 100));
+        }, 0);
+      }
+      const itemsBase = Array.isArray(r.items)
+        ? r.items.reduce((s: number, itm: any) => s + (Number(itm.entered_qty || itm.quantity || 0) * Number(itm.buy_price || itm.price || 0)), 0)
+        : 0;
+      if (rGst > 0 && (rVal <= itemsBase || rVal === 0)) {
+        rVal = (itemsBase || rVal) + rGst;
+      }
+      return sum + rVal;
+    }, 0);
+
+    return fromReturns + Number(po.refund_amount || 0);
+  }, [allReturns, po.refund_amount]);
+
+  const netAmount = Math.max(0, effectiveGrandTotal - totalReturn);
+
+  const effectiveOutstanding = totalReturn > 0
+    ? Math.max(0, netAmount - (po.paid_amount || 0))
+    : (po.outstanding !== undefined ? po.outstanding : Math.max(0, effectiveGrandTotal - (po.paid_amount || 0)));
+
   const totalLandedCost = isGstRegistered
     ? (subtotal + totalAdditional)
     : (subtotal + totalGst + totalAdditional);
 
-  const outstanding =
-    po.outstanding !== undefined ? po.outstanding : Math.max(0, grandTotal - (po.paid_amount || 0));
+  const outstanding = effectiveOutstanding;
 
   return (
     <div className="flex-1 flex flex-col min-h-0 h-full bg-slate-50/50 font-sans text-slate-900 overflow-hidden relative">
@@ -1014,6 +1112,30 @@ const PurchaseDetail = () => {
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[var(--pay-paid-bg)] text-[var(--pay-paid-tx)] border border-[var(--pay-paid-bd)]">Paid</span>
                         )}
                       </div>
+
+                      {/* Calculation Breakdown: Original, Returned, Net */}
+                      {totalReturn > 0 ? (
+                        <div className="p-3 bg-slate-50/80 rounded-xl border border-slate-200/60 space-y-2">
+                          <div className="flex justify-between items-center text-xs font-medium text-slate-500">
+                            <span>Original</span>
+                            <span className="tabular-nums font-mono text-slate-700">{fmt(effectiveGrandTotal)}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs font-semibold text-rose-600">
+                            <span>Returned</span>
+                            <span className="tabular-nums font-mono">- {fmt(totalReturn)}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs font-bold text-slate-900 border-t border-slate-200/80 pt-1.5 mt-0.5">
+                            <span>Net</span>
+                            <span className="tabular-nums font-mono text-slate-900">{fmt(netAmount)}</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex justify-between items-center text-xs font-semibold text-slate-600">
+                          <span>Total Amount</span>
+                          <span className="tabular-nums font-mono font-bold text-slate-800">{fmt(effectiveGrandTotal)}</span>
+                        </div>
+                      )}
+
                       <div className="flex justify-between items-center text-sm font-semibold text-slate-600 pt-1">
                         <span>Paid Amount</span>
                         <span className="tabular-nums text-slate-800">{fmt(po.paid_amount || 0)}</span>
@@ -1024,6 +1146,17 @@ const PurchaseDetail = () => {
                           {fmt(outstanding)}
                         </span>
                       </div>
+
+                      {outstanding > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setShowRecordPaymentModal(true)}
+                          className="w-full mt-2 py-2 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-xs"
+                        >
+                          <Banknote size={14} />
+                          Record Payment
+                        </button>
+                      )}
                     </div>
                   </SectionCard>
                 </div>
@@ -1121,11 +1254,15 @@ const PurchaseDetail = () => {
                                   </div>
 
                                   {/* Flat Format (PurchaseReadModel) Batches & Serials */}
-                                  {product.variant && (
-                                    <div className="mt-2 pl-3 border-l-2 border-indigo-100 space-y-2.5">
-                                      <AntBadge variant="at-variant" type="tag">V: {product.variant.variant_name}</AntBadge>
-                                    </div>
-                                  )}
+                                  {(() => {
+                                    const vDisplay = getVariantName(product);
+                                    if (!vDisplay) return null;
+                                    return (
+                                      <div className="mt-2 pl-3 border-l-2 border-indigo-100 space-y-2.5">
+                                        <AntBadge variant="at-variant" type="tag">V: {vDisplay}</AntBadge>
+                                      </div>
+                                    );
+                                  })()}
 
                                   {product.batch && (
                                     <div className="mt-2 pl-3 border-l-2 border-indigo-150 space-y-1.5">
@@ -1567,6 +1704,21 @@ const PurchaseDetail = () => {
         shopId={SHOP_ID}
         outstanding={outstanding}
       />
+
+      {/* Supplier Record Payment Modal */}
+      {po && (
+        <SupplierRecordPaymentModal
+          show={showRecordPaymentModal}
+          onClose={() => setShowRecordPaymentModal(false)}
+          supplierId={po.supplierId || (po as any).supplier_id || (po as any).supplier?.id}
+          supplierName={po.vendor}
+          initialPurchase={po}
+          initialPurchaseId={po.id}
+          onSuccess={() => {
+            fetchPo(true);
+          }}
+        />
+      )}
 
     </div>
   );

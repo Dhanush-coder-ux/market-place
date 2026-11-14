@@ -34,7 +34,7 @@
 import { apiClient } from './apiClient';
 import { validateMandatory } from './validation';
 import { SCHEMAS } from './schemas';
-import { ENDPOINTS, SHOP_ID } from '../endpoints';
+import { ENDPOINTS, SHOP_ID, getShopId } from '../endpoints';
 import type {
   CreateInventoryPayload,
   UpdateInventoryPayload,
@@ -132,7 +132,8 @@ export const inventoryApi = {
     include_serialno?: string;
     active?: string;
   }) => {
-    return await apiClient.get(`${INV}/by/id/${shopId}/${id}`, params);
+    const resolvedShopId = shopId || getShopId() || (typeof window !== "undefined" ? localStorage.getItem("shop_id") : "") || SHOP_ID;
+    return await apiClient.get(`${INV}/by/id/${resolvedShopId}/${id}`, params);
   },
 
   /**
@@ -159,7 +160,8 @@ export const inventoryApi = {
       if (isActive !== undefined) params.active = isActive ? 'true' : 'false';
       if (excludeNonTracking) params.exclude_non_tracking = 'true';
 
-      const response = await apiClient.get(`${INV}/by/shop/${SHOP_ID}`, params);
+      const resolvedShopId = getShopId() || (typeof window !== "undefined" ? localStorage.getItem("shop_id") : "") || SHOP_ID;
+      const response = await apiClient.get(`${INV}/by/shop/${resolvedShopId}`, params);
 
       // Response: { detail: {...}, data: [...] }  OR raw array
       const items: any[] = Array.isArray(response)

@@ -172,3 +172,248 @@ export function extractSaleCustomerInfo(
     isWalkIn: name === "Walk-in Customer" || (!rawName && !cleanUiId),
   };
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   UNIT & QUANTITY DISPLAY HELPERS
+═══════════════════════════════════════════════════════════════ */
+
+export function formatUnitName(rawUnit?: string): string {
+  if (!rawUnit) return "pcs";
+  const trimmed = String(rawUnit).trim();
+  const lower = trimmed.toLowerCase();
+
+  if (!lower || lower === "unit" || lower === "units" || lower === "none" || lower === "null" || lower === "undefined") {
+    return "pcs";
+  }
+
+  if (lower === "kilogram" || lower === "kilograms" || lower === "kg" || lower === "kgs") {
+    return "kg";
+  }
+  if (lower === "gram" || lower === "grams" || lower === "gm" || lower === "gms" || lower === "g") {
+    return "g";
+  }
+  if (lower === "milligram" || lower === "milligrams" || lower === "mg") {
+    return "mg";
+  }
+  if (lower === "milliliter" || lower === "millilitre" || lower === "milliliters" || lower === "millilitres" || lower === "ml") {
+    return "ml";
+  }
+  if (lower === "liter" || lower === "litre" || lower === "liters" || lower === "litres" || lower === "l" || lower === "ltr") {
+    return "L";
+  }
+  if (lower === "piece" || lower === "pieces" || lower === "pc" || lower === "pcs") {
+    return "pcs";
+  }
+  if (lower === "box" || lower === "boxes") {
+    return "box";
+  }
+  if (lower === "bottle" || lower === "bottles") {
+    return "bottle";
+  }
+  if (lower === "bag" || lower === "bags") {
+    return "bag";
+  }
+  if (lower === "can" || lower === "cans") {
+    return "can";
+  }
+  if (lower === "packet" || lower === "packets" || lower === "pkt" || lower === "pkts") {
+    return "pkt";
+  }
+  if (lower === "carton" || lower === "cartons") {
+    return "ctn";
+  }
+  return lower;
+}
+
+export function formatQtyNumber(val: number | string | undefined | null): string {
+  if (val === undefined || val === null || val === "") return "0";
+  const n = Number(val);
+  if (isNaN(n)) return String(val);
+  return Number(n.toFixed(2)).toString();
+}
+
+export function getItemQtyAndUnit(item: any, calcItem?: any): {
+  qty: number;
+  qtyStr: string;
+  unit: string;
+  name: string;
+  formatted: string;
+} {
+  if (!item) {
+    return { qty: 1, qtyStr: "1", unit: "pcs", name: "Item", formatted: "1 pcs" };
+  }
+  const calc = calcItem || {};
+  const rawUnit =
+    item.entered_unit ||
+    calc.entered_unit ||
+    calc.unit ||
+    item.selectedUnit ||
+    item.unit ||
+    item.unit_name ||
+    item.unit_infos?.name ||
+    item.unit_info?.name ||
+    item.uom ||
+    item.packaging_unit ||
+    item.package_type ||
+    item.unitType ||
+    item.product?.unit ||
+    item.product_details?.unit ||
+    item.datas?.unit ||
+    item.datas?.unit_name ||
+    "";
+
+  const unit = formatUnitName(rawUnit);
+  const enteredUnit = String(item.entered_unit || calc.entered_unit || "").trim().toLowerCase();
+  const baseUnit = String(item.unit || item.unit_name || item.unit_infos?.name || "").trim().toLowerCase();
+
+  const enteredQty = (item.entered_qty !== undefined && item.entered_qty !== null && !isNaN(Number(item.entered_qty)))
+    ? Number(item.entered_qty)
+    : (calc.entered_qty !== undefined && calc.entered_qty !== null && !isNaN(Number(calc.entered_qty)))
+      ? Number(calc.entered_qty)
+      : NaN;
+
+  let baseQty = Number(item.quantity ?? item.qty ?? calc.qty ?? 0);
+  if (isNaN(baseQty) || baseQty <= 0) {
+    baseQty = !isNaN(enteredQty) && enteredQty > 0 ? enteredQty : 1;
+  }
+
+  // Derive quantity matching the unit
+  let resolvedQty = baseQty;
+  const isSubUnit = Boolean(enteredUnit && baseUnit && enteredUnit !== baseUnit);
+
+  if (isSubUnit) {
+    const isGramOrMl = ['gm', 'g', 'gram', 'grams', 'ml', 'milli', 'milliliter', 'millilitre', 'milliliters', 'mg', 'milligram', 'milligrams'].includes(enteredUnit);
+    if (!isNaN(enteredQty) && enteredQty > 0) {
+      if (isGramOrMl && enteredQty <= 5 && baseQty > 0 && baseQty <= 5) {
+        resolvedQty = baseQty * 1000;
+      } else {
+        resolvedQty = enteredQty;
+      }
+    } else if (isGramOrMl && baseQty > 0 && baseQty < 100) {
+      resolvedQty = baseQty * 1000;
+    }
+  } else if (!isNaN(enteredQty) && enteredQty > 0) {
+    if (enteredQty > baseQty && Math.abs(enteredQty - baseQty) > 0.001) {
+      resolvedQty = enteredQty;
+    } else {
+      resolvedQty = baseQty > 0 ? baseQty : enteredQty;
+    }
+  }
+
+  const qtyStr = formatQtyNumber(resolvedQty);
+  const name = item.name || item.product_name || calc.name || item.datas?.name || item.datas?.product_name || "Item";
+
+  return {
+    qty: resolvedQty,
+    qtyStr,
+    unit,
+    name,
+    formatted: `${qtyStr} ${unit}`,
+  };
+}
+
+export interface SaleQuantityDisplay {
+  primaryText: string;
+  subText?: string;
+  tooltipText: string;
+  isMultiple: boolean;
+  totalQty: number;
+}
+
+export function getSaleQuantityDisplay(sale: any): SaleQuantityDisplay {
+  if (!sale) {
+    return {
+      primaryText: "0 pcs",
+      tooltipText: "0 pcs",
+      isMultiple: false,
+      totalQty: 0,
+    };
+  }
+
+  const rawItems = Array.isArray(sale.items) && sale.items.length > 0
+    ? sale.items
+    : (Array.isArray(sale.calculation_infos?.items) && sale.calculation_infos.items.length > 0)
+      ? sale.calculation_infos.items
+      : (Array.isArray(sale.order_items) && sale.order_items.length > 0)
+        ? sale.order_items
+        : [];
+
+  const calcItems = Array.isArray(sale.calculation_infos?.items) ? sale.calculation_infos.items : [];
+
+  if (rawItems.length === 0) {
+    const rawTotalQty = Number(
+      sale.total_quantity ||
+      sale.item_infos?.total_order_qty ||
+      sale.item_infos?.total_order_quantity ||
+      sale.calculation_infos?.total_quantity ||
+      sale.calculation_infos?.total_qty ||
+      1
+    );
+    const qStr = formatQtyNumber(rawTotalQty);
+    return {
+      primaryText: `${qStr} pcs`,
+      tooltipText: `${qStr} pcs`,
+      isMultiple: false,
+      totalQty: rawTotalQty,
+    };
+  }
+
+  const parsedItems = rawItems.map((it: any, idx: number) => {
+    const itPid = it.product_id || it.inventory_id || it.id;
+    const itName = (it.name || it.product_name || "").trim().toLowerCase();
+    const matchedCalc = calcItems.find((ci: any) => {
+      const ciPid = ci.product_id || ci.inventory_id || ci.id;
+      if (ciPid && itPid && ciPid === itPid) return true;
+      const ciName = (ci.name || ci.product_name || "").trim().toLowerCase();
+      if (ciName && itName && ciName === itName) return true;
+      return false;
+    }) || calcItems[idx];
+
+    return getItemQtyAndUnit(it, matchedCalc);
+  });
+
+  // Single item
+  if (parsedItems.length === 1) {
+    const single = parsedItems[0];
+    return {
+      primaryText: single.formatted,
+      tooltipText: `${single.name}: ${single.formatted}`,
+      isMultiple: false,
+      totalQty: single.qty,
+    };
+  }
+
+  // Multiple items: Check if all have the exact same unit
+  const uniqueUnits = Array.from(new Set(parsedItems.map((p: any) => p.unit)));
+  if (uniqueUnits.length === 1) {
+    const commonUnit = uniqueUnits[0];
+    const totalQty = parsedItems.reduce((acc: number, p: any) => acc + p.qty, 0);
+    const qStr = formatQtyNumber(totalQty);
+    const tooltip = `${parsedItems.length} items (${qStr} ${commonUnit}):\n` +
+      parsedItems.map((p: any) => `• ${p.name}: ${p.formatted}`).join("\n");
+
+    return {
+      primaryText: `${qStr} ${commonUnit}`,
+      tooltipText: tooltip,
+      isMultiple: true,
+      totalQty,
+    };
+  }
+
+  // Multiple items with DIFFERENT units
+  const totalCount = parsedItems.length;
+  const breakdownShort = parsedItems.slice(0, 2).map((p: any) => p.formatted).join(", ") +
+    (totalCount > 2 ? ` (+${totalCount - 2})` : "");
+  const fullBreakdown = `${totalCount} items:\n` +
+    parsedItems.map((p: any) => `• ${p.name}: ${p.formatted}`).join("\n");
+
+  const totalQty = parsedItems.reduce((acc: number, p: any) => acc + p.qty, 0);
+
+  return {
+    primaryText: `${totalCount} items`,
+    subText: breakdownShort,
+    tooltipText: fullBreakdown,
+    isMultiple: true,
+    totalQty,
+  };
+}

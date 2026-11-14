@@ -3,7 +3,7 @@ import { X, FileSpreadsheet, FileText, Download, CheckCircle2, Loader2, FileDown
 import * as XLSX from "xlsx";
 import { useToast } from "@/context/ToastContext";
 import { ENDPOINTS, SHOP_ID, getShopId } from "@/services/endpoints";
-import { extractSaleCustomerInfo } from "../type";
+import { extractSaleCustomerInfo, formatUnitName, getSaleQuantityDisplay } from "../type";
 
 export interface SalesExportModalProps {
   isOpen: boolean;
@@ -152,8 +152,12 @@ export const SalesExportModal: React.FC<SalesExportModalProps> = ({
 
         const calc = s.calculation_infos || s.calculations || {};
         const rawItems = Array.isArray(s.items) ? s.items : (Array.isArray(calc?.items) ? calc.items : []);
-        const itemsSummary = rawItems.map((it: any) => `${it.name || it.product_name || "Item"} (x${it.quantity || it.qty || 1})`).join(", ");
-        const totalQty = rawItems.reduce((acc: number, it: any) => acc + Number(it.quantity || it.qty || 1), 0);
+        const itemsSummary = rawItems.map((it: any) => {
+          const u = formatUnitName(it.entered_unit || it.unit || it.unit_infos?.name);
+          const q = it.entered_qty ?? it.quantity ?? it.qty ?? 1;
+          return `${it.name || it.product_name || "Item"} (${q} ${u})`;
+        }).join(", ");
+        const qtyDisplay = getSaleQuantityDisplay(s);
 
         // Total Billed
         let total = Number(
@@ -250,7 +254,7 @@ export const SalesExportModal: React.FC<SalesExportModalProps> = ({
           "Customer Name": cust.name,
           "Customer ID": cust.uiId || "—",
           "Customer Mobile": cust.phone || "—",
-          "Items Count": totalQty || rawItems.length,
+          "Items Count": qtyDisplay.primaryText,
           "Items Summary": itemsSummary || "—",
           "Taxable Subtotal (₹)": Number(subtotal.toFixed(2)),
           "GST Amount (₹)": Number(tax.toFixed(2)),

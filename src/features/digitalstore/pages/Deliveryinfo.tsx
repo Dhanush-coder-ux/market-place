@@ -15,6 +15,7 @@ import {
 import { useBusinessApi } from "@/context/BusinessApiContext";
 import { SHOP_ID } from "@/services/endpoints";
 import { EstimatedDeliverySelect } from "../components/wizard/Step3DeliveryOptions";
+import { DigitalStoreActionBar } from "../components/DigitalStoreActionBar";
 
 export type DeliveryConfig = {
   id?: number;
@@ -667,30 +668,42 @@ export default function DeliveryPreferences({ shopId, initialOptions, onStatusCh
         </p>
       </div>
 
-      {/* ── Save Button ── */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-        {saveSuccess && (
-          <span className="text-xs font-bold text-emerald-600 flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl animate-in fade-in">
-            <Check size={14} strokeWidth={3} />
-            Delivery preferences saved successfully!
-          </span>
-        )}
-        <div className="sm:ml-auto w-full sm:w-auto">
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            className={`w-full sm:w-auto justify-center flex items-center gap-2 px-7 py-2.5 rounded-xl text-[13.5px] font-bold text-white transition-all shadow-md ${
-              isSaving
-                ? "opacity-70 cursor-not-allowed bg-blue-400"
-                : "bg-blue-600 hover:bg-blue-700 active:scale-98 cursor-pointer"
-            }`}
-            style={{ boxShadow: "0 4px 14px rgba(59,130,246,0.3)" }}
-          >
-            {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} strokeWidth={3} />}
-            {isSaving ? "Saving..." : "Save Preferences"}
-          </button>
-        </div>
-      </div>
+      <DigitalStoreActionBar
+        status={
+          <div className="flex items-center gap-2">
+            <span
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                activeCount > 0
+                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                  : "bg-slate-100 text-slate-500"
+              }`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${activeCount > 0 ? "bg-emerald-500" : "bg-slate-400"}`} />
+              {activeCount} Delivery Mode{activeCount !== 1 ? "s" : ""} Active
+            </span>
+            {saveSuccess && (
+              <span className="text-xs font-semibold text-emerald-600 hidden sm:inline-flex items-center gap-1">
+                <Check size={13} strokeWidth={3} /> Saved successfully
+              </span>
+            )}
+          </div>
+        }
+      >
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={isSaving}
+          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white transition-all shadow-sm ${
+            isSaving
+              ? "opacity-70 cursor-not-allowed bg-blue-400"
+              : "bg-blue-600 hover:bg-blue-700 active:scale-98 cursor-pointer"
+          }`}
+          style={{ boxShadow: "0 2px 10px rgba(59,130,246,0.3)" }}
+        >
+          {isSaving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} strokeWidth={3} />}
+          <span>{isSaving ? "Saving Preferences..." : "Save Delivery Preferences"}</span>
+        </button>
+      </DigitalStoreActionBar>
     </div>
   );
 }

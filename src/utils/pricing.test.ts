@@ -1,4 +1,4 @@
-import { calculateTaxSplit, calculateProductEffectivePrice, calculateBillTotals } from "./pricing";
+import { calculateTaxSplit, calculateProductEffectivePrice, calculateBillTotals, calculateProfitAndMargin } from "./pricing";
 
 function expectEq(label: string, actual: number, expected: number) {
   if (Math.abs(actual - expected) > 0.001) {
@@ -7,37 +7,37 @@ function expectEq(label: string, actual: number, expected: number) {
 }
 
 export function runPricingTests(): boolean {
-  // User Case: ₹95 at 18% GST
+  // User Case: ₹95 at 18% GST (95 / 1.18 = 80.51 base, 14.49 GST)
   const tUser = calculateTaxSplit(95, 18);
-  expectEq("User Taxable", tUser.taxableValue, 77.90);
-  expectEq("User GST", tUser.gstAmount, 17.10);
-  expectEq("User CGST", tUser.cgst, 8.55);
-  expectEq("User SGST", tUser.sgst, 8.55);
+  expectEq("User Taxable", tUser.taxableValue, 80.51);
+  expectEq("User GST", tUser.gstAmount, 14.49);
+  expectEq("User CGST", tUser.cgst, 7.25);
+  expectEq("User SGST", tUser.sgst, 7.24);
   expectEq("User Total", tUser.taxableValue + tUser.cgst + tUser.sgst, 95.00);
 
-  // T1: ₹105 at 5% GST
+  // T1: ₹105 at 5% GST (105 / 1.05 = 100.00 base, 5.00 GST)
   const t1 = calculateTaxSplit(105, 5);
-  expectEq("T1 Taxable", t1.taxableValue, 99.75);
-  expectEq("T1 GST", t1.gstAmount, 5.25);
-  expectEq("T1 CGST", t1.cgst, 2.63);
-  expectEq("T1 SGST", t1.sgst, 2.62);
+  expectEq("T1 Taxable", t1.taxableValue, 100.00);
+  expectEq("T1 GST", t1.gstAmount, 5.00);
+  expectEq("T1 CGST", t1.cgst, 2.50);
+  expectEq("T1 SGST", t1.sgst, 2.50);
 
-  // T2: ₹100 at 5% GST
+  // T2: ₹100 at 5% GST (100 / 1.05 = 95.24 base, 4.76 GST)
   const t2 = calculateTaxSplit(100, 5);
-  expectEq("T2 Taxable", t2.taxableValue, 95.00);
-  expectEq("T2 GST", t2.gstAmount, 5.00);
-  expectEq("T2 CGST", t2.cgst, 2.50);
-  expectEq("T2 SGST", t2.sgst, 2.50);
+  expectEq("T2 Taxable", t2.taxableValue, 95.24);
+  expectEq("T2 GST", t2.gstAmount, 4.76);
+  expectEq("T2 CGST", t2.cgst, 2.38);
+  expectEq("T2 SGST", t2.sgst, 2.38);
 
-  // T3: ₹118 at 18% GST
+  // T3: ₹118 at 18% GST (118 / 1.18 = 100.00 base, 18.00 GST)
   const t3 = calculateTaxSplit(118, 18);
-  expectEq("T3 Taxable", t3.taxableValue, 96.76);
-  expectEq("T3 GST", t3.gstAmount, 21.24);
+  expectEq("T3 Taxable", t3.taxableValue, 100.00);
+  expectEq("T3 GST", t3.gstAmount, 18.00);
 
-  // T4: ₹100 at 18% GST
+  // T4: ₹100 at 18% GST (100 / 1.18 = 84.75 base, 15.25 GST)
   const t4 = calculateTaxSplit(100, 18);
-  expectEq("T4 Taxable", t4.taxableValue, 82.00);
-  expectEq("T4 GST", t4.gstAmount, 18.00);
+  expectEq("T4 Taxable", t4.taxableValue, 84.75);
+  expectEq("T4 GST", t4.gstAmount, 15.25);
 
   // T5: ₹100 at 0% GST
   const t5 = calculateTaxSplit(100, 0);
@@ -131,6 +131,34 @@ export function runPricingTests(): boolean {
   expectEq("T14 Total Discount", t14.totalDiscountGiven, 27.10);
   expectEq("T14 Payable (No Roundoff)", t14.payable, 72.90);
   expectEq("T14 Roundoff Zero", t14.roundOff, 0.00);
+
+  // T15: Pre-GST base profit margin calculation
+  // SP: ₹150 inclusive at 18% GST -> base SP = 150 / 1.18 = ₹127.12
+  // BP: ₹84.75 base -> Profit = 127.12 - 84.75 = ₹42.37, Margin = (42.37 / 127.12) * 100 = 33.3%
+  const t15 = calculateProfitAndMargin({
+    sellingPrice: 150,
+    buyingPrice: 84.75,
+    gstRate: 18,
+    sellingGstMode: 'inclusive',
+    buyingGstMode: 'exclusive',
+    isGstRegistered: true,
+  });
+  expectEq("T15 Base Selling", t15.baseSellingPrice, 127.12);
+  expectEq("T15 Base Buying", t15.baseBuyingPrice, 84.75);
+  expectEq("T15 Profit", t15.profit, 42.37);
+  expectEq("T15 Margin %", t15.marginPercent, 33.3);
+
+  // T16: Pre-GST base profit calculation in calculateProductEffectivePrice
+  const t16 = calculateProductEffectivePrice({
+    sellingPrice: 150,
+    gstRate: 18,
+    isGstRegistered: true,
+    costPrice: 84.75,
+  });
+  expectEq("T16 Taxable Base SP", t16.tax.taxableValue, 127.12);
+  expectEq("T16 Base Cost", t16.baseCostPrice || 0, 84.75);
+  expectEq("T16 Profit", t16.profit || 0, 42.37);
+  expectEq("T16 Margin %", t16.marginPercent || 0, 33.3);
 
   return true;
 }

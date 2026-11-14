@@ -21,7 +21,7 @@ import { AntBadge } from "@/components/ui/AntBadge";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
 import { ReusableSelect, SearchBar, Button, GradientButton } from "@/components/ui";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
-import { extractSaleCustomerInfo } from "../type";
+import { extractSaleCustomerInfo, getSaleQuantityDisplay, formatUnitName } from "../type";
 import { ReprintReceiptModal } from "../components/ReprintReceiptModal";
 import { SaleInvoiceModal } from "../components/SaleInvoiceModal";
 import { SalesExportModal } from "../components/SalesExportModal";
@@ -261,7 +261,11 @@ const SalesListPage: React.FC = () => {
     const rawItems = Array.isArray(sale.items) ? sale.items : (Array.isArray(sale.calculation_infos?.items) ? sale.calculation_infos.items : []);
     const itemsText = rawItems
       .slice(0, 5)
-      .map((it: any) => `• ${(it.name || it.product_name || "Item")} x ${(it.quantity || it.qty || 1)} - ₹${Number(it.final_inclusive || it.sell_price || it.total_amount || 0).toFixed(2)}`)
+      .map((it: any) => {
+        const u = formatUnitName(it.entered_unit || it.unit || it.unit_infos?.name);
+        const q = it.entered_qty ?? it.quantity ?? it.qty ?? 1;
+        return `• ${(it.name || it.product_name || "Item")} x ${q} ${u} - ₹${Number(it.final_inclusive || it.sell_price || it.total_amount || 0).toFixed(2)}`;
+      })
       .join("\n");
     const moreCount = rawItems.length > 5 ? `\n...and ${rawItems.length - 5} more items` : "";
 
@@ -517,19 +521,19 @@ const SalesListPage: React.FC = () => {
         total = Math.max(0, total - totalRefunds);
       }
 
-      // Derive total quantity
-      let totalQty = Number(s.total_quantity || s.item_infos?.total_order_qty || s.item_infos?.total_order_quantity || 0);
-      if (s.calculation_infos?.items && Array.isArray(s.calculation_infos.items)) {
-        totalQty = s.calculation_infos.items.reduce((sum: number, item: any) => sum + (Number(item.qty ?? item.quantity ?? 1) || 0), 0);
-      }
-      if (!totalQty && Array.isArray(s.items) && s.items.length > 0) {
+      // Derive total quantity: prioritize summing actual item quantities
+      let totalQty = 0;
+      if (Array.isArray(s.items) && s.items.length > 0) {
         totalQty = s.items.reduce((sum: number, item: any) => sum + (Number(item.quantity ?? item.qty ?? item.entered_qty ?? 1) || 0), 0);
+      }
+      if (!totalQty && s.calculation_infos?.items && Array.isArray(s.calculation_infos.items)) {
+        totalQty = s.calculation_infos.items.reduce((sum: number, item: any) => sum + (Number(item.qty ?? item.quantity ?? item.entered_qty ?? 1) || 0), 0);
       }
       if (!totalQty && Array.isArray((s as any).order_items) && (s as any).order_items.length > 0) {
         totalQty = (s as any).order_items.reduce((sum: number, item: any) => sum + (Number(item.quantity ?? item.qty ?? item.entered_qty ?? 1) || 0), 0);
       }
-      if (!totalQty && (s.calculation_infos?.total_quantity || s.calculation_infos?.total_qty || s.calculation_infos?.total_items)) {
-        totalQty = Number(s.calculation_infos?.total_quantity ?? s.calculation_infos?.total_qty ?? s.calculation_infos?.total_items ?? 0);
+      if (!totalQty) {
+        totalQty = Number(s.total_quantity || s.item_infos?.total_order_qty || s.item_infos?.total_order_quantity || s.calculation_infos?.total_quantity || s.calculation_infos?.total_qty || s.calculation_infos?.total_items || 0);
       }
       if (!totalQty && Array.isArray(s.items) && s.items.length > 0) {
         totalQty = s.items.length;
@@ -1067,7 +1071,12 @@ const SalesListPage: React.FC = () => {
                       <div className="flex items-center gap-1.5 text-[10.5px] truncate">
                         <span className="font-mono">{dateStr}{timeStr ? ` ${timeStr}` : ''}</span>
                         <span>•</span>
-                        <span className="font-semibold text-slate-700">{Number((sale.total_quantity || 0).toFixed(2))} items</span>
+                        <span className="font-semibold text-slate-700">
+                          {(() => {
+                            const q = getSaleQuantityDisplay(sale);
+                            return q.subText ? `${q.primaryText} (${q.subText})` : q.primaryText;
+                          })()}
+                        </span>
                         <span>•</span>
                         <span className="font-medium text-slate-600 truncate">{sale.payment_method || "Other"}</span>
                       </div>
@@ -1121,7 +1130,7 @@ const SalesListPage: React.FC = () => {
               })
             )}
           </div>
-          <table className="w-full border-collapse table-fixed relative min-w-[880px] hidden md:table">
+          <table className="w-full border-collapse table-fixed relative min-w-[920px] hidden md:table">
             <thead className="sticky top-0 z-10 bg-white shadow-[0_1px_0_0_#e2e8f0]">
               <tr>
                 <th className="w-[110px] px-4 py-3 text-[10px] font-semibold tracking-wider text-slate-500 uppercase text-left">Order ID</th>
@@ -1129,7 +1138,7 @@ const SalesListPage: React.FC = () => {
                 <th className="w-[90px] px-4 py-3 text-[10px] font-semibold tracking-wider text-slate-500 uppercase text-left">Origin</th>
                 <th className="w-[100px] px-4 py-3 text-[10px] font-semibold tracking-wider text-slate-500 uppercase text-left">Payment</th>
                 <th className="w-[96px] px-4 py-3 text-[10px] font-semibold tracking-wider text-slate-500 uppercase text-left">Date</th>
-                <th className="w-[50px] px-4 py-3 text-[10px] font-semibold tracking-wider text-slate-500 uppercase text-center">Qty</th>
+                <th className="w-[85px] px-3 py-3 text-[10px] font-semibold tracking-wider text-slate-500 uppercase text-center">Qty</th>
                 <th className="w-[90px] px-4 py-3 text-[10px] font-semibold tracking-wider text-slate-500 uppercase text-right">Amount</th>
                 <th className="w-[90px] px-4 py-3 text-[10px] font-semibold tracking-wider text-slate-500 uppercase text-left">Status</th>
                 <th className="w-[130px] px-4 py-3 text-[10px] font-semibold tracking-wider text-slate-500 uppercase text-right">Actions</th>
@@ -1270,7 +1279,23 @@ const SalesListPage: React.FC = () => {
                         {timeStr && <span className="text-[10px] text-slate-400 block">{timeStr}</span>}
                       </div>
                     </td>
-                    <td className="px-4 py-4 border-b border-slate-50 text-center"><span className="text-[11px] font-semibold text-slate-600">{Number((sale.total_quantity || 0).toFixed(2))}</span></td>
+                    <td className="px-3 py-4 border-b border-slate-50 text-center">
+                      {(() => {
+                        const qtyInfo = getSaleQuantityDisplay(sale);
+                        return (
+                          <div className="flex flex-col items-center justify-center cursor-default" title={qtyInfo.tooltipText}>
+                            <span className="text-[11px] font-bold text-slate-700 whitespace-nowrap">
+                              {qtyInfo.primaryText}
+                            </span>
+                            {qtyInfo.subText && (
+                              <span className="text-[9.5px] font-medium text-slate-500 truncate max-w-[95px] block leading-tight mt-0.5">
+                                {qtyInfo.subText}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </td>
                     <td className="px-4 py-4 border-b border-slate-50 text-right">
                       <span className="font-mono text-xs font-bold text-slate-900">{fmt(sale.total_sellprice)}</span>
                       {Number((sale as any).delivery_fee || 0) > 0 && (

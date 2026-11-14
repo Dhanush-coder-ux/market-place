@@ -845,10 +845,17 @@ const AmountWithReturnHover = ({
       return sum + rVal;
     }, 0) || 0) + Number(refundAmount || 0);
 
+  const formatAmount = (val: number) => {
+    return Number(val || 0).toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
+
   if (totalReturn === 0) {
     return (
       <span className="font-mono text-xs font-bold text-slate-700 tabular-nums">
-        ₹{total.toLocaleString("en-IN")}
+        ₹{formatAmount(total)}
       </span>
     );
   }
@@ -858,7 +865,7 @@ const AmountWithReturnHover = ({
   return (
     <div className="relative group inline-flex items-center gap-1.5 cursor-help">
       <span className="font-mono text-xs font-bold text-slate-900 tabular-nums">
-        ₹{netAmount.toLocaleString("en-IN")}
+        ₹{formatAmount(netAmount)}
       </span>
 
       <div className="w-3.5 h-3.5 rounded-full bg-rose-50 text-rose-500 border border-rose-200 flex items-center justify-center shrink-0">
@@ -869,15 +876,15 @@ const AmountWithReturnHover = ({
       <div className="absolute right-0 top-full mt-2 w-48 bg-slate-900 rounded-lg shadow-xl border border-slate-800 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[100] text-left flex flex-col p-3 pointer-events-none">
         <div className="flex justify-between items-center text-xs font-medium text-slate-400 mb-1">
           <span>Original</span>
-          <span className="tabular-nums font-mono">₹{total.toLocaleString("en-IN")}</span>
+          <span className="tabular-nums font-mono">₹{formatAmount(total)}</span>
         </div>
         <div className="flex justify-between items-center text-xs font-medium text-rose-400 mb-1.5">
           <span>Returned</span>
-          <span className="tabular-nums font-mono">- ₹{totalReturn.toLocaleString("en-IN")}</span>
+          <span className="tabular-nums font-mono">- ₹{formatAmount(totalReturn)}</span>
         </div>
         <div className="flex justify-between items-center text-xs font-bold text-white border-t border-slate-700 pt-2 mt-0.5">
           <span>Net</span>
-          <span className="tabular-nums font-mono">₹{netAmount.toLocaleString("en-IN")}</span>
+          <span className="tabular-nums font-mono">₹{formatAmount(netAmount)}</span>
         </div>
       </div>
     </div>
@@ -920,7 +927,8 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                   ? r.productsList!.reduce((sum: number, p: any) => sum + p.receivedStocks, 0)
                   : (r.productsList?.[0]?.receivedStocks ?? r.receivedStocks);
                 const firstProd = r.productsList?.[0] || {};
-                const currentOutstanding = r.outstandingAmount ?? Math.max(0, (r.totalCost || 0) - (r.amountPaid || 0));
+                const fullTotal = Number(r.totalAmount ?? r.grandTotal ?? r.totalCost ?? 0);
+                const currentOutstanding = r.outstandingAmount ?? Math.max(0, fullTotal - (r.amountPaid || 0));
 
                 return (
                   <div
@@ -942,8 +950,13 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                       </div>
                       <div className="text-right shrink-0">
                         <div className="text-sm font-black text-slate-800 tabular-nums">
-                          <AmountWithReturnHover total={Number(r.totalCost || 0)} returns={r.returns} refundAmount={r.refundAmount} />
+                          <AmountWithReturnHover total={fullTotal} returns={r.returns} refundAmount={r.refundAmount} />
                         </div>
+                        {Number(r.gstAmount || 0) > 0 && (
+                          <div className="text-[10px] text-slate-400 font-normal">
+                            (incl. ₹{Number(r.gstAmount).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} GST)
+                          </div>
+                        )}
                         <div className={`text-[10px] font-bold tabular-nums ${r.type === 'RETURN' ? 'text-rose-600' : 'text-emerald-600'}`}>
                           {r.type === 'RETURN' ? '-' : '+'}{totalStocksIn} units
                         </div>
@@ -951,8 +964,8 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                     </div>
                     <div className="flex flex-wrap items-center justify-between gap-2 pt-1.5 border-t border-slate-100 text-[11px]">
                       <div className="flex items-center gap-2">
-                        <span className="text-emerald-600 font-bold">Paid: ₹{Number(r.amountPaid || 0).toLocaleString("en-IN")}</span>
-                        {currentOutstanding > 0 && <span className="text-rose-600 font-bold">Due: ₹{Number(currentOutstanding).toLocaleString("en-IN")}</span>}
+                        <span className="text-emerald-600 font-bold">Paid: ₹{Number(r.amountPaid || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        {currentOutstanding > 0 && <span className="text-rose-600 font-bold">Due: ₹{Number(currentOutstanding).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>}
                       </div>
                       <div className="flex items-center gap-1.5">
                         {hasList && (
@@ -966,7 +979,7 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                         <PaymentStatusBadge
                           status={r.paymentStatus || r.payment_status}
                           outstanding={currentOutstanding}
-                          grandTotal={r.grandTotal ?? ((Number(r.totalCost || 0) + Number(r.gstAmount || 0) + Number(r.deliveryCharge || 0) + Number(r.otherCharge || 0)) || undefined)}
+                          grandTotal={fullTotal}
                           amountPaid={r.amountPaid}
                         />
                       </div>
@@ -987,8 +1000,7 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                   <th className="px-5 py-3.5">Product</th>
                   <th className="px-5 py-3.5 text-center">Stock In/Out</th>
                   <th className="px-5 py-3.5 text-center">Stock After</th>
-                  <th className="px-5 py-3.5">Total Cost</th>
-                  <th className="px-5 py-3.5">GST Amount</th>
+                  <th className="px-5 py-3.5">Total Amount</th>
                   <th className="px-5 py-3.5">Paid</th>
                   <th className="px-5 py-3.5">Outstanding</th>
                   <th className="px-5 py-3.5">Payment</th>
@@ -1022,7 +1034,8 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                     return total;
                   })();
 
-                  const currentOutstanding = r.outstandingAmount ?? Math.max(0, (r.totalCost || 0) - (r.amountPaid || 0));
+                  const fullTotal = Number(r.totalAmount ?? r.grandTotal ?? r.totalCost ?? 0);
+                  const currentOutstanding = r.outstandingAmount ?? Math.max(0, fullTotal - (r.amountPaid || 0));
 
                   return (
                     <Fragment key={rowKey}>
@@ -1113,22 +1126,24 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                           {totalStockAfterSupp !== null ? totalStockAfterSupp : '—'}
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap text-xs font-bold text-slate-700">
-                          <AmountWithReturnHover total={Number(r.totalCost || 0)} returns={r.returns} refundAmount={r.refundAmount} />
-                        </td>
-                        <td className="px-5 py-4 whitespace-nowrap text-xs font-medium text-slate-500">
-                          ₹{Number(r.gstAmount || 0).toLocaleString("en-IN")}
+                          <AmountWithReturnHover total={fullTotal} returns={r.returns} refundAmount={r.refundAmount} />
+                          {Number(r.gstAmount || 0) > 0 && (
+                            <span className="block text-[10px] text-slate-400 font-normal">
+                              (incl. ₹{Number(r.gstAmount).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} GST)
+                            </span>
+                          )}
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap text-xs font-bold text-emerald-600">
-                          ₹{Number(r.amountPaid || 0).toLocaleString("en-IN")}
+                          ₹{Number(r.amountPaid || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap text-xs font-bold text-rose-600">
-                          ₹{Number(currentOutstanding).toLocaleString("en-IN")}
+                          ₹{Number(currentOutstanding).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap">
                           <PaymentStatusBadge
                             status={r.paymentStatus || r.payment_status}
                             outstanding={currentOutstanding}
-                            grandTotal={r.grandTotal ?? ((Number(r.totalCost || 0) + Number(r.gstAmount || 0) + Number(r.deliveryCharge || 0) + Number(r.otherCharge || 0)) || undefined)}
+                            grandTotal={fullTotal}
                             amountPaid={r.amountPaid}
                           />
                         </td>
@@ -1147,7 +1162,6 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                           )}
                         </td>
                       </tr>
-
                     </Fragment>
                   );
                 })}
@@ -1218,7 +1232,10 @@ export function CustomerPurchasesTable({ rows, loading, onNavigateToSale }: Cust
                   total = Math.max(0, total - totalRefunds);
                 }
                 const products = order.items || order.products || order.datas?.items || order.datas?.products || [];
-                const itemCount = order.item_infos?.total_order_qty ?? order.total_quantity ?? order.datas?.total_quantity ?? products.length;
+                const productsQtySum = Array.isArray(products) && products.length > 0
+                  ? products.reduce((sum: number, it: any) => sum + (Number(it.quantity ?? it.qty ?? it.entered_qty ?? 1) || 0), 0)
+                  : 0;
+                const itemCount = productsQtySum || (order.item_infos?.total_order_qty ?? order.total_quantity ?? order.datas?.total_quantity ?? products.length);
                 const unit = products[0]?.product?.unit || products[0]?.unit || products[0]?.datas?.unit || (itemCount === 1 ? "Item" : "Units");
                 const invoiceId = order.ui_id ? `Order ${order.ui_id}` : `${order.id.slice(0, 8).toUpperCase()}`;
 
@@ -1331,7 +1348,10 @@ export function CustomerPurchasesTable({ rows, loading, onNavigateToSale }: Cust
                     total = Math.max(0, total - totalRefunds);
                   }
                   const products = order.items || order.products || order.datas?.items || order.datas?.products || [];
-                  const itemCount = order.item_infos?.total_order_qty ?? order.total_quantity ?? order.datas?.total_quantity ?? products.length;
+                  const productsQtySum = Array.isArray(products) && products.length > 0
+                    ? products.reduce((sum: number, it: any) => sum + (Number(it.quantity ?? it.qty ?? it.entered_qty ?? 1) || 0), 0)
+                    : 0;
+                  const itemCount = productsQtySum || (order.item_infos?.total_order_qty ?? order.total_quantity ?? order.datas?.total_quantity ?? products.length);
                   const unit = products[0]?.product?.unit || products[0]?.unit || products[0]?.datas?.unit || (itemCount === 1 ? "Item" : "Units");
                   const invoiceId = order.ui_id ? `Order ${order.ui_id}` : `${order.id.slice(0, 8).toUpperCase()}`;
 

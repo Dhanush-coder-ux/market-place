@@ -8,7 +8,7 @@ import ProductSelectionModal from "./ProductSelectionModel";
 import { BillingItemSelectDropdown } from "./BillingItemSelectDropdown";
 import { useToast } from "@/context/ToastContext";
 import { inventoryApi } from "@/services/api/inventory";
-import { SHOP_ID } from "@/services/endpoints";
+import { SHOP_ID, getShopId } from "@/services/endpoints";
 import { isShopGstRegistered, calculateTaxSplit } from "@/utils/pricing";
 import { calculateDaysToExpiry, formatDate } from "@/features/inventory/components/StockTree";
 
@@ -166,8 +166,8 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
         let variantsSource = p.variants || p.variant_infos || p.varients || p.combinations;
         if (variantsSource && typeof variantsSource === "object" && !Array.isArray(variantsSource)) {
           rawVariants = Object.entries(variantsSource).map(([k, v]: any) => ({
-            ...v,
-            id: v?.id || k,
+            ...(typeof v === "object" && v !== null ? v : {}),
+            id: v?.id || v?._id || k,
           }));
         } else if (Array.isArray(variantsSource)) {
           rawVariants = variantsSource;
@@ -177,14 +177,14 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
         let batchesSource = p.batch_infos || p.batches;
         if (batchesSource && typeof batchesSource === "object" && !Array.isArray(batchesSource)) {
           rawBatches = Object.entries(batchesSource).map(([k, b]: any) => ({
-            ...b,
-            id: b?.id || k,
+            ...(typeof b === "object" && b !== null ? b : {}),
+            id: b?.id || b?._id || k,
           }));
         } else if (Array.isArray(batchesSource)) {
           rawBatches = batchesSource;
         }
 
-        const mappedVariants = rawVariants.map((v: any) => {
+        const mappedVariants = rawVariants.map((v: any, idx: number) => {
           const combDatas = v.datas || {};
           const variantLabel = formatVariantLabel(v, combDatas);
 
@@ -204,9 +204,11 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
           const vPricing = v.pricing_infos || combDatas.pricing_infos;
           const vDisc = Number(vPricing?.discount_percent ?? v.discount_percent ?? combDatas.discount_percent ?? p.pricing_infos?.discount_percent ?? p.discount_percent ?? 0);
 
+          const vId = String(v.id || v._id || v.variant_id || v.combination_id || v.datas?.id || v.datas?._id || (v.sku ? `sku-${v.sku}` : `var-${p.id || 'prod'}-${idx}`));
+
           return {
             ...v,
-            id: v.id || String(Math.random()),
+            id: vId,
             name: variantLabel,
             price: Number(vPrice || 0),
             stock: Number(vStock || 0),
@@ -215,18 +217,19 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
           };
         });
 
-        const mappedBatches = rawBatches.map((b: any) => {
+        const mappedBatches = rawBatches.map((b: any, bIdx: number) => {
           const bPrice = b.pricing_infos?.sell_price ?? b.sell_price ?? b.price ?? computedPrice ?? 0;
           const bStock = b.stock_infos?.available_stocks !== undefined
             ? b.stock_infos?.available_stocks
             : (b.stocks !== undefined ? b.stocks : (b.stock !== undefined ? b.stock : (b.stock_infos?.physical_stocks ?? 0)));
-          const bName = b.batch_name || b.name || b.batch || (b.batch_no ? `Batch: ${b.batch_no}` : (b.id ? `Batch: ${String(b.id).slice(0, 8)}` : "Batch"));
+          const bName = b.batch_name || b.name || b.batch || (b.batch_no ? `Batch: ${b.batch_no}` : (b.id ? `Batch: ${String(b.id).slice(0, 8)}` : `Batch: ${bIdx + 1}`));
+          const bId = String(b.id || b._id || b.batchId || b.batch_id || (b.batch_no ? `batch-${b.batch_no}` : `batch-${p.id || 'prod'}-${bIdx}`));
 
           return {
             ...b,
-            id: b.id,
+            id: bId,
             isBatchOnly: true,
-            batchId: b.id,
+            batchId: bId,
             name: bName,
             price: Number(bPrice || 0),
             stock: Number(bStock || 0),
@@ -481,22 +484,32 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
 
     setLoading(true);
     try {
-      // Fetch full product details
-      const response = await inventoryApi.getInventoryById(SHOP_ID, selectedProduct.id);
-      const fullProduct = response?.data || response;
+      // Resolve active shop ID
+      const activeShopId = getShopId() || (typeof window !== "undefined" ? localStorage.getItem("shop_id") : "") || SHOP_ID || selectedProduct.shop_id || "";
 
-      if (!fullProduct || !fullProduct.id) {
-        showToast("Failed to fetch full product details", "error");
-        return;
+      // Try fetching fresh full details, with safe fallback to selectedProduct
+      let fullProduct = selectedProduct;
+      if (activeShopId && selectedProduct.id) {
+        try {
+          const response = await inventoryApi.getInventoryById(activeShopId, selectedProduct.id);
+          const fetched = response?.data || response;
+          if (fetched && (fetched.id || fetched.name || fetched.variant_infos || fetched.variants)) {
+            fullProduct = { ...selectedProduct, ...fetched };
+          }
+        } catch (fetchErr) {
+          console.warn("Could not fetch full product details by id, falling back to selected product data:", fetchErr);
+        }
       }
 
       // Map variants the same way ProductSelectionModal expects
       let rawVariants: any[] = [];
       let variantsSource = fullProduct.variant_infos || fullProduct.variants || fullProduct.varients || fullProduct.combinations;
       if (variantsSource && typeof variantsSource === 'object' && !Array.isArray(variantsSource)) {
-        variantsSource = Object.values(variantsSource);
-      }
-      if (Array.isArray(variantsSource)) {
+        rawVariants = Object.entries(variantsSource).map(([k, v]: any) => ({
+          ...(typeof v === 'object' && v !== null ? v : {}),
+          id: v?.id || v?._id || k,
+        }));
+      } else if (Array.isArray(variantsSource)) {
         rawVariants = variantsSource;
       }
 
@@ -508,7 +521,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
         return [];
       };
 
-      let mappedVariants = rawVariants.map((v: any) => {
+      let mappedVariants = rawVariants.map((v: any, idx: number) => {
         const combDatas = v.datas || {};
         const variantLabel = formatVariantLabel(v, combDatas);
 
@@ -529,18 +542,20 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
           calculatedStock = 0;
         }
 
+        const vId = String(v.id || v._id || v.variant_id || v.combination_id || v.datas?.id || v.datas?._id || (v.sku ? `sku-${v.sku}` : `var-${fullProduct.id || 'prod'}-${idx}`));
+
         return {
           ...v,
-          id: v.id || String(Math.random()),
+          id: vId,
           name: variantLabel,
           price: calculatedPrice,
           stock: calculatedStock,
           serialnoId: v.serial_numbers?.id || v.serialno_infos?.[0]?.id || v.serial_number?.id || v.batches?.[0]?.serial_numbers?.id || combDatas.serial_numbers?.id || fullProduct.serialno_infos?.[0]?.id || fullProduct.serial_number?.id || fullProduct.serials?.id,
           availableSerials: getSerialNames(v.serialno_infos || v.serial_numbers || v.serial_number || v.batches?.[0]?.serial_numbers || combDatas.serial_numbers || fullProduct.serialno_infos || fullProduct.serial_number || fullProduct.serials),
           batchId: v.batch_infos?.[0]?.id || v.batches?.[0]?.id || v.batchId || combDatas.batches?.[0]?.id,
-          batches: (v.batch_infos || v.batches || []).map((b: any) => ({
+          batches: (v.batch_infos || v.batches || []).map((b: any, bIdx: number) => ({
             ...b,
-            batchId: b.id,
+            batchId: b.id || b.batchId || `batch-${bIdx}`,
             price: b.pricing_infos?.sell_price || b.sell_price || calculatedPrice,
             stock: b.stock_infos?.available_stocks !== undefined ? b.stock_infos?.available_stocks : (b.stocks !== undefined ? b.stocks : (b.stock !== undefined ? b.stock : 0)),
           })),
@@ -550,26 +565,31 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
       let rawBatches: any[] = [];
       let batchesSource = fullProduct.batch_infos || fullProduct.batches;
       if (batchesSource && typeof batchesSource === "object" && !Array.isArray(batchesSource)) {
-        batchesSource = Object.values(batchesSource);
-      }
-      if (Array.isArray(batchesSource)) {
+        rawBatches = Object.entries(batchesSource).map(([k, b]: any) => ({
+          ...(typeof b === 'object' && b !== null ? b : {}),
+          id: b?.id || b?._id || k,
+        }));
+      } else if (Array.isArray(batchesSource)) {
         rawBatches = batchesSource;
       }
 
       if (mappedVariants.length === 0 && (fullProduct.type_infos?.has_batch || fullProduct.has_batch || rawBatches.length > 0) && rawBatches.length > 0) {
-        mappedVariants = rawBatches.map((b: any) => ({
-          id: b.id,
-          isBatchOnly: true,
-          name: b.batch_name || b.name || b.batch || (b.batch_no ? `Batch: ${b.batch_no}` : `Batch: ${String(b.id).slice(0, 8)}`),
-          price: b.pricing_infos?.sell_price || b.sell_price || fullProduct.pricing_infos?.sell_price || fullProduct.sell_price || 0,
-          stock: b.stock_infos?.available_stocks || b.stocks || 0,
-          serialnoId: b.serial_numbers?.id || b.serialno_infos?.[0]?.id || fullProduct.serialno_infos?.[0]?.id || fullProduct.serial_number?.id || fullProduct.serials?.id,
-          availableSerials: getSerialNames(b.serialno_infos || b.serial_numbers || fullProduct.serialno_infos || fullProduct.serial_number || fullProduct.serials),
-          batchId: b.id,
-          expiryDate: b.expiry_date,
-          manufacturingDate: b.manufacturing_date,
-          batch_no: b.batch_no || b.name || b.batch,
-        }));
+        mappedVariants = rawBatches.map((b: any, bIdx: number) => {
+          const bId = String(b.id || b._id || b.batchId || b.batch_id || (b.batch_no ? `batch-${b.batch_no}` : `batch-${fullProduct.id || 'prod'}-${bIdx}`));
+          return {
+            id: bId,
+            isBatchOnly: true,
+            name: b.batch_name || b.name || b.batch || (b.batch_no ? `Batch: ${b.batch_no}` : `Batch: ${String(bId).slice(0, 8)}`),
+            price: b.pricing_infos?.sell_price || b.sell_price || fullProduct.pricing_infos?.sell_price || fullProduct.sell_price || 0,
+            stock: b.stock_infos?.available_stocks || b.stocks || 0,
+            serialnoId: b.serial_numbers?.id || b.serialno_infos?.[0]?.id || fullProduct.serialno_infos?.[0]?.id || fullProduct.serial_number?.id || fullProduct.serials?.id,
+            availableSerials: getSerialNames(b.serialno_infos || b.serial_numbers || fullProduct.serialno_infos || fullProduct.serial_number || fullProduct.serials),
+            batchId: bId,
+            expiryDate: b.expiry_date,
+            manufacturingDate: b.manufacturing_date,
+            batch_no: b.batch_no || b.name || b.batch,
+          };
+        });
       }
 
       let computedStock = Number(fullProduct.stock_infos?.available_stocks ?? fullProduct.stock_infos?.physical_stocks ?? fullProduct.stocks ?? 0);
@@ -703,11 +723,83 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
         setSearchQuery("");
         setDropdownOpen(false);
       } else if (preselectedVariantId) {
-        const foundVariant = pMapped.variants?.find((v: any) => v.id === preselectedVariantId || (v as any)._id === preselectedVariantId);
+        let foundVariant = pMapped.variants?.find((v: any) =>
+          v.id === preselectedVariantId ||
+          (v as any)._id === preselectedVariantId ||
+          (v as any).variant_id === preselectedVariantId ||
+          (v as any).combination_id === preselectedVariantId ||
+          (v as any).sku === preselectedVariantId
+        );
+
+        // Fallback 1: check selectedProduct.variants (the exact items passed to the dropdown)
+        if (!foundVariant && Array.isArray(selectedProduct.variants)) {
+          foundVariant = selectedProduct.variants.find((v: any) =>
+            v.id === preselectedVariantId ||
+            (v as any)._id === preselectedVariantId ||
+            (v as any).variant_id === preselectedVariantId ||
+            (v as any).sku === preselectedVariantId
+          );
+        }
+
+        // Fallback 2: match by clean variant name
+        if (!foundVariant && Array.isArray(pMapped.variants) && Array.isArray(selectedProduct.variants)) {
+          const origVariant = selectedProduct.variants.find((v: any) => v.id === preselectedVariantId);
+          if (origVariant) {
+            foundVariant = pMapped.variants.find((v: any) => cleanVariantLabel(v.name) === cleanVariantLabel(origVariant.name));
+          }
+        }
+
+        // Fallback 3: check batches
+        if (!foundVariant) {
+          const allBatches = [
+            ...(Array.isArray(pMapped.batches) ? pMapped.batches : []),
+            ...(Array.isArray(selectedProduct.batches) ? selectedProduct.batches : []),
+            ...rawBatches,
+          ];
+          const foundBatch = allBatches.find((b: any) =>
+            b.id === preselectedVariantId ||
+            b.batchId === preselectedVariantId ||
+            b._id === preselectedVariantId ||
+            b.batch_no === preselectedVariantId
+          );
+          if (foundBatch) {
+            const bId = String(foundBatch.id || foundBatch.batchId || foundBatch._id || preselectedVariantId);
+            foundVariant = {
+              ...foundBatch,
+              id: bId,
+              isBatchOnly: true,
+              batchId: bId,
+              name: foundBatch.batch_name || foundBatch.name || foundBatch.batch || (foundBatch.batch_no ? `Batch: ${foundBatch.batch_no}` : `Batch: ${String(bId).slice(0, 8)}`),
+              price: foundBatch.pricing_infos?.sell_price || foundBatch.sell_price || foundBatch.price || pMapped.price || 0,
+              stock: foundBatch.stock_infos?.available_stocks !== undefined ? foundBatch.stock_infos?.available_stocks : (foundBatch.stocks !== undefined ? foundBatch.stocks : (foundBatch.stock || 0)),
+              serialnoId: foundBatch.serial_numbers?.id || foundBatch.serialno_infos?.[0]?.id || pMapped.serialnoId,
+              availableSerials: getSerialNames(foundBatch.serialno_infos || foundBatch.serial_numbers || pMapped.serialno_infos || pMapped.serial_number || pMapped.serials),
+              expiryDate: foundBatch.expiry_date || foundBatch.expiryDate,
+              manufacturingDate: foundBatch.manufacturing_date || foundBatch.manufacturingDate,
+              batch_no: foundBatch.batch_no || foundBatch.name || foundBatch.batch,
+            };
+          }
+        }
+
+        // If variant doesn't require additional batch tracking or serial numbers, directly add it to the bill!
+        const variantNeedsBatch = !foundVariant?.isBatchOnly && (
+          prodHasBatches ||
+          (Array.isArray(foundVariant?.batches) && foundVariant.batches.length > 0) ||
+          (Array.isArray((foundVariant as any)?.batch_infos) && (foundVariant as any).batch_infos.length > 0)
+        );
+        const variantNeedsSerial = requiresSerial || (Array.isArray(foundVariant?.availableSerials) && foundVariant.availableSerials.length > 0);
+
+        if (foundVariant && !variantNeedsBatch && !variantNeedsSerial) {
+          addVariantItemToBill(pMapped, foundVariant, 1);
+          setSearchQuery("");
+          setDropdownOpen(false);
+          return;
+        }
+
         setPendingProduct({
           ...pMapped,
-          initialVariantId: foundVariant?.isBatchOnly ? undefined : preselectedVariantId,
-          initialBatchId: foundVariant?.isBatchOnly ? preselectedVariantId : undefined,
+          initialVariantId: foundVariant?.isBatchOnly ? undefined : (foundVariant?.id || preselectedVariantId),
+          initialBatchId: foundVariant?.isBatchOnly ? (foundVariant?.id || preselectedVariantId) : undefined,
         });
         setModalOpen(true);
         setSearchQuery("");
@@ -762,9 +854,27 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
   // Close dropdown on click outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setDropdownOpen(false);
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+
+      // 1. Check if click is inside search container / dropdown
+      if (dropdownRef.current && dropdownRef.current.contains(target)) {
+        return;
       }
+
+      // 2. Check if click is inside any Radix popover portal, popover trigger, or modal dialog
+      if (
+        target.closest?.("[data-radix-popper-content-wrapper]") ||
+        target.closest?.("[data-slot='popover-content']") ||
+        target.closest?.("[data-slot='popover-trigger']") ||
+        target.closest?.("[data-billing-dropdown]") ||
+        target.closest?.(".billing-popover-content") ||
+        target.closest?.("[role='dialog']")
+      ) {
+        return;
+      }
+
+      setDropdownOpen(false);
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -862,6 +972,8 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
 
   const handleModalSuccess = (variant: ProductVariant, quantity: number, serials?: string[]) => {
     addVariantItemToBill(pendingProduct, variant, quantity, serials);
+    setModalOpen(false);
+    setPendingProduct(null);
   };
 
   const handleLineDiscountChange = useCallback((id: string, mode: '%' | '₹', value: number) => {

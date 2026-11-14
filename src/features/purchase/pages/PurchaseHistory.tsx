@@ -124,6 +124,8 @@ export interface DirectPurchaseData {
   refund_amount?: number;
   notes?: string;
   calculation_infos?: any;
+  gst_infos?: any;
+  gst_type?: string;
 }
 
 type ViewMode = "grid" | "horizontal" | "vertical";
@@ -212,19 +214,46 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
     0
   );
 
-  const prods = (products ?? []);
-  const subtotal = (p as any).item_infos?.total_pur_cost ?? prods.reduce((sum: number, pr: any) => {
-    const qty = Number(pr.stocks_infos?.stocks ?? pr.stocks ?? pr.received_stocks ?? pr.received_qty ?? pr.quantity ?? pr.qty ?? pr.stocks_added ?? 1);
-    const price = Number(pr.pricing_infos?.[0]?.buy_price ?? pr.buy_price ?? 0);
-    return sum + (qty * price);
-  }, 0);
+  const gstTypeStr = String(
+    (p as any).gst_infos?.type ||
+    (p as any).gst_type ||
+    (p as any).calculation_infos?.gst_type ||
+    (p as any).calculations?.gst_type ||
+    d2?.gst_infos?.type ||
+    d2?.gst_type ||
+    d2?.calculation_infos?.gst_type ||
+    d2?.calculations?.gst_type ||
+    "EXCLUSIVE"
+  ).toUpperCase();
+  const isGstInclusive = gstTypeStr === "INCLUSIVE";
 
-  const totalGst = (p as any).item_infos?.total_gst_amount ?? prods.reduce((sum: number, pr: any) => {
+  const prods = (products ?? []);
+  let computedSubtotal = 0;
+  let computedGst = 0;
+  prods.forEach((pr: any) => {
     const qty = Number(pr.stocks_infos?.stocks ?? pr.stocks ?? pr.received_stocks ?? pr.received_qty ?? pr.quantity ?? pr.qty ?? pr.stocks_added ?? 1);
     const price = Number(pr.pricing_infos?.[0]?.buy_price ?? pr.buy_price ?? 0);
     const gstPercent = parseGst(pr.gst || pr.datas?.gst || pr.taxGst || pr.tax_gst || 0);
-    return sum + (qty * price * (gstPercent / 100));
-  }, 0);
+    if (isGstInclusive) {
+      let unitPriceIncl = price * (1 + gstPercent / 100);
+      if (Math.abs(unitPriceIncl - Math.round(unitPriceIncl)) < 0.01) {
+        unitPriceIncl = Math.round(unitPriceIncl);
+      }
+      const lineTotal = Math.round(qty * unitPriceIncl * 100) / 100;
+      const lineTaxable = gstPercent > 0 ? Math.round((lineTotal / (1 + gstPercent / 100)) * 100) / 100 : lineTotal;
+      const lineGst = Math.round((lineTotal - lineTaxable) * 100) / 100;
+      computedSubtotal += lineTaxable;
+      computedGst += lineGst;
+    } else {
+      const lineTaxable = Math.round(qty * price * 100) / 100;
+      const lineGst = gstPercent > 0 ? Math.round((lineTaxable * (gstPercent / 100)) * 100) / 100 : 0;
+      computedSubtotal += lineTaxable;
+      computedGst += lineGst;
+    }
+  });
+
+  const subtotal = (p as any).item_infos?.total_pur_cost ?? computedSubtotal;
+  const totalGst = (p as any).item_infos?.total_gst_amount ?? computedGst;
 
   const totalCost = (p as any).total_cost ?? (subtotal + totalGst);
   const additionalChargesTotal = otherCharge + transportCharge;
@@ -338,6 +367,8 @@ export function toDisplayData(p: PurchaseRecord): DirectPurchaseData {
     refund_amount: Number((p as any).refund_amount || (p as any).return?.refund_amount || 0),
     notes: (p as any).notes || d2?.notes || d2?.purchaseDetails?.referenceNo || "",
     calculation_infos: (p as any).calculation_infos || d2?.calculation_infos || (p as any).calculations || d2?.calculations || null,
+    gst_infos: (p as any).gst_infos || d2?.gst_infos || null,
+    gst_type: gstTypeStr,
   };
 }
 

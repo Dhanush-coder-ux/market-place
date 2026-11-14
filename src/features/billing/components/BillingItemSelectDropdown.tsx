@@ -83,6 +83,7 @@ export const BillingItemSelectDropdown: React.FC<BillingItemSelectDropdownProps>
   const triggerButton = (
     <button
       type="button"
+      onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => {
         e.stopPropagation();
         if (items.length === 0) {
@@ -124,7 +125,10 @@ export const BillingItemSelectDropdown: React.FC<BillingItemSelectDropdownProps>
       <PopoverContent
         align="end"
         sideOffset={6}
-        className="p-0 w-80 max-w-[92vw] shadow-2xl rounded-xl border border-slate-200 bg-white z-[99999] overflow-hidden"
+        className="p-0 w-80 max-w-[92vw] shadow-2xl rounded-xl border border-slate-200 bg-white z-[99999] overflow-hidden billing-popover-content"
+        data-billing-dropdown="true"
+        onPointerDown={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Dropdown Header */}
@@ -153,6 +157,7 @@ export const BillingItemSelectDropdown: React.FC<BillingItemSelectDropdownProps>
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
               onKeyDown={(e) => e.stopPropagation()}
               placeholder={isBatch ? "Search batch name, no. or expiry..." : "Search variant name or price..."}
@@ -161,6 +166,7 @@ export const BillingItemSelectDropdown: React.FC<BillingItemSelectDropdownProps>
             {searchQuery && (
               <button
                 type="button"
+                onMouseDown={(e) => e.stopPropagation()}
                 onClick={(e) => {
                   e.stopPropagation();
                   setSearchQuery("");
@@ -189,11 +195,12 @@ export const BillingItemSelectDropdown: React.FC<BillingItemSelectDropdownProps>
               return (
                 <div
                   key={item.id}
+                  onMouseDown={(e) => e.stopPropagation()}
                   onClick={(e) => {
                     e.stopPropagation();
                     if (isOOS) return;
-                    setOpen(false);
                     onSelect(item.id);
+                    setOpen(false);
                   }}
                   className={`p-2 rounded-lg flex items-center justify-between text-left transition-all ${
                     isOOS
@@ -246,10 +253,11 @@ export const BillingItemSelectDropdown: React.FC<BillingItemSelectDropdownProps>
           <span className="text-slate-400 font-medium">Need more options?</span>
           <button
             type="button"
+            onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
-              setOpen(false);
               onOpenModal();
+              setOpen(false);
             }}
             className="text-blue-600 hover:text-blue-700 font-bold hover:underline cursor-pointer"
           >

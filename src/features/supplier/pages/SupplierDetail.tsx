@@ -297,6 +297,11 @@ export default function SupplierDetail() {
   useEffect(() => {
     if (!id || activeTab !== 2) return;
     setHistoryLoading(true);
+    getData(`${ENDPOINTS.PURCHASES}/by/supplier/${SHOP_ID}/${id}`, { exclude_cancel: "true", exclude_draft: "true" })
+      .then((r: any) => {
+        setPurchases(r?.data ? (Array.isArray(r.data) ? r.data : [r.data]) : []);
+      })
+      .catch(() => {});
     supplierApi.getClearedHistory(SHOP_ID, id, { exclude_cancel: true })
       .then((res: any) => {
         let historyList = res?.data ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
@@ -308,7 +313,7 @@ export default function SupplierDetail() {
         showToast("Failed to fetch cleared history", "error");
         setHistoryLoading(false);
       });
-  }, [activeTab, id, showToast]);
+  }, [activeTab, id, showToast, getData]);
 
   // Load custom field definitions + values when supplier is loaded (embedded in General Info sidebar)
   useEffect(() => {
@@ -667,6 +672,16 @@ export default function SupplierDetail() {
 
               if (productsList.length > 0) {
                 const firstItem = productsList[0];
+                const baseCost = Number(p.total_cost ?? p.item_infos?.total_pur_cost ?? pd.totalAmount ?? 0);
+                const gstAmt = Number(p.item_infos?.total_gst_amount ?? pd.gstAmount ?? pd.taxAmount ?? p.tax_amount ?? charges.gst_amount ?? p.charges_infos?.gst_amount ?? 0);
+                const delCharge = Number(p.transport_charge ?? p.charges_infos?.transport_charge ?? charges.delivery_charge ?? 0);
+                const othCharge = Number(p.other_charges ?? p.charges_infos?.other_charge ?? charges.other_charge ?? 0);
+                const computedSum = baseCost + gstAmt + delCharge + othCharge;
+                const rawTotal = Number(p.total_amount ?? p.grand_total ?? p.calculation_infos?.total ?? 0);
+                const fullGrandTotal = (rawTotal >= computedSum && rawTotal > 0) ? rawTotal : (computedSum > 0 ? computedSum : rawTotal);
+                const paidAmt = Number(p.paid_amount ?? p.payment_infos?.[0]?.amount ?? payment.amountPaid ?? 0);
+                const outstandingAmt = p.outstanding_amount ?? p.outstanding ?? Math.max(0, fullGrandTotal - paidAmt);
+
                 rows.push({
                   purchaseId: p.id || p.purchase_id,
                   type: p.type,
@@ -686,13 +701,15 @@ export default function SupplierDetail() {
                   purchaseDate: p.purchase_date || pd.date || p.created_at,
                   paymentMethod: p.payment_infos?.[0]?.method ?? ((p.payment_status && p.payment_status.toLowerCase() === "outstanding") ? "Outstanding" : (payment.method || p.payment_status || '—')),
                   paymentStatus: p.payment_status || pd.payment_status || pd.paymentStatus || p.datas?.payment_status,
-                  amountPaid: p.paid_amount ?? p.payment_infos?.[0]?.amount ?? payment.amountPaid ?? 0,
-                  outstandingAmount: p.outstanding_amount ?? p.outstanding ?? Math.max(0, (Number(p.total_amount ?? p.grand_total ?? p.calculation_infos?.total ?? ((p.total_cost ?? p.item_infos?.total_pur_cost ?? pd.totalAmount ?? 0) + (p.item_infos?.total_gst_amount ?? pd.gstAmount ?? pd.taxAmount ?? p.tax_amount ?? charges.gst_amount ?? p.charges_infos?.gst_amount ?? 0) + (p.transport_charge ?? p.charges_infos?.transport_charge ?? charges.delivery_charge ?? 0) + (p.other_charges ?? p.charges_infos?.other_charge ?? charges.other_charge ?? 0)))) - (p.paid_amount ?? p.payment_infos?.[0]?.amount ?? payment.amountPaid ?? 0)),
-                  grandTotal: Number(p.total_amount ?? p.grand_total ?? p.calculation_infos?.total ?? ((p.total_cost ?? p.item_infos?.total_pur_cost ?? pd.totalAmount ?? 0) + (p.item_infos?.total_gst_amount ?? pd.gstAmount ?? pd.taxAmount ?? p.tax_amount ?? charges.gst_amount ?? p.charges_infos?.gst_amount ?? 0) + (p.transport_charge ?? p.charges_infos?.transport_charge ?? charges.delivery_charge ?? 0) + (p.other_charges ?? p.charges_infos?.other_charge ?? charges.other_charge ?? 0))),
-                  totalCost: p.total_cost ?? p.item_infos?.total_pur_cost ?? pd.totalAmount ?? 0,
-                  gstAmount: p.item_infos?.total_gst_amount ?? pd.gstAmount ?? pd.taxAmount ?? p.tax_amount ?? charges.gst_amount ?? p.charges_infos?.gst_amount ?? 0,
-                  deliveryCharge: p.transport_charge ?? p.charges_infos?.transport_charge ?? charges.delivery_charge ?? 0,
-                  otherCharge: p.other_charges ?? p.charges_infos?.other_charge ?? charges.other_charge ?? 0,
+                  amountPaid: paidAmt,
+                  outstandingAmount: outstandingAmt,
+                  grandTotal: fullGrandTotal,
+                  totalAmount: fullGrandTotal,
+                  totalCost: fullGrandTotal,
+                  baseCost: baseCost,
+                  gstAmount: gstAmt,
+                  deliveryCharge: delCharge,
+                  otherCharge: othCharge,
                   uiId: p.ui_id || d.ui_id || (p.purchase_id ? p.purchase_id.split('-')[0].toUpperCase() : p.id?.slice(-6)),
                   storageLocation: d.storage_location || p.storage_location || '—',
                   version: p.version || d?.version || p.datas?.version || "v1",
@@ -715,6 +732,20 @@ export default function SupplierDetail() {
 
           {activeTab === 2 && (() => {
             const getReturnTypeLabel = (h: any) => {
+              const rawMethod = String(h.payment_method || h.method || "").toUpperCase().trim();
+              if (rawMethod === 'ADJUSTED') {
+                return "ADJUSTED";
+              }
+              if (rawMethod.includes('REFUND')) {
+                return rawMethod.replace(/_/g, ' ');
+              }
+              if (['CASH', 'UPI', 'BANK', 'CHEQUE', 'CARD'].includes(rawMethod)) {
+                return `${rawMethod} REFUND`;
+              }
+              if (rawMethod === 'REFUNDED') {
+                return "REFUNDED";
+              }
+
               const invKey = String(h.invoice_no || h.reference_no || h.ref_no || h.entity_id || "").toLowerCase().trim();
               const matchedPurchase = purchases.find((p: any) => {
                 const pId = String(p.id || p.purchase_id || "").toLowerCase().trim();
@@ -747,12 +778,8 @@ export default function SupplierDetail() {
 
               const isExplicitCashRefund = (cashRefundInReturn > 0 && adjustedInReturn === 0 && !supplierHasOutstanding);
 
-              if (String(h.payment_method).toUpperCase() === 'REFUND' || String(h.payment_method).toUpperCase() === 'REFUNDED') {
-                return "REFUNDED";
-              }
-
               const shouldShowAdjusted = (supplierHasOutstanding || purchaseHasOutstanding) && !isExplicitCashRefund;
-              return shouldShowAdjusted ? "ADJUSTED" : "REFUNDED";
+              return shouldShowAdjusted ? "ADJUSTED" : "RETURN REFUND";
             };
 
             const entryBalanceMap = (() => {
@@ -861,11 +888,12 @@ export default function SupplierDetail() {
                                                    h.type === 'REFUND' || 
                                                    h.type === 'REFUNDED' || 
                                                    h.entity_name?.toLowerCase().includes('return') || 
+                                                   h.entity_name?.toLowerCase().includes('refund') || 
                                                    h.notes?.toLowerCase().includes('purchase return') || 
                                                    h.notes?.toLowerCase().includes('refund') ||
-                                                   h.payment_method?.toLowerCase() === 'adjusted' ||
-                                                   h.payment_method?.toLowerCase() === 'refunded' ||
-                                                   h.payment_method?.toLowerCase() === 'refund';
+                                                   h.payment_method?.toLowerCase().includes('return') ||
+                                                   h.payment_method?.toLowerCase().includes('refund') ||
+                                                   h.payment_method?.toLowerCase() === 'adjusted';
 
                           const returnType = isPurchaseReturn ? getReturnTypeLabel(h) : null;
                           const isAdjusted = returnType === "ADJUSTED";
@@ -895,8 +923,8 @@ export default function SupplierDetail() {
                                 {h.reference_no || h.invoice_no || h.ref_no || h.entity_id || "—"}
                               </td>
                               <td className="px-4 py-3 text-sm font-black whitespace-nowrap">
-                                <span className={isPurchaseReturn ? 'text-emerald-600' : 'text-rose-600'}>
-                                  ₹{displayAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                <span className={isPurchaseReturn ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold'}>
+                                  {isPurchaseReturn ? '+ ' : ''}₹{displayAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </span>
                               </td>
                               <td className="px-4 py-3 text-sm text-slate-700 font-bold whitespace-nowrap">

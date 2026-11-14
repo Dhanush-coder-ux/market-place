@@ -19,6 +19,8 @@ import { inventoryApi, inventoryCustomFieldsApi } from "../../../services/api/in
 import { SHOP_ID } from "../../../services/endpoints";
 import { useToast } from "../../../context/ToastContext";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
+import { useNavigate } from "react-router-dom";
+import { DigitalStoreActionBar } from "../components/DigitalStoreActionBar";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Product {
@@ -503,6 +505,7 @@ function CardMoreMenu({
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 const ProductDashboard = () => {
+  const navigate = useNavigate();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1360,6 +1363,73 @@ const ProductDashboard = () => {
           </div>
         </RightSidebarFilter>
       )}
+
+      <DigitalStoreActionBar
+        status={
+          selectedIds.length > 0 ? (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-full">
+                {selectedIds.length} Product{selectedIds.length !== 1 ? "s" : ""} Selected
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-600">
+                Catalog: <strong className="text-slate-800">{filtered.length}</strong> items
+              </span>
+              <span className="text-xs text-slate-400 hidden sm:inline">•</span>
+              <span className="text-xs text-emerald-600 font-medium hidden sm:inline">
+                {products.filter(p => p.visibleOnApp).length} online
+              </span>
+            </div>
+          )
+        }
+      >
+        {selectedIds.length > 0 ? (
+          <>
+            <button
+              type="button"
+              onClick={() => setSelectedIds([])}
+              className="text-xs font-medium text-slate-400 hover:text-slate-600 px-2.5 py-1.5 transition-colors cursor-pointer"
+            >
+              Clear
+            </button>
+            <button
+              type="button"
+              onClick={() => bulkToggleVisibility(false)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white text-xs font-semibold text-slate-700 border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer"
+            >
+              <EyeOff size={13} /> Hide from App
+            </button>
+            <button
+              type="button"
+              onClick={() => bulkToggleVisibility(true)}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+            >
+              <Eye size={13} /> Show on App
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={() => loadProducts(page)}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white text-xs font-semibold text-slate-700 border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer"
+            >
+              <RefreshCw size={13} />
+              <span>Refresh</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/product/add")}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs sm:text-sm font-semibold shadow-xs transition-colors cursor-pointer"
+            >
+              <Plus size={14} />
+              <span>Add Product</span>
+            </button>
+          </>
+        )}
+      </DigitalStoreActionBar>
     </div>
   );
 };

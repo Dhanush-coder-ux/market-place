@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useBusinessApi } from "@/context/BusinessApiContext";
 import { SHOP_ID } from "@/services/endpoints";
+import { DigitalStoreActionBar } from "../components/DigitalStoreActionBar";
 
 // ─── Types & Interfaces ──────────────────────────────────────────────────────
 
@@ -949,6 +950,91 @@ export default function AnnouncementsPage() {
           </div>
         )}
       </div>
+
+      <DigitalStoreActionBar
+        status={
+          isComposing ? (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-500">
+                {editingId ? "Editing Announcement" : "Composing Announcement"}
+              </span>
+              <span className="text-xs font-bold text-slate-800 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md">
+                {type}
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                publishedCount > 0 ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-slate-100 text-slate-500"
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${publishedCount > 0 ? "bg-emerald-500" : "bg-slate-400"}`} />
+                {publishedCount} Active Broadcast{publishedCount !== 1 ? "s" : ""}
+              </span>
+              <span className="text-xs text-slate-400 hidden sm:inline">
+                Live storefront announcements
+              </span>
+            </div>
+          )
+        }
+      >
+        {isComposing ? (
+          <>
+            <button
+              type="button"
+              disabled={isSaving}
+              onClick={() => {
+                resetForm();
+                setIsComposing(false);
+              }}
+              className="h-9 px-3.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-all cursor-pointer disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={!text.trim() || isSaving}
+              onClick={() => handlePublish(true)}
+              className="h-9 px-3.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Save as Draft
+            </button>
+            <button
+              type="button"
+              disabled={!text.trim() || isSaving}
+              onClick={() => handlePublish(false)}
+              className="h-9 px-5 rounded-xl text-white text-xs sm:text-sm font-semibold shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{
+                backgroundColor: BRAND_GREEN,
+                boxShadow: "0 2px 8px rgba(40, 96, 56, 0.25)",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = BRAND_GREEN_HOVER)}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = BRAND_GREEN)}
+            >
+              {isSaving ? (
+                <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <Send size={14} />
+              )}
+              <span>{editingId ? "Save Changes" : "Publish Announcement"}</span>
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={handleStartCompose}
+            className="inline-flex items-center gap-2 h-9 px-4 rounded-xl text-white text-xs sm:text-sm font-semibold shadow-sm transition-all cursor-pointer"
+            style={{
+              backgroundColor: BRAND_GREEN,
+              boxShadow: "0 2px 8px rgba(40, 96, 56, 0.25)",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = BRAND_GREEN_HOVER)}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = BRAND_GREEN)}
+          >
+            <Plus size={14} />
+            <span>New Announcement</span>
+          </button>
+        )}
+      </DigitalStoreActionBar>
     </div>
   );
 }

@@ -197,8 +197,13 @@ const VariantColumnDropdown: React.FC<VariantColumnDropdownProps> = ({
         const rawBuy = pInfo.buy_price ?? it.buy_price ?? it.cost_price;
         const numBuy = rawBuy !== undefined && rawBuy !== null && !isNaN(Number(rawBuy)) && Number(rawBuy) > 0 ? Number(rawBuy) : null;
         if (numBuy !== null) {
-          const gstAmt = cleanGstRate > 0 ? Math.round((numBuy * (cleanGstRate / 100)) * 100) / 100 : 0;
-          const totalBuy = Math.round((numBuy + gstAmt) * 100) / 100;
+          let totalBuy = numBuy;
+          let gstAmt = 0;
+          if (cleanGstRate > 0) {
+            const rawTotal = numBuy * (1 + cleanGstRate / 100);
+            totalBuy = Math.abs(rawTotal - Math.round(rawTotal)) < 0.01 ? Math.round(rawTotal) : Math.round(rawTotal * 100) / 100;
+            gstAmt = Math.round((totalBuy - numBuy) * 100) / 100;
+          }
           return {
             name,
             numVal: totalBuy,
@@ -789,8 +794,10 @@ const ProductRow = React.memo(
               if (key === "buy_price" && (p.gst || datas.gst || (p as any).gst) && actualNumericPrice && !isNaN(Number(actualNumericPrice))) {
                 const gstRate = parseFloat(String(p.gst || datas.gst || (p as any).gst).replace(/[^0-9.]/g, '')) || 0;
                 if (gstRate > 0) {
-                  gstAmount = Number(actualNumericPrice) * (gstRate / 100);
-                  totalPrice = Number(actualNumericPrice) + gstAmount;
+                  const numPrice = Number(actualNumericPrice);
+                  const rawTotal = numPrice * (1 + gstRate / 100);
+                  totalPrice = Math.abs(rawTotal - Math.round(rawTotal)) < 0.01 ? Math.round(rawTotal) : Math.round(rawTotal * 100) / 100;
+                  gstAmount = Math.round((totalPrice - numPrice) * 100) / 100;
                   isGstApplied = true;
                   displayPrice = formatCurrency(totalPrice);
                 }

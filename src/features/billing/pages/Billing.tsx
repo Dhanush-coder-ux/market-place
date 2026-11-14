@@ -432,11 +432,15 @@ const Billing = () => {
         include_gst: includeGst,
         billing_type: isInvoice ? "INVOICE" : "BILL",
         is_invoice: isInvoice,
+        total_quantity: billTotals.totalQty || totalUnits,
+        total_items: billTotals.lines.length,
         items: billTotals.lines.map(l => {
           const orig = filledItems.find(fi => fi.inventoryId === l.inventoryId || fi.id === l.id);
           const selUnit = orig?.selectedUnit || (orig as any)?.unit || null;
           return {
             product_id: l.inventoryId,
+            variant_id: orig?.variantId || null,
+            batch_id: orig?.batchId || null,
             name: l.name,
             qty: l.qty,
             unit: selUnit,

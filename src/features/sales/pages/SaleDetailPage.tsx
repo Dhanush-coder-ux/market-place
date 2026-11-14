@@ -26,7 +26,7 @@ import { DetailItem, InfoRow, ProfileHeaderCard, SectionCard } from "@/component
 import { AntBadge } from "@/components/ui/AntBadge";
 import { OrderResponse } from "@/features/order/types";
 import SkeletonLoader from "@/components/common/SkeletonLoader";
-import { extractSaleCustomerInfo } from "../type";
+import { extractSaleCustomerInfo, formatUnitName, getSaleQuantityDisplay } from "../type";
 import { ReprintReceiptModal } from "../components/ReprintReceiptModal";
 import { SaleInvoiceModal } from "../components/SaleInvoiceModal";
 import { BiLogoWhatsapp } from "react-icons/bi";
@@ -511,7 +511,7 @@ const generateItems = (
       status: i.status || "COMPLETED",
       reason: i.reason,
       serial_numbers: Array.isArray(i.serialno_infos) ? i.serialno_infos.map((sn: any) => sn.name || sn) : (i.serialno_info?.serial_numbers || i.serial_info?.serial_numbers || i.serial_numbers || []),
-      unit: i.unit_infos?.name || i.unit_info?.name || i.product?.unit || i.unit || i.datas?.unit || matchedProd?.unit || matchedProd?.unit_infos?.name || "UNIT",
+      unit: formatUnitName(i.entered_unit || calc?.entered_unit || calc?.unit || i.unit_infos?.name || i.unit_info?.name || i.product?.unit || i.unit || i.datas?.unit || matchedProd?.unit || matchedProd?.unit_infos?.name),
       variantName: i.variant_infos?.variant_name || i.variant_info?.variant_name || i.variant?.variant_name,
       batchName: i.batch_infos?.batch_name || i.batch_infos?.name || i.batch_info?.batch_name || i.batch?.batch_name,
       mfgDate: i.batch_infos?.mfg_date || i.batch_infos?.manufacturing_date || i.batch_info?.mfg_date || i.batch?.mfg_date,
@@ -524,7 +524,7 @@ const generateItems = (
       entered_qty: (i.entered_unit && (i.unit_infos?.name || i.unit) && String(i.entered_unit).toLowerCase() !== String(i.unit_infos?.name || i.unit).toLowerCase() && i.entered_qty !== undefined && Number(i.entered_qty) > 0)
         ? Number(i.entered_qty)
         : (calc?.entered_qty !== undefined ? Number(calc.entered_qty) : (i.entered_qty !== undefined && Number(i.entered_qty) > qty ? Number(i.entered_qty) : (qty > 1 ? qty : (i.entered_qty ?? undefined)))),
-      entered_unit: i.entered_unit || calc?.entered_unit || calc?.unit || i.unit_infos?.sub_units?.find((su: any) => su.name === i.unit || su.name === calc?.unit)?.name || undefined,
+      entered_unit: formatUnitName(i.entered_unit || calc?.entered_unit || calc?.unit || i.unit_infos?.sub_units?.find((su: any) => su.name === i.unit || su.name === calc?.unit)?.name || i.unit_infos?.name || i.unit),
       unit_infos: i.unit_infos || i.unit_info || i.product?.unit_infos || matchedProd?.unit_infos || null,
     };
   });
@@ -567,7 +567,11 @@ const SaleDetailPage: React.FC = () => {
     const rawItems = Array.isArray(sAny?.items) ? sAny.items : (Array.isArray(sAny?.calculation_infos?.items) ? sAny.calculation_infos.items : []);
     const itemsText = rawItems
       .slice(0, 5)
-      .map((it: any) => `• ${(it.name || it.product_name || "Item")} x ${(it.quantity || it.qty || 1)} - ₹${Number(it.final_inclusive || it.sell_price || it.total_amount || 0).toFixed(2)}`)
+      .map((it: any) => {
+        const u = formatUnitName(it.entered_unit || it.unit || it.unit_infos?.name);
+        const q = it.entered_qty ?? it.quantity ?? it.qty ?? 1;
+        return `• ${(it.name || it.product_name || "Item")} x ${q} ${u} - ₹${Number(it.final_inclusive || it.sell_price || it.total_amount || 0).toFixed(2)}`;
+      })
       .join("\n");
     const moreCount = rawItems.length > 5 ? `\n...and ${rawItems.length - 5} more items` : "";
 
@@ -603,11 +607,11 @@ const SaleDetailPage: React.FC = () => {
             ...found,
             total_sellprice: Number(found.total_sellprice ?? found.calculation_infos?.total ?? found.calculation_infos?.grand_total ?? found.item_infos?.total_order_amount ?? found.total_amount ?? (Array.isArray(found.items) ? found.items.reduce((s: number, item: any) => s + (Number(item.total_amount) || ((Number(item.sell_price) || 0) * (Number(item.quantity) || 1))), 0) : 0) ?? found.total ?? 0),
             total_quantity: Number(
+              (Array.isArray(found.items) && found.items.length > 0 ? found.items.reduce((s: number, item: any) => s + (Number(item.quantity ?? item.qty ?? item.entered_qty ?? 1) || 0), 0) : 0) ||
+              (found.calculation_infos?.items && Array.isArray(found.calculation_infos.items) ? found.calculation_infos.items.reduce((sum: number, item: any) => sum + (Number(item.qty ?? item.quantity ?? 1) || 0), 0) : 0) ||
               found.total_quantity ||
               found.item_infos?.total_order_qty ||
               found.item_infos?.total_order_quantity ||
-              (found.calculation_infos?.items && Array.isArray(found.calculation_infos.items) ? found.calculation_infos.items.reduce((sum: number, item: any) => sum + (Number(item.qty ?? item.quantity ?? 1) || 0), 0) : 0) ||
-              (Array.isArray(found.items) && found.items.length > 0 ? found.items.reduce((s: number, item: any) => s + (Number(item.quantity ?? item.qty ?? item.entered_qty ?? 1) || 0), 0) : 0) ||
               0
             ),
             status: found.status ? found.status.charAt(0).toUpperCase() + found.status.slice(1).toLowerCase() : "Completed",
@@ -1416,6 +1420,10 @@ const SaleDetailPage: React.FC = () => {
                         <span className="text-xs font-bold text-slate-700">{items.length}</span>
                       </div>
                       <div className="flex justify-between items-center">
+                        <span className="text-[11px] font-medium text-slate-400 uppercase tracking-tight">Total Quantity</span>
+                        <span className="text-xs font-bold text-slate-700">{getSaleQuantityDisplay(sale).primaryText}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
                         <span className="text-[11px] font-medium text-slate-400 uppercase tracking-tight">Origin</span>
                         <span className="text-xs font-bold text-slate-700">{sale.origin}</span>
                       </div>
@@ -1624,7 +1632,7 @@ const SaleDetailPage: React.FC = () => {
                                     <div className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md text-[10px] text-slate-650 shadow-sm">
                                       <div className="flex justify-between items-center font-bold">
                                         <span className="text-slate-800">Batch: {item.batchName || "Default"}</span>
-                                        <span className="text-indigo-600">Qty: {getItemDisplayQty(item)} {(item as any).entered_unit || item.unit}</span>
+                                        <span className="text-indigo-600">Qty: {getItemDisplayQty(item)} {formatUnitName((item as any).entered_unit || item.unit)}</span>
                                       </div>
                                       {(item.mfgDate || item.expDate) && (
                                         <div className="flex gap-3 text-[9px] text-slate-400 mt-1 font-medium">
@@ -1651,10 +1659,13 @@ const SaleDetailPage: React.FC = () => {
                             </div>
                           </td>
                           <td className="px-3 py-4 text-center">
-                            <span className="text-xs font-black text-slate-600">{getItemDisplayQty(item)}</span>
+                            <div className="flex items-center justify-center gap-1 font-black text-slate-700">
+                              <span className="text-xs">{getItemDisplayQty(item)}</span>
+                              <span className="text-[10px] text-slate-500 lowercase font-bold">{formatUnitName((item as any).entered_unit || item.unit)}</span>
+                            </div>
                           </td>
                           <td className="px-3 py-4 text-center">
-                            <span className="text-[10px] font-black text-slate-500 uppercase px-2 py-0.5 rounded bg-slate-100">{(item as any).entered_unit || item.unit}</span>
+                            <span className="text-[10px] font-black text-slate-500 uppercase px-2 py-0.5 rounded bg-slate-100">{formatUnitName((item as any).entered_unit || item.unit)}</span>
                           </td>
                           <td className="px-4 py-4 text-right">
                             {(item.totalDiscountAmount || 0) > 0 ? (
@@ -1790,10 +1801,13 @@ const SaleDetailPage: React.FC = () => {
                                   </div>
                                 </td>
                                 <td className="px-6 py-4 text-center">
-                                  <span className="text-xs font-black text-blue-650">{item.entered_qty ?? item.quantity}</span>
+                                  <div className="flex items-center justify-center gap-1 font-black text-blue-650">
+                                    <span className="text-xs">{item.entered_qty ?? item.quantity}</span>
+                                    <span className="text-[10px] text-blue-500 lowercase font-bold">{formatUnitName(item.entered_unit || item.unit_infos?.name || item.unit)}</span>
+                                  </div>
                                 </td>
                                 <td className="px-6 py-4 text-center">
-                                  <span className="text-[10px] font-black text-blue-500 uppercase px-2 py-0.5 rounded bg-blue-50 border border-blue-100">{item.entered_unit || item.unit_infos?.name || item.unit || ""}</span>
+                                  <span className="text-[10px] font-black text-blue-500 uppercase px-2 py-0.5 rounded bg-blue-50 border border-blue-100">{formatUnitName(item.entered_unit || item.unit_infos?.name || item.unit)}</span>
                                 </td>
                                 <td className="px-6 py-4 text-right">
                                   <span className="text-xs font-bold text-slate-500 tabular-nums">{fmt(unitPriceExclGst)}</span>
@@ -1884,7 +1898,7 @@ const SaleDetailPage: React.FC = () => {
                                         <div className="bg-slate-50 p-2 rounded border border-slate-100 max-w-md text-[10px] text-slate-650 shadow-sm">
                                           <div className="flex justify-between items-center font-bold">
                                             <span className="text-slate-800">Batch: {item.batchName || "Default"}</span>
-                                            <span className="text-indigo-600">Qty: {item.quantity}</span>
+                                            <span className="text-indigo-600">Qty: {getItemDisplayQty(item)} {formatUnitName((item as any).entered_unit || item.unit)}</span>
                                           </div>
                                           {(item.mfgDate || item.expDate) && (
                                             <div className="flex gap-3 text-[9px] text-slate-400 mt-1 font-medium">
@@ -1911,10 +1925,13 @@ const SaleDetailPage: React.FC = () => {
                                 </div>
                               </td>
                               <td className="px-6 py-4 text-center">
-                                <span className="text-xs font-black text-slate-600">{getItemDisplayQty(item)}</span>
+                                <div className="flex items-center justify-center gap-1 font-black text-slate-700">
+                                  <span className="text-xs">{getItemDisplayQty(item)}</span>
+                                  <span className="text-[10px] text-blue-500 lowercase font-bold">{formatUnitName((item as any).entered_unit || item.unit)}</span>
+                                </div>
                               </td>
                               <td className="px-6 py-4 text-center">
-                                <span className="text-[10px] font-black text-blue-500 uppercase px-2 py-0.5 rounded bg-blue-50 border border-blue-100">{(item as any).entered_unit || item.unit}</span>
+                                <span className="text-[10px] font-black text-blue-500 uppercase px-2 py-0.5 rounded bg-blue-50 border border-blue-100">{formatUnitName((item as any).entered_unit || item.unit)}</span>
                               </td>
                               <td className="px-6 py-4 text-right">
                                 <span className="text-xs font-bold text-slate-700 tabular-nums">{fmt(item.basePrice)}</span>
@@ -2057,7 +2074,7 @@ const SaleDetailPage: React.FC = () => {
                                       </td>
                                       <td className="px-4 py-3 text-center">
                                         <span className="text-xs font-black text-rose-600">{rItem.entered_qty ?? rItem.quantity}</span>
-                                        <span className="text-[9px] font-black text-rose-400 uppercase block">{rItem.entered_unit || rItem.unit_infos?.name || ""}</span>
+                                        <span className="text-[9px] font-black text-rose-400 uppercase block">{formatUnitName(rItem.entered_unit || rItem.unit_infos?.name || rItem.unit)}</span>
                                       </td>
                                       <td className="px-4 py-3 text-center whitespace-nowrap">
                                         {(() => {
@@ -2163,11 +2180,11 @@ const SaleDetailPage: React.FC = () => {
                                       <td className="px-4 py-3 text-center">
                                         <span className="text-xs font-black text-emerald-700">{repItem.entered_qty ?? repItem.quantity}</span>
                                         {(() => {
-                                          const repUnit = repItem.entered_unit || repItem.unit_infos?.name || repItem.unit || repItem.unit_name || (() => {
+                                          const repUnit = formatUnitName(repItem.entered_unit || repItem.unit_infos?.name || repItem.unit || repItem.unit_name || (() => {
                                             const matched = (sale.items || []).find((si: any) => si.product_id === repItem.product_id);
                                             return (matched as any)?.unit_infos?.name || (matched as any)?.entered_unit || matched?.unit || "";
-                                          })();
-                                          return repUnit ? <span className="text-[9px] font-black text-emerald-500 uppercase block">{repUnit}</span> : null;
+                                          })());
+                                          return <span className="text-[9px] font-black text-emerald-500 uppercase block">{repUnit}</span>;
                                         })()}
                                       </td>
                                       <td className="px-4 py-3 text-center whitespace-nowrap">
@@ -2345,8 +2362,11 @@ const SaleDetailPage: React.FC = () => {
                                   </td>
                                   <td className="px-6 py-4 text-center">
                                     <div className="flex flex-col items-center justify-center">
-                                      <span className="text-xs font-black text-rose-600">{displayQty}</span>
-                                      {displayUnit && <span className="text-[9px] font-black text-rose-400 uppercase mt-0.5">{displayUnit}</span>}
+                                      <div className="flex items-center justify-center gap-1 font-black text-rose-600">
+                                        <span className="text-xs">{displayQty}</span>
+                                        <span className="text-[10px] text-rose-500 lowercase font-bold">{formatUnitName(displayUnit)}</span>
+                                      </div>
+                                      <span className="text-[9px] font-black text-rose-400 uppercase mt-0.5">{formatUnitName(displayUnit)}</span>
                                     </div>
                                   </td>
                                   <td className="px-6 py-4 text-center whitespace-nowrap">

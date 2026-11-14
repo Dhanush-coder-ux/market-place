@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { X, CheckCircle2, AlertCircle, Barcode, CalendarDays, ChevronRight, ArrowLeft, Package, Check, Search } from "lucide-react";
+import { X, CheckCircle2, AlertCircle, Barcode, CalendarDays, ChevronRight, ArrowLeft, Package, Check, Search, Plus, Minus } from "lucide-react";
 import { InventoryItem, ProductVariant, cleanVariantLabel, formatVariantLabel } from "../types";
 import { AntBadge } from "@/components/ui/AntBadge";
 import { calculateDaysToExpiry, formatDate } from "@/features/inventory/components/StockTree";
@@ -49,9 +49,11 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
     if (!product?.variants) return [];
     const raw = Array.isArray(product.variants)
       ? product.variants
-      : (typeof product.variants === 'object' ? Object.values(product.variants) : []);
+      : (typeof product.variants === 'object'
+          ? Object.entries(product.variants).map(([k, v]: [string, any]) => ({ ...(typeof v === 'object' && v !== null ? v : {}), id: v?.id || k }))
+          : []);
 
-    return raw.map((v: any) => {
+    return raw.map((v: any, idx: number) => {
       const combDatas = v.datas || {};
       const variantLabel = formatVariantLabel(v, combDatas);
 
@@ -71,23 +73,25 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
       }
       if (stock === undefined) stock = 0;
 
-      const batches = (v.batches || v.batch_infos || []).map((b: any) => ({
+      const batches = (v.batches || v.batch_infos || []).map((b: any, bIdx: number) => ({
         ...b,
-        batchId: b.id,
+        batchId: b.id || b.batchId || `batch-${bIdx}`,
         price: b.pricing_infos?.sell_price || b.sell_price || price,
         stock: b.stock_infos?.available_stocks !== undefined ? b.stock_infos?.available_stocks : (b.stocks !== undefined ? b.stocks : (b.stock !== undefined ? b.stock : 0)),
       }));
 
+      const vId = String(v.id || v._id || v.variant_id || v.combination_id || v.datas?.id || v.datas?._id || (v.sku ? `sku-${v.sku}` : `var-${product.id || 'prod'}-${idx}`));
+
       return {
         ...v,
-        id: v.id || String(Math.random()),
+        id: vId,
         name: variantLabel,
         price,
         stock,
         batches,
       };
     });
-  }, [product?.variants, product?.price]);
+  }, [product?.variants, product?.price, product?.id]);
 
   const executeSubmit = (v: ProductVariant | null, b: any | null, s: string[], qty: number) => {
     const activeV = v || selectedVariant;
@@ -122,7 +126,8 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
       }
     }
 
-    onSuccess(finalVariant, qty, s);
+    const finalQty = typeof qty === 'number' && qty > 0 ? qty : 1;
+    onSuccess(finalVariant, finalQty, s);
   };
 
   // Body Scroll Lock
@@ -143,10 +148,11 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
     if (hasVariants) s.push("variant");
     if (hasBatches) s.push("batch");
     if (isElectronics) s.push("serial");
+    s.push("summary");
     return s;
   }, [hasVariants, hasBatches, isElectronics]);
 
-  const currentStep = steps[stepIndex];
+  const currentStep = steps[stepIndex] || steps[0] || "summary";
 
   // Batches to select helper
   const batchesToSelect = useMemo(() => {
@@ -166,7 +172,13 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
     if (isOpen && product) {
       if (normalizedVariants.length > 0 && !((normalizedVariants[0] as any).isBatchOnly || normalizedVariants[0].name.startsWith("Batch: "))) {
         if (initialVariantId) {
-          const v = normalizedVariants.find(x => x.id === initialVariantId || (x as any)._id === initialVariantId || (x as any).combination_id === initialVariantId);
+          const v = normalizedVariants.find(x =>
+            x.id === initialVariantId ||
+            (x as any)._id === initialVariantId ||
+            (x as any).variant_id === initialVariantId ||
+            (x as any).combination_id === initialVariantId ||
+            cleanVariantLabel(x.name) === cleanVariantLabel(initialVariantId)
+          );
           setSelectedVariant(v || null);
         } else {
           setSelectedVariant(null);
@@ -191,6 +203,8 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
           setStepIndex(steps.indexOf("batch"));
         } else if (isElectronics && steps.includes("serial")) {
           setStepIndex(steps.indexOf("serial"));
+        } else if (steps.includes("summary")) {
+          setStepIndex(steps.indexOf("summary"));
         } else {
           setStepIndex(0);
         }
@@ -199,6 +213,8 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
           setStepIndex(steps.indexOf("serial"));
         } else if (steps.includes("batch")) {
           setStepIndex(steps.indexOf("batch"));
+        } else if (steps.includes("summary")) {
+          setStepIndex(steps.indexOf("summary"));
         } else {
           setStepIndex(0);
         }
@@ -310,6 +326,7 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
     if (currentStep === "variant") return !!selectedVariant;
     if (currentStep === "batch") return !!selectedBatch;
     if (currentStep === "serial") return selectedSerials.length === quantity && quantity > 0;
+    if (currentStep === "summary") return quantity > 0;
     return true;
   })();
 
@@ -412,10 +429,11 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                             disabled={isOutOfStock}
                             onClick={() => {
                               setSelectedVariant(variant);
-                              if (steps.length === 1) {
-                                executeSubmit(variant, selectedBatch, selectedSerials, quantity);
+                              const vIdx = steps.indexOf("variant");
+                              if (vIdx >= 0 && vIdx < steps.length - 1) {
+                                setStepIndex(vIdx + 1);
                               } else {
-                                setStepIndex(1);
+                                executeSubmit(variant, selectedBatch, selectedSerials, quantity);
                               }
                             }}
                             className={`group flex items-center gap-4 p-4 rounded-lg border-2 text-left transition-all duration-200 ${isOutOfStock ? "opacity-40 cursor-not-allowed border-slate-50 bg-slate-50/50" :
@@ -494,13 +512,11 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                             disabled={isOutOfStock}
                             onClick={() => {
                               setSelectedBatch(batch);
-                              if (currentStep === steps[steps.length - 1]) {
-                                executeSubmit(selectedVariant, batch, selectedSerials, quantity);
+                              const bIdx = steps.indexOf("batch");
+                              if (bIdx >= 0 && bIdx < steps.length - 1) {
+                                setStepIndex(bIdx + 1);
                               } else {
-                                const batchIdx = steps.indexOf("batch");
-                                if (batchIdx < steps.length - 1) {
-                                  setStepIndex(batchIdx + 1);
-                                }
+                                executeSubmit(selectedVariant, batch, selectedSerials, quantity);
                               }
                             }}
                             className={`group flex items-center gap-4 p-4 rounded-lg border-2 text-left transition-all duration-200 ${isOutOfStock ? "opacity-40 cursor-not-allowed border-slate-50 bg-slate-50/50" :
@@ -567,32 +583,90 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                   <div className="flex items-center justify-between">
                     <p className="text-[11px] font-bold text-slate-400">Quantity & Serials</p>
                   </div>
-                  <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-lg border border-slate-100">
-                    <div className="flex-1">
-                      <label className="block text-[10px] font-bold text-slate-400 mb-1">Enter Quantity</label>
-                      <input
-                        type="number"
-                        min="1"
-                        max={(() => {
-                          const m = availableSerials.length || 1;
-                          return maxAllowedQuantity !== undefined ? Math.min(maxAllowedQuantity, m) : m;
-                        })()}
-                        value={quantity}
-                        onChange={(e) => {
-                          let val = Math.max(1, Number(e.target.value));
-                          const limit = maxAllowedQuantity !== undefined ? Math.min(maxAllowedQuantity, availableSerials.length || 1) : (availableSerials.length || 1);
-                          val = Math.min(val, limit);
-                          setQuantity(val);
-                          const currentSerials = Array.isArray(selectedSerials) ? selectedSerials : [];
-                          if (currentSerials.length > val) {
-                            setSelectedSerials(currentSerials.slice(0, val));
-                          }
-                        }}
-                        className="w-full bg-transparent text-xl font-bold text-slate-800 focus:outline-none"
-                      />
+                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-100">
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 mb-1.5">Enter Quantity</label>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          disabled={quantity <= 1}
+                          onClick={() => {
+                            const nextVal = Math.max(1, (quantity || 1) - 1);
+                            setQuantity(nextVal);
+                            const currentSerials = Array.isArray(selectedSerials) ? selectedSerials : [];
+                            if (currentSerials.length > nextVal) {
+                              setSelectedSerials(currentSerials.slice(0, nextVal));
+                            }
+                          }}
+                          className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-100 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer font-bold text-sm shadow-2xs transition-all"
+                          aria-label="Decrease quantity"
+                        >
+                          <Minus size={14} />
+                        </button>
+                        <input
+                          type="number"
+                          min="1"
+                          max={(() => {
+                            const m = availableSerials.length || 1;
+                            return maxAllowedQuantity !== undefined ? Math.min(maxAllowedQuantity, m) : m;
+                          })()}
+                          value={quantity || ""}
+                          onFocus={(e) => e.target.select()}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            if (v === "") {
+                              setQuantity(0);
+                              return;
+                            }
+                            const limit = maxAllowedQuantity !== undefined ? Math.min(maxAllowedQuantity, availableSerials.length || 1) : (availableSerials.length || 1);
+                            let val = Math.max(1, Number(v));
+                            if (!isNaN(limit) && limit > 0) {
+                              val = Math.min(val, limit);
+                            }
+                            setQuantity(val);
+                            const currentSerials = Array.isArray(selectedSerials) ? selectedSerials : [];
+                            if (val > 0 && currentSerials.length > val) {
+                              setSelectedSerials(currentSerials.slice(0, val));
+                            }
+                          }}
+                          onBlur={() => {
+                            const limit = maxAllowedQuantity !== undefined ? Math.min(maxAllowedQuantity, availableSerials.length || 1) : (availableSerials.length || 1);
+                            let safeVal = quantity;
+                            if (!safeVal || safeVal < 1) safeVal = 1;
+                            if (limit > 0 && safeVal > limit) safeVal = limit;
+                            setQuantity(safeVal);
+                            const currentSerials = Array.isArray(selectedSerials) ? selectedSerials : [];
+                            if (currentSerials.length > safeVal) {
+                              setSelectedSerials(currentSerials.slice(0, safeVal));
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "ArrowDown" && quantity <= 1) {
+                              e.preventDefault();
+                            }
+                          }}
+                          className="w-16 h-8 px-2 py-1 text-sm font-bold text-slate-800 bg-white border border-slate-200 rounded-lg outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                        <button
+                          type="button"
+                          disabled={(() => {
+                            const limit = maxAllowedQuantity !== undefined ? Math.min(maxAllowedQuantity, availableSerials.length || 1) : (availableSerials.length || 1);
+                            return quantity >= limit;
+                          })()}
+                          onClick={() => {
+                            const limit = maxAllowedQuantity !== undefined ? Math.min(maxAllowedQuantity, availableSerials.length || 1) : (availableSerials.length || 1);
+                            const nextVal = Math.min(limit, (quantity || 0) + 1);
+                            setQuantity(nextVal);
+                          }}
+                          className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-100 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer font-bold text-sm shadow-2xs transition-all"
+                          aria-label="Increase quantity"
+                        >
+                          <Plus size={14} />
+                        </button>
+                      </div>
                     </div>
                     <div className="w-px h-10 bg-slate-200" />
-                    <div className="flex-1 text-right">
+                    <div className="text-right">
                       <span className="text-[10px] font-bold text-slate-400 block mb-1">In Stock</span>
                       <span className="text-lg font-bold text-emerald-500">{availableSerials.length}</span>
                     </div>
@@ -624,10 +698,10 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                 <div className="flex flex-col flex-1 min-h-0 space-y-3">
                   <div className="flex items-center justify-between shrink-0">
                     <p className="text-[11px] font-bold text-slate-400 flex items-center gap-1.5">
-                      <Barcode size={14} /> Select {quantity} Serial{quantity !== 1 ? 's' : ''}
+                      <Barcode size={14} /> Select {quantity || 0} Serial{(quantity || 0) !== 1 ? 's' : ''}
                     </p>
-                    <AntBadge variant={selectedSerials.length === quantity ? "ps-completed" : "lb-brand"} type="pill">
-                      {selectedSerials.length} / {quantity}
+                    <AntBadge variant={selectedSerials.length === quantity && quantity > 0 ? "ps-completed" : "lb-brand"} type="pill">
+                      {selectedSerials.length} / {quantity || 0}
                     </AntBadge>
                   </div>
 
@@ -726,31 +800,66 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                       {isElectronics ? (
                         <p className="text-sm font-bold text-slate-800">{quantity} Units</p>
                       ) : (
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            min="1"
-                            max={(() => {
-                              const m = selectedBatch?.stock ?? selectedBatch?.stocks ?? selectedVariant?.stock ?? product.stocks ?? 9999;
-                              return maxAllowedQuantity !== undefined ? Math.min(maxAllowedQuantity, m) : m;
-                            })()}
-                            value={quantity}
-                            onChange={(e) => {
-                              let val = Math.max(1, Number(e.target.value));
-                              const m = selectedBatch?.stock ?? selectedBatch?.stocks ?? selectedVariant?.stock ?? product.stocks ?? 9999;
-                              const limit = maxAllowedQuantity !== undefined ? Math.min(maxAllowedQuantity, m) : m;
-                              val = Math.min(val, limit);
-                              setQuantity(val);
-                            }}
-                            className="w-16 px-2 py-1 text-sm font-bold text-slate-800 bg-white border border-slate-200 rounded outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all text-center"
-                          />
-                          <span className="text-xs font-bold text-slate-600">Units</span>
-                        </div>
+                        (() => {
+                          const isStockTracked = (product as any).isStockTracked !== false && (product as any).track_stock !== false && (product as any).have_tracking !== false;
+                          const maxStock = isStockTracked ? (selectedBatch?.stock ?? selectedBatch?.stocks ?? selectedVariant?.stock ?? product.stocks ?? 9999) : 9999;
+                          const effectiveMax = maxAllowedQuantity !== undefined ? Math.min(maxAllowedQuantity, maxStock) : maxStock;
+
+                          return (
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                disabled={quantity <= 1}
+                                onClick={() => setQuantity(prev => Math.max(1, (prev || 1) - 1))}
+                                className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-100 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer font-bold text-sm shadow-2xs transition-all"
+                              >
+                                -
+                              </button>
+                              <input
+                                type="number"
+                                min="1"
+                                max={effectiveMax}
+                                value={quantity || ""}
+                                onFocus={(e) => e.target.select()}
+                                onChange={(e) => {
+                                  const v = e.target.value;
+                                  if (v === "") {
+                                    setQuantity(0);
+                                    return;
+                                  }
+                                  let val = Math.max(1, Number(v));
+                                  if (!isNaN(effectiveMax) && effectiveMax > 0) {
+                                    val = Math.min(val, effectiveMax);
+                                  }
+                                  setQuantity(val);
+                                }}
+                                onBlur={() => {
+                                  if (!quantity || quantity < 1) setQuantity(1);
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === "ArrowDown" && quantity <= 1) {
+                                    e.preventDefault();
+                                  }
+                                }}
+                                className="w-16 h-8 px-2 py-1 text-sm font-bold text-slate-800 bg-white border border-slate-200 rounded-lg outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              />
+                              <button
+                                type="button"
+                                disabled={effectiveMax ? quantity >= effectiveMax : false}
+                                onClick={() => setQuantity(prev => (effectiveMax ? Math.min(effectiveMax, (prev || 0) + 1) : (prev || 0) + 1))}
+                                className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-100 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer font-bold text-sm shadow-2xs transition-all"
+                              >
+                                +
+                              </button>
+                              <span className="text-xs font-bold text-slate-600 ml-1">Units</span>
+                            </div>
+                          );
+                        })()
                       )}
                     </div>
                     <div className="text-right">
                       <p className="text-[10px] font-bold text-slate-400 mb-0.5">Total</p>
-                      <p className="text-sm font-bold text-blue-600">{fmt((selectedVariant?.price || 0) * quantity)}</p>
+                      <p className="text-sm font-bold text-blue-600">{fmt((selectedVariant?.price || 0) * (quantity || 1))}</p>
                     </div>
                   </div>
 

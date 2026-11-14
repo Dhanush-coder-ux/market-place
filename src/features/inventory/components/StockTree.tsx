@@ -747,7 +747,8 @@ export const BatchCards = ({ batches, parentGst, parentBuyPrice, parentSellPrice
                           </span>
                         )}
                         {displaySellPrice > 0 && displayBuyPrice > 0 && (() => {
-                          const bProfit = Math.round((sellTaxable - displayBuyPrice) * 100) / 100;
+                          const baseBuy = Number(batchBuyPrice) || 0;
+                          const bProfit = Math.round((sellTaxable - baseBuy) * 100) / 100;
                           const bMargin = sellTaxable > 0 ? ((bProfit / sellTaxable) * 100) : 0;
                           return (
                             <span className="text-[8px] font-medium leading-tight mt-0.5">
@@ -1106,7 +1107,8 @@ export const VariantRows = ({
                           </span>
                         )}
                         {displaySellPrice > 0 && displayBuyPrice > 0 && (() => {
-                          const varProfit = Math.round((sellTaxable - displayBuyPrice) * 100) / 100;
+                          const baseBuy = Number(buyPrice) || 0;
+                          const varProfit = Math.round((sellTaxable - baseBuy) * 100) / 100;
                           const varMargin = sellTaxable > 0 ? ((varProfit / sellTaxable) * 100) : 0;
                           return (
                             <span className="text-[9px] font-medium leading-tight mt-0.5">

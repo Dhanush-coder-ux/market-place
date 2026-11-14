@@ -6,7 +6,7 @@ import { shopApi } from "@/services/api/shop";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID, getShopId } from "@/services/endpoints";
 import { InvoiceRenderer } from "@/features/billing/components/InvoiceRenderer";
-import { extractSaleCustomerInfo } from "../type";
+import { extractSaleCustomerInfo, formatUnitName } from "../type";
 import type { BillingItem } from "@/features/billing/types";
 import { type BillTotals, calculateTaxSplit } from "@/utils/pricing";
 
@@ -117,7 +117,7 @@ export const SaleInvoiceModal: React.FC<SaleInvoiceModalProps> = ({
         productMap[it.inventory_id] ||
         `Item ${idx + 1}`;
 
-      const qty = Number(it.quantity ?? it.qty ?? 1);
+      const qty = Number(it.entered_qty ?? it.quantity ?? it.qty ?? 1);
       const price = Number(it.sell_price ?? it.price ?? it.unit_price ?? 0);
       const mrp = Number(it.mrp ?? it.datas?.mrp ?? price);
       const rawGst = it.gst_rate ?? it.gst ?? it.tax_rate ?? 0;
@@ -140,7 +140,7 @@ export const SaleInvoiceModal: React.FC<SaleInvoiceModalProps> = ({
         lineDiscountValue: Number(it.line_discount_value || 0),
         taxable_rate: taxableRate,
         gst_amount: gstAmt,
-        unit: it.unit || it.unit_infos?.name || "Units",
+        unit: formatUnitName(it.entered_unit || it.unit || it.unit_infos?.name),
       };
     });
   }, [activeSale, productMap]);
@@ -411,7 +411,7 @@ export const SaleInvoiceModal: React.FC<SaleInvoiceModalProps> = ({
     const shopName = shopData?.name || localStorage.getItem("shop_name") || "Our Store";
     const itemsText = parsedItems
       .slice(0, 5)
-      .map((it) => `• ${it.name} x ${it.qty} - ₹${Number(it.price * it.qty).toFixed(2)}`)
+      .map((it: any) => `• ${it.name} x ${it.qty} ${(it.unit || "")} - ₹${Number(it.price * it.qty).toFixed(2)}`)
       .join("\n");
     const moreCount = parsedItems.length > 5 ? `
 ...and ${parsedItems.length - 5} more items` : "";

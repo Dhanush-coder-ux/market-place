@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import { Clock, ChevronDown, Copy, Sun, Moon, Check, Timer, CheckCircle2 } from "lucide-react";
 import { useBusinessApi } from "@/context/BusinessApiContext";
 import { SHOP_ID } from "@/services/endpoints";
+import { DigitalStoreActionBar } from "../components/DigitalStoreActionBar";
 
 /** Parse "HH:MM:SS+00:00" → { hour24, minute } */
 function parseTimeString(t: string): { hour24: number; minute: number } {
@@ -518,19 +519,38 @@ export default function OperatingHours({ shopId, initialHours, onStatusChange }:
             );
           })}
         </div>
-
-        <div className="flex justify-end pt-5 border-t border-slate-100 mt-5">
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[13.5px] font-bold text-white transition-all shadow-md ${isSaving ? 'opacity-70 cursor-not-allowed' : 'hover:opacity-90 cursor-pointer'}`}
-            style={{ background: "#3b82f6", boxShadow: "0 4px 14px rgba(59,130,246,0.3)" }}
-          >
-            {isSaving ? <Timer size={15} className="animate-spin" /> : <Check size={15} strokeWidth={3} />}
-            {isSaving ? "Saving..." : "Save Operating Hours"}
-          </button>
-        </div>
       </div>
+
+      <DigitalStoreActionBar
+        status={
+          <div className="flex items-center gap-2">
+            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
+              openCount > 0 ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-slate-100 text-slate-500"
+            }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${openCount > 0 ? "bg-emerald-500" : "bg-slate-400"}`} />
+              {openCount} / 7 Days Open
+            </span>
+            <span className="text-xs text-slate-400 hidden sm:inline">
+              Store operating schedule for online orders
+            </span>
+          </div>
+        }
+      >
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={isSaving}
+          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white transition-all shadow-sm ${
+            isSaving
+              ? "opacity-70 cursor-not-allowed bg-blue-400"
+              : "bg-blue-600 hover:bg-blue-700 active:scale-98 cursor-pointer"
+          }`}
+          style={{ boxShadow: "0 2px 10px rgba(59,130,246,0.3)" }}
+        >
+          {isSaving ? <Timer size={15} className="animate-spin" /> : <Check size={15} strokeWidth={3} />}
+          <span>{isSaving ? "Saving..." : "Save Operating Hours"}</span>
+        </button>
+      </DigitalStoreActionBar>
     </div>
   );
 }

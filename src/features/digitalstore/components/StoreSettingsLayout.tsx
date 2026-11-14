@@ -16,6 +16,7 @@ import { ShopProfileForm } from "../../Setting/pages/ShopProfileForm";
 import OperatingHours from "../pages/OperatingHours";
 import DeliveryPreferences from "../pages/Deliveryinfo";
 import { useToast } from "@/context/ToastContext";
+import { DigitalStoreActionBar } from "./DigitalStoreActionBar";
 
 export type SettingSection = "details" | "hours" | "delivery" | "returns" | "vacation" | "danger";
 
@@ -272,7 +273,7 @@ export function StoreSettingsLayout({
 
 
   return (
-    <div className={`bg-white rounded-2xl border border-slate-200/90 overflow-hidden shadow-xs ${hideInternalNav ? "w-full" : "flex flex-col md:flex-row md:min-h-[600px] mb-20 md:mb-0"}`}>
+    <div className={`${hideInternalNav ? "w-full" : "bg-white rounded-2xl border border-slate-200/90 overflow-hidden shadow-xs flex flex-col md:flex-row md:min-h-[600px] mb-20 md:mb-0"}`}>
 
       {/* ── Left Sidebar (Horizontal pill bar on mobile, sidebar on md+) ── */}
       {!hideInternalNav && (
@@ -312,7 +313,7 @@ export function StoreSettingsLayout({
       )}
 
       {/* ── Right Content ── */}
-      <div className={`flex-1 overflow-y-auto ${hideInternalNav ? "p-4 sm:p-6 lg:p-7" : "p-4 sm:p-6"}`}>
+      <div className={`flex-1 ${hideInternalNav ? "p-0" : "overflow-y-auto p-4 sm:p-6"}`}>
 
         {/* ── Store Details ── */}
         {activeSection === "details" && (
@@ -364,14 +365,6 @@ export function StoreSettingsLayout({
                   Set your store's default return window and refund rules. Applies globally to all products unless overridden individually.
                 </p>
               </div>
-              <button
-                onClick={handleSaveReturns}
-                disabled={savingReturns || savedReturns}
-                className={`inline-flex items-center gap-2 h-9 px-4 ${savedReturns ? 'bg-emerald-600 hover:bg-emerald-700 opacity-90' : 'bg-blue-600 hover:bg-blue-700'} disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-all shrink-0 ml-4 cursor-pointer`}
-              >
-                {savedReturns ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Save className="w-3.5 h-3.5" />}
-                {savingReturns ? "Saving…" : savedReturns ? "Saved" : "Save Changes"}
-              </button>
             </div>
 
             {/* Choose Policy Preset */}
@@ -520,6 +513,30 @@ export function StoreSettingsLayout({
                 </div>
               </div>
             </div>
+
+            <DigitalStoreActionBar
+              status={
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500 font-medium">Selected Policy:</span>
+                  <span className="text-xs font-bold text-slate-800 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md">
+                    {policyTitle || "Default Return Policy"}
+                  </span>
+                </div>
+              }
+            >
+              <button
+                type="button"
+                onClick={handleSaveReturns}
+                disabled={savingReturns || savedReturns}
+                className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white transition-all shadow-sm cursor-pointer disabled:opacity-50 ${
+                  savedReturns ? "bg-emerald-600 hover:bg-emerald-700" : "bg-blue-600 hover:bg-blue-700 active:scale-98"
+                }`}
+                style={{ boxShadow: "0 2px 10px rgba(59,130,246,0.3)" }}
+              >
+                {savedReturns ? <CheckCircle2 size={15} /> : <Save size={15} />}
+                <span>{savingReturns ? "Saving Policy…" : savedReturns ? "Policy Saved" : "Save Return Policy"}</span>
+              </button>
+            </DigitalStoreActionBar>
           </div>
         )}
 
@@ -533,14 +550,6 @@ export function StoreSettingsLayout({
                   Temporarily pause online orders and display a notice to visitors.
                 </p>
               </div>
-              <button
-                onClick={handleSaveVacation}
-                disabled={savingVacation || savedVacation}
-                className={`inline-flex items-center gap-2 h-9 px-4 ${savedVacation ? 'bg-emerald-600 hover:bg-emerald-700 opacity-90' : 'bg-blue-600 hover:bg-blue-700'} disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-all shrink-0 ml-4`}
-              >
-                {savedVacation ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Save className="w-3.5 h-3.5" />}
-                {savingVacation ? "Saving…" : savedVacation ? "Saved" : "Save Changes"}
-              </button>
             </div>
 
             <div className="bg-white rounded-xl border border-slate-200 p-5">
@@ -589,6 +598,32 @@ export function StoreSettingsLayout({
                 </div>
               )}
             </div>
+
+            <DigitalStoreActionBar
+              status={
+                <div className="flex items-center gap-2">
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                    vacationEnabled ? "bg-amber-50 text-amber-800 border border-amber-200" : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${vacationEnabled ? "bg-amber-500 animate-pulse" : "bg-emerald-500"}`} />
+                    {vacationEnabled ? "Vacation Mode Active (Orders Paused)" : "Store Active (Accepting Orders)"}
+                  </span>
+                </div>
+              }
+            >
+              <button
+                type="button"
+                onClick={handleSaveVacation}
+                disabled={savingVacation || savedVacation}
+                className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white transition-all shadow-sm cursor-pointer disabled:opacity-50 ${
+                  savedVacation ? "bg-emerald-600 hover:bg-emerald-700" : "bg-blue-600 hover:bg-blue-700 active:scale-98"
+                }`}
+                style={{ boxShadow: "0 2px 10px rgba(59,130,246,0.3)" }}
+              >
+                {savedVacation ? <CheckCircle2 size={15} /> : <Save size={15} />}
+                <span>{savingVacation ? "Saving…" : savedVacation ? "Saved" : "Save Vacation Settings"}</span>
+              </button>
+            </DigitalStoreActionBar>
           </div>
         )}
 
@@ -658,6 +693,33 @@ export function StoreSettingsLayout({
                 </div>
               </div>
             </div>
+
+            <DigitalStoreActionBar
+              status={
+                <div className="flex items-center gap-1.5 text-xs text-rose-600 font-semibold">
+                  <AlertTriangle size={14} />
+                  <span>Storefront deactivation & deletion actions</span>
+                </div>
+              }
+            >
+              <button
+                type="button"
+                onClick={handleTurnOffStore}
+                disabled={turningOff}
+                className="h-9 px-3.5 border border-amber-300 hover:bg-amber-50 text-amber-800 text-xs font-semibold rounded-xl transition-all cursor-pointer disabled:opacity-50"
+              >
+                {turningOff ? "Turning Off..." : "Turn Off Store"}
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteStore}
+                disabled={deleting || confirmDelete !== "DELETE"}
+                className="h-9 px-4 bg-red-600 hover:bg-red-700 disabled:opacity-40 text-white text-xs font-semibold rounded-xl transition-all inline-flex items-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
+              >
+                <Trash2 size={13} />
+                <span>{deleting ? "Deleting…" : "Permanently Delete"}</span>
+              </button>
+            </DigitalStoreActionBar>
           </div>
         )}
 

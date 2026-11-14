@@ -21,7 +21,7 @@ import {
 import { PrinterConfigModal } from "@/features/billing/components/PrinterConfigModal";
 import { QRCodeSVG } from "qrcode.react";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
-import { extractSaleCustomerInfo } from "../type";
+import { extractSaleCustomerInfo, formatUnitName } from "../type";
 import { useToast } from "@/context/ToastContext";
 import { calculateTaxSplit } from "@/utils/pricing";
 
@@ -259,7 +259,7 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
         productMap[it.inventory_id] ||
         `Item ${idx + 1}`;
 
-      const qty = Number(it.quantity ?? it.qty ?? 1);
+      const qty = Number(it.entered_qty ?? it.quantity ?? it.qty ?? 1);
       const unitPrice = Number(it.sell_price ?? it.price ?? it.unit_price ?? 0);
       const totalAmount = Number(
         it.total_amount ??
@@ -273,7 +273,7 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
         it.discount_amount ??
         0
       );
-      const unit = it.unit || it.unit_infos?.name || "Units";
+      const unit = formatUnitName(it.entered_unit || it.unit || it.unit_infos?.name);
 
       return {
         id: it.id || idx,

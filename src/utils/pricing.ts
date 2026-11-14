@@ -19,6 +19,7 @@ export interface ProductPricingInfo {
   discountPercent?: number; // 0 - 99.99
   offerValidUntil?: string | null;
   costPrice?: number;
+  costGstMode?: 'inclusive' | 'exclusive';
 }
 
 export interface BillLineInput {
@@ -124,8 +125,8 @@ export function calculateTaxSplit(inclusivePrice: number, gstRate: number): TaxS
     };
   }
 
-  const gstAmount = Math.round((cleanInclusive * (cleanRate / 100)) * 100) / 100;
-  const taxableValue = Math.round((cleanInclusive - gstAmount) * 100) / 100;
+  const taxableValue = Math.round((cleanInclusive / (1 + cleanRate / 100)) * 100) / 100;
+  const gstAmount = Math.round((cleanInclusive - taxableValue) * 100) / 100;
   const cgst = Math.round((gstAmount / 2) * 100) / 100;
   const sgst = Math.round((gstAmount - cgst) * 100) / 100; // ensures cgst + sgst == gstAmount
 
@@ -178,11 +179,22 @@ export function calculateProductEffectivePrice(input: ProductPricingInfo & { isG
   }
 
   // Profit calculation:
-  // Profit = taxable_value - cost_price (taxable value is base excluding GST)
-  const costPrice = input.costPrice !== undefined && input.costPrice !== null ? Number(input.costPrice) : undefined;
-  const profit = costPrice !== undefined ? Math.round((tax.taxableValue - costPrice) * 100) / 100 : undefined;
-  const marginPercent = costPrice !== undefined && tax.taxableValue > 0
-    ? Math.round(((tax.taxableValue - costPrice) / tax.taxableValue * 100) * 10) / 10
+  // Both selling and buying values used for profit and margin must be pre-GST base values (exclusive of GST):
+  // Selling base price = tax.taxableValue (selling price excluding GST)
+  // Buying base price = costPrice (if inclusive, clean base is extracted via calculateTaxSplit or / (1 + gstRate/100))
+  let baseCostPrice: number | undefined = undefined;
+  if (input.costPrice !== undefined && input.costPrice !== null) {
+    const rawCost = Number(input.costPrice);
+    if (!isNaN(rawCost)) {
+      baseCostPrice = (input.costGstMode === 'inclusive' && gstRate > 0)
+        ? calculateTaxSplit(rawCost, gstRate).taxableValue
+        : rawCost;
+    }
+  }
+
+  const profit = baseCostPrice !== undefined ? Math.round((tax.taxableValue - baseCostPrice) * 100) / 100 : undefined;
+  const marginPercent = baseCostPrice !== undefined && tax.taxableValue > 0
+    ? Math.round(((tax.taxableValue - baseCostPrice) / tax.taxableValue * 100) * 10) / 10
     : undefined;
 
   return {
@@ -198,7 +210,57 @@ export function calculateProductEffectivePrice(input: ProductPricingInfo & { isG
     offMrpPercent,
     profit,
     marginPercent,
+    baseCostPrice,
     isGstRegistered: isGstReg,
+  };
+}
+
+/**
+ * Calculates profit and profit margin percentage using pre-GST base values.
+ * Selling base price: Sell Price excluding GST (taxable value)
+ * Buying base price: Buy Price excluding GST (base cost)
+ * Profit = Base Selling Price - Base Buying Price
+ * Margin % = (Profit / Base Selling Price) * 100
+ */
+export function calculateProfitAndMargin(params: {
+  sellingPrice: number;
+  buyingPrice: number;
+  gstRate?: number;
+  sellingGstMode?: 'inclusive' | 'exclusive';
+  buyingGstMode?: 'inclusive' | 'exclusive';
+  isGstRegistered?: boolean;
+}): {
+  baseSellingPrice: number;
+  baseBuyingPrice: number;
+  profit: number;
+  marginPercent: number;
+} {
+  const isGstReg = params.isGstRegistered !== undefined ? params.isGstRegistered : isShopGstRegistered();
+  const gstRate = isGstReg ? Math.max(0, Number(params.gstRate) || 0) : 0;
+
+  const rawSp = Math.max(0, Number(params.sellingPrice) || 0);
+  const rawBp = Math.max(0, Number(params.buyingPrice) || 0);
+
+  const sellingGstMode = params.sellingGstMode || 'inclusive';
+  const baseSellingPrice = (sellingGstMode === 'inclusive' && gstRate > 0)
+    ? calculateTaxSplit(rawSp, gstRate).taxableValue
+    : rawSp;
+
+  const buyingGstMode = params.buyingGstMode || 'exclusive';
+  const baseBuyingPrice = (buyingGstMode === 'inclusive' && gstRate > 0)
+    ? calculateTaxSplit(rawBp, gstRate).taxableValue
+    : rawBp;
+
+  const profit = Math.round((baseSellingPrice - baseBuyingPrice) * 100) / 100;
+  const marginPercent = baseSellingPrice > 0
+    ? Math.round(((profit / baseSellingPrice) * 100) * 10) / 10
+    : 0;
+
+  return {
+    baseSellingPrice,
+    baseBuyingPrice,
+    profit,
+    marginPercent,
   };
 }
 

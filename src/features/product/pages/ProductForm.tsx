@@ -672,11 +672,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         discountPercent: numDiscount,
         offerValidUntil: form.offer_valid_until || null,
         isGstRegistered: isGstReg,
-        costPrice: effectiveCostToMake,
+        costPrice: numCostToMake,
       });
     }
     return null;
-  }, [numSellingPrice, numMrp, gstRateNum, numDiscount, form.offer_valid_until, isGstReg, effectiveCostToMake]);
+  }, [numSellingPrice, numMrp, gstRateNum, numDiscount, form.offer_valid_until, isGstReg, numCostToMake]);
 
   const pricingHelperState = useMemo(() => {
     const hasMrp = numMrp > 0;
@@ -2360,14 +2360,14 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                               <>
                                 <strong>Live GST split:</strong> ₹{formatINR(priceCalc.tax.taxableValue)} base + ₹{formatINR(priceCalc.tax.gstAmount)} GST {gstRateNum}% = ₹{formatINR(priceCalc.finalPrice)}
                                 {numCostToMake > 0 && (
-                                  <span className="text-slate-500 font-medium ml-1">· Cost: ₹{formatINR(effectiveCostToMake)}</span>
+                                  <span className="text-slate-500 font-medium ml-1">· Base Cost: ₹{formatINR(numCostToMake)}</span>
                                 )}
                               </>
                             ) : (
                               <>
                                 <strong>Selling price:</strong> ₹{formatINR(priceCalc.finalPrice)}
                                 {numCostToMake > 0 && (
-                                  <span className="text-slate-500 font-medium ml-1">· Cost: ₹{formatINR(effectiveCostToMake)}</span>
+                                  <span className="text-slate-500 font-medium ml-1">· Base Cost: ₹{formatINR(numCostToMake)}</span>
                                 )}
                               </>
                             )}

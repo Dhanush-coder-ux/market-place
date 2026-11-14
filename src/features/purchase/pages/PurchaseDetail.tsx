@@ -209,6 +209,15 @@ export const PurchaseReturnDialog = ({
 
   const selectedItems = returnItems.filter((r) => r.returnQty > 0);
   const totalReturnGst = selectedItems.reduce((sum, r) => {
+    let unitPriceIncl = r.buy_price * (1 + r.gst_rate / 100);
+    if (r.gst_type === "INCLUSIVE") {
+      if (Math.abs(unitPriceIncl - Math.round(unitPriceIncl)) < 0.01) {
+        unitPriceIncl = Math.round(unitPriceIncl);
+      }
+      const lineTotal = Math.round(r.returnQty * unitPriceIncl * 100) / 100;
+      const lineTaxable = r.gst_rate > 0 ? Math.round((lineTotal / (1 + r.gst_rate / 100)) * 100) / 100 : lineTotal;
+      return sum + (lineTotal - lineTaxable);
+    }
     const itemBase = r.returnQty * r.buy_price;
     if (r.gst_type === "EXCLUSIVE") {
       return sum + itemBase * (r.gst_rate / 100);
@@ -217,6 +226,13 @@ export const PurchaseReturnDialog = ({
   }, 0);
   const returnValue = selectedItems.reduce(
     (sum, r) => {
+      let unitPriceIncl = r.buy_price * (1 + r.gst_rate / 100);
+      if (r.gst_type === "INCLUSIVE") {
+        if (Math.abs(unitPriceIncl - Math.round(unitPriceIncl)) < 0.01) {
+          unitPriceIncl = Math.round(unitPriceIncl);
+        }
+        return sum + Math.round(r.returnQty * unitPriceIncl * 100) / 100;
+      }
       const itemBase = r.returnQty * r.buy_price;
       let gstAmount = 0;
       if (r.gst_type === "EXCLUSIVE") {
@@ -266,7 +282,13 @@ export const PurchaseReturnDialog = ({
           buy_price: r.buy_price,
           gst: `${r.gst_rate}%`,
           gst_rate: r.gst_rate,
-          gst_amount: r.gst_type === "EXCLUSIVE" ? Number((r.returnQty * r.buy_price * (r.gst_rate / 100)).toFixed(2)) : 0,
+          gst_amount: r.gst_type === "EXCLUSIVE" ? Number((r.returnQty * r.buy_price * (r.gst_rate / 100)).toFixed(2)) : Number(((() => {
+            let uIncl = r.buy_price * (1 + r.gst_rate / 100);
+            if (Math.abs(uIncl - Math.round(uIncl)) < 0.01) uIncl = Math.round(uIncl);
+            const lTot = r.returnQty * uIncl;
+            const lTax = r.gst_rate > 0 ? lTot / (1 + r.gst_rate / 100) : lTot;
+            return lTot - lTax;
+          })()).toFixed(2)),
         })),
       };
       const result = await postData(`${ENDPOINTS.PURCHASES}/returns`, payload);
@@ -382,8 +404,15 @@ export const PurchaseReturnDialog = ({
                             <span className="text-[10px] text-slate-500 font-semibold flex items-center gap-1">
                               {item.gst_rate > 0 ? (
                                 <>
-                                  <span className="text-slate-700 font-bold">{fmt(item.gst_type === "EXCLUSIVE" ? item.buy_price * (1 + item.gst_rate / 100) : item.buy_price)}</span>
-                                  <span className="text-slate-400 font-medium">(Base: {fmt(item.gst_type === "EXCLUSIVE" ? item.buy_price : item.buy_price / (1 + item.gst_rate / 100))})</span>
+                                  <span className="text-slate-700 font-bold">{fmt((() => {
+                                    let u = item.buy_price * (1 + item.gst_rate / 100);
+                                    return Math.abs(u - Math.round(u)) < 0.01 ? Math.round(u) : u;
+                                  })())}</span>
+                                  <span className="text-slate-400 font-medium">(Base: {fmt((() => {
+                                    let u = item.buy_price * (1 + item.gst_rate / 100);
+                                    if (Math.abs(u - Math.round(u)) < 0.01) u = Math.round(u);
+                                    return item.gst_type === "EXCLUSIVE" ? item.buy_price : u / (1 + item.gst_rate / 100);
+                                  })())})</span>
                                 </>
                               ) : (
                                 <span className="text-slate-700 font-bold">{fmt(item.buy_price)}</span>
@@ -394,7 +423,11 @@ export const PurchaseReturnDialog = ({
                               <>
                                 <span className="text-[10px] text-slate-300">•</span>
                                 <span className="text-[10px] text-rose-600 font-bold">
-                                  Return value: {fmt(item.gst_type === "EXCLUSIVE" ? (item.returnQty * item.buy_price) * (1 + item.gst_rate / 100) : item.returnQty * item.buy_price)}
+                                  Return value: {fmt((() => {
+                                    let u = item.buy_price * (1 + item.gst_rate / 100);
+                                    if (Math.abs(u - Math.round(u)) < 0.01) u = Math.round(u);
+                                    return item.gst_type === "EXCLUSIVE" ? (item.returnQty * item.buy_price) * (1 + item.gst_rate / 100) : item.returnQty * u;
+                                  })())}
                                 </span>
                               </>
                             )}
@@ -481,8 +514,9 @@ export const PurchaseReturnDialog = ({
               <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 space-y-2">
                 <p className="text-[10px] font-black text-rose-600 uppercase tracking-wider mb-3">Return Summary</p>
                 {selectedItems.map((item, idx) => {
-                  const itemBase = item.returnQty * item.buy_price;
-                  const itemTotal = item.gst_type === "EXCLUSIVE" ? itemBase + (itemBase * (item.gst_rate / 100)) : itemBase;
+                  let u = item.buy_price * (1 + item.gst_rate / 100);
+                  if (Math.abs(u - Math.round(u)) < 0.01) u = Math.round(u);
+                  const itemTotal = item.gst_type === "EXCLUSIVE" ? (item.returnQty * item.buy_price) * (1 + item.gst_rate / 100) : item.returnQty * u;
                   return (
                     <div key={idx} className="flex justify-between items-center text-xs">
                       <div className="flex items-center gap-1.5 flex-wrap">
@@ -771,35 +805,55 @@ const PurchaseDetail = () => {
   const { settings } = usePurchaseSettings();
   const isGstRegistered = settings?.gstType === "registered";
 
+  const isGstInclusive = String(
+    po.gst_type ||
+    po.calculation_infos?.gst_type ||
+    po.gst_infos?.type ||
+    (po as any).calculations?.gst_type ||
+    ""
+  ).toUpperCase() === "INCLUSIVE";
+
   const totalQty = po.products.reduce(
     (sum, item) => sum + (item.quantity || 0),
     0
   );
 
-  const subtotal = po.products.reduce(
-    (sum, item) => sum + (item.buy_price || 0) * (item.quantity || 0),
-    0
-  );
+  let computedSubtotal = 0;
+  let computedGst = 0;
 
-  const totalGst = po.products.reduce((sum, item) => {
-    let gst = 0;
+  po.products.forEach((item) => {
+    const q = Number(item.quantity) || 0;
+    const bp = Number(item.buy_price) || 0;
+    const gstVal = typeof item.gst === "string" ? parseFloat(String(item.gst).replace("%", "")) : Number(item.gst ?? 0);
 
-    if (typeof item.gst === "string") {
-      gst = parseFloat(String(item.gst).replace("%", ""));
+    if (isGstInclusive) {
+      let unitPriceIncl = bp * (1 + gstVal / 100);
+      if (Math.abs(unitPriceIncl - Math.round(unitPriceIncl)) < 0.01) {
+        unitPriceIncl = Math.round(unitPriceIncl);
+      }
+      const lineTotal = Math.round(q * unitPriceIncl * 100) / 100;
+      const lineTaxable = gstVal > 0 ? Math.round((lineTotal / (1 + gstVal / 100)) * 100) / 100 : lineTotal;
+      const lineGst = Math.round((lineTotal - lineTaxable) * 100) / 100;
+
+      computedSubtotal += lineTaxable;
+      computedGst += lineGst;
     } else {
-      gst = Number(item.gst ?? 0);
-    }
+      const lineTaxable = Math.round(q * bp * 100) / 100;
+      const lineGst = gstVal > 0 ? Math.round((lineTaxable * (gstVal / 100)) * 100) / 100 : 0;
 
-    return sum + ((item.buy_price || 0) * (item.quantity || 0) * gst) / 100;
-  }, 0);
+      computedSubtotal += lineTaxable;
+      computedGst += lineGst;
+    }
+  });
+
+  const subtotal = Math.round(computedSubtotal * 100) / 100;
+  const totalGst = Math.round(computedGst * 100) / 100;
 
   const transportCharge = po.charges?.transport || 0;
   const otherCharge = po.charges?.other || 0;
   const totalAdditional = transportCharge + otherCharge || po.additional_charges_total || 0;
 
-  const grandTotal =
-    subtotal +
-    totalGst;
+  const grandTotal = Math.round((subtotal + totalGst) * 100) / 100;
 
   const effectiveGrandTotal =
     (subtotal + totalGst) > 0 ? (subtotal + totalGst) : (po.grand_total || po.total_cost || 0);
@@ -1195,8 +1249,32 @@ const PurchaseDetail = () => {
                         const q = Number(product.quantity) || 0;
                         const baseBuyPrice = Number(product.buy_price) || 0;
                         const gstVal = typeof product.gst === "string" ? parseFloat(String(product.gst).replace("%", "")) : Number(product.gst ?? 0);
-                        const rowGstPerUnit = (baseBuyPrice * gstVal) / 100;
-                        const rowGstTotal = q * rowGstPerUnit;
+
+                        let unitPriceIncl = baseBuyPrice * (1 + gstVal / 100);
+                        if (isGstInclusive) {
+                          if (Math.abs(unitPriceIncl - Math.round(unitPriceIncl)) < 0.01) {
+                            unitPriceIncl = Math.round(unitPriceIncl);
+                          }
+                        }
+
+                        let lineTotal = 0;
+                        let lineTaxable = 0;
+                        let lineGst = 0;
+                        let rowGstPerUnit = 0;
+
+                        if (isGstInclusive) {
+                          lineTotal = Math.round(q * unitPriceIncl * 100) / 100;
+                          lineTaxable = gstVal > 0 ? Math.round((lineTotal / (1 + gstVal / 100)) * 100) / 100 : lineTotal;
+                          lineGst = Math.round((lineTotal - lineTaxable) * 100) / 100;
+                          rowGstPerUnit = q > 0 ? lineGst / q : 0;
+                        } else {
+                          lineTaxable = Math.round(q * baseBuyPrice * 100) / 100;
+                          lineGst = gstVal > 0 ? Math.round((lineTaxable * (gstVal / 100)) * 100) / 100 : 0;
+                          lineTotal = Math.round((lineTaxable + lineGst) * 100) / 100;
+                          rowGstPerUnit = (baseBuyPrice * gstVal) / 100;
+                        }
+                        const rowGstTotal = lineGst;
+                        const effectiveUnitBase = isGstInclusive && q > 0 ? lineTaxable / q : baseBuyPrice;
 
                         const distributeBy = String((po as any).calculation_infos?.distribute_by || (po as any).calculation_infos?.divided_by || "").toUpperCase();
                         let allocPerUnit = 0;
@@ -1204,11 +1282,11 @@ const PurchaseDetail = () => {
                           if (distributeBy === "BY_UNIT" && totalQty > 0) {
                             allocPerUnit = totalAdditional / totalQty;
                           } else if (distributeBy === "BY_VALUE" && subtotal > 0) {
-                            allocPerUnit = (baseBuyPrice / subtotal) * totalAdditional;
+                            allocPerUnit = (effectiveUnitBase / subtotal) * totalAdditional;
                           } else if (distributeBy === "BY_EQUAL" && po.products.length > 0) {
                             allocPerUnit = (totalAdditional / po.products.length) / (q > 0 ? q : 1);
                           } else if (subtotal > 0) {
-                            allocPerUnit = (baseBuyPrice / subtotal) * totalAdditional;
+                            allocPerUnit = (effectiveUnitBase / subtotal) * totalAdditional;
                           } else if (totalQty > 0) {
                             allocPerUnit = totalAdditional / totalQty;
                           }
@@ -1216,9 +1294,11 @@ const PurchaseDetail = () => {
                         const allocTotal = q * allocPerUnit;
 
                         const landedCostPerUnit = isGstRegistered
-                          ? (baseBuyPrice + allocPerUnit)
-                          : (baseBuyPrice + rowGstPerUnit + allocPerUnit);
-                        const itemTotalLanded = q * landedCostPerUnit;
+                          ? (effectiveUnitBase + allocPerUnit)
+                          : (unitPriceIncl + allocPerUnit);
+                        const itemTotalLanded = isGstRegistered
+                          ? (lineTaxable + allocTotal)
+                          : (lineTotal + allocTotal);
 
                         return (
                           <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
@@ -1416,10 +1496,12 @@ const PurchaseDetail = () => {
                             <td className="px-4 py-4 text-right">
                               {product.buy_price !== undefined ? (
                                 <div className="flex flex-col items-end">
-                                  <span className="text-xs font-black text-slate-800 tabular-nums">{fmt(baseBuyPrice + rowGstPerUnit)}</span>
-                                  {rowGstPerUnit > 0 && (
+                                  <span className="text-xs font-black text-slate-800 tabular-nums">
+                                    {fmt(isGstInclusive ? unitPriceIncl : baseBuyPrice + rowGstPerUnit)}
+                                  </span>
+                                  {(rowGstPerUnit > 0 || (isGstInclusive && gstVal > 0)) && (
                                     <span className="text-[10px] text-slate-500 font-medium mt-0.5 whitespace-nowrap">
-                                      Base: {fmt(baseBuyPrice)}
+                                      Base: {fmt(effectiveUnitBase)}
                                     </span>
                                   )}
                                 </div>
@@ -1473,10 +1555,10 @@ const PurchaseDetail = () => {
                             <td className="px-5 py-4 text-right">
                               {product.buy_price !== undefined ? (
                                 <div className="flex flex-col items-end">
-                                  <span className="text-sm font-black text-slate-800 tabular-nums">{fmt(baseBuyPrice * q)}</span>
+                                  <span className="text-sm font-black text-slate-800 tabular-nums">{fmt(lineTaxable)}</span>
                                   {gstVal > 0 && (
                                     <span className="text-xs text-indigo-600 font-semibold mt-0.5 whitespace-nowrap">
-                                      ₹{(baseBuyPrice * q + rowGstTotal).toFixed(2)} incl. GST
+                                      ₹{lineTotal.toFixed(2)} incl. GST
                                     </span>
                                   )}
                                 </div>
@@ -1548,6 +1630,7 @@ const PurchaseDetail = () => {
 
                           let itemsBaseTotal = 0;
                           let calculatedGst = 0;
+                          let itemsGrossTotal = 0;
                           const overallGstRate = subtotal > 0 ? (totalGst / subtotal) * 100 : 0;
 
                           if (Array.isArray(ret.items) && ret.items.length > 0) {
@@ -1571,15 +1654,26 @@ const PurchaseDetail = () => {
                                 poProd?.buy_price ??
                                 0
                               );
-                              const itemBase = qty * price;
+                              const itemBase = Math.round(qty * price * 100) / 100;
                               itemsBaseTotal += itemBase;
 
-                              if (item.gst_amount !== undefined && item.gst_amount !== null && !isNaN(Number(item.gst_amount)) && Number(item.gst_amount) > 0) {
-                                calculatedGst += Number(item.gst_amount);
+                              const rawGst = item.gst ?? item.gst_rate ?? item.tax_gst ?? item.taxGst ?? poProd?.gst ?? (overallGstRate > 0 ? overallGstRate : 0);
+                              const gstRate = Number(typeof rawGst === 'number' ? rawGst : (parseFloat(String(rawGst).replace('%', '')) || 0));
+
+                              let itemGstAmt = Number(item.gst_amount ?? 0);
+                              if (itemGstAmt <= 0 && gstRate > 0) {
+                                let uGross = price * (1 + gstRate / 100);
+                                if (Math.abs(uGross - Math.round(uGross)) < 0.01) uGross = Math.round(uGross);
+                                const lTot = Math.round(qty * uGross * 100) / 100;
+                                itemGstAmt = Math.max(0, Math.round((lTot - itemBase) * 100) / 100);
+                              }
+                              calculatedGst += itemGstAmt;
+
+                              const lineRefund = Number(item.refund_amount ?? 0);
+                              if (lineRefund > 0 && Math.abs(lineRefund - itemBase) > 0.01) {
+                                itemsGrossTotal += lineRefund;
                               } else {
-                                const rawGst = item.gst ?? item.gst_rate ?? item.tax_gst ?? item.taxGst ?? poProd?.gst ?? (overallGstRate > 0 ? overallGstRate : 0);
-                                const gstRate = Number(typeof rawGst === 'number' ? rawGst : (parseFloat(String(rawGst).replace('%', '')) || 0));
-                                calculatedGst += (itemBase * (gstRate / 100));
+                                itemsGrossTotal += (itemBase + itemGstAmt);
                               }
                             });
                           }
@@ -1592,25 +1686,28 @@ const PurchaseDetail = () => {
                             itemsBaseTotal = storedReturnValue;
                           }
                           if (calculatedGst === 0 && overallGstRate > 0 && itemsBaseTotal > 0) {
-                            calculatedGst = itemsBaseTotal * (overallGstRate / 100);
+                            let uGross = itemsBaseTotal * (1 + overallGstRate / 100);
+                            if (Math.abs(uGross - Math.round(uGross)) < 0.01) uGross = Math.round(uGross);
+                            calculatedGst = Math.round((uGross - itemsBaseTotal) * 100) / 100;
                           }
 
-                          const gstAmount = Number(ret.total_gst_amount ?? ret.gst_amount ?? ret.gst_total ?? payInfo.gst_amount ?? payInfo.total_gst_amount ?? calculatedGst ?? 0);
+                          const storedGst = Number(ret.total_gst_amount || ret.gst_amount || ret.gst_total || payInfo.gst_amount || payInfo.total_gst_amount || 0);
+                          const gstAmount = storedGst > 0 ? storedGst : (calculatedGst > 0 ? calculatedGst : 0);
 
-                          // Return Value is the base item return value (e.g. ₹50)
-                          let effectiveReturnValue = itemsBaseTotal > 0 ? itemsBaseTotal : storedReturnValue;
-                          if (effectiveReturnValue > itemsBaseTotal && itemsBaseTotal > 0 && gstAmount > 0 && Math.abs(effectiveReturnValue - (itemsBaseTotal + gstAmount)) < 0.01) {
-                            effectiveReturnValue = itemsBaseTotal;
-                          } else if (gstAmount > 0 && effectiveReturnValue >= gstAmount && (itemsBaseTotal === 0 || Math.abs(effectiveReturnValue - (50 + gstAmount)) < 0.01 || Math.abs(effectiveReturnValue - (storedCashRefund)) < 0.01)) {
-                            // If return value was recorded as gross (e.g. 59) while GST is 9, base return value is 50
-                            if (effectiveReturnValue === storedReturnValue && storedReturnValue > gstAmount && (storedCashRefund === 0 || storedCashRefund === storedReturnValue || storedCashRefund === effectiveReturnValue)) {
-                              effectiveReturnValue = storedReturnValue - gstAmount;
-                            }
+                          // Return Value is the total return value (Base + GST, e.g. ₹100.00)
+                          let effectiveReturnValue = storedReturnValue;
+                          const totalCalculatedValue = itemsGrossTotal > 0 ? itemsGrossTotal : (itemsBaseTotal + gstAmount);
+
+                          // If storedReturnValue is 0 or only recorded base amount (without GST), use the full gross return value (Base + GST)
+                          if (effectiveReturnValue <= 0 || (gstAmount > 0 && Math.abs(effectiveReturnValue - itemsBaseTotal) < 0.01)) {
+                            effectiveReturnValue = totalCalculatedValue > 0 ? totalCalculatedValue : effectiveReturnValue;
                           }
 
-                          // Cash Refund is the combined value (Return Value + GST) minus adjusted outstanding (e.g. 50 + 9 = 59)
-                          const combinedRefundValue = effectiveReturnValue + gstAmount;
-                          let effectiveCashRefund = Math.max(0, combinedRefundValue - adjusted);
+                          // Cash Refund is total Return Value minus adjusted outstanding
+                          let effectiveCashRefund = storedCashRefund;
+                          if (effectiveCashRefund <= 0 || (gstAmount > 0 && Math.abs(effectiveCashRefund - itemsBaseTotal) < 0.01)) {
+                            effectiveCashRefund = Math.max(0, effectiveReturnValue - adjusted);
+                          }
 
                           const reason = payInfo.reason || ret.reason || "—";
                           const status = ret.status || "—";

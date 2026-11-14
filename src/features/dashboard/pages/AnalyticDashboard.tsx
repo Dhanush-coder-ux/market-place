@@ -692,17 +692,17 @@ const AnalyticsDashboard = () => {
           const name = productNameMap[pid] || item.name || "Product";
           const qty = Number(item.quantity ?? item.stocks ?? 1);
           const rev = Number(item.total_amount ?? (Number(item.sell_price || 0) * qty));
-          const rawBuyPrice = Number(item.cost_at_sale ?? item.costPrice ?? item.buy_price ?? 0);
+          const rawBuyPrice = Number(item.raw_buy_price ?? item.buy_price ?? item.costPrice ?? item.cost_at_sale ?? 0);
           const rawGst = Number(String(item.gst ?? item.gst_rate ?? "0").replace(/[^0-9.]/g, "")) || 0;
-          const buyPriceWithGst = rawGst > 0 && rawBuyPrice > 0 ? (rawBuyPrice + Math.round((rawBuyPrice * (rawGst / 100)) * 100) / 100) : rawBuyPrice;
-          const cost = item.cost_amounts !== undefined ? Number(item.cost_amounts) : (buyPriceWithGst * qty);
-          const profit = item.profit_amounts !== undefined ? Number(item.profit_amounts) : (rev - cost);
+          const revTaxable = rawGst > 0 ? (rev / (1 + rawGst / 100)) : rev;
+          const cost = item.cost_amounts !== undefined ? Number(item.cost_amounts) : (rawBuyPrice * qty);
+          const profit = item.profit_amounts !== undefined ? Number(item.profit_amounts) : (revTaxable - cost);
 
           if (!prodMap[pid]) {
             prodMap[pid] = { product_id: pid, name, total_qty: 0, total_revenue: 0, total_profit: 0 };
           }
           prodMap[pid].total_qty += qty;
-          prodMap[pid].total_revenue += rev;
+          prodMap[pid].total_revenue += revTaxable;
           prodMap[pid].total_profit += profit;
         });
       });
@@ -724,8 +724,9 @@ const AnalyticsDashboard = () => {
         const pName = productNameMap[p.product_id] || p.product_name || p.name || p.product_id || "Product";
         const totalQty = Number(p.total_sales_stocks ?? (p.total_sales_amounts ? 1 : 0));
         const totalRev = Number(p.total_sales_amounts ?? p.total_revenue ?? 0);
-        const totalCostVal = Number(p.total_purchase_amounts ?? 0);
-        const totalProfitVal = totalRev > 0 ? (totalRev - totalCostVal) : 0;
+        const unitCost = Number(p.buy_price ?? p.cost_price ?? 0);
+        const totalCostVal = Number(p.total_cost ?? (unitCost * totalQty));
+        const totalProfitVal = Number(p.total_profit ?? (totalRev > 0 ? (totalRev - totalCostVal) : 0));
         return {
           ...p,
           name: pName,

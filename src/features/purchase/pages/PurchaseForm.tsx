@@ -287,7 +287,8 @@ const PurchaseForm = () => {
 
           // Populate gst mode
           const gstModeValue = data.calculation_infos?.gst_type || data.calculations?.gst_type || data.gst_infos?.type;
-          setGstMode(gstModeValue?.toLowerCase() === "exclusive" ? "exclusive" : "inclusive");
+          const isInclusiveMode = gstModeValue?.toLowerCase() === "inclusive";
+          setGstMode(isInclusiveMode ? "inclusive" : "exclusive");
 
           const itemsSource = data.items || data.products || [];
           const updatedProducts = [...itemsSource.map((p: any) => {
@@ -296,6 +297,10 @@ const PurchaseForm = () => {
             const pBuyPrice = p.pricing_infos?.[0]?.buy_price ?? p.pricing_infos?.buy_price ?? p.buy_price;
             const pSellPrice = p.pricing_infos?.[0]?.sell_price ?? p.pricing_infos?.sell_price ?? p.sell_price;
             const pStorage = p.storage_locations?.[0]?.name ?? p.storage_locations?.[0]?.storage_location ?? p.storage_location_infos?.name ?? p.storage_location_infos?.storage_location ?? p.datas?.storage_location ?? "";
+            const pTaxGst = (p.gst ?? p.datas?.gst ?? p.taxGst ?? p.tax_gst) !== undefined ? parseGst(p.gst ?? p.datas?.gst ?? p.taxGst ?? p.tax_gst) : 18;
+            const displayCostPrice = isInclusiveMode && pTaxGst > 0 && pBuyPrice
+              ? Number((pBuyPrice * (1 + pTaxGst / 100)).toFixed(2))
+              : pBuyPrice;
 
             return {
               // Store the real backend item ID (used in update payload). Never generate a temp ID here
@@ -308,7 +313,7 @@ const PurchaseForm = () => {
               name: p.name || "",
               quantity: qty,
               originalQuantity: qty,
-              costPrice: pBuyPrice,
+              costPrice: displayCostPrice,
               sellingPrice: pSellPrice,
               marginPercent: "",
               marginAmount: "",
@@ -316,7 +321,7 @@ const PurchaseForm = () => {
               unit: p.unit || p.unit_infos?.name || "pc",
               unit_infos: p.unit_infos || null,
               selectedUnit: p.unit || p.selectedUnit || p.unit_infos?.name || "pc",
-              taxGst: (p.gst ?? p.datas?.gst ?? p.taxGst ?? p.tax_gst) !== undefined ? parseGst(p.gst ?? p.datas?.gst ?? p.taxGst ?? p.tax_gst) : 18,
+              taxGst: pTaxGst,
               variant_id: p.variant_id || p.variant_infos?.id || ((typeof p.variant === 'object' && p.variant !== null) ? p.variant.variant_id : null),
               variant: p.variant_infos?.name || (typeof p.variant === 'object' && p.variant !== null ? p.variant.variant_name || p.variant.name : p.variant) || "",
               sku: parsedSku,
@@ -640,7 +645,7 @@ const PurchaseForm = () => {
           storage_location_infos: p.storageLoc ? { name: p.storageLoc } : null,
           reorder_point_infos: p.reorderPoint ? { reorder_point: Number(p.reorderPoint) } : null,
           pricing_infos: {
-            buy_price: Number(rowBaseCost.toFixed(2)),
+            buy_price: gstMode === "inclusive" ? rowBaseCost : Number(rowBaseCost.toFixed(2)),
             sell_price: Number(finalSellPrice.toFixed(2)),
             mrp: p.mrp !== undefined && p.mrp !== null && p.mrp !== "" ? Number(p.mrp) : undefined
           },
@@ -705,6 +710,9 @@ const PurchaseForm = () => {
           calculation_infos: {
             distribute_by: costMethodMap[costMethod] || "NONE",
             gst_type: gstMode
+          },
+          gst_infos: {
+            type: gstMode.toUpperCase()
           },
           charges_infos: {
             transport_charge: Number(charges.transport) || 0,

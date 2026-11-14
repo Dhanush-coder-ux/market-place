@@ -757,7 +757,7 @@ const DigitalMain = () => {
         </header>
 
         {/* Content Body */}
-        <div className={`flex-1 min-h-0 ${activeTab === "Products" ? "overflow-hidden p-3 sm:p-5 flex flex-col" : "overflow-y-auto p-4 sm:p-6 custom-scrollbar"}`}>
+        <div className={`flex-1 min-h-0 ${activeTab === "Products" ? "overflow-hidden p-3 sm:p-5 flex flex-col" : "overflow-y-auto p-4 sm:p-6 custom-scrollbar pb-24"}`}>
           <div
             key={`${activeTab}-${activeSettingSection}`}
             className={activeTab === "Products" ? "flex-1 min-h-0 flex flex-col h-full" : undefined}
@@ -775,6 +775,14 @@ const DigitalMain = () => {
             )}
           </div>
         </div>
+
+        {/* ── Fixed Bottom Action Bar Section ── */}
+        <footer className="shrink-0 bg-white/95 backdrop-blur-md border-t border-slate-200/90 px-4 sm:px-6 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] z-20 flex items-center justify-between gap-3 min-h-[60px]">
+          <div id="digital-store-bottom-status" className="flex items-center gap-2 min-w-0 flex-1">
+            <span className="text-xs text-slate-400 font-medium">Digital Store Actions</span>
+          </div>
+          <div id="digital-store-bottom-actions" className="flex items-center gap-2.5 sm:gap-3 shrink-0 ml-auto" />
+        </footer>
       </main>
 
       {/* ── Confirmation Modal for Turning Off Digital Store ── */}

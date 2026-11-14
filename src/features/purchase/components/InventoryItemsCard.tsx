@@ -961,7 +961,8 @@ export const InventoryItemsCard = ({
             }
             const spTax = calculateTaxSplit(sellingPriceInclusive, gstRate);
             const spTaxableValue = spTax.taxableValue;
-            const profitAmount = Math.round((spTaxableValue - landedCostPerUnit) * 100) / 100;
+            const baseCostToCompare = rowBaseCost + allocPerUnit;
+            const profitAmount = Math.round((spTaxableValue - baseCostToCompare) * 100) / 100;
             const marginPercent = spTaxableValue > 0 ? ((profitAmount / spTaxableValue) * 100) : 0;
             const isExceedingMrp = rowMrp > 0 && sellingPriceInclusive > rowMrp;
             const isExpanded = expandedSettings.has(index) || expandedBreakdown.has(index);
@@ -1276,7 +1277,8 @@ export const InventoryItemsCard = ({
                 // Extract GST from inclusive selling price (Rule 1)
                 const spTax = calculateTaxSplit(sellingPriceInclusive, gstRate);
                 const spTaxableValue = spTax.taxableValue;
-                const profitAmount = Math.round((spTaxableValue - landedCostPerUnit) * 100) / 100;
+                const baseCostToCompare = rowBaseCost + allocPerUnit;
+                const profitAmount = Math.round((spTaxableValue - baseCostToCompare) * 100) / 100;
                 const marginPercent = spTaxableValue > 0 ? ((profitAmount / spTaxableValue) * 100) : 0;
                 const customerSavings = rowMrp > sellingPriceInclusive ? Math.round((rowMrp - sellingPriceInclusive) * 100) / 100 : 0;
                 const offMrpPercent = rowMrp > 0 && customerSavings > 0 ? Math.round(((customerSavings / rowMrp) * 100) * 10) / 10 : 0;

@@ -22,6 +22,7 @@ import { SHOP_ID } from "@/services/endpoints";
 import { shopApi } from "@/services/api/shop";
 import Loader from "@/components/common/Loader";
 import { NavigationBlocker } from "@/components/common/NavigationBlocker";
+import { DigitalStoreActionBar } from "@/features/digitalstore/components/DigitalStoreActionBar";
 
 interface ShopProfileFormProps {
   editPath?: string;
@@ -557,6 +558,36 @@ export const ShopProfileForm: React.FC<ShopProfileFormProps> = ({ editPath }) =>
           </div>,
           document.body
         )}
+
+      <DigitalStoreActionBar
+        status={
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-xs font-bold text-slate-700 truncate">{name}</span>
+            <span className="text-xs text-slate-400">•</span>
+            <span className={`text-xs font-medium ${rawShop?.visible_online ? "text-emerald-600" : "text-slate-500"}`}>
+              {rawShop?.visible_online ? "Live Online" : "Offline"}
+            </span>
+          </div>
+        }
+      >
+        <a
+          href={storeUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 px-3 py-2 border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-semibold rounded-xl transition-colors"
+        >
+          <span>Preview Store</span>
+          <ExternalLink size={12} />
+        </a>
+        <button
+          type="button"
+          onClick={() => navigate(editPath || `/setup-digital-store?mode=edit`)}
+          className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-700 hover:bg-emerald-800 active:scale-98 text-white text-xs sm:text-sm font-semibold rounded-xl shadow-xs transition-all cursor-pointer"
+        >
+          <Edit3 size={14} />
+          <span>Edit Shop Details</span>
+        </button>
+      </DigitalStoreActionBar>
     </>
   );
 };

@@ -332,7 +332,7 @@ const MainLayoutContent = () => {
                   </div>
                 )}
 
-                {isListPage || isDetails ? (
+                {isListPage || isDetails || isStorePage ? (
                   <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                     <Outlet />
                   </div>

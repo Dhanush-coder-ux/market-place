@@ -47,16 +47,21 @@ const isBoolFalse = (val: any): boolean => {
 function extractProductLandedCost(
   purchasesList: any[],
   productId: string,
+  fallbackBaseBuyPrice: number,
   fallbackBuyPriceWithGst: number
 ): {
-  landedCost: number;
+  landedCost: number;        // Base landed cost (rowBase + allocatedPerUnit) without GST
+  landedCostWithGst: number; // Landed cost including GST
+  baseBuyPrice: number;      // Clean pre-GST base buying price
   allocatedPerUnit: number;
   buyPriceIncGst: number;
   hasPurchase: boolean;
 } {
   if (!purchasesList || purchasesList.length === 0) {
     return {
-      landedCost: fallbackBuyPriceWithGst,
+      landedCost: fallbackBaseBuyPrice,
+      landedCostWithGst: fallbackBuyPriceWithGst,
+      baseBuyPrice: fallbackBaseBuyPrice,
       allocatedPerUnit: 0,
       buyPriceIncGst: fallbackBuyPriceWithGst,
       hasPurchase: false,
@@ -116,16 +121,27 @@ function extractProductLandedCost(
       let rowBase = baseBuyPrice;
       let gstPerUnit = 0;
       if (gstType === "INCLUSIVE") {
-        rowBase = gstRate > 0 ? baseBuyPrice / (1 + gstRate / 100) : baseBuyPrice;
-        gstPerUnit = baseBuyPrice - rowBase;
+        // In this system, it.buy_price is already stored as the pre-tax base cost (e.g. 67.80).
+        // Only divide by (1 + gst) if baseBuyPrice is still the gross/inclusive price (e.g. 80.00).
+        const isAlreadyBase = grossQty > 0 && Math.abs((Number(it.total_amount || 0) / grossQty) - baseBuyPrice) < 0.05;
+        if (isAlreadyBase) {
+          rowBase = baseBuyPrice;
+          gstPerUnit = baseBuyPrice * (gstRate / 100);
+        } else {
+          rowBase = gstRate > 0 ? baseBuyPrice / (1 + gstRate / 100) : baseBuyPrice;
+          gstPerUnit = baseBuyPrice - rowBase;
+        }
       } else {
         rowBase = baseBuyPrice;
         gstPerUnit = baseBuyPrice * (gstRate / 100);
       }
 
-      const landedCost = rowBase + gstPerUnit + allocatedPerUnit;
+      const baseLanded = rowBase + allocatedPerUnit;
+      const landedWithGst = rowBase + gstPerUnit + allocatedPerUnit;
       return {
-        landedCost: Math.round(landedCost * 100) / 100,
+        landedCost: Math.round(baseLanded * 100) / 100,
+        landedCostWithGst: Math.round(landedWithGst * 100) / 100,
+        baseBuyPrice: Math.round(rowBase * 100) / 100,
         allocatedPerUnit: Math.round(allocatedPerUnit * 100) / 100,
         buyPriceIncGst: Math.round((rowBase + gstPerUnit) * 100) / 100,
         hasPurchase: true,
@@ -134,7 +150,9 @@ function extractProductLandedCost(
   }
 
   return {
-    landedCost: fallbackBuyPriceWithGst,
+    landedCost: fallbackBaseBuyPrice,
+    landedCostWithGst: fallbackBuyPriceWithGst,
+    baseBuyPrice: fallbackBaseBuyPrice,
     allocatedPerUnit: 0,
     buyPriceIncGst: fallbackBuyPriceWithGst,
     hasPurchase: false,
@@ -626,13 +644,13 @@ const ProductDetail = () => {
                       isBuyGstApplied = true;
                     }
 
-                    const costBreakdown = extractProductLandedCost(purchases, id || product.id, buyPriceWithGst);
-                    const costPerUnit = costBreakdown.landedCost > 0 ? costBreakdown.landedCost : buyPriceWithGst;
+                    const costBreakdown = extractProductLandedCost(purchases, id || product.id, numBuyingPrice, buyPriceWithGst);
+                    const baseCostPerUnit = costBreakdown.landedCost > 0 ? costBreakdown.landedCost : numBuyingPrice;
 
                     const numSellingPrice = sellingPrice !== null && sellingPrice !== undefined ? Number(sellingPrice) : 0;
                     const spTax = calculateTaxSplit(numSellingPrice, gstRate);
                     const spTaxableValue = spTax.taxableValue;
-                    const profitAmount = Math.round((spTaxableValue - costPerUnit) * 100) / 100;
+                    const profitAmount = Math.round((spTaxableValue - baseCostPerUnit) * 100) / 100;
                     const marginPercent = spTaxableValue > 0 ? ((profitAmount / spTaxableValue) * 100) : 0;
 
                     return (
@@ -758,7 +776,7 @@ const ProductDetail = () => {
                                 </span>
                               </p>
                               <span className="text-[10px] text-slate-400 font-medium mt-0.5">
-                                Taxable: ₹{spTaxableValue.toFixed(2)} · Cost: ₹{costPerUnit.toFixed(2)}
+                                Taxable: ₹{spTaxableValue.toFixed(2)} · Base Cost: ₹{baseCostPerUnit.toFixed(2)}
                               </span>
                             </div>
                           </div>

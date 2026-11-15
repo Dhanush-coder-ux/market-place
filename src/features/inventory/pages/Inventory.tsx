@@ -31,7 +31,7 @@ import { useApi } from "@/context/ApiContext";
 import { PriceCell } from "@/components/common/PriceCell";
 import { useHeader } from "@/context/HeaderContext";
 import { useToast } from "@/context/ToastContext";
-import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import { ENDPOINTS, SHOP_ID, getShopId } from "@/services/endpoints";
 import { shopApi } from "@/services/api/shop";
 import SkeletonLoader from "@/components/common/SkeletonLoader";
 import { StatCard } from "@/components/common/StatsCard";
@@ -1094,12 +1094,15 @@ const InventoryPage = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isStockImportCompleted, setIsStockImportCompleted] = useState<boolean>(() => {
-    return localStorage.getItem(`stock_import_completed_${SHOP_ID}`) === "true";
+    const sid = getShopId();
+    return Boolean(sid && localStorage.getItem(`stock_import_completed_${sid}`) === "true");
   });
 
   useEffect(() => {
     // Check DB-level initial stock import completion
-    shopApi.getShopById(SHOP_ID).then((res: any) => {
+    const currentShopId = getShopId();
+    if (!currentShopId) return;
+    shopApi.getShopById(currentShopId).then((res: any) => {
       const shopData = res?.data || res;
       const isImported = Boolean(
         shopData?.initial_stock_imported ||
@@ -1108,7 +1111,10 @@ const InventoryPage = () => {
       );
       if (isImported) {
         setIsStockImportCompleted(true);
-        localStorage.setItem(`stock_import_completed_${SHOP_ID}`, "true");
+        localStorage.setItem(`stock_import_completed_${currentShopId}`, "true");
+      } else {
+        setIsStockImportCompleted(false);
+        localStorage.removeItem(`stock_import_completed_${currentShopId}`);
       }
     }).catch(err => {
       console.error("Failed to fetch shop import status:", err);

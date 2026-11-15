@@ -267,10 +267,14 @@ const MainLayoutContent = () => {
     }
   }, [location.pathname, navigate]);
 
+  const isDashboardPage =
+    location.pathname === "/" ||
+    location.pathname === "/dashboard";
+
   const isStorePage =
     location.pathname === "/digital-store" ||
-    location.pathname === "/profile" ||
-    location.pathname === "/";
+    location.pathname === "/setup-digital-store" ||
+    location.pathname === "/profile";
 
   const isBillingPage = location.pathname === "/billing";
   const isCleanMode = new URLSearchParams(location.search).get("mode") === "clean";
@@ -314,13 +318,13 @@ const MainLayoutContent = () => {
         <SubscriptionAlertBanner />
 
         <main className="flex-1 flex flex-col min-w-0 relative overflow-hidden">
-          <div className={`flex-1 flex flex-col min-h-0 overflow-hidden relative ${hideNav ? (isBillingPage ? "p-0" : "p-2.5 md:p-4") : isStorePage ? "p-0" : "p-2 sm:p-2.5 md:p-3 lg:p-3"} ${!isBillingPage && !isCleanMode ? (bottomActions ? "pb-[calc(124px+env(safe-area-inset-bottom))] md:pb-0" : "pb-[calc(64px+env(safe-area-inset-bottom))] md:pb-0") : ""}`}>
+          <div className={`flex-1 flex flex-col min-h-0 overflow-hidden relative ${hideNav ? (isBillingPage ? "p-0" : "p-2.5 md:p-4") : (isStorePage || isDashboardPage) ? "p-0" : "p-2 sm:p-2.5 md:p-3 lg:p-3"} ${!isBillingPage && !isCleanMode ? (bottomActions ? "pb-[calc(124px+env(safe-area-inset-bottom))] md:pb-0" : "pb-[calc(64px+env(safe-area-inset-bottom))] md:pb-0") : ""}`}>
 
             {isExpired && !isPricingPage ? (
               <SubscriptionExpiredLockScreen planName={subData?.plan_name} />
             ) : (
               <>
-                {!isStorePage && (
+                {!isStorePage && !isDashboardPage && (
                   <div className="">
                     {!hideNav && !isDetails && <Breadcrumb />}
 
@@ -332,7 +336,7 @@ const MainLayoutContent = () => {
                   </div>
                 )}
 
-                {isListPage || isDetails || isStorePage ? (
+                {!isDashboardPage && (isListPage || isDetails || isStorePage) ? (
                   <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                     <Outlet />
                   </div>

@@ -777,7 +777,7 @@ const AnalyticsDashboard = () => {
   }, [stats, supplierNameMap]);
 
   return (
-    <div className="min-h-screen bg-[#F7F9FA] text-[#27364B] p-4 sm:p-6 lg:p-8 font-sans antialiased">
+    <div className="min-h-full w-full bg-[#F7F9FA] text-[#27364B] p-4 sm:p-6 lg:p-8 font-sans antialiased">
       <div className="max-w-[1600px] mx-auto space-y-6">
 
         {/* ── HEADER / FILTER CONTROL BAR ── */}

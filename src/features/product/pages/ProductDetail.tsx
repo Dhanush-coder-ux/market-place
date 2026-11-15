@@ -377,8 +377,25 @@ const ProductDetail = () => {
   const categoryName = (product as any).category_infos?.name || product.category || "—";
   const unitName = (product as any).unit_infos?.name || product.unit || "—";
   const description = String(product.description || "—");
-  const sellingPrice = product.pricing_infos?.sell_price ?? product.sell_price ?? null;
-  const buyingPrice = product.pricing_infos?.buy_price ?? product.buy_price ?? null;
+  const sellingPrice = product.pricing_infos?.sell_price
+    ?? product.sell_price
+    ?? (product as any).selling_price
+    ?? datas.sell_price
+    ?? datas.selling_price
+    ?? null;
+  const buyingPrice = product.pricing_infos?.buy_price
+    ?? product.buy_price
+    ?? (product as any).cost_to_make
+    ?? (product as any).cost_price
+    ?? (product as any).raw_buy_price
+    ?? (product as any).pricing_infos?.cost_price
+    ?? datas.buy_price
+    ?? datas.cost_to_make
+    ?? datas.cost_price
+    ?? datas.raw_buy_price
+    ?? (product as any).additional_infos?.buy_price
+    ?? (product as any).additional_infos?.cost_to_make
+    ?? null;
 
   // ── Compute TOTAL available stocks across all sources ──────────────────────
   // Root stock_infos is often empty {} for batch/variant products.
@@ -645,13 +662,14 @@ const ProductDetail = () => {
                     }
 
                     const costBreakdown = extractProductLandedCost(purchases, id || product.id, numBuyingPrice, buyPriceWithGst);
-                    const baseCostPerUnit = costBreakdown.landedCost > 0 ? costBreakdown.landedCost : numBuyingPrice;
+                    const baseCostPerUnit = costBreakdown.landedCost > 0 ? costBreakdown.landedCost : (numBuyingPrice > 0 ? numBuyingPrice : 0);
 
                     const numSellingPrice = sellingPrice !== null && sellingPrice !== undefined ? Number(sellingPrice) : 0;
                     const spTax = calculateTaxSplit(numSellingPrice, gstRate);
                     const spTaxableValue = spTax.taxableValue;
-                    const profitAmount = Math.round((spTaxableValue - baseCostPerUnit) * 100) / 100;
-                    const marginPercent = spTaxableValue > 0 ? ((profitAmount / spTaxableValue) * 100) : 0;
+                    const hasCostBasis = baseCostPerUnit > 0;
+                    const profitAmount = hasCostBasis ? Math.round((spTaxableValue - baseCostPerUnit) * 100) / 100 : 0;
+                    const marginPercent = (hasCostBasis && spTaxableValue > 0) ? ((profitAmount / spTaxableValue) * 100) : 0;
 
                     return (
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-y-6 gap-x-8">
@@ -713,9 +731,15 @@ const ProductDetail = () => {
                               {numSellingPrice > 0 && (
                                 <span className="text-[9px] font-medium text-slate-500 leading-tight block mt-1">
                                   Taxable: ₹{spTaxableValue.toFixed(2)}<br />
-                                  Margin: <span className={profitAmount >= 0 ? "text-emerald-600 font-semibold" : "text-rose-600 font-semibold"}>
-                                    {marginPercent.toFixed(1)}% ({profitAmount >= 0 ? "+" : ""}₹{profitAmount.toFixed(2)})
-                                  </span>
+                                  Margin: {hasCostBasis ? (
+                                    <span className={profitAmount >= 0 ? "text-emerald-600 font-semibold" : "text-rose-600 font-semibold"}>
+                                      {marginPercent.toFixed(1)}% ({profitAmount >= 0 ? "+" : ""}₹{profitAmount.toFixed(2)})
+                                    </span>
+                                  ) : (
+                                    <span className="text-slate-400 font-medium">
+                                      0% (₹0.00)
+                                    </span>
+                                  )}
                                 </span>
                               )}
                             </div>
@@ -766,18 +790,34 @@ const ProductDetail = () => {
                         {!hasVariants && !hasBatches && numSellingPrice > 0 && (
                           <div>
                             <p className="text-[10px] font-medium text-slate-400 tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
-                              <TrendingUp size={12} className={profitAmount >= 0 ? "text-emerald-500" : "text-rose-500"} /> Margin & Profit
+                              <TrendingUp size={12} className={hasCostBasis ? (profitAmount >= 0 ? "text-emerald-500" : "text-rose-500") : "text-slate-400"} /> Margin & Profit
                             </p>
                             <div className="flex flex-col">
-                              <p className={`text-[13px] font-bold tabular-nums flex items-baseline gap-1 ${profitAmount >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
-                                {marginPercent.toFixed(1)}%{" "}
-                                <span className="text-[11px] font-semibold text-slate-600">
-                                  ({profitAmount >= 0 ? "+" : ""}₹{profitAmount.toFixed(2)})
-                                </span>
-                              </p>
-                              <span className="text-[10px] text-slate-400 font-medium mt-0.5">
-                                Taxable: ₹{spTaxableValue.toFixed(2)} · Base Cost: ₹{baseCostPerUnit.toFixed(2)}
-                              </span>
+                              {hasCostBasis ? (
+                                <>
+                                  <p className={`text-[13px] font-bold tabular-nums flex items-baseline gap-1 ${profitAmount >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                                    {marginPercent.toFixed(1)}%{" "}
+                                    <span className="text-[11px] font-semibold text-slate-600">
+                                      ({profitAmount >= 0 ? "+" : ""}₹{profitAmount.toFixed(2)})
+                                    </span>
+                                  </p>
+                                  <span className="text-[10px] text-slate-400 font-medium mt-0.5">
+                                    Taxable: ₹{spTaxableValue.toFixed(2)} · Base Cost: ₹{baseCostPerUnit.toFixed(2)}
+                                  </span>
+                                </>
+                              ) : (
+                                <>
+                                  <p className="text-[13px] font-bold tabular-nums text-slate-400 flex items-baseline gap-1">
+                                    0%{" "}
+                                    <span className="text-[11px] font-semibold text-slate-400">
+                                      (₹0.00)
+                                    </span>
+                                  </p>
+                                  <span className="text-[10px] text-slate-400 font-medium mt-0.5">
+                                    Taxable: ₹{spTaxableValue.toFixed(2)} · Base Cost: —
+                                  </span>
+                                </>
+                              )}
                             </div>
                           </div>
                         )}

@@ -160,5 +160,27 @@ export function runPricingTests(): boolean {
   expectEq("T16 Profit", t16.profit || 0, 42.37);
   expectEq("T16 Margin %", t16.marginPercent || 0, 33.3);
 
+  // T17: Zero or missing buying price should give 0 profit and 0% margin (not 100%)
+  const t17 = calculateProfitAndMargin({
+    sellingPrice: 150,
+    buyingPrice: 0,
+    gstRate: 18,
+    sellingGstMode: 'inclusive',
+    buyingGstMode: 'exclusive',
+    isGstRegistered: true,
+  });
+  expectEq("T17 Zero Buying Price Profit", t17.profit, 0);
+  expectEq("T17 Zero Buying Price Margin %", t17.marginPercent, 0);
+
+  // T18: Zero cost in calculateProductEffectivePrice should not yield 100% margin
+  const t18 = calculateProductEffectivePrice({
+    sellingPrice: 150,
+    gstRate: 18,
+    isGstRegistered: true,
+    costPrice: 0,
+  });
+  expectEq("T18 Zero Cost Profit", t18.profit ?? 0, 0);
+  expectEq("T18 Zero Cost Margin %", t18.marginPercent ?? 0, 0);
+
   return true;
 }

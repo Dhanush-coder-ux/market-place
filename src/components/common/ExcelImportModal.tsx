@@ -52,7 +52,7 @@ import {
   transformRowToPayload,
 } from "./excelImportSchemas";
 import { useApi } from "@/context/ApiContext";
-import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import { ENDPOINTS, getShopId } from "@/services/endpoints";
 import { utilityApi } from "@/services/api/utility";
 import { shopApi } from "@/services/api/shop";
 
@@ -163,7 +163,15 @@ function normalizeRows(
   // Also map category + unit column headers
   if (hasCategUnit) {
     labelToKey["category"] = "_category_text";
+    labelToKey["category name"] = "_category_text";
+    labelToKey["categories"] = "_category_text";
+    labelToKey["product category"] = "_category_text";
+    labelToKey["item category"] = "_category_text";
     labelToKey["unit"] = "_unit_text";
+    labelToKey["unit name"] = "_unit_text";
+    labelToKey["units"] = "_unit_text";
+    labelToKey["uom"] = "_unit_text";
+    labelToKey["unit of measure"] = "_unit_text";
   }
 
   return rawRows.map((raw, i) => {
@@ -614,7 +622,7 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
   entityType,
   onCompleteStockImport,
 }) => {
-  const { postData } = useApi();
+  const { postData, getLastError } = useApi();
   const meta = ENTITY_META[entityType];
   const columns = getColumnsForEntity(entityType);
   const hasCategoryUnit = meta.hasCategoryUnit;
@@ -686,10 +694,12 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
   // ── Fetch categories + units when inventory modal opens ───────────────────
   useEffect(() => {
     if (!open || !hasCategoryUnit) return;
+    const currentShopId = getShopId() || (typeof window !== "undefined" ? localStorage.getItem("shop_id") || "" : "");
+    if (!currentShopId) return;
     setLoadingDropdowns(true);
     Promise.all([
-      utilityApi.getShopCategories(SHOP_ID),
-      utilityApi.getShopUnits(SHOP_ID),
+      utilityApi.getShopCategories(currentShopId),
+      utilityApi.getShopUnits(currentShopId),
     ])
       .then(([catRes, unitRes]) => {
         if (catRes?.data) {
@@ -772,22 +782,40 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
     setStep("submitting");
     setSubmitProgress(0);
 
+    const currentShopId = getShopId() || (typeof window !== "undefined" ? localStorage.getItem("shop_id") || "" : "");
+    if (!currentShopId) {
+      setSubmitResult({
+        success: false,
+        message: "No shop selected. Please select a shop before importing.",
+      });
+      setStep("result");
+      return;
+    }
+
     const payloads = rows.map((row) => {
-      const payload = transformRowToPayload(row, columns, SHOP_ID, entityType);
+      const payload = transformRowToPayload(row, columns, currentShopId, entityType);
 
       if (hasCategoryUnit) {
         // Resolve category_id
         const catText = String(row._category_text || "").trim();
-        const catId = catText
+        let catId = catText
           ? (categoryMapping[catText] || fuzzyMatch(catText, categories)?.id || "")
           : "";
+        if (!catId && categories.length > 0) {
+          const defaultCat = categories.find(c => c.name.toUpperCase() === "GENERAL") || categories[0];
+          catId = defaultCat?.id || "";
+        }
         payload.category_id = catId;
 
         // Resolve unit_id
         const unitText = String(row._unit_text || "").trim();
-        const unitId = unitText
+        let unitId = unitText
           ? (unitMapping[unitText] || fuzzyMatch(unitText, units)?.id || "")
           : "";
+        if (!unitId && units.length > 0) {
+          const defaultUnit = units.find(u => ["PIECE", "PCS", "PIECES"].includes(u.name.toUpperCase())) || units[0];
+          unitId = defaultUnit?.id || "";
+        }
         payload.unit_id = unitId;
       }
 
@@ -807,9 +835,10 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
       setSubmitProgress(100);
 
       if (res === null) {
+        const errorDetail = getLastError();
         setSubmitResult({
           success: false,
-          message: "The server rejected the request. Check your data and try again.",
+          message: errorDetail || "The server rejected the request. Check your data and try again.",
         });
       } else {
         setSubmitResult({
@@ -1283,12 +1312,15 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
                   <button
                     type="button"
                     onClick={async () => {
+                      const currentShopId = getShopId() || (typeof window !== "undefined" ? localStorage.getItem("shop_id") || "" : "");
                       try {
-                        await shopApi.completeInitialStockImport(SHOP_ID);
+                        if (currentShopId) {
+                          await shopApi.completeInitialStockImport(currentShopId);
+                          localStorage.setItem(`stock_import_completed_${currentShopId}`, "true");
+                        }
                       } catch (err) {
                         console.error("Failed to persist initial stock import completion to DB:", err);
                       }
-                      localStorage.setItem(`stock_import_completed_${SHOP_ID}`, "true");
                       setShowStockConfirmModal(false);
                       onClose();
                       if (onCompleteStockImport) onCompleteStockImport();

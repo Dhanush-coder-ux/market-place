@@ -185,15 +185,15 @@ export function calculateProductEffectivePrice(input: ProductPricingInfo & { isG
   let baseCostPrice: number | undefined = undefined;
   if (input.costPrice !== undefined && input.costPrice !== null) {
     const rawCost = Number(input.costPrice);
-    if (!isNaN(rawCost)) {
+    if (!isNaN(rawCost) && rawCost > 0) {
       baseCostPrice = (input.costGstMode === 'inclusive' && gstRate > 0)
         ? calculateTaxSplit(rawCost, gstRate).taxableValue
         : rawCost;
     }
   }
 
-  const profit = baseCostPrice !== undefined ? Math.round((tax.taxableValue - baseCostPrice) * 100) / 100 : undefined;
-  const marginPercent = baseCostPrice !== undefined && tax.taxableValue > 0
+  const profit = (baseCostPrice !== undefined && baseCostPrice > 0) ? Math.round((tax.taxableValue - baseCostPrice) * 100) / 100 : undefined;
+  const marginPercent = (baseCostPrice !== undefined && baseCostPrice > 0 && tax.taxableValue > 0)
     ? Math.round(((tax.taxableValue - baseCostPrice) / tax.taxableValue * 100) * 10) / 10
     : undefined;
 
@@ -251,8 +251,9 @@ export function calculateProfitAndMargin(params: {
     ? calculateTaxSplit(rawBp, gstRate).taxableValue
     : rawBp;
 
-  const profit = Math.round((baseSellingPrice - baseBuyingPrice) * 100) / 100;
-  const marginPercent = baseSellingPrice > 0
+  const hasCost = rawBp > 0;
+  const profit = hasCost ? Math.round((baseSellingPrice - baseBuyingPrice) * 100) / 100 : 0;
+  const marginPercent = (hasCost && baseSellingPrice > 0)
     ? Math.round(((profit / baseSellingPrice) * 100) * 10) / 10
     : 0;
 

@@ -458,13 +458,13 @@ const ProductRow = React.memo(
 
     let computedStock = calculateProductStock(p);
 
-    let computedSellPrice = p.pricing_infos?.sell_price ?? (p as any).sell_price;
-    let computedBuyPrice = p.pricing_infos?.buy_price ?? (p as any).buy_price;
+    let computedSellPrice = p.pricing_infos?.sell_price ?? (p as any).sell_price ?? (p as any).selling_price ?? (p as any).datas?.sell_price ?? (p as any).datas?.selling_price;
+    let computedBuyPrice = p.pricing_infos?.buy_price ?? (p as any).buy_price ?? (p as any).cost_to_make ?? (p as any).cost_price ?? (p as any).raw_buy_price ?? (p as any).pricing_infos?.cost_price ?? (p as any).datas?.buy_price ?? (p as any).datas?.cost_to_make ?? (p as any).datas?.cost_price ?? (p as any).additional_infos?.buy_price ?? (p as any).additional_infos?.cost_to_make;
     if (!hasVariants && hasBatches && (computedSellPrice === undefined || computedSellPrice === null)) {
       const firstBatch = batches[0];
       if (firstBatch) {
-        computedSellPrice = firstBatch.pricing_infos?.sell_price ?? firstBatch.sell_price;
-        computedBuyPrice = firstBatch.pricing_infos?.buy_price ?? firstBatch.buy_price;
+        computedSellPrice = firstBatch.pricing_infos?.sell_price ?? firstBatch.sell_price ?? firstBatch.selling_price;
+        computedBuyPrice = firstBatch.pricing_infos?.buy_price ?? firstBatch.buy_price ?? firstBatch.cost_price ?? firstBatch.cost_to_make;
       }
     }
 

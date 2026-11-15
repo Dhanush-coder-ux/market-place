@@ -647,7 +647,7 @@ export const BatchCards = ({ batches, parentGst, parentBuyPrice, parentSellPrice
 
           const isGstReg = isShopGstRegistered();
           const batchSellPrice = batch.pricing_infos?.sell_price ?? batch.sell_price ?? batch.price ?? parentSellPrice;
-          const batchBuyPrice = batch.pricing_infos?.buy_price ?? batch.buy_price ?? batch.cost_price ?? parentBuyPrice;
+          const batchBuyPrice = batch.pricing_infos?.buy_price ?? batch.buy_price ?? batch.cost_price ?? batch.cost_to_make ?? parentBuyPrice;
           const gstValue = batch.gst ?? parentGst ?? 0;
           const gstRate = parseFloat(String(gstValue).replace(/[^0-9.]/g, '')) || 0;
 
@@ -746,15 +746,20 @@ export const BatchCards = ({ batches, parentGst, parentBuyPrice, parentSellPrice
                             {formatCurrency(sellTaxable)} + {formatCurrency(sellGstAmt)} GST {gstRate}%
                           </span>
                         )}
-                        {displaySellPrice > 0 && displayBuyPrice > 0 && (() => {
-                          const baseBuy = Number(batchBuyPrice) || 0;
-                          const bProfit = Math.round((sellTaxable - baseBuy) * 100) / 100;
-                          const bMargin = sellTaxable > 0 ? ((bProfit / sellTaxable) * 100) : 0;
+                        {displaySellPrice > 0 && (() => {
+                          const hasCost = displayBuyPrice > 0;
+                          const baseBuy = hasCost ? (Number(batchBuyPrice) || 0) : 0;
+                          const bProfit = hasCost ? Math.round((sellTaxable - baseBuy) * 100) / 100 : 0;
+                          const bMargin = (hasCost && sellTaxable > 0) ? ((bProfit / sellTaxable) * 100) : 0;
                           return (
                             <span className="text-[8px] font-medium leading-tight mt-0.5">
-                              Margin: <span className={bProfit >= 0 ? "text-emerald-600 font-semibold" : "text-rose-600 font-semibold"}>
-                                {bMargin.toFixed(1)}% ({bProfit >= 0 ? "+" : ""}₹{bProfit.toFixed(2)})
-                              </span>
+                              Margin: {hasCost ? (
+                                <span className={bProfit >= 0 ? "text-emerald-600 font-semibold" : "text-rose-600 font-semibold"}>
+                                  {bMargin.toFixed(1)}% ({bProfit >= 0 ? "+" : ""}₹{bProfit.toFixed(2)})
+                                </span>
+                              ) : (
+                                <span className="text-slate-400 font-medium">0% (₹0.00)</span>
+                              )}
                             </span>
                           );
                         })()}
@@ -924,7 +929,7 @@ export const VariantRows = ({
               const stockStatus = getStockStatus(stockNum, reorderPoint ?? 0);
               const statusLabel = stockNum <= 0 ? "Out of Stock" : (reorderPoint !== null && stockNum <= reorderPoint) ? "Low Stock" : "In Stock";
               const sellPrice = comb.pricing_infos?.sell_price ?? comb.sell_price ?? comb.price ?? combDatas.sell_price ?? combDatas.datas?.sell_price ?? baseSellPrice;
-              const buyPrice = comb.pricing_infos?.buy_price ?? comb.buy_price ?? combDatas.buy_price ?? combDatas.datas?.buy_price ?? baseBuyPrice;
+              const buyPrice = comb.pricing_infos?.buy_price ?? comb.buy_price ?? comb.cost_price ?? comb.cost_to_make ?? combDatas.buy_price ?? combDatas.cost_to_make ?? combDatas.cost_price ?? combDatas.datas?.buy_price ?? baseBuyPrice;
               
               const gstValue = comb.gst ?? combDatas.gst ?? parentGst ?? 0;
               const gstRate = parseFloat(String(gstValue).replace(/[^0-9.]/g, '')) || 0;
@@ -1106,15 +1111,20 @@ export const VariantRows = ({
                             {formatCurrency(sellTaxable)} + {formatCurrency(sellGstAmt)} GST {gstRate}%
                           </span>
                         )}
-                        {displaySellPrice > 0 && displayBuyPrice > 0 && (() => {
-                          const baseBuy = Number(buyPrice) || 0;
-                          const varProfit = Math.round((sellTaxable - baseBuy) * 100) / 100;
-                          const varMargin = sellTaxable > 0 ? ((varProfit / sellTaxable) * 100) : 0;
+                        {displaySellPrice > 0 && (() => {
+                          const hasCost = displayBuyPrice > 0;
+                          const baseBuy = hasCost ? (Number(buyPrice) || 0) : 0;
+                          const varProfit = hasCost ? Math.round((sellTaxable - baseBuy) * 100) / 100 : 0;
+                          const varMargin = (hasCost && sellTaxable > 0) ? ((varProfit / sellTaxable) * 100) : 0;
                           return (
                             <span className="text-[9px] font-medium leading-tight mt-0.5">
-                              Margin: <span className={varProfit >= 0 ? "text-emerald-600 font-semibold" : "text-rose-600 font-semibold"}>
-                                {varMargin.toFixed(1)}% ({varProfit >= 0 ? "+" : ""}₹{varProfit.toFixed(2)})
-                              </span>
+                              Margin: {hasCost ? (
+                                <span className={varProfit >= 0 ? "text-emerald-600 font-semibold" : "text-rose-600 font-semibold"}>
+                                  {varMargin.toFixed(1)}% ({varProfit >= 0 ? "+" : ""}₹{varProfit.toFixed(2)})
+                                </span>
+                              ) : (
+                                <span className="text-slate-400 font-medium">0% (₹0.00)</span>
+                              )}
                             </span>
                           );
                         })()}

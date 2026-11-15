@@ -254,6 +254,13 @@ export const PRODUCT_IMPORT_COLUMNS: ImportColumnDef[] = [
     example: "12000",
   },
   {
+    key: "mrp",
+    label: "MRP",
+    required: false,
+    type: "number",
+    example: "15000",
+  },
+  {
     key: "gst",
     label: "GST (%)",
     required: false,
@@ -339,6 +346,13 @@ export const INVENTORY_IMPORT_COLUMNS: ImportColumnDef[] = [
     required: false,
     type: "number",
     example: "12000",
+  },
+  {
+    key: "mrp",
+    label: "MRP",
+    required: false,
+    type: "number",
+    example: "15000",
   },
 
   {
@@ -496,6 +510,13 @@ export function transformRowToPayload(
       };
     if (!payload.gst) payload.gst = "0%";
     if (payload.reorder_point === undefined) payload.reorder_point = 5;
+    if (payload.mrp === undefined || payload.mrp === null || Number(payload.mrp) <= 0) {
+      if (payload.sell_price && Number(payload.sell_price) > 0) {
+        payload.mrp = Number(payload.sell_price);
+      }
+    } else if (payload.sell_price && Number(payload.sell_price) > Number(payload.mrp)) {
+      payload.mrp = Number(payload.sell_price);
+    }
   }
 
   return payload;
@@ -542,6 +563,13 @@ export function validateRow(
         errors[col.key] = `"${col.label}" must be true or false`;
       }
     }
+  }
+
+  // Cross-field validation: Sell Price vs MRP
+  const sellPrice = Number(row["sell_price"]);
+  const mrp = Number(row["mrp"]);
+  if (!isNaN(sellPrice) && !isNaN(mrp) && mrp > 0 && sellPrice > mrp) {
+    errors["sell_price"] = `Selling price (${sellPrice}) cannot exceed MRP (${mrp})`;
   }
 
   return errors;

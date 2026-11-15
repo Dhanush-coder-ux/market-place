@@ -40,6 +40,8 @@ type ApiContextType = {
   /** Per-request loading state — use this to avoid full-app re-renders */
   isLoading: (key: string) => boolean;
   error: string | null;
+  lastError: string | null;
+  getLastError: () => string | null;
   getData: (endpoint: string, params?: Record<string, string>, options?: { signal?: AbortSignal; cacheKey?: string }) => Promise<any>;
   postData: (endpoint: string, body: unknown) => Promise<any>;
   putData: (endpoint: string, body: unknown) => Promise<any>;
@@ -143,6 +145,7 @@ const parseError = async (res: Response): Promise<string> => {
 export const ApiProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const lastErrorRef = useRef<string | null>(null);
 
   useEffect(() => {
     const handleClearCache = () => {
@@ -285,6 +288,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
 
         if (!res.ok) {
           const msg = await parseError(res);
+          lastErrorRef.current = msg;
           setError(msg);
           return null;
         }
@@ -300,7 +304,9 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
         return data;
       } catch (err: any) {
         if (err?.name === "AbortError") return null;
-        setError(err?.message ?? "Network error");
+        const msg = err?.message ?? "Network error";
+        lastErrorRef.current = msg;
+        setError(msg);
         return null;
       } finally {
         setKey(key, false);
@@ -320,7 +326,11 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
   const putData = useCallback((e: string, b: any) => request("PUT", e, b), [request]);
   const deleteData = useCallback((e: string, b?: any) => request("DELETE", e, b), [request]);
   const patchData = useCallback((e: string, b: any) => request("PATCH", e, b), [request]);
-  const clearError = useCallback(() => setError(null), []);
+  const clearError = useCallback(() => {
+    lastErrorRef.current = null;
+    setError(null);
+  }, []);
+  const getLastError = useCallback(() => lastErrorRef.current, []);
 
   const subscribe = useCallback((fn: () => void) => {
     subscribersRef.current.add(fn);
@@ -333,6 +343,8 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
         loading,
         isLoading,
         error,
+        lastError: lastErrorRef.current,
+        getLastError,
         getData,
         postData,
         putData,

@@ -52,6 +52,7 @@ import {
   transformRowToPayload,
 } from "./excelImportSchemas";
 import { useApi } from "@/context/ApiContext";
+import { useToast } from "@/context/ToastContext";
 import { ENDPOINTS, getShopId } from "@/services/endpoints";
 import { utilityApi } from "@/services/api/utility";
 import { shopApi } from "@/services/api/shop";
@@ -623,6 +624,7 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
   onCompleteStockImport,
 }) => {
   const { postData, getLastError } = useApi();
+  const { showProgress, updateProgress, completeProgress, failProgress } = useToast();
   const meta = ENTITY_META[entityType];
   const columns = getColumnsForEntity(entityType);
   const hasCategoryUnit = meta.hasCategoryUnit;
@@ -822,11 +824,13 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
       return payload;
     });
 
+    const toastId = showProgress(`Importing ${meta.label}...`, 0, `0 of ${rows.length} rows processed`);
     try {
       let prog = 0;
       const interval = setInterval(() => {
         prog = Math.min(prog + 4, 88);
         setSubmitProgress(prog);
+        updateProgress(toastId, prog, `Importing ${meta.label}...`, `${Math.round((prog / 100) * rows.length)} of ${rows.length} rows`);
       }, 80);
 
       const res = await postData(meta.bulkEndpoint, payloads);
@@ -836,23 +840,29 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
 
       if (res === null) {
         const errorDetail = getLastError();
+        const errorMsg = errorDetail || "The server rejected the request. Check your data and try again.";
         setSubmitResult({
           success: false,
-          message: errorDetail || "The server rejected the request. Check your data and try again.",
+          message: errorMsg,
         });
+        failProgress(toastId, "Import Failed", errorMsg);
       } else {
+        const successMsg = `Successfully imported ${rows.length} ${meta.label.toLowerCase()}.`;
         setSubmitResult({
           success: true,
-          message: `Successfully imported ${rows.length} ${meta.label.toLowerCase()}.`,
+          message: successMsg,
           count: rows.length,
         });
+        completeProgress(toastId, "Import Complete!", successMsg);
         onSuccess();
       }
     } catch (err: any) {
+      const errMsg = err?.message ?? "Unexpected error during import.";
       setSubmitResult({
         success: false,
-        message: err?.message ?? "Unexpected error during import.",
+        message: errMsg,
       });
+      failProgress(toastId, "Import Failed", errMsg);
     }
     setStep("result");
   };

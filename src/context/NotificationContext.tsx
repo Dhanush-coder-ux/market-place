@@ -7,6 +7,7 @@ import {
   getEnvironmentName 
 } from "@/utils/notificationFilter";
 import { getGatewayBaseUrl } from "@/services/api/tokenManager";
+import { toast } from "@/context/ToastContext";
 
 interface NotificationContextType {
   notifications: NotificationItem[];
@@ -205,6 +206,11 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
               // Push to animation queue for dynamic island
               queueRef.current.push(data);
               processNotificationQueue();
+
+              // Trigger Dynaura Dynamic Island notification across all pages
+              toast.info(data.title || "Notification", {
+                description: data.message || undefined,
+              });
             }
           } catch (e) {
             // Non-JSON message, ignore

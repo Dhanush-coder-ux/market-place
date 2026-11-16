@@ -125,7 +125,14 @@ export const ProfileSettingsPage = () => {
   const [searchParams] = useSearchParams();
   const initialTab = searchParams.get("tab") || "shopprofile";
   const [activeTab, setActiveTab] = useState(initialTab);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    try {
+      const saved = localStorage.getItem("settings_sidebar_open");
+      return saved !== null ? saved === "true" : true;
+    } catch {
+      return true;
+    }
+  });
 
   React.useEffect(() => {
     const tabParam = searchParams.get("tab");
@@ -498,7 +505,15 @@ export const ProfileSettingsPage = () => {
           </div>
           <button
             type="button"
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            onClick={() => {
+              setIsSidebarOpen((prev) => {
+                const next = !prev;
+                try {
+                  localStorage.setItem("settings_sidebar_open", String(next));
+                } catch {}
+                return next;
+              });
+            }}
             className="hidden md:flex w-7 h-7 rounded-lg items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
             title={isSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
           >

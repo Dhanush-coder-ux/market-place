@@ -1,6 +1,7 @@
 import { createContext, useContext, useCallback, ReactNode } from "react";
 import { Toaster, dynaura, type ToastOptions } from "dynaura";
 import "dynaura/styles.css";
+import "./ToastContext.css";
 
 export type ToastType = "success" | "error" | "info" | "warning" | "loading" | "progress";
 

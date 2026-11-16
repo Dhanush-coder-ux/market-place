@@ -11,6 +11,7 @@ import { useBusinessApi } from "@/context/BusinessApiContext";
 import { SHOP_ID } from "@/services/endpoints";
 import { Switch } from "@/components/ui/switch";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
+import { DigitalStoreActionBar } from "../components/DigitalStoreActionBar";
 
 // ─── Types & Configuration ──────────────────────────────────────────────────
 
@@ -744,29 +745,89 @@ export default function Announcements({ onCountChange }: AnnouncementsProps) {
             </div>
 
             {/* 5. Live Storefront Banner Preview */}
-            <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-3">
-              <div className="flex items-center justify-between mb-2">
+            <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-3.5 space-y-2.5">
+              <div className="flex items-center justify-between">
                 <span className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                  <Eye size={12} className="text-slate-400" />
+                  <Eye size={13} className="text-slate-400" />
                   Storefront Banner Preview
                 </span>
-                <span className="text-[10px] text-slate-400">Customer view</span>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                  isActiveOnStore 
+                    ? "bg-emerald-50 text-emerald-800 border-emerald-200" 
+                    : "bg-slate-100 text-slate-600 border-slate-200"
+                }`}>
+                  {isActiveOnStore ? "Live on Storefront" : "Draft Preview"}
+                </span>
               </div>
 
-              <div className="rounded-lg overflow-hidden border border-slate-200/90 shadow-2xs bg-white">
+              {/* Functional Dynamic Storefront Banner Preview Card */}
+              <div className="rounded-xl overflow-hidden border border-slate-200/90 shadow-2xs bg-white transition-all">
+                {/* Banner Image Preview if image URL exists */}
+                {imageUrl.trim() && (
+                  <div className="w-full h-28 sm:h-32 bg-slate-100 relative overflow-hidden border-b border-slate-100">
+                    <img
+                      src={imageUrl.trim()}
+                      alt="Storefront banner preview"
+                      className="w-full h-full object-cover transition-opacity duration-300"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLElement).style.display = "none";
+                      }}
+                    />
+                    <div className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-black/60 text-[10px] font-medium text-white backdrop-blur-xs flex items-center gap-1">
+                      <ImageIcon size={11} />
+                      <span>Banner Image</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Banner Message Bar */}
                 <div
-                  className={`px-3.5 py-2.5 flex items-center justify-center gap-2 text-center text-xs font-medium text-white transition-colors ${
-                    TYPE_CONFIG[type]?.previewBg || "bg-[#286038]"
+                  className={`p-3.5 text-white bg-gradient-to-r transition-all duration-200 ${
+                    type === "Offer"
+                      ? "from-amber-600 via-orange-600 to-amber-700"
+                      : type === "Urgent"
+                      ? "from-rose-600 via-red-600 to-rose-700"
+                      : type === "Maintenance"
+                      ? "from-blue-600 via-sky-600 to-blue-700"
+                      : "from-emerald-700 via-[#15803d] to-[#1e4a2b]"
                   }`}
                 >
-                  {type === "Offer" && <Tag size={13} className="shrink-0" />}
-                  {type === "Urgent" && <AlertCircle size={13} className="shrink-0" />}
-                  {type === "Maintenance" && <RefreshCw size={13} className="shrink-0" />}
-                  {type === "General" && <Megaphone size={13} className="shrink-0" />}
-                  <span className="truncate font-semibold">
-                    {title ? `${title}: ` : ""}
-                    {message.trim() || "Your customer broadcast announcement will appear here…"}
-                  </span>
+                  <div className="flex items-start gap-2.5">
+                    {/* Badge Icon */}
+                    <div className="w-6 h-6 rounded-lg bg-white/20 backdrop-blur-xs flex items-center justify-center shrink-0 mt-0.5">
+                      {type === "Offer" && <Tag size={13} className="text-white" />}
+                      {type === "Urgent" && <AlertCircle size={13} className="text-white" />}
+                      {type === "Maintenance" && <RefreshCw size={13} className="text-white" />}
+                      {type === "General" && <Megaphone size={13} className="text-white" />}
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-black/25 text-white/95">
+                          {type === "Offer"
+                            ? "Special Offer"
+                            : type === "Urgent"
+                            ? "Urgent Alert"
+                            : type === "Maintenance"
+                            ? "Store Notice"
+                            : "Announcement"}
+                        </span>
+                        {title.trim() && (
+                          <span className="text-xs sm:text-sm font-bold text-white drop-shadow-xs">
+                            {title.trim()}
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="text-xs text-white/95 leading-relaxed font-normal break-words">
+                        {message.trim() || (
+                          <span className="italic text-white/70">
+                            Your customer broadcast announcement will appear here in real time as you compose…
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1105,6 +1166,47 @@ export default function Announcements({ onCountChange }: AnnouncementsProps) {
         </div>
 
       </div>
+
+      {/* ── Fixed Bottom Action Bar for Announcements Tab ── */}
+      <DigitalStoreActionBar
+        status={
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-500 font-medium hidden sm:inline">Storefront Announcements:</span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+              {activeCount} Active on Store
+            </span>
+            {editingId ? (
+              <span className="text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md">
+                Editing Announcement #{editingId}
+              </span>
+            ) : draftCount > 0 ? (
+              <span className="text-xs text-slate-400 hidden md:inline">({draftCount} drafts)</span>
+            ) : null}
+          </div>
+        }
+      >
+        <button
+          type="button"
+          disabled={!message.trim() || isSaving}
+          onClick={() => handlePublish()}
+          className="inline-flex items-center gap-2 h-9 px-5 rounded-xl text-xs sm:text-sm font-bold text-white transition-all shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed bg-[#286038] hover:bg-[#1e4a2b] active:scale-98"
+          style={{ boxShadow: "0 2px 8px rgba(40, 96, 56, 0.3)" }}
+        >
+          {isSaving ? (
+            <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+          ) : (
+            <Send size={14} />
+          )}
+          <span>
+            {editingId
+              ? "Update Announcement"
+              : isActiveOnStore
+              ? "Publish Announcement"
+              : "Create Announcement"}
+          </span>
+        </button>
+      </DigitalStoreActionBar>
     </div>
   );
 }

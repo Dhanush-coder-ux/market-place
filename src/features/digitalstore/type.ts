@@ -61,3 +61,20 @@ export interface SelectedProductConfig {
 export interface StoreSetupProps {
   existingData?: Partial<StoreFormData>;
 }
+
+export interface CustomerReview {
+  user_id?: string;
+  shop_id?: string;
+  user_name: string;
+  rating: number;
+  review_text: string;
+  timestamp?: string;
+  created_at?: string;
+}
+
+export interface ShopReviewSummary {
+  shop_id?: string;
+  average_rating: number;
+  review_count: number;
+  star_counts?: Record<string, number>;
+}

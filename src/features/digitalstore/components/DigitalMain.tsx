@@ -4,18 +4,18 @@ import { useNavigate } from "react-router-dom";
 import {
   Megaphone, Package, Settings2, AlertCircle,
   PowerOff, QrCode, X, Download, ExternalLink,
-  Copy, Check, Edit3, Store, Users, ChevronDown,
-  Plus,
+  Copy, Check, Edit3, Users,
+  MapPin, Star,
 } from "lucide-react";
 import { useToast } from "@/context/ToastContext";
 import { QRCodeSVG } from "qrcode.react";
 import { shopApi } from "@/services/api/shop";
 import { inventoryApi } from "@/services/api/inventory";
-import { SHOP_ID, setShopId } from "@/services/endpoints";
-import { fetchMyShops } from "@/services/api/shopHelpers";
+import { SHOP_ID } from "@/services/endpoints";
 import ProductDashboard from "../pages/StoreProductManagement";
 import Announcements from "../pages/Announcement";
 import { StoreSettingsLayout } from "./StoreSettingsLayout";
+import { CustomerReviewsModal, CustomerReview, FALLBACK_REVIEWS } from "./CustomerReviewsModal";
 
 type TabType = "Announcements" | "Products" | "Settings";
 
@@ -56,8 +56,12 @@ interface ShopData {
   tagline: string | null;
   categories: string[];
   visible_online: boolean;
-  banner_url: string | null;
-  logo_url: string | null;
+  banner_url?: string | null;
+  bannerUrl?: string | null;
+  banner?: string | null;
+  logo_url?: string | null;
+  logoUrl?: string | null;
+  logo?: string | null;
   business_infos: {
     type: string;
     currency: string;
@@ -74,12 +78,49 @@ interface ShopData {
     emails: string[] | null;
     website: string | null;
     mobile_numbers: string[] | null;
+    banner_url?: string | null;
+    banner?: string | null;
+    logo_url?: string | null;
+    logo?: string | null;
+    [key: string]: any;
   };
   operating_hours: OperatingHour[];
   delivery_options: DeliveryOption[];
   announcements: ShopAnnouncement[];
   created_at?: string;
+  [key: string]: any;
 }
+
+// Default store hero banner fallback (tasteful Unsplash retail/store banner)
+const DEFAULT_STORE_BANNER =
+  "https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&w=1600&q=80";
+
+// Robust banner URL extraction helper with complete fallbacks
+const getShopBannerUrl = (shopData?: ShopData | null): string => {
+  if (!shopData) return DEFAULT_STORE_BANNER;
+
+  const candidates = [
+    shopData.banner_url,
+    shopData.bannerUrl,
+    shopData.banner,
+    shopData.additional_infos?.banner_url,
+    shopData.additional_infos?.banner,
+    typeof window !== "undefined" ? localStorage.getItem("shop_banner") : null,
+  ];
+
+  for (const candidate of candidates) {
+    if (
+      typeof candidate === "string" &&
+      candidate.trim().length > 0 &&
+      candidate !== "null" &&
+      candidate !== "undefined"
+    ) {
+      return candidate.trim();
+    }
+  }
+
+  return DEFAULT_STORE_BANNER;
+};
 
 // ─── Skeletons ──────────────────────────────────────────────────────────────
 const Skeleton = ({ className }: { className?: string }) => (
@@ -220,169 +261,6 @@ function QRModal({ shop, onClose }: { shop: ShopData; onClose: () => void }) {
   );
 }
 
-// ─── Switch Shop Modal ───────────────────────────────────────────────────────
-function SwitchShopModal({
-  currentShopId,
-  onClose,
-}: {
-  currentShopId: string;
-  onClose: () => void;
-}) {
-  const navigate = useNavigate();
-  const [shops, setShops] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchMyShops()
-      .then((list) => {
-        setShops(Array.isArray(list) ? list : []);
-      })
-      .catch((err) => {
-        console.error("Failed to fetch shops:", err);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  }, []);
-
-  const handleSelectShop = (targetShop: any) => {
-    if (targetShop.id === currentShopId) {
-      onClose();
-      return;
-    }
-    localStorage.setItem("shop_id", targetShop.id);
-    localStorage.setItem("shop_name", targetShop.name);
-    if (targetShop.logo_url) {
-      localStorage.setItem("shop_logo", targetShop.logo_url);
-    } else {
-      localStorage.removeItem("shop_logo");
-    }
-    setShopId(targetShop.id);
-    onClose();
-    window.location.reload();
-  };
-
-  return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="absolute inset-0" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-150">
-        
-        {/* Modal Header */}
-        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-[#286038] border border-emerald-100 flex items-center justify-center font-bold shrink-0">
-              <Store size={16} />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-slate-900 leading-tight">Switch Store</h3>
-              <p className="text-[11px] text-slate-500 mt-0.5">Select a store to manage</p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="w-7 h-7 rounded-lg hover:bg-slate-200/60 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
-          >
-            <X size={14} />
-          </button>
-        </div>
-
-        {/* Modal List */}
-        <div className="p-4 max-h-[360px] overflow-y-auto space-y-2">
-          {loading ? (
-            <div className="space-y-2 p-2">
-              {[1, 2].map((i) => (
-                <div key={i} className="animate-pulse flex items-center gap-3 p-3 rounded-xl bg-slate-100">
-                  <div className="w-10 h-10 rounded-full bg-slate-200" />
-                  <div className="space-y-1.5 flex-1">
-                    <div className="h-4 bg-slate-200 rounded w-1/2" />
-                    <div className="h-3 bg-slate-200 rounded w-1/3" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : shops.length === 0 ? (
-            <div className="py-8 text-center text-xs text-slate-500">
-              No other stores found for your account.
-            </div>
-          ) : (
-            shops.map((s: any) => {
-              const isCurrent = s.id === currentShopId;
-              const initial = (s.name?.charAt(0) || "S").toUpperCase();
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => handleSelectShop(s)}
-                  className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                    isCurrent
-                      ? "bg-emerald-50/70 border-emerald-300 ring-2 ring-emerald-500/20"
-                      : "bg-white border-slate-200/90 hover:bg-slate-50 hover:border-slate-300"
-                  }`}
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-full border border-slate-200 bg-white overflow-hidden shrink-0 flex items-center justify-center text-[#286038] font-bold text-sm">
-                      {s.logo_url ? (
-                        <img src={s.logo_url} alt={s.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <span>{initial}</span>
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-bold text-slate-900 truncate">
-                          {s.name}
-                        </span>
-                        {isCurrent && (
-                          <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-1.5 py-0.2 rounded-full">
-                            Current
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[11px] text-slate-500 truncate mt-0.5">
-                        {s.address?.full_address || s.tagline || "Store"}
-                      </p>
-                    </div>
-                  </div>
-
-                  {isCurrent && (
-                    <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
-                      <Check size={13} />
-                    </div>
-                  )}
-                </button>
-              );
-            })
-          )}
-        </div>
-
-        {/* Modal Footer */}
-        <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => {
-              onClose();
-              navigate("/create-shop");
-            }}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#286038] hover:text-[#1e4a2b] transition-colors cursor-pointer"
-          >
-            <Plus size={14} />
-            <span>Create New Store</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="h-8 px-3 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>,
-    document.body
-  );
-}
-
 // ═════════════════════════════════════════════════════════════════════════════
 // MAIN COMPONENT: Digital Store Page
 // ═════════════════════════════════════════════════════════════════════════════
@@ -395,6 +273,7 @@ const DigitalMain = () => {
 
   // Shop data state
   const [shop, setShop] = useState<ShopData | null>(null);
+  const [bannerSrc, setBannerSrc] = useState<string>(DEFAULT_STORE_BANNER);
   const [followersCount, setFollowersCount] = useState<number>(0);
   const [productsCount, setProductsCount] = useState<number>(0);
   const [announcementsCount, setAnnouncementsCount] = useState<number>(0);
@@ -404,11 +283,22 @@ const DigitalMain = () => {
   const [error, setError] = useState<string | null>(null);
   const [needsSetup, setNeedsSetup] = useState(false);
 
+  useEffect(() => {
+    if (shop) {
+      setBannerSrc(getShopBannerUrl(shop));
+    }
+  }, [shop]);
+
   // Modals state
   const [showQR, setShowQR] = useState(false);
-  const [showSwitchShop, setShowSwitchShop] = useState(false);
+  const [showReviewsModal, setShowReviewsModal] = useState(false);
   const [showTurnOffConfirm, setShowTurnOffConfirm] = useState(false);
   const [updatingVisibility, setUpdatingVisibility] = useState(false);
+
+  // Reviews state
+  const [reviewsCount, setReviewsCount] = useState<number>(12);
+  const [averageRating, setAverageRating] = useState<number>(4.8);
+  const [reviewsList, setReviewsList] = useState<CustomerReview[]>(FALLBACK_REVIEWS);
 
   const handleCopyStoreUrl = () => {
     const storeUrl =
@@ -462,10 +352,12 @@ const DigitalMain = () => {
     const load = async () => {
       setLoading(true);
       try {
-        const [shopRes, productsRes, followersRes] = await Promise.allSettled([
+        const [shopRes, productsRes, followersRes, reviewsRes, summaryRes] = await Promise.allSettled([
           shopApi.getShopById(activeShopId),
           inventoryApi.getInventoriesByShop(activeShopId, { limit: "50" }),
           shopApi.getShopFollowers(activeShopId),
+          shopApi.getShopReviews(activeShopId, { limit: 100 }),
+          shopApi.getShopReviewSummary(activeShopId),
         ]);
 
         if (shopRes.status === "fulfilled" && (shopRes.value?.data || shopRes.value)) {
@@ -512,6 +404,35 @@ const DigitalMain = () => {
               followersRes.value?.data ??
               (Array.isArray(followersRes.value) ? followersRes.value : []);
             setFollowersCount(Array.isArray(rawFollowers) ? rawFollowers.length : 0);
+          }
+
+          // Process reviews & summary
+          if (summaryRes.status === "fulfilled") {
+            const sumData = summaryRes.value?.data ?? summaryRes.value;
+            if (sumData && typeof sumData.review_count === "number" && sumData.review_count > 0) {
+              setReviewsCount(sumData.review_count);
+              if (typeof sumData.average_rating === "number") {
+                setAverageRating(sumData.average_rating);
+              }
+            }
+          }
+
+          if (reviewsRes.status === "fulfilled") {
+            const rawRev = reviewsRes.value?.data ?? reviewsRes.value;
+            if (Array.isArray(rawRev) && rawRev.length > 0) {
+              setReviewsList(rawRev);
+              setReviewsCount(rawRev.length);
+              const avg = rawRev.reduce((acc: number, r: any) => acc + Number(r.rating || 0), 0) / rawRev.length;
+              setAverageRating(Number(avg.toFixed(1)));
+            } else {
+              setReviewsList(FALLBACK_REVIEWS);
+              setReviewsCount(FALLBACK_REVIEWS.length);
+              setAverageRating(4.8);
+            }
+          } else {
+            setReviewsList(FALLBACK_REVIEWS);
+            setReviewsCount(FALLBACK_REVIEWS.length);
+            setAverageRating(4.8);
           }
         } else {
           setNeedsSetup(true);
@@ -583,6 +504,13 @@ const DigitalMain = () => {
   }
 
   const initials = shop.name?.charAt(0)?.toUpperCase() ?? "S";
+  const logoUrl =
+    shop.logo_url ||
+    shop.logoUrl ||
+    shop.logo ||
+    shop.additional_infos?.logo_url ||
+    shop.additional_infos?.logo ||
+    fallbackImg;
 
   return (
     <div
@@ -591,10 +519,15 @@ const DigitalMain = () => {
     >
       {/* ── Modals ── */}
       {showQR && <QRModal shop={shop} onClose={() => setShowQR(false)} />}
-      {showSwitchShop && (
-        <SwitchShopModal
-          currentShopId={shop.id}
-          onClose={() => setShowSwitchShop(false)}
+      {showReviewsModal && (
+        <CustomerReviewsModal
+          isOpen={showReviewsModal}
+          onClose={() => setShowReviewsModal(false)}
+          shopId={shop.id}
+          shopName={shop.name}
+          initialReviews={reviewsList}
+          initialAverageRating={averageRating}
+          initialReviewsCount={reviewsCount}
         />
       )}
 
@@ -604,20 +537,25 @@ const DigitalMain = () => {
       {/* ═══════════════════════════════════════════════════════════════════════
           1. HERO / BANNER HEADER (Matching Wireframe Image 1)
       ═══════════════════════════════════════════════════════════════════════ */}
-      <section className="relative overflow-hidden bg-slate-900 border-b border-slate-200/90 shadow-xs">
+      <section className="relative overflow-hidden bg-slate-950 border-b border-slate-200/90 shadow-xs">
         
         {/* Background Shop Banner with Blur Effect */}
-        {shop.banner_url ? (
-          <div
-            className="absolute inset-0 bg-cover bg-center filter blur-md scale-105 opacity-60 transition-transform duration-700"
-            style={{ backgroundImage: `url(${shop.banner_url})` }}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <img
+            src={bannerSrc}
+            alt=""
+            aria-hidden="true"
+            onError={() => {
+              if (bannerSrc !== DEFAULT_STORE_BANNER) {
+                setBannerSrc(DEFAULT_STORE_BANNER);
+              }
+            }}
+            className="w-full h-full object-cover filter blur-[2px] scale-105 opacity-60 transition-transform duration-700"
           />
-        ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-[#122e1b] via-[#1b4328] to-[#0d2214]" />
-        )}
+        </div>
 
-        {/* Dark High-Contrast Backdrop Overlay for Sharp Readability */}
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/85 via-slate-900/75 to-slate-950/90 backdrop-blur-md" />
+        {/* Balanced Dark Gradient Overlay for Sharp Readability & Contrast */}
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/80 via-slate-950/60 to-slate-950/80 pointer-events-none" />
 
         {/* Foreground Content Container */}
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
@@ -629,15 +567,9 @@ const DigitalMain = () => {
               {/* Circular Logo with border & shadow */}
               <div className="relative shrink-0">
                 <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-3 sm:border-4 border-white/95 shadow-2xl bg-white overflow-hidden flex items-center justify-center">
-                  {shop.logo_url ? (
+                  {logoUrl ? (
                     <img
-                      src={shop.logo_url}
-                      alt={shop.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : fallbackImg ? (
-                    <img
-                      src={fallbackImg}
+                      src={logoUrl}
                       alt={shop.name}
                       className="w-full h-full object-cover"
                     />
@@ -685,23 +617,49 @@ const DigitalMain = () => {
                   </button>
                 </div>
 
-                {/* Followers count */}
-                <div className="flex items-center gap-2 text-xs sm:text-sm text-emerald-300 font-semibold">
-                  <Users size={14} className="text-emerald-400 shrink-0" />
-                  <span>
-                    {followersCount} {followersCount === 1 ? "follower" : "followers"}
-                  </span>
-                  {shop.address?.full_address && (
-                    <>
-                      <span className="text-white/40">•</span>
-                      <span className="text-white/75 truncate text-xs font-normal">
-                        {shop.address.full_address}
-                      </span>
-                    </>
-                  )}
+                {/* Line 2 (Single Row for Stats): Follower count AND Review count / rating */}
+                <div className="flex items-center gap-2.5 text-xs sm:text-sm flex-wrap">
+                  {/* Followers Count */}
+                  <div className="flex items-center gap-1.5 text-emerald-300 font-semibold">
+                    <Users size={14} className="text-emerald-400 shrink-0" />
+                    <span>
+                      {followersCount} {followersCount === 1 ? "follower" : "followers"}
+                    </span>
+                  </div>
+
+                  <span className="text-white/40">•</span>
+
+                  {/* Review Badge / Button (Clickable!) */}
+                  <button
+                    type="button"
+                    onClick={() => setShowReviewsModal(true)}
+                    className="inline-flex items-center gap-1.5 text-amber-300 hover:text-amber-200 bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded-md transition-all cursor-pointer group shadow-2xs"
+                    title="View customer reviews and ratings"
+                  >
+                    <Star
+                      size={13}
+                      className="fill-amber-400 text-amber-400 shrink-0 group-hover:scale-110 transition-transform"
+                    />
+                    <span className="font-bold">
+                      {averageRating > 0 ? averageRating.toFixed(1) : "4.8"}
+                    </span>
+                    <span className="text-white/80 font-normal">
+                      ({reviewsCount} {reviewsCount === 1 ? "review" : "reviews"})
+                    </span>
+                  </button>
                 </div>
 
-                {/* Tagline / Description */}
+                {/* Line 3 (Address): Dedicated row with MapPin icon */}
+                {shop.address?.full_address && (
+                  <div className="flex items-center gap-1.5 text-xs text-slate-200/90 font-normal">
+                    <MapPin size={13} className="text-emerald-400 shrink-0" />
+                    <span className="truncate max-w-xl" title={shop.address.full_address}>
+                      {shop.address.full_address}
+                    </span>
+                  </div>
+                )}
+
+                {/* Line 4: Tagline / Description */}
                 <p className="text-xs sm:text-sm text-slate-200/90 max-w-xl font-normal leading-relaxed line-clamp-2">
                   {shop.description ||
                     shop.tagline ||
@@ -713,7 +671,7 @@ const DigitalMain = () => {
             {/* Right side: Styled Action Buttons */}
             <div className="flex flex-wrap sm:flex-col lg:flex-row items-stretch sm:items-end lg:items-center gap-2.5 shrink-0">
               
-              {/* 1. "Edit Store" button */}
+              {/* "Edit Store" button */}
               <button
                 type="button"
                 onClick={() => navigate("/setup-digital-store?mode=edit")}
@@ -722,18 +680,6 @@ const DigitalMain = () => {
               >
                 <Edit3 size={15} />
                 <span>Edit Store</span>
-              </button>
-
-              {/* 2. "Switch Shop" button */}
-              <button
-                type="button"
-                onClick={() => setShowSwitchShop(true)}
-                className="h-10 px-4 rounded-xl bg-[#286038] hover:bg-[#1e4a2b] text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-emerald-950/40"
-                title="Switch active store"
-              >
-                <Store size={15} />
-                <span>Switch Shop</span>
-                <ChevronDown size={14} className="opacity-80" />
               </button>
             </div>
           </div>
@@ -852,7 +798,7 @@ const DigitalMain = () => {
           3. SCROLLABLE ACTIVE TAB CONTENT
       ═══════════════════════════════════════════════════════════════════════ */}
       <main className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
-        <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 pb-28">
+        <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 pb-20">
         
         {/* Tab 1: Announcements (Two-column layout matching Wireframe Image 2) */}
         {activeTab === "Announcements" && (
@@ -882,7 +828,7 @@ const DigitalMain = () => {
       </main>
 
       {/* ── Fixed Bottom Action Bar Section (Compatible with Action Portal) ── */}
-      <footer className="fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-slate-200 px-4 sm:px-8 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] z-20 flex items-center justify-between gap-3 min-h-[56px]">
+      <footer className="fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-slate-200 px-4 sm:px-8 py-2 h-12 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] z-20 flex items-center justify-between gap-3">
         <div id="digital-store-bottom-status" className="flex items-center gap-2 min-w-0 flex-1">
           <span className="text-xs text-slate-400 font-medium">Digital Store Controls</span>
         </div>

@@ -1039,3 +1039,41 @@
   border-top: 1px solid #A8A49C;
   margin-top: 2px;
 }
+
+/* Dynamic Island Toast Styles - Brand Theme Green */
+.dynaura-root,
+.dynaura-root[data-theme="dark"],
+.dynaura-root[data-theme="light"],
+.dynaura-root[data-theme="system"] {
+  --dynaura-bg: #15803d;
+  --dynaura-fg: #ffffff;
+  --dynaura-muted: rgba(255, 255, 255, 0.9);
+  --dynaura-ring: rgba(255, 255, 255, 0.25);
+  --dynaura-btn: rgba(255, 255, 255, 0.22);
+}
+
+.dynaura-island {
+  background: #15803d !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  box-shadow: 0 10px 25px -5px rgba(21, 128, 61, 0.45), 0 8px 10px -6px rgba(21, 128, 61, 0.3) !important;
+}
+
+.dynaura-title {
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+
+.dynaura-desc {
+  color: rgba(255, 255, 255, 0.92) !important;
+}
+
+.dynaura-badge {
+  background: rgba(255, 255, 255, 0.22) !important;
+  color: #ffffff !important;
+}
+
+.dynaura-badge svg {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+}

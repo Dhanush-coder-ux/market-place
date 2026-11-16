@@ -147,8 +147,15 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
               longitude: s.address?.longitude || prev.longitude,
               gstRegistered: !!s.business_infos?.gst_infos?.registered,
               gstNumber: s.business_infos?.gst_infos?.number || "",
-              logoPreview: s.logo_url || prev.logoPreview,
-              bannerPreview: s.banner_url || prev.bannerPreview,
+              logoPreview: s.logo_url || (s as any).logoUrl || (s as any).logo || prev.logoPreview,
+              bannerPreview:
+                s.banner_url ||
+                (s as any).bannerUrl ||
+                (s as any).banner ||
+                s.additional_infos?.banner_url ||
+                s.additional_infos?.banner ||
+                localStorage.getItem("shop_banner") ||
+                prev.bannerPreview,
               contactEmail: s.additional_infos?.emails?.[0] || prev.contactEmail,
               contactPhone: s.additional_infos?.mobile_numbers?.[0] || prev.contactPhone,
               website: s.additional_infos?.website || prev.website,
@@ -225,7 +232,11 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
       }
       if (form.banner instanceof File) {
         try {
-          await shop.uploadShopImage(form.banner, "banner", currentShopId);
+          const res: any = await shop.uploadShopImage(form.banner, "banner", currentShopId);
+          const uploadedUrl = res?.data?.url || res?.data?.image_url || res?.data?.banner_url || res?.url;
+          if (uploadedUrl) {
+            localStorage.setItem("shop_banner", uploadedUrl);
+          }
         } catch (e) {
           console.error("Banner upload error", e);
         }
@@ -403,7 +414,11 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
         }
         if (form.banner instanceof File) {
           try {
-            await shop.uploadShopImage(form.banner, "banner", newShopId);
+            const res: any = await shop.uploadShopImage(form.banner, "banner", newShopId);
+            const uploadedUrl = res?.data?.url || res?.data?.image_url || res?.data?.banner_url || res?.url;
+            if (uploadedUrl) {
+              localStorage.setItem("shop_banner", uploadedUrl);
+            }
           } catch (e) {
             console.error("Banner upload error", e);
           }

@@ -96,5 +96,16 @@ export const shopApi = {
     formData.append("image_type", imageType);
     formData.append("user_id", userId);
     return await apiClient.postFormData(`${ENDPOINTS.SHOPS}/upload/images`, formData);
+  },
+
+  // ── Customer Reviews ───────────────────────────────────────────────────────
+  getShopReviews: async (shop_id: string, params?: Record<string, any>) => {
+    const stringParams = params
+      ? Object.fromEntries(Object.entries(params).map(([k, v]) => [k, String(v)]))
+      : undefined;
+    return await apiClient.get(`/digitalstore/shops/${shop_id}/reviews`, stringParams);
+  },
+  getShopReviewSummary: async (shop_id: string) => {
+    return await apiClient.get(`/digitalstore/shops/${shop_id}/reviews/summary`);
   }
 };

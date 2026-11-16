@@ -309,7 +309,7 @@ export const Navbar = () => {
                   background: `linear-gradient(135deg, var(--t-primary, #286038), var(--t-sidebar-via, #103020))`,
                   boxShadow: `0 2px 8px var(--t-btn-shadow, rgba(40, 96, 56, 0.25))`,
                 }}
-                className="flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-full text-white font-semibold text-xs hover:opacity-95 hover:shadow-md transition-all active:scale-95 cursor-pointer shrink-0 border border-white/20"
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-white font-semibold text-xs hover:opacity-95 hover:shadow-md transition-all active:scale-95 cursor-pointer shrink-0 border border-white/20"
                 title="Download / Install inventQ as Desktop App"
               >
                 <Download size={13} strokeWidth={2.5} />

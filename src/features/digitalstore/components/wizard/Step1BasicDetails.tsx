@@ -148,7 +148,11 @@ export default function Step1BasicDetails({ form, setForm, errors, setErrors }: 
       const setStatus = type === 'logo' ? setUploadingLogo : setUploadingBanner;
       setStatus("uploading");
       try {
-        await shopApi.uploadShopImage(file, type, existingShopId);
+        const res: any = await shopApi.uploadShopImage(file, type, existingShopId);
+        const uploadedUrl = res?.data?.url || res?.data?.image_url || res?.data?.banner_url || res?.url;
+        if (type === 'banner' && uploadedUrl) {
+          localStorage.setItem("shop_banner", uploadedUrl);
+        }
         setStatus("done");
         setTimeout(() => setStatus("idle"), 2500);
       } catch (err) {

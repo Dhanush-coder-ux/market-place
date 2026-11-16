@@ -273,12 +273,12 @@ export function StoreSettingsLayout({
 
 
   return (
-    <div className={`${hideInternalNav ? "w-full" : "bg-white rounded-2xl border border-slate-200/90 overflow-hidden shadow-xs flex flex-col md:flex-row md:min-h-[600px] mb-20 md:mb-0"}`}>
+    <div className="w-full flex flex-col md:flex-row md:min-h-[600px] gap-6">
 
       {/* ── Left Sidebar (Horizontal pill bar on mobile, sidebar on md+) ── */}
       {!hideInternalNav && (
-        <nav className="w-full md:w-56 border-b md:border-b-0 md:border-r border-slate-200 bg-slate-50/60 shrink-0">
-          <div className="p-2.5 md:p-3 flex md:flex-col gap-1.5 md:gap-0.5 overflow-x-auto no-scrollbar">
+        <nav className="w-full md:w-60 shrink-0">
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-2 md:p-2.5 flex md:flex-col gap-1 md:gap-1.5 overflow-x-auto no-scrollbar shadow-xs sticky top-20">
             {sidebarItems.map((item) => {
               const isActive   = activeSection === item.id;
               const isDanger   = item.id === "danger";
@@ -286,14 +286,14 @@ export function StoreSettingsLayout({
                 <button
                   key={item.id}
                   onClick={() => setActiveSection(item.id)}
-                  className={`shrink-0 md:w-full flex items-center gap-2 md:gap-3 px-3 py-2 md:py-2.5 rounded-lg text-left transition-all duration-150 group whitespace-nowrap ${
+                  className={`shrink-0 md:w-full flex items-center gap-2 md:gap-3 px-3 py-2 md:py-2.5 rounded-lg text-left transition-all duration-150 group whitespace-nowrap cursor-pointer ${
                     isActive
                       ? isDanger
-                        ? "bg-red-50 text-red-600 md:border-l-2 border-red-500 ring-1 md:ring-0 ring-red-200"
+                        ? "bg-red-50 text-red-600 font-semibold md:border-l-2 border-red-500 ring-1 md:ring-0 ring-red-200"
                         : "bg-emerald-50 text-[#1e4a2b] font-semibold md:border-l-2 border-[#286038] shadow-xs ring-1 md:ring-0 ring-emerald-200"
                       : isDanger
                         ? "text-red-500 hover:bg-red-50/60 md:border-l-2 border-transparent"
-                        : "text-slate-600 hover:bg-white hover:text-slate-800 md:border-l-2 border-transparent"
+                        : "text-slate-600 hover:bg-slate-50 hover:text-slate-800 md:border-l-2 border-transparent"
                   }`}
                 >
                   <item.icon
@@ -313,7 +313,7 @@ export function StoreSettingsLayout({
       )}
 
       {/* ── Right Content ── */}
-      <div className={`flex-1 ${hideInternalNav ? "p-0" : "overflow-y-auto p-4 sm:p-6"}`}>
+      <div className="flex-1 w-full min-w-0">
 
         {/* ── Store Details ── */}
         {activeSection === "details" && (
@@ -528,7 +528,7 @@ export function StoreSettingsLayout({
                 type="button"
                 onClick={handleSaveReturns}
                 disabled={savingReturns || savedReturns}
-                className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white transition-all shadow-sm cursor-pointer disabled:opacity-50 ${
+                className={`inline-flex items-center gap-2 h-9 px-5 rounded-xl text-xs sm:text-sm font-bold text-white transition-all shadow-sm cursor-pointer disabled:opacity-50 ${
                   savedReturns ? "bg-emerald-600 hover:bg-emerald-700" : "bg-blue-600 hover:bg-blue-700 active:scale-98"
                 }`}
                 style={{ boxShadow: "0 2px 10px rgba(59,130,246,0.3)" }}
@@ -615,7 +615,7 @@ export function StoreSettingsLayout({
                 type="button"
                 onClick={handleSaveVacation}
                 disabled={savingVacation || savedVacation}
-                className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white transition-all shadow-sm cursor-pointer disabled:opacity-50 ${
+                className={`inline-flex items-center gap-2 h-9 px-5 rounded-xl text-xs sm:text-sm font-bold text-white transition-all shadow-sm cursor-pointer disabled:opacity-50 ${
                   savedVacation ? "bg-emerald-600 hover:bg-emerald-700" : "bg-blue-600 hover:bg-blue-700 active:scale-98"
                 }`}
                 style={{ boxShadow: "0 2px 10px rgba(59,130,246,0.3)" }}

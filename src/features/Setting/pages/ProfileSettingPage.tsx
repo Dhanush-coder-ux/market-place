@@ -20,9 +20,11 @@ import {
   Keyboard,
   ChevronLeft,
   ChevronRight,
+  SlidersHorizontal,
 } from "lucide-react";
 import { ActivityLogPage } from "@/features/Setting/pages/ActivityLogPage";
 import { CustomListSettings } from "@/features/Setting/pages/CustomListSettings";
+import { CustomFieldsSettings } from "@/features/Setting/pages/CustomFieldsSettings";
 import { ShopProfileForm } from "@/features/Setting/pages/ShopProfileForm";
 import { BusinessCategorySettings } from "@/features/Setting/pages/BusinessCategorySettings";
 import PricingPlansPage from "@/features/subscription/pages/PricingPlansPage";
@@ -56,6 +58,13 @@ const MENU_ITEMS = [
     icon: ListTree,
     description: "Categories & units",
     accent: "violet",
+  },
+  {
+    id: "customfields",
+    label: "Custom Fields",
+    icon: SlidersHorizontal,
+    description: "Product custom fields & attributes",
+    accent: "indigo",
   },
   {
     id: "gst",
@@ -107,6 +116,7 @@ const accentClasses: Record<string, { icon: string; badge: string }> = {
   emerald: { icon: "bg-emerald-50 text-emerald-600", badge: "bg-emerald-100 text-emerald-700" },
   amber: { icon: "bg-amber-50   text-amber-600", badge: "bg-amber-100   text-amber-700" },
   rose: { icon: "bg-rose-50    text-rose-600", badge: "bg-rose-100    text-rose-700" },
+  indigo: { icon: "bg-indigo-50  text-indigo-600", badge: "bg-indigo-100  text-indigo-700" },
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -279,6 +289,9 @@ export const ProfileSettingsPage = () => {
       case "shopprofile":
         return <ShopProfileForm />;
 
+      case "customfields":
+        return wrapper(<CustomFieldsSettings />);
+
       case "dropdowns":
         return wrapper(
           <div className="space-y-6">
@@ -286,6 +299,9 @@ export const ProfileSettingsPage = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
               <CustomListSettings type="categories" />
               <CustomListSettings type="units" />
+            </div>
+            <div className="pt-6 border-t border-slate-200">
+              <CustomFieldsSettings isEmbedded={true} />
             </div>
           </div>
         );

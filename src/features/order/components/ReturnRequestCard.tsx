@@ -1,9 +1,11 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   User, Phone, Package, RotateCcw, Check, X,
-  Clock, IndianRupee, MessageSquareQuote, ArrowRight, AlertCircle
+  Clock, IndianRupee, MessageSquareQuote, ArrowRight, AlertCircle, AlertTriangle
 } from "lucide-react";
 import type { ReturnRequestRecord } from "../types";
+import { useToast } from "@/context/ToastContext";
 
 interface ReturnRequestCardProps {
   request: ReturnRequestRecord;
@@ -18,9 +20,13 @@ export const ReturnRequestCard: React.FC<ReturnRequestCardProps> = ({
   onViewOrder,
   viewMode = "list"
 }) => {
+  const navigate = useNavigate();
+  const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [showAcceptModal, setShowAcceptModal] = useState(false);
+  const [acceptNotes, setAcceptNotes] = useState("");
 
   const status = (request.status || "PENDING").toUpperCase();
   const isPending = status === "PENDING";
@@ -41,9 +47,16 @@ export const ReturnRequestCard: React.FC<ReturnRequestCardProps> = ({
     try {
       setLoading(true);
       await onStatusChange(request.id, newStatus, notes);
+      if (newStatus === "ACCEPTED") {
+        showToast(
+          "Return request accepted! Please go to Sales to execute the return for this product.",
+          "warning"
+        );
+      }
     } finally {
       setLoading(false);
       setShowRejectModal(false);
+      setShowAcceptModal(false);
     }
   };
 
@@ -223,7 +236,10 @@ export const ReturnRequestCard: React.FC<ReturnRequestCardProps> = ({
                 <button
                   type="button"
                   disabled={loading}
-                  onClick={() => handleAction("ACCEPTED")}
+                  onClick={() => {
+                    setAcceptNotes("");
+                    setShowAcceptModal(true);
+                  }}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-600 hover:text-white transition-all shadow-sm active:scale-95 disabled:opacity-50"
                 >
                   <Check size={14} strokeWidth={2.5} />
@@ -234,12 +250,26 @@ export const ReturnRequestCard: React.FC<ReturnRequestCardProps> = ({
 
             {!isPending && (
               <div className="flex items-center gap-2">
+                {isAccepted && (
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/sales/return/${request.order_id}`)}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold text-white bg-[#286038] hover:bg-[#1e4a2b] transition-all shadow-xs"
+                    title="Process the return and refund in Sales"
+                  >
+                    <RotateCcw size={12} strokeWidth={2.5} />
+                    <span>Go to Sales Return</span>
+                  </button>
+                )}
                 <span className="text-xs text-slate-400">Change Status:</span>
                 {isRejected && (
                   <button
                     type="button"
                     disabled={loading}
-                    onClick={() => handleAction("ACCEPTED")}
+                    onClick={() => {
+                      setAcceptNotes("");
+                      setShowAcceptModal(true);
+                    }}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 border border-emerald-200 hover:bg-emerald-600 hover:text-white transition-all"
                   >
                     <Check size={12} strokeWidth={2.5} />
@@ -261,7 +291,80 @@ export const ReturnRequestCard: React.FC<ReturnRequestCardProps> = ({
             )}
           </div>
         </div>
+
+        {/* Indication Banner for Accepted Requests */}
+        {isAccepted && (
+          <div className="mt-2.5 p-3 bg-amber-50/90 border border-amber-200 rounded-lg text-xs text-amber-900 flex items-start gap-2">
+            <AlertTriangle size={15} className="text-amber-600 shrink-0 mt-0.5" />
+            <div className="leading-relaxed">
+              <span className="font-bold block text-amber-800">Return Not Automatically Executed</span>
+              <span>
+                Accepting this digital store request only updates its status. You need to go to <strong>Sales &gt; Return</strong> for this product/order to process the return and refund properly.
+              </span>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Accept Confirmation Modal with clear indication */}
+      {showAcceptModal && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-xl border border-slate-200 p-4 sm:p-5 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-5 w-full max-w-md max-h-[90dvh] overflow-y-auto space-y-4">
+            <div className="flex items-center gap-2.5 text-emerald-600">
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center">
+                <Check size={18} strokeWidth={2.5} />
+              </div>
+              <h3 className="text-base font-bold text-slate-800">Accept Return Request</h3>
+            </div>
+
+            {/* Warning banner */}
+            <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 flex items-start gap-2.5">
+              <AlertTriangle size={18} className="text-amber-600 shrink-0 mt-0.5" />
+              <div className="text-xs space-y-1">
+                <p className="font-bold text-amber-800">Return will NOT execute automatically</p>
+                <p className="text-amber-700 leading-relaxed">
+                  Accepting this request approves it for the customer, but <strong>will NOT automatically execute the return or refund the stock/payment</strong>.
+                </p>
+                <p className="font-semibold text-amber-800">
+                  Please note: You need to go to the <strong>Sales</strong> page for this product/order and execute the return properly.
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
+                Merchant Notes (Optional)
+              </label>
+              <textarea
+                value={acceptNotes}
+                onChange={(e) => setAcceptNotes(e.target.value)}
+                placeholder="e.g. Return approved. Please bring or courier the items..."
+                rows={2}
+                className="w-full text-xs p-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowAcceptModal(false)}
+                className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => handleAction("ACCEPTED", acceptNotes.trim() || "Return request accepted.")}
+                className="px-4 py-2 rounded-lg text-xs font-bold text-white bg-[#286038] hover:bg-[#1e4a2b] shadow-sm transition-all flex items-center gap-1.5"
+              >
+                <Check size={14} strokeWidth={2.5} />
+                <span>Confirm &amp; Accept</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Reject Remarks Modal */}
       {showRejectModal && (

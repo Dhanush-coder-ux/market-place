@@ -1,9 +1,10 @@
 import React, { useMemo } from "react";
 import {
-  Banknote, Clock, CreditCard, User, X, Search, ArrowLeft
+  Banknote, Clock, CreditCard, User, X, Search, ArrowLeft, AlertCircle
 } from "lucide-react";
 import { BillingItem, CustomerData } from "../types";
 import { BillTotals, formatINR } from "@/utils/pricing";
+import { useToast } from "@/context/ToastContext";
 import KeyboardKey from "@/components/common/KeyboardKey";
 
 type PaymentMode = "cash" | "upi" | "credit" | "card";
@@ -57,6 +58,7 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
   onDetachCustomer,
   onBackToItems
 }) => {
+  const { showToast } = useToast();
   const totalQty = useMemo(() => items.reduce((s, i) => s + (i.qty || 0), 0), [items]);
   const filledItems = useMemo(() => items.filter(i => !!i.name).length, [items]);
   const isCreditAllowed = customerData ? customerData.outstanding < customerData.creditLimit : false;
@@ -98,6 +100,7 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
 
   const paidAmount = useMemo(() => round2(payments.reduce((s, p) => s + (p.amount || 0), 0)), [payments]);
   const balanceAmount = useMemo(() => round2(finalAmount - paidAmount), [finalAmount, paidAmount]);
+  const isOverpaid = paidAmount > round2(finalAmount) + 0.01;
 
   const handleGenerateInvoice = () => {
     if (totalQty === 0) return alert("Cart is empty");
@@ -105,8 +108,12 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
       alert("Please select a customer to generate an invoice. Invoices are only available for registered or selected customers.");
       return;
     }
+    if (isOverpaid) {
+      showToast(`Total paid amount (₹${formatINR(paidAmount)}) cannot exceed the bill amount (₹${formatINR(finalAmount)}).`, "error");
+      return;
+    }
     if (balanceAmount > 0.01) {
-      alert("Please pay the full balance amount first.");
+      showToast("Please pay the full balance amount first.", "warning");
       return;
     }
     onConfirmOrder(payments, includeGst, "COMPLETED", "INVOICE");
@@ -114,7 +121,14 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
 
   const handleQuickCheckout = () => {
     if (totalQty === 0) return alert("Cart is empty");
-    if (balanceAmount > 0.01) return alert("Please pay the full balance amount first.");
+    if (isOverpaid) {
+      showToast(`Total paid amount (₹${formatINR(paidAmount)}) cannot exceed the bill amount (₹${formatINR(finalAmount)}).`, "error");
+      return;
+    }
+    if (balanceAmount > 0.01) {
+      showToast("Please pay the full balance amount first.", "warning");
+      return;
+    }
     onConfirmOrder(payments, includeGst, "COMPLETED", "BILL");
   };
 
@@ -342,26 +356,39 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
           <div className="space-y-2 pr-0.5">
             {payments.map((p, idx) => (
               <div key={idx} className="flex gap-2 items-center">
-                <div className="flex-1 flex items-center bg-blue-50/40 rounded-lg border border-blue-100/80 h-[38px] overflow-hidden">
-                  <div className="flex items-center gap-2 px-2.5 w-[85px] bg-blue-50/40 text-blue-900 text-[12px] font-bold shrink-0">
+                <div className={`flex-1 flex items-center rounded-lg border h-[38px] overflow-hidden transition-colors ${
+                  isOverpaid ? "bg-rose-50/40 border-rose-300" : "bg-blue-50/40 border-blue-100/80"
+                }`}>
+                  <div className={`flex items-center gap-2 px-2.5 w-[85px] text-[12px] font-bold shrink-0 ${
+                    isOverpaid ? "bg-rose-50 text-rose-900" : "bg-blue-50/40 text-blue-900"
+                  }`}>
                     {p.mode === 'cash' && <Banknote size={14} className="opacity-60" />}
                     {p.mode === 'upi' && <CreditCard size={14} className="opacity-60" />}
                     {p.mode === 'credit' && <Clock size={14} className="opacity-60" />}
                     {p.mode === 'card' && <CreditCard size={14} className="opacity-60" />}
                     <span className="capitalize">{p.mode === 'upi' ? 'UPI' : p.mode === 'credit' ? 'On Credit' : p.mode === 'card' ? 'Card' : p.mode}</span>
                   </div>
-                  <div className="h-full w-px bg-blue-100/80" />
-                  <div className="flex items-center justify-center px-3 bg-blue-50/80 text-blue-600 text-[12px] font-bold shrink-0">
+                  <div className={`h-full w-px ${isOverpaid ? "bg-rose-200" : "bg-blue-100/80"}`} />
+                  <div className={`flex items-center justify-center px-3 text-[12px] font-bold shrink-0 ${
+                    isOverpaid ? "bg-rose-100/70 text-rose-700" : "bg-blue-50/80 text-blue-600"
+                  }`}>
                     ₹
                   </div>
-                  <div className="h-full w-px bg-blue-100/80" />
+                  <div className={`h-full w-px ${isOverpaid ? "bg-rose-200" : "bg-blue-100/80"}`} />
                   <input
                     type="number"
                     autoFocus={idx === payments.length - 1}
                     value={p.amount || ""}
                     onChange={(e) => updatePayment(idx, { amount: Number(e.target.value) })}
+                    onBlur={() => {
+                      if (isOverpaid) {
+                        showToast(`Total paid amount (₹${formatINR(paidAmount)}) cannot exceed the bill amount (₹${formatINR(finalAmount)}).`, "error");
+                      }
+                    }}
                     placeholder="0"
-                    className="flex-1 w-full bg-white h-full px-3 text-right text-[14px] font-bold text-slate-800 outline-none tabular-nums"
+                    className={`flex-1 w-full bg-white h-full px-3 text-right text-[14px] font-bold outline-none tabular-nums ${
+                      isOverpaid ? "text-rose-600 font-extrabold" : "text-slate-800"
+                    }`}
                   />
                 </div>
                 {payments.length > 1 ? (
@@ -444,18 +471,34 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
           </div>
 
           {/* Settle Status Indicator */}
-          <div className={`p-2.5 rounded-lg border transition-all shrink-0 ${Math.abs(balanceAmount) < 0.01
-            ? "bg-emerald-50/50 border-emerald-100"
-            : balanceAmount > 0
-              ? "bg-amber-50/50 border-amber-100"
-              : "bg-blue-50/50 border-blue-100"
-            }`}>
+          <div className={`p-2.5 rounded-lg border transition-all shrink-0 ${
+            isOverpaid
+              ? "bg-rose-50 border-rose-300"
+              : Math.abs(balanceAmount) < 0.01
+                ? "bg-emerald-50/50 border-emerald-100"
+                : balanceAmount > 0
+                  ? "bg-amber-50/50 border-amber-100"
+                  : "bg-blue-50/50 border-blue-100"
+          }`}>
             <div className="flex items-center justify-between text-[11px] font-bold">
               <div>
-                <span className="text-[7.5px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Received</span>
-                <span className="text-[12px] text-slate-800 tabular-nums">₹{formatINR(paidAmount)}</span>
+                <span className={`text-[7.5px] font-black uppercase tracking-widest block mb-0.5 ${isOverpaid ? "text-rose-500" : "text-slate-400"}`}>
+                  Received
+                </span>
+                <span className={`text-[12px] tabular-nums ${isOverpaid ? "text-rose-700 font-extrabold" : "text-slate-800"}`}>
+                  ₹{formatINR(paidAmount)}
+                </span>
               </div>
-              {Math.abs(balanceAmount) >= 0.01 && (
+              {isOverpaid ? (
+                <div className="text-right">
+                  <span className="text-[7.5px] font-black uppercase tracking-widest block mb-0.5 text-rose-500">
+                    Exceeded By
+                  </span>
+                  <span className="text-[12px] tabular-nums text-rose-600 font-extrabold">
+                    +₹{formatINR(paidAmount - finalAmount)}
+                  </span>
+                </div>
+              ) : Math.abs(balanceAmount) >= 0.01 ? (
                 <div className="text-right">
                   <span className={`text-[7.5px] font-black uppercase tracking-widest block mb-0.5 ${balanceAmount > 0 ? "text-amber-550" : "text-blue-550"}`}>
                     {balanceAmount > 0 ? "Remaining" : "Change"}
@@ -464,8 +507,7 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
                     ₹{formatINR(Math.abs(balanceAmount))}
                   </span>
                 </div>
-              )}
-              {Math.abs(balanceAmount) < 0.01 && finalAmount > 0 && (
+              ) : finalAmount > 0 ? (
                 <div className="flex items-center gap-1 text-emerald-600">
                   <div className="w-4 h-4 rounded-full bg-emerald-100 flex items-center justify-center">
                     <svg width="8" height="8" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -474,8 +516,15 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
                   </div>
                   <span className="text-[10px] font-bold">Settled</span>
                 </div>
-              )}
+              ) : null}
             </div>
+
+            {isOverpaid && (
+              <div className="mt-2 pt-1.5 border-t border-rose-200 flex items-start gap-1.5 text-rose-700 text-[10.5px] font-semibold leading-tight">
+                <AlertCircle size={13} className="shrink-0 mt-0.5 text-rose-600" />
+                <span>Total paid amount (₹{formatINR(paidAmount)}) cannot exceed the bill amount (₹{formatINR(finalAmount)}).</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -485,9 +534,9 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
         <div className="shrink-0 p-3 pt-2.5 pb-[max(12px,env(safe-area-inset-bottom))] lg:pb-3 bg-white border-t border-slate-200/80 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] flex gap-2.5 z-10">
           <button
             onClick={handleQuickCheckout}
-            disabled={totalQty === 0 || balanceAmount > 0.01 || isSubmitting}
-            title="Complete & Save Bill (Ctrl + Enter)"
-            className={`flex-1 h-11 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 ${totalQty === 0 || balanceAmount > 0.01 || isSubmitting
+            disabled={totalQty === 0 || balanceAmount > 0.01 || isOverpaid || isSubmitting}
+            title={isOverpaid ? `Total paid amount (₹${formatINR(paidAmount)}) cannot exceed the bill amount (₹${formatINR(finalAmount)}).` : "Complete & Save Bill (Ctrl + Enter)"}
+            className={`flex-1 h-11 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 ${totalQty === 0 || balanceAmount > 0.01 || isOverpaid || isSubmitting
                 ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed shadow-none"
                 : "text-blue-500 border-blue-400 border-2 hover:bg-blue-500 hover:text-white shadow-md shadow-slate-900/10 active:scale-97 cursor-pointer"
               }`}
@@ -498,9 +547,17 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
 
           <button
             onClick={handleGenerateInvoice}
-            disabled={totalQty === 0 || isSubmitting || !customerData}
-            title={!customerData ? "Select a customer (F4) to enable invoice generation" : "Complete and generate A4 tax invoice"}
-            className={`flex-1 h-11 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 ${totalQty === 0 || isSubmitting || !customerData
+            disabled={totalQty === 0 || isSubmitting || !customerData || balanceAmount > 0.01 || isOverpaid}
+            title={
+              !customerData
+                ? "Select a customer (F4) to enable invoice generation"
+                : isOverpaid
+                ? `Total paid amount (₹${formatINR(paidAmount)}) cannot exceed the bill amount (₹${formatINR(finalAmount)}).`
+                : balanceAmount > 0.01
+                ? "Please pay the full balance amount first."
+                : "Complete and generate A4 tax invoice"
+            }
+            className={`flex-1 h-11 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-200 flex items-center justify-center gap-1.5 ${totalQty === 0 || isSubmitting || !customerData || balanceAmount > 0.01 || isOverpaid
                 ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed shadow-none"
                 : "text-blue-500 border-blue-400 border-2 hover:bg-blue-500 hover:text-white shadow-lg shadow-blue-500/20 active:scale-97 cursor-pointer"
               }`}

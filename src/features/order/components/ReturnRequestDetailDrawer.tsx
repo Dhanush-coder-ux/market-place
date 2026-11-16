@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from "react";
 import {
   X, Check, AlertCircle, Clock, RotateCcw, Package,
-  User, Phone, Mail, FileText, ChevronRight, AlertTriangle, Loader2
+  User, Phone, Mail, FileText, ChevronRight, AlertTriangle, Loader2,
+  ArrowRight
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import Drawer from "@/components/common/Drawer";
 import type { ReturnRequestRecord } from "../types";
 import { orderApi } from "@/services/api/order";
+import { useToast } from "@/context/ToastContext";
 
 interface ReturnRequestDetailDrawerProps {
   isOpen: boolean;
@@ -24,6 +27,9 @@ export const ReturnRequestDetailDrawer: React.FC<ReturnRequestDetailDrawerProps>
   onStatusUpdated,
   onViewOrder,
 }) => {
+  const navigate = useNavigate();
+  const { showToast } = useToast();
+
   const [confirmModal, setConfirmModal] = useState<{
     open: boolean;
     type: "ACCEPTED" | "REJECTED";
@@ -103,6 +109,15 @@ export const ReturnRequestDetailDrawer: React.FC<ReturnRequestDetailDrawerProps>
         admin_notes: adminNotes.trim(),
       });
 
+      if (confirmModal.type === "ACCEPTED") {
+        showToast(
+          "Return request accepted! Please go to Sales to execute the return for this product.",
+          "warning"
+        );
+      } else {
+        showToast("Return request rejected.", "info");
+      }
+
       setConfirmModal({ open: false, type: "ACCEPTED" });
       onStatusUpdated();
       onClose();
@@ -157,6 +172,32 @@ export const ReturnRequestDetailDrawer: React.FC<ReturnRequestDetailDrawerProps>
               <span className="text-xs font-bold text-slate-700 mt-1 block">{formattedDate}</span>
             </div>
           </div>
+
+          {/* Indication Banner for Accepted Requests */}
+          {isAccepted && (
+            <div className="p-4 bg-amber-50/90 border border-amber-200 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+              <div className="flex items-start gap-2.5">
+                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                <div className="text-xs text-amber-950 space-y-0.5">
+                  <span className="font-bold block text-amber-900">Manual Return Execution Required in Sales</span>
+                  <span className="text-amber-800 leading-relaxed block">
+                    This request has been accepted, but the return is <strong>not automatically executed</strong>. Please note that you need to go to <strong>Sales &gt; Return</strong> for this product/order to complete the return and financial refund properly.
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  navigate(`/sales/return/${request.order_id}`);
+                }}
+                className="shrink-0 px-3.5 py-2 rounded-lg bg-[#286038] hover:bg-[#1e4a2b] text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5"
+              >
+                <span>Go to Sales Return</span>
+                <ArrowRight size={13} />
+              </button>
+            </div>
+          )}
 
           {/* Seller / Admin Notes (if present) */}
           {request.admin_notes && (
@@ -359,6 +400,22 @@ export const ReturnRequestDetailDrawer: React.FC<ReturnRequestDetailDrawerProps>
                 </p>
               </div>
             </div>
+
+            {/* Warning banner for Accept action */}
+            {confirmModal.type === "ACCEPTED" && (
+              <div className="mt-4 p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                <div className="text-xs space-y-1">
+                  <p className="font-bold text-amber-800">Return will NOT execute automatically</p>
+                  <p className="leading-relaxed text-amber-700">
+                    Accepting this request only approves the customer's request. It <strong>will NOT automatically execute the return</strong> or process the refund in inventory.
+                  </p>
+                  <p className="font-semibold text-amber-800">
+                    Please note: You need to go to <strong>Sales &gt; Return</strong> for this product/order and execute the return properly.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {actionError && (
               <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-xs font-semibold text-red-700 flex items-center gap-2">

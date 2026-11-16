@@ -615,9 +615,11 @@ const PurchaseForm = () => {
         let finalSellPrice = 0;
         if (p.marginType === "percent" && Number(p.marginPercent) > 0) {
           const m = Number(p.marginPercent);
-          finalSellPrice = m < 100 ? netCostForSp / (1 - m / 100) : netCostForSp * (1 + m / 100);
+          const computedBase = m < 100 ? netCostForSp / (1 - m / 100) : netCostForSp * (1 + m / 100);
+          finalSellPrice = Math.round(computedBase * (1 + (isGstRegistered ? gstRate : 0) / 100) * 100) / 100;
         } else if (p.marginType === "amount" && Number(p.marginAmount) > 0) {
-          finalSellPrice = netCostForSp + Number(p.marginAmount);
+          const computedBase = netCostForSp + Number(p.marginAmount);
+          finalSellPrice = Math.round(computedBase * (1 + (isGstRegistered ? gstRate : 0) / 100) * 100) / 100;
         } else {
           finalSellPrice = Number(p.sellingPrice) || 0;
         }

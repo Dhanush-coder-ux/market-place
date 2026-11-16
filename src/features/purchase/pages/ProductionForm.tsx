@@ -286,13 +286,15 @@ const ProductionForm = () => {
         const baseCost = Number(p.costPrice) || 0;
         const netCostPerUnit = stats.allocations[idx]?.netCostPerUnit || baseCost;
 
-        let finalSellPrice = 0;
-        if (p.marginType === "percent") {
-          finalSellPrice = netCostPerUnit * (1 + (Number(p.marginPercent) || 0) / 100);
-        } else if (p.marginType === "amount") {
-          finalSellPrice = netCostPerUnit + (Number(p.marginAmount) || 0);
-        } else {
-          finalSellPrice = Number(p.sellingPrice) || 0;
+        const gstRate = Number(p.taxGst || 0);
+        let finalSellPrice = Number(p.sellingPrice) || 0;
+        if (p.marginType === "percent" && Number(p.marginPercent) > 0) {
+          const m = Number(p.marginPercent);
+          const computedBase = m < 100 ? netCostPerUnit / (1 - m / 100) : netCostPerUnit * (1 + m / 100);
+          finalSellPrice = Math.round(computedBase * (1 + gstRate / 100) * 100) / 100;
+        } else if (p.marginType === "amount" && Number(p.marginAmount) > 0) {
+          const computedBase = netCostPerUnit + Number(p.marginAmount);
+          finalSellPrice = Math.round(computedBase * (1 + gstRate / 100) * 100) / 100;
         }
 
         return {

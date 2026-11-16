@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   RotateCcw, Clock, CheckCircle2, XCircle, RefreshCw,
   Copy, Check, X, AlertCircle, ChevronLeft, ChevronRight, Eye,
@@ -8,6 +9,7 @@ import {
 import { orderApi } from "@/services/api/order";
 import { customerApi } from "@/services/api/customer";
 import { getShopId, SHOP_ID } from "@/services/endpoints";
+import { useToast } from "@/context/ToastContext";
 import type { ReturnRequestRecord } from "../types";
 import { ReturnRequestDetailDrawer } from "../components/ReturnRequestDetailDrawer";
 import { ReturnRequestCard } from "../components/ReturnRequestCard";
@@ -20,6 +22,8 @@ import { StatCard } from "@/components/common/StatsCard";
 import { SearchBar } from "@/components/ui";
 
 export const ReturnRequestsPage: React.FC = () => {
+  const navigate = useNavigate();
+  const { showToast } = useToast();
   const rawId = getShopId() || localStorage.getItem("shop_id") || SHOP_ID || "";
   const currentShopId = rawId && rawId !== "string" ? rawId : "";
 
@@ -54,6 +58,12 @@ export const ReturnRequestsPage: React.FC = () => {
   // Fast Reject confirmation modal state
   const [rejectModalReq, setRejectModalReq] = useState<ReturnRequestRecord | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+
+  // Accept confirmation modal state & post-acceptance modal
+  const [acceptModalReq, setAcceptModalReq] = useState<ReturnRequestRecord | null>(null);
+  const [acceptNotes, setAcceptNotes] = useState("");
+  const [acceptSuccessModal, setAcceptSuccessModal] = useState<ReturnRequestRecord | null>(null);
+
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -222,26 +232,46 @@ export const ReturnRequestsPage: React.FC = () => {
     }
   };
 
-  // Quick Accept action
-  const handleQuickAccept = async (requestId: string, e: React.MouseEvent) => {
+  // Open Accept Modal with reminder indication
+  const handleOpenAcceptModal = (req: ReturnRequestRecord, e: React.MouseEvent) => {
     e.stopPropagation();
+    setAcceptModalReq(req);
+    setAcceptNotes("");
+    setActionError(null);
+  };
+
+  // Submit Accept with warning and prompt
+  const handleConfirmAccept = async () => {
+    if (!acceptModalReq) return;
     try {
       setActionLoading(true);
-      await orderApi.updateReturnRequestStatus(requestId, {
+      setActionError(null);
+      const notes = acceptNotes.trim() || "Return request accepted.";
+      await orderApi.updateReturnRequestStatus(acceptModalReq.id, {
         status: "ACCEPTED",
-        admin_notes: "Return request accepted.",
+        admin_notes: notes,
       });
+
       setRequests((prev) =>
         prev.map((r) =>
-          r.id === requestId
-            ? { ...r, status: "ACCEPTED", admin_notes: "Return request accepted." }
+          r.id === acceptModalReq.id
+            ? { ...r, status: "ACCEPTED", admin_notes: notes }
             : r
         )
       );
+
+      showToast(
+        "Return request accepted! Please go to Sales to execute the return for this product.",
+        "warning"
+      );
+
+      const acceptedReq = acceptModalReq;
+      setAcceptModalReq(null);
+      setAcceptSuccessModal(acceptedReq);
       handleRefresh();
     } catch (err: any) {
       console.error("Failed to accept return request:", err);
-      setError(err?.message || "Failed to accept return request.");
+      setActionError(err?.message || "Failed to accept return request.");
     } finally {
       setActionLoading(false);
     }
@@ -567,6 +597,7 @@ export const ReturnRequestsPage: React.FC = () => {
                     const firstItem = req.items?.[0];
                     const extraItemsCount = (req.items?.length || 1) - 1;
                     const isPending = (req.status || "PENDING").toUpperCase() === "PENDING";
+                    const isAccepted = (req.status || "").toUpperCase() === "ACCEPTED";
 
                     return (
                       <tr
@@ -683,7 +714,7 @@ export const ReturnRequestsPage: React.FC = () => {
                               <>
                                 <button
                                   type="button"
-                                  onClick={(e) => handleQuickAccept(req.id, e)}
+                                  onClick={(e) => handleOpenAcceptModal(req, e)}
                                   className="px-2.5 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white text-xs font-semibold transition-all shadow-2xs"
                                   title="Approve return request"
                                 >
@@ -698,6 +729,20 @@ export const ReturnRequestsPage: React.FC = () => {
                                   Reject
                                 </button>
                               </>
+                            )}
+                            {isAccepted && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/sales/return/${req.order_id}`);
+                                }}
+                                className="px-2.5 py-1.5 rounded-lg border border-[#286038]/30 bg-emerald-50 text-emerald-800 hover:bg-[#286038] hover:text-white text-xs font-semibold transition-all shadow-2xs inline-flex items-center gap-1"
+                                title="Execute the return and refund in Sales"
+                              >
+                                <RotateCcw size={11} />
+                                <span>Sales Return</span>
+                              </button>
                             )}
                             <button
                               type="button"
@@ -946,6 +991,137 @@ export const ReturnRequestsPage: React.FC = () => {
               >
                 {actionLoading && <Loader2 size={13} className="animate-spin" />}
                 <span>Confirm Reject</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Accept Confirmation & Notice Modal ────────────────────── */}
+      {acceptModalReq && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
+          <div className="bg-white rounded-xl shadow-2xl border border-slate-200 p-6 w-full max-w-md space-y-4 animate-in fade-in zoom-in-95 duration-150 font-sans">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 shrink-0">
+                <Check size={20} strokeWidth={2.5} />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-base font-bold text-slate-900">
+                  Accept Return Request #{acceptModalReq.order_ui_id || acceptModalReq.id.slice(0, 8).toUpperCase()}
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Approve this digital store return request for the customer.
+                </p>
+              </div>
+            </div>
+
+            {/* Clear Warning Banner */}
+            <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 flex items-start gap-2.5">
+              <AlertTriangle size={18} className="text-amber-600 shrink-0 mt-0.5" />
+              <div className="text-xs space-y-1">
+                <p className="font-bold text-amber-800">Return will NOT execute automatically</p>
+                <p className="text-amber-700 leading-relaxed">
+                  Accepting this request marks it as approved for the customer, but <strong>will NOT automatically execute the return or refund any stock/payment</strong>.
+                </p>
+                <p className="font-semibold text-amber-800">
+                  Please note: You need to go to <strong>Sales &gt; Return</strong> for this product/order and execute the return properly.
+                </p>
+              </div>
+            </div>
+
+            {actionError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs font-semibold text-red-700 flex items-center gap-2">
+                <AlertCircle size={15} className="shrink-0" />
+                <span>{actionError}</span>
+              </div>
+            )}
+
+            <div>
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
+                Merchant Notes (Optional)
+              </label>
+              <textarea
+                value={acceptNotes}
+                onChange={(e) => setAcceptNotes(e.target.value)}
+                placeholder="e.g. Return approved. Please bring or send the item back in original condition..."
+                rows={2}
+                className="w-full text-sm sm:text-xs p-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 placeholder:text-slate-400 font-medium"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                disabled={actionLoading}
+                onClick={() => setAcceptModalReq(null)}
+                className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={actionLoading}
+                onClick={handleConfirmAccept}
+                className="px-4 py-2 rounded-lg text-xs font-bold text-white bg-[#286038] hover:bg-[#1e4a2b] disabled:opacity-50 shadow-xs transition-all flex items-center gap-1.5"
+              >
+                {actionLoading && <Loader2 size={13} className="animate-spin" />}
+                <span>Confirm &amp; Accept</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Post-Acceptance Guidance Modal ──────────────────────────── */}
+      {acceptSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
+          <div className="bg-white rounded-xl shadow-2xl border border-slate-200 p-6 w-full max-w-md space-y-4 animate-in fade-in zoom-in-95 duration-150 font-sans">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 shrink-0">
+                <CheckCircle2 size={22} />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-base font-bold text-slate-900">
+                  Return Request Accepted
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Order #{acceptSuccessModal.order_ui_id || acceptSuccessModal.order_id}
+                </p>
+              </div>
+            </div>
+
+            <div className="p-4 bg-amber-50/90 border border-amber-200 rounded-xl text-amber-900 text-xs leading-relaxed space-y-2">
+              <p className="font-bold text-amber-800 flex items-center gap-1.5">
+                <AlertTriangle size={15} className="text-amber-600 shrink-0" />
+                <span>Next Step: Execute the Return in Sales</span>
+              </p>
+              <p className="text-amber-700">
+                The return request has been marked as <strong>Accepted</strong> for the customer.
+              </p>
+              <p className="text-amber-800 font-medium">
+                <strong>Please note:</strong> It will <strong>NOT automatically execute the return</strong> or refund stock/cash. You need to go to <strong>Sales</strong> for this product/order and execute the return properly.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setAcceptSuccessModal(null)}
+                className="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+              >
+                Close &amp; Stay Here
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const oid = acceptSuccessModal.order_id;
+                  setAcceptSuccessModal(null);
+                  navigate(`/sales/return/${oid}`);
+                }}
+                className="px-4 py-2 rounded-lg text-xs font-bold text-white bg-[#286038] hover:bg-[#1e4a2b] shadow-xs transition-all flex items-center gap-1.5"
+              >
+                <RotateCcw size={13} />
+                <span>Go to Sales Return</span>
               </button>
             </div>
           </div>

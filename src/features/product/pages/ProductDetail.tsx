@@ -24,7 +24,7 @@ import StockMovementTab from "../components/StockMovement";
 import { inventoryCustomFieldsApi } from "@/services/api/inventory";
 import type { InventoryCustomFieldDefinition, InventoryCustomFieldValue } from "@/features/inventory/types";
 import { PriceCell } from "@/components/common/PriceCell";
-import { calculateTaxSplit } from "@/utils/pricing";
+import { calculateProfitAndMargin } from "@/utils/pricing";
 
 const isBoolTrue = (val: any): boolean => {
   if (val === true || val === 1) return true;
@@ -77,8 +77,6 @@ function extractProductLandedCost(
     const distributeBy = String(calcInfos.distribute_by || "BY_VALUE").toUpperCase();
     const charges = p.charges_infos || p.charges || {};
     const totalCharges = Number(charges.transport_charge || 0) + Number(charges.other_charge || 0);
-    const gstInfos = p.gst_infos || {};
-    const gstType = String(gstInfos.type || calcInfos.gst_type || "EXCLUSIVE").toUpperCase();
 
     const items: any[] = p.items || p.products || [];
     let totalQty = 0;
@@ -118,23 +116,8 @@ function extractProductLandedCost(
 
       const itemGst = it.gst || "0%";
       const gstRate = parseFloat(String(itemGst).replace(/[^0-9.]/g, "")) || 0;
-      let rowBase = baseBuyPrice;
-      let gstPerUnit = 0;
-      if (gstType === "INCLUSIVE") {
-        // In this system, it.buy_price is already stored as the pre-tax base cost (e.g. 67.80).
-        // Only divide by (1 + gst) if baseBuyPrice is still the gross/inclusive price (e.g. 80.00).
-        const isAlreadyBase = grossQty > 0 && Math.abs((Number(it.total_amount || 0) / grossQty) - baseBuyPrice) < 0.05;
-        if (isAlreadyBase) {
-          rowBase = baseBuyPrice;
-          gstPerUnit = baseBuyPrice * (gstRate / 100);
-        } else {
-          rowBase = gstRate > 0 ? baseBuyPrice / (1 + gstRate / 100) : baseBuyPrice;
-          gstPerUnit = baseBuyPrice - rowBase;
-        }
-      } else {
-        rowBase = baseBuyPrice;
-        gstPerUnit = baseBuyPrice * (gstRate / 100);
-      }
+      const rowBase = baseBuyPrice;
+      const gstPerUnit = baseBuyPrice * (gstRate / 100);
 
       const baseLanded = rowBase + allocatedPerUnit;
       const landedWithGst = rowBase + gstPerUnit + allocatedPerUnit;
@@ -665,11 +648,17 @@ const ProductDetail = () => {
                     const baseCostPerUnit = costBreakdown.landedCost > 0 ? costBreakdown.landedCost : (numBuyingPrice > 0 ? numBuyingPrice : 0);
 
                     const numSellingPrice = sellingPrice !== null && sellingPrice !== undefined ? Number(sellingPrice) : 0;
-                    const spTax = calculateTaxSplit(numSellingPrice, gstRate);
-                    const spTaxableValue = spTax.taxableValue;
+                    const profitData = calculateProfitAndMargin({
+                      sellingPrice: numSellingPrice,
+                      buyingPrice: baseCostPerUnit,
+                      gstRate,
+                      sellingGstMode: 'inclusive',
+                      buyingGstMode: 'exclusive',
+                    });
+                    const spTaxableValue = profitData.baseSellingPrice;
                     const hasCostBasis = baseCostPerUnit > 0;
-                    const profitAmount = hasCostBasis ? Math.round((spTaxableValue - baseCostPerUnit) * 100) / 100 : 0;
-                    const marginPercent = (hasCostBasis && spTaxableValue > 0) ? ((profitAmount / spTaxableValue) * 100) : 0;
+                    const profitAmount = profitData.profit;
+                    const marginPercent = profitData.marginPercent;
 
                     return (
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-y-6 gap-x-8">
@@ -730,16 +719,7 @@ const ProductDetail = () => {
                               />
                               {numSellingPrice > 0 && (
                                 <span className="text-[9px] font-medium text-slate-500 leading-tight block mt-1">
-                                  Taxable: ₹{spTaxableValue.toFixed(2)}<br />
-                                  Margin: {hasCostBasis ? (
-                                    <span className={profitAmount >= 0 ? "text-emerald-600 font-semibold" : "text-rose-600 font-semibold"}>
-                                      {marginPercent.toFixed(1)}% ({profitAmount >= 0 ? "+" : ""}₹{profitAmount.toFixed(2)})
-                                    </span>
-                                  ) : (
-                                    <span className="text-slate-400 font-medium">
-                                      0% (₹0.00)
-                                    </span>
-                                  )}
+                                  Taxable: ₹{spTaxableValue.toFixed(2)}
                                 </span>
                               )}
                             </div>

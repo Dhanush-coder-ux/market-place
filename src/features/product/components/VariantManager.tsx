@@ -44,7 +44,15 @@ export interface VariantCombination {
     name: string;
     expiry_date: string;
     manufacturing_date: string;
+    stocks?: string;
   };
+  batches?: {
+    id: string;
+    name: string;
+    expiry_date: string;
+    manufacturing_date: string;
+    stocks: string;
+  }[];
   reorder_point: string;
   location?: string;
 }
@@ -66,7 +74,7 @@ const uid = () => `id_${Math.random().toString(36).slice(2, 11)}`;
 // --- Components ---
 
 interface TagChipProps { label: string; onRemove: () => void; color?: string; }
-const TagChip: React.FC<TagChipProps> = ({ label, onRemove, color = "bg-blue-50 text-blue-700 border-blue-100" }) => (
+const TagChip: React.FC<TagChipProps> = ({ label, onRemove, color = "bg-emerald-50 text-emerald-700 border-emerald-100" }) => (
   <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border animate-in zoom-in-95 duration-150 ${color}`}>
     {label}
     <button type="button" onClick={onRemove} className="hover:text-red-500 transition-colors ml-0.5">
@@ -139,7 +147,7 @@ export const VariantBuilder: React.FC<VariantBuilderProps> = ({ variantTypes, on
           <div className="flex flex-wrap gap-2">
             {unusedSuggestions.map(s => (
               <button key={s} type="button" onClick={() => addType(s)}
-                className="px-3 py-1.5 text-xs font-medium border border-slate-200 rounded-full text-slate-600 bg-white flex items-center gap-1.5 hover:bg-blue-50 hover:border-blue-200 transition-all">
+                className="px-3 py-1.5 text-xs font-medium border border-slate-200 rounded-full text-slate-600 bg-white flex items-center gap-1.5 hover:bg-emerald-50 hover:border-emerald-200 transition-all">
                 <Plus size={10} />{s}
               </button>
             ))}
@@ -156,7 +164,7 @@ export const VariantBuilder: React.FC<VariantBuilderProps> = ({ variantTypes, on
           <div key={vt.id} className="border border-slate-200 rounded-lg p-5 bg-slate-50/50 animate-in slide-in-from-top-2">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <div className="w-1.5 h-6 bg-blue-600 rounded-full" />
+                <div className="w-1.5 h-6 bg-emerald-600 rounded-full" />
                 <span className="text-sm font-black text-slate-800 tracking-tight uppercase">{vt.name}</span>
                 <span className="text-[10px] font-bold text-slate-400 bg-white px-2 py-0.5 rounded-full border border-slate-100">
                   {vt.values.length} value{vt.values.length !== 1 ? "s" : ""}
@@ -179,14 +187,14 @@ export const VariantBuilder: React.FC<VariantBuilderProps> = ({ variantTypes, on
             <div className="flex gap-2">
               <input
                 ref={el => { valueInputRefs.current[vt.id] = el; }}
-                className="flex-1 h-10 px-4 text-xs border border-slate-200 rounded-lg bg-white text-slate-800 placeholder-slate-300 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                className="flex-1 h-10 px-4 text-xs border border-slate-200 rounded-lg bg-white text-slate-800 placeholder-slate-300 focus:ring-2 focus:ring-emerald-100 outline-none transition-all"
                 placeholder={`Add ${vt.name} value`}
                 value={inputVal}
                 onChange={e => setValueInputs(p => ({ ...p, [vt.id]: e.target.value }))}
                 onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addValue(vt.id, inputVal); } }}
               />
               <button type="button" onClick={() => addValue(vt.id, inputVal)}
-                className="px-5 h-10 text-[10px] font-black uppercase tracking-wider bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all shadow-md shadow-blue-100">
+                className="px-5 h-10 text-[10px] font-black uppercase tracking-wider bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all shadow-md shadow-emerald-100">
                 Add
               </button>
               {presets.length > 0 && (
@@ -203,7 +211,7 @@ export const VariantBuilder: React.FC<VariantBuilderProps> = ({ variantTypes, on
               <div className="mt-4 p-4 bg-white rounded-lg border border-slate-100 flex flex-wrap gap-2 animate-in fade-in duration-200">
                 {unusedPresets.map(p => (
                   <button key={p} type="button" onClick={() => addPresetValue(vt.id, p)}
-                    className="px-3 py-1.5 text-[10px] font-black border border-dashed border-slate-200 rounded-full text-slate-500 hover:border-blue-400 hover:text-blue-700 hover:bg-blue-50 transition-all uppercase">
+                    className="px-3 py-1.5 text-[10px] font-black border border-dashed border-slate-200 rounded-full text-slate-500 hover:border-emerald-400 hover:text-emerald-700 hover:bg-emerald-50 transition-all uppercase">
                     +{p}
                   </button>
                 ))}
@@ -215,7 +223,7 @@ export const VariantBuilder: React.FC<VariantBuilderProps> = ({ variantTypes, on
 
       <div className="flex gap-2">
         <input
-          className="flex-1 h-12 px-5 text-sm border border-dashed border-slate-300 rounded-[1.25rem] bg-white text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+          className="flex-1 h-12 px-5 text-sm border border-dashed border-slate-300 rounded-[1.25rem] bg-white text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-emerald-100 outline-none transition-all"
           placeholder="New variant type (e.g. Color, Storage, RAM)"
           value={newTypeName}
           onChange={e => setNewTypeName(e.target.value)}
@@ -236,6 +244,8 @@ interface VariantMatrixTableProps {
   variantTypes: VariantType[];
   onChange: (combos: VariantCombination[]) => void;
   trackStock?: boolean;
+  showOpeningStock?: boolean;
+  hasBatch?: boolean;
   baseMrp?: number;
   productId?: string;
   onCheckStock?: (combo: VariantCombination) => Promise<boolean>;
@@ -243,7 +253,7 @@ interface VariantMatrixTableProps {
 }
 
 export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
-  combinations, onChange, trackStock: _trackStock, baseMrp, productId: _productId, onCheckStock, onStockError
+  combinations, onChange, trackStock: _trackStock, showOpeningStock = false, hasBatch = false, baseMrp, productId: _productId, onCheckStock, onStockError
 }) => {
 
   const [barcodeBase, setbarcodeBase] = useState("");
@@ -472,7 +482,7 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <div className="flex flex-wrap items-center gap-2">
             <input
-              className="h-9 px-3 text-xs border border-slate-200 rounded-lg w-28 sm:w-32 font-mono focus:ring-2 focus:ring-blue-100 outline-none"
+              className="h-9 px-3 text-xs border border-slate-200 rounded-lg w-28 sm:w-32 font-mono focus:ring-2 focus:ring-emerald-100 outline-none"
               placeholder="barcode base"
               value={barcodeBase}
               onChange={e => setbarcodeBase(e.target.value)}
@@ -509,9 +519,21 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                   </th>
                 ))}
                 <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 whitespace-nowrap">Barcode</th>
+                {hasBatch && (
+                  <>
+                    <th className="px-4 py-3.5 text-[10px] font-black uppercase text-amber-700 bg-amber-50/70 whitespace-nowrap">Batch No.</th>
+                    <th className="px-4 py-3.5 text-[10px] font-black uppercase text-amber-700 bg-amber-50/70 whitespace-nowrap">Mfg Date</th>
+                    <th className="px-4 py-3.5 text-[10px] font-black uppercase text-amber-700 bg-amber-50/70 whitespace-nowrap">Exp Date</th>
+                  </>
+                )}
                 <th className="px-4 py-3.5 text-center text-[10px] font-black uppercase text-slate-400 whitespace-nowrap">MRP</th>
                 <th className="px-4 py-3.5 text-center text-[10px] font-black uppercase text-slate-400 whitespace-nowrap">Discount</th>
                 <th className="px-4 py-3.5 text-center text-[10px] font-black uppercase text-slate-400 whitespace-nowrap">Sell Price</th>
+                {showOpeningStock && (
+                  <th className="px-4 py-3.5 text-center text-[10px] font-black uppercase text-emerald-700 bg-emerald-50/80 whitespace-nowrap">
+                    Opening Stock
+                  </th>
+                )}
                 <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 whitespace-nowrap">Storage Location</th>
                 <th className="px-4 py-3.5 text-center text-[10px] font-black uppercase text-slate-400 whitespace-nowrap">Reorder Pt</th>
                 <th className="px-4 py-3.5 text-center text-[10px] font-black uppercase text-slate-400 whitespace-nowrap">Active</th>
@@ -559,7 +581,7 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                             className={`h-9 px-2.5 text-xs border rounded-lg w-28 font-mono focus:ring-2 outline-none ${
                               isDuplicateBarcode
                                 ? "border-red-400 bg-red-50 text-red-700 focus:ring-red-200"
-                                : "border-slate-200 focus:ring-blue-100"
+                                : "border-slate-200 focus:ring-emerald-100"
                             }`}
                             placeholder="SKU-001"
                             value={combo.barcode}
@@ -573,13 +595,57 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                         </div>
                       </td>
 
+                      {hasBatch && (
+                        <>
+                          <td className="px-3 py-3.5 bg-amber-50/20">
+                            <input
+                              className="h-9 px-2 text-xs border border-amber-200 rounded-lg w-24 font-mono focus:ring-2 focus:ring-amber-200 outline-none bg-white"
+                              placeholder="e.g. B-01"
+                              value={combo.batch?.name || ""}
+                              onChange={e => {
+                                const currentBatch = combo.batch || { name: "", expiry_date: "", manufacturing_date: "" };
+                                update(combo.id, {
+                                  batch: { ...currentBatch, name: e.target.value }
+                                });
+                              }}
+                            />
+                          </td>
+                          <td className="px-3 py-3.5 bg-amber-50/20">
+                            <input
+                              type="date"
+                              className="h-9 px-2 text-xs border border-amber-200 rounded-lg w-28 text-slate-700 focus:ring-2 focus:ring-amber-200 outline-none bg-white"
+                              value={combo.batch?.manufacturing_date || ""}
+                              onChange={e => {
+                                const currentBatch = combo.batch || { name: "", expiry_date: "", manufacturing_date: "" };
+                                update(combo.id, {
+                                  batch: { ...currentBatch, manufacturing_date: e.target.value }
+                                });
+                              }}
+                            />
+                          </td>
+                          <td className="px-3 py-3.5 bg-amber-50/20">
+                            <input
+                              type="date"
+                              className="h-9 px-2 text-xs border border-amber-200 rounded-lg w-28 text-slate-700 focus:ring-2 focus:ring-amber-200 outline-none bg-white"
+                              value={combo.batch?.expiry_date || ""}
+                              onChange={e => {
+                                const currentBatch = combo.batch || { name: "", expiry_date: "", manufacturing_date: "" };
+                                update(combo.id, {
+                                  batch: { ...currentBatch, expiry_date: e.target.value }
+                                });
+                              }}
+                            />
+                          </td>
+                        </>
+                      )}
+
                       {/* MRP Column */}
                       <td className="px-4 py-3.5">
                         <div className="flex flex-col items-center">
                           <div className="relative">
                             <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-semibold">₹</span>
                             <input
-                              className="h-9 pl-6 pr-2 text-xs border border-slate-200 rounded-lg w-24 text-right font-mono focus:ring-2 focus:ring-blue-100 outline-none"
+                              className="h-9 pl-6 pr-2 text-xs border border-slate-200 rounded-lg w-24 text-right font-mono focus:ring-2 focus:ring-emerald-100 outline-none"
                               placeholder={baseMrp ? String(baseMrp) : "0.00"}
                               type="number"
                               min="0"
@@ -600,7 +666,7 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                                 {combo.discount_type === "percent" ? "%" : "₹"}
                               </span>
                               <input
-                                className="h-9 pl-5 pr-1 text-xs border border-r-0 border-slate-200 rounded-l-lg w-20 text-right font-mono focus:ring-2 focus:ring-blue-100 outline-none"
+                                className="h-9 pl-5 pr-1 text-xs border border-r-0 border-slate-200 rounded-l-lg w-20 text-right font-mono focus:ring-2 focus:ring-emerald-100 outline-none"
                                 placeholder="0"
                                 type="number"
                                 min="0"
@@ -630,7 +696,7 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                           <div className="relative">
                             <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-semibold">₹</span>
                             <input
-                              className={`h-9 pl-6 pr-2 text-xs border rounded-lg w-24 text-right font-mono focus:ring-2 focus:ring-blue-100 outline-none ${
+                              className={`h-9 pl-6 pr-2 text-xs border rounded-lg w-24 text-right font-mono focus:ring-2 focus:ring-emerald-100 outline-none ${
                                 isOverMrp
                                   ? "border-red-300 bg-red-50/50 text-red-700 font-bold"
                                   : "border-slate-200"
@@ -657,9 +723,22 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                         </div>
                       </td>
 
+                      {showOpeningStock && (
+                        <td className="px-4 py-3.5 text-center bg-emerald-50/20">
+                          <input
+                            className="h-9 px-2 text-xs border border-emerald-200 rounded-lg w-20 text-center font-mono focus:ring-2 focus:ring-emerald-200 outline-none bg-white text-emerald-900 font-semibold"
+                            placeholder="0"
+                            type="number"
+                            min="0"
+                            value={combo.stock || ""}
+                            onChange={e => update(combo.id, { stock: e.target.value })}
+                          />
+                        </td>
+                      )}
+
                       <td className="px-4 py-3.5">
                         <input
-                          className="h-9 px-2.5 text-xs border border-slate-200 rounded-lg w-32 focus:ring-2 focus:ring-blue-100 outline-none"
+                          className="h-9 px-2.5 text-xs border border-slate-200 rounded-lg w-32 focus:ring-2 focus:ring-emerald-100 outline-none"
                           placeholder="e.g. Shelf B"
                           value={combo.location || ""}
                           onChange={e => update(combo.id, { location: e.target.value })}
@@ -668,7 +747,7 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
 
                       <td className="px-4 py-3.5 text-center">
                         <input
-                          className="h-9 px-2 text-xs border border-slate-200 rounded-lg w-16 text-center font-mono focus:ring-2 focus:ring-blue-100 outline-none"
+                          className="h-9 px-2 text-xs border border-slate-200 rounded-lg w-16 text-center font-mono focus:ring-2 focus:ring-emerald-100 outline-none"
                           placeholder="5"
                           type="number"
                           value={combo.reorder_point}

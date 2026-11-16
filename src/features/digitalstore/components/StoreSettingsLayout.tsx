@@ -290,7 +290,7 @@ export function StoreSettingsLayout({
                     isActive
                       ? isDanger
                         ? "bg-red-50 text-red-600 md:border-l-2 border-red-500 ring-1 md:ring-0 ring-red-200"
-                        : "bg-white text-blue-600 md:border-l-2 border-blue-600 shadow-sm ring-1 md:ring-0 ring-blue-100"
+                        : "bg-emerald-50 text-[#1e4a2b] font-semibold md:border-l-2 border-[#286038] shadow-xs ring-1 md:ring-0 ring-emerald-200"
                       : isDanger
                         ? "text-red-500 hover:bg-red-50/60 md:border-l-2 border-transparent"
                         : "text-slate-600 hover:bg-white hover:text-slate-800 md:border-l-2 border-transparent"
@@ -300,7 +300,7 @@ export function StoreSettingsLayout({
                     size={15}
                     className={`shrink-0 ${
                       isActive
-                        ? isDanger ? "text-red-500" : "text-blue-500"
+                        ? isDanger ? "text-red-500" : "text-[#286038]"
                         : isDanger ? "text-red-400" : "text-slate-400 group-hover:text-slate-600"
                     }`}
                   />

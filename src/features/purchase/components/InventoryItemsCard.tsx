@@ -23,7 +23,7 @@ import { usePurchaseSettings } from "@/context/PurchaseContext";
 import { InlineSerialManager } from "@/components/common/InlineSerialManager";
 import { useQuickCreate } from "@/features/common/QuickCreate/QuickCreateContext";
 import { AntBadge } from "@/components/ui/AntBadge";
-import { calculateTaxSplit } from "@/utils/pricing";
+import { calculateProfitAndMargin } from "@/utils/pricing";
 
 /**
  * Resolves initial selling price:
@@ -424,7 +424,7 @@ export const InventoryItemsCard = ({
     setBatchModal({ isOpen: false, rowIndex: -1, batches: [], productName: "", variantName: "", existingSerials: [], allowNewBatch: true });
   };
 
-  const themeColor = type === "PURCHASE" ? "blue" : "emerald";
+  const themeColor = "emerald";
   const typeText = type === "PURCHASE" ? "Purchase" : "Production";
 
 
@@ -715,7 +715,7 @@ export const InventoryItemsCard = ({
       {/* Variant Modal — rendered outside the card to avoid overflow clipping */}
       {variantModal.isOpen && createPortal(
         <div className="fixed inset-0 z-[100] flex flex-col items-center p-4 md:p-12 overflow-y-auto bg-slate-900/40 backdrop-blur-sm custom-scrollbar animate-in fade-in duration-300">
-          <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col border border-slate-200 my-auto shadow-blue-200/20">
+          <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col border border-slate-200 my-auto shadow-emerald-200/20">
             <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-lg bg-${themeColor}-50 flex items-center justify-center text-${themeColor}-600 border border-${themeColor}-100`}>
@@ -742,9 +742,9 @@ export const InventoryItemsCard = ({
                     <div
                       key={variant.id}
                       onClick={() => setSelectedVariants(variant.id)}
-                      className={`relative p-5 rounded-lg border-2 transition-all cursor-pointer group ${isSelected ? 'border-blue-600 bg-blue-50/50 shadow-md shadow-blue-100' : 'border-slate-100 bg-white hover:border-blue-200 hover:bg-slate-50/30'}`}
+                      className={`relative p-5 rounded-lg border-2 transition-all cursor-pointer group ${isSelected ? 'border-emerald-600 bg-emerald-50/50 shadow-md shadow-emerald-100' : 'border-slate-100 bg-white hover:border-emerald-200 hover:bg-slate-50/30'}`}
                     >
-                      <div className={`absolute top-5 right-5 h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-200 group-hover:border-blue-300'}`}>
+                      <div className={`absolute top-5 right-5 h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-slate-200 group-hover:border-emerald-300'}`}>
                         {isSelected && <Check size={12} strokeWidth={4} />}
                       </div>
                       <h4 className="font-medium text-slate-800 text-sm pr-8 tracking-tight">{variant.name}</h4>
@@ -890,7 +890,7 @@ export const InventoryItemsCard = ({
                     type="button"
                     onClick={() => setGstMode("inclusive")}
                     className={`px-2.5 py-0.5 flex items-center justify-center rounded-md text-[10px] font-medium uppercase tracking-wider transition-all duration-200 cursor-pointer h-6 ${gstMode === "inclusive"
-                      ? "bg-white text-blue-600 shadow-sm border border-slate-200/40"
+                      ? "bg-white text-emerald-700 shadow-sm border border-slate-200/40 font-bold"
                       : "text-slate-500 hover:text-slate-700"
                       }`}
                   >
@@ -900,7 +900,7 @@ export const InventoryItemsCard = ({
                     type="button"
                     onClick={() => setGstMode("exclusive")}
                     className={`px-2.5 py-0.5 flex items-center justify-center rounded-md text-[10px] font-medium uppercase tracking-wider transition-all duration-200 cursor-pointer h-6 ${gstMode === "exclusive"
-                      ? "bg-white text-blue-600 shadow-sm border border-slate-200/40"
+                      ? "bg-white text-emerald-700 shadow-sm border border-slate-200/40 font-bold"
                       : "text-slate-500 hover:text-slate-700"
                       }`}
                   >
@@ -954,17 +954,22 @@ export const InventoryItemsCard = ({
             if (product.marginType === "percent" && Number(product.marginPercent) > 0) {
               const m = Number(product.marginPercent);
               const computedBase = m < 100 ? netCostForSp / (1 - m / 100) : netCostForSp * (1 + m / 100);
-              sellingPriceInclusive = Math.round(computedBase * (1 + gstRate / 100) * 100) / 100;
+              sellingPriceInclusive = Math.round(computedBase * (1 + (isGstRegistered ? gstRate : 0) / 100) * 100) / 100;
             } else if (product.marginType === "amount" && Number(product.marginAmount) > 0) {
               const computedBase = netCostForSp + Number(product.marginAmount);
-              sellingPriceInclusive = Math.round(computedBase * (1 + gstRate / 100) * 100) / 100;
+              sellingPriceInclusive = Math.round(computedBase * (1 + (isGstRegistered ? gstRate : 0) / 100) * 100) / 100;
             }
-            const spTax = calculateTaxSplit(sellingPriceInclusive, gstRate);
-            const spTaxableValue = spTax.taxableValue;
-            const baseCostToCompare = rowBaseCost + allocPerUnit;
-            const hasCostBasis = baseCostToCompare > 0;
-            const profitAmount = hasCostBasis ? Math.round((spTaxableValue - baseCostToCompare) * 100) / 100 : 0;
-            const marginPercent = (hasCostBasis && spTaxableValue > 0) ? ((profitAmount / spTaxableValue) * 100) : 0;
+            const baseCostToCompare = isGstRegistered ? (rowBaseCost + allocPerUnit) : (rowBaseCost + rowGstPerUnit + allocPerUnit);
+            const profitData = calculateProfitAndMargin({
+              sellingPrice: sellingPriceInclusive,
+              buyingPrice: baseCostToCompare,
+              gstRate,
+              sellingGstMode: 'inclusive',
+              buyingGstMode: 'exclusive',
+              isGstRegistered,
+            });
+            const profitAmount = profitData.profit;
+            const marginPercent = profitData.marginPercent;
             const isExceedingMrp = rowMrp > 0 && sellingPriceInclusive > rowMrp;
             const isExpanded = expandedSettings.has(index) || expandedBreakdown.has(index);
             const subUnits = product.unit_infos?.sub_units || [];
@@ -1049,7 +1054,7 @@ export const InventoryItemsCard = ({
                     {product.serialTracking && (
                       <span
                         onClick={() => toggleSettings(index)}
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-medium border cursor-pointer ${(product.serialNumbers?.split(",").filter(Boolean).length || 0) >= q ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-rose-50 text-rose-600 border-rose-200"}`}
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-medium border cursor-pointer ${(product.serialNumbers?.split(",").filter(Boolean).length || 0) >= q ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-rose-50 text-rose-600 border-rose-200"}`}
                       >
                         <Check size={9} /> {(product.serialNumbers?.split(",").filter(Boolean).length || 0)}/{q} Serials
                       </span>
@@ -1111,7 +1116,7 @@ export const InventoryItemsCard = ({
                             key={m}
                             type="button"
                             onClick={() => handleProductChange(index, "marginType", m)}
-                            className={`w-6 h-7 flex items-center justify-center rounded-md text-[9px] font-medium transition-all ${product.marginType === m ? "bg-white text-blue-600 shadow-sm" : "text-slate-400"}`}
+                            className={`w-6 h-7 flex items-center justify-center rounded-md text-[9px] font-medium transition-all ${product.marginType === m ? "bg-white text-emerald-600 shadow-sm font-bold" : "text-slate-400"}`}
                           >
                             {m === "percent" ? "%" : m === "amount" ? "₹" : "SP"}
                           </button>
@@ -1214,7 +1219,7 @@ export const InventoryItemsCard = ({
                     <span
                       className={`text-[8px] font-medium px-1.5 py-0.5 rounded ${
                         isGstRegistered
-                          ? "bg-blue-50 text-blue-600 border border-blue-200/60"
+                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
                           : "bg-amber-50 text-amber-700 border border-amber-200/60"
                       }`}
                       title={
@@ -1269,19 +1274,24 @@ export const InventoryItemsCard = ({
                 if (product.marginType === "percent" && Number(product.marginPercent) > 0) {
                   const m = Number(product.marginPercent);
                   const computedBase = m < 100 ? netCostForSp / (1 - m / 100) : netCostForSp * (1 + m / 100);
-                  sellingPriceInclusive = Math.round(computedBase * (1 + gstRate / 100) * 100) / 100;
+                  sellingPriceInclusive = Math.round(computedBase * (1 + (isGstRegistered ? gstRate : 0) / 100) * 100) / 100;
                 } else if (product.marginType === "amount" && Number(product.marginAmount) > 0) {
                   const computedBase = netCostForSp + Number(product.marginAmount);
-                  sellingPriceInclusive = Math.round(computedBase * (1 + gstRate / 100) * 100) / 100;
+                  sellingPriceInclusive = Math.round(computedBase * (1 + (isGstRegistered ? gstRate : 0) / 100) * 100) / 100;
                 }
 
-                // Extract GST from inclusive selling price (Rule 1)
-                const spTax = calculateTaxSplit(sellingPriceInclusive, gstRate);
-                const spTaxableValue = spTax.taxableValue;
-                const baseCostToCompare = rowBaseCost + allocPerUnit;
-                const hasCostBasis = baseCostToCompare > 0;
-                const profitAmount = hasCostBasis ? Math.round((spTaxableValue - baseCostToCompare) * 100) / 100 : 0;
-                const marginPercent = (hasCostBasis && spTaxableValue > 0) ? ((profitAmount / spTaxableValue) * 100) : 0;
+                const baseCostToCompare = isGstRegistered ? (rowBaseCost + allocPerUnit) : (rowBaseCost + rowGstPerUnit + allocPerUnit);
+                const profitData = calculateProfitAndMargin({
+                  sellingPrice: sellingPriceInclusive,
+                  buyingPrice: baseCostToCompare,
+                  gstRate,
+                  sellingGstMode: 'inclusive',
+                  buyingGstMode: 'exclusive',
+                  isGstRegistered,
+                });
+                const spTaxableValue = profitData.baseSellingPrice;
+                const profitAmount = profitData.profit;
+                const marginPercent = profitData.marginPercent;
                 const customerSavings = rowMrp > sellingPriceInclusive ? Math.round((rowMrp - sellingPriceInclusive) * 100) / 100 : 0;
                 const offMrpPercent = rowMrp > 0 && customerSavings > 0 ? Math.round(((customerSavings / rowMrp) * 100) * 10) / 10 : 0;
                 const isExceedingMrp = rowMrp > 0 && sellingPriceInclusive > rowMrp;
@@ -1356,7 +1366,7 @@ export const InventoryItemsCard = ({
                                 <span
                                   onClick={() => toggleSettings(index)}
                                   className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-medium border transition-all cursor-pointer ${(product.serialNumbers?.split(",").filter(Boolean).length || 0) >= (Number(product.quantity) || 0)
-                                    ? "bg-blue-50 text-blue-700 border-blue-200"
+                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                                     : "bg-rose-50/50 text-rose-600 border-rose-100/60 animate-pulse"
                                     }`}>
                                   <Check size={9} /> {
@@ -1451,15 +1461,15 @@ export const InventoryItemsCard = ({
                             </span>
                           </div>
                           {baseCost > 0 && (
-                            <div className="text-[9px] text-slate-400 font-medium mt-1.5 leading-normal bg-blue-50/40 border border-blue-100/50 rounded-md px-2 py-1 select-none animate-in fade-in duration-200 flex flex-wrap gap-x-1 items-center">
+                            <div className="text-[9px] text-slate-400 font-medium mt-1.5 leading-normal bg-emerald-50/40 border border-emerald-100/50 rounded-md px-2 py-1 select-none animate-in fade-in duration-200 flex flex-wrap gap-x-1 items-center">
                               <span>Base:</span>
                               <span className="text-slate-700 font-medium">₹{rowBaseCost.toFixed(2)}</span>
                               <span className="mx-0.5 text-slate-350">|</span>
                               <span>GST:</span>
-                              <span className="text-blue-600 font-medium">+₹{rowGstPerUnit.toFixed(2)}</span>
+                              <span className="text-emerald-600 font-medium">+₹{rowGstPerUnit.toFixed(2)}</span>
                               <span className="mx-0.5 text-slate-350">|</span>
                               <span>Tot:</span>
-                              <span className="text-emerald-600 font-medium">₹{(rowBaseCost + rowGstPerUnit).toFixed(2)}</span>
+                              <span className="text-emerald-700 font-medium">₹{(rowBaseCost + rowGstPerUnit).toFixed(2)}</span>
                             </div>
                           )}
                         </div>
@@ -1484,7 +1494,7 @@ export const InventoryItemsCard = ({
                             ₹{allocTotal > 0 ? allocTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
                           </span>
                           {allocPerUnit > 0 && (
-                            <span className="text-[9px] text-blue-500 font-medium whitespace-nowrap truncate" title={`(+₹${allocPerUnit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/u)`}>
+                            <span className="text-[9px] text-emerald-600 font-medium whitespace-nowrap truncate" title={`(+₹${allocPerUnit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/u)`}>
                               (+₹{allocPerUnit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/u)
                             </span>
                           )}
@@ -1499,7 +1509,7 @@ export const InventoryItemsCard = ({
                               type="number"
                               value={product.taxGst ?? ""}
                               onChange={(e) => handleProductChange(index, "taxGst", e.target.value ? Number(e.target.value) : 0)}
-                              className={`w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-center focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none pr-6 ${!!product.inventory_id ? "bg-slate-50 opacity-60 cursor-not-allowed" : "bg-white"}`}
+                              className={`w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-center focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 outline-none pr-6 ${!!product.inventory_id ? "bg-slate-50 opacity-60 cursor-not-allowed" : "bg-white"}`}
                               min="0"
                               max="100"
                               placeholder="GST"
@@ -1541,7 +1551,7 @@ export const InventoryItemsCard = ({
                                 <button
                                   key={m}
                                   onClick={() => handleProductChange(index, "marginType", m)}
-                                  className={`w-6 h-6 flex items-center justify-center rounded-md text-[9px] font-medium transition-all ${product.marginType === m ? "bg-white text-blue-600 shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
+                                  className={`w-6 h-6 flex items-center justify-center rounded-md text-[9px] font-medium transition-all ${product.marginType === m ? "bg-white text-emerald-600 shadow-sm font-bold" : "text-slate-400 hover:text-slate-600"}`}
                                 >
                                   {m === "percent" ? "%" : m === "amount" ? "₹" : "SP"}
                                 </button>
@@ -1681,10 +1691,10 @@ export const InventoryItemsCard = ({
 
                               {/* Serial Section */}
                               {(type !== "PURCHASE" || purchaseType !== "PO_CREATE") && product.serialTracking && (
-                                <div className="w-full max-w-[400px] bg-white p-3 rounded-lg border border-blue-200 shadow-sm shrink-0">
+                                <div className="w-full max-w-[400px] bg-white p-3 rounded-lg border border-emerald-200 shadow-sm shrink-0">
                                   <div className="flex items-center gap-1.5 mb-2.5">
-                                    <Check size={12} className="text-blue-500" />
-                                    <span className="text-[11px] font-medium text-blue-900">Serial Numbers</span>
+                                    <Check size={12} className="text-emerald-600" />
+                                    <span className="text-[11px] font-medium text-emerald-950">Serial Numbers</span>
                                   </div>
                                   <InlineSerialManager
                                     serials={(product.serialNumbers || "").split(',').filter(Boolean)}
@@ -1733,7 +1743,7 @@ export const InventoryItemsCard = ({
                                         <>
                                           <div className="flex justify-between text-[11px]">
                                             <span className="text-slate-500">GST Cost ({product.taxGst}%)</span>
-                                            <span className="font-medium text-blue-650">+₹{(baseCost * Number(product.taxGst) / 100).toFixed(2)}</span>
+                                            <span className="font-medium text-emerald-700">+₹{(baseCost * Number(product.taxGst) / 100).toFixed(2)}</span>
                                           </div>
                                           <div className="flex justify-between text-[11px] font-medium text-slate-750">
                                             <span className="text-slate-600">Unit Cost (incl. GST)</span>
@@ -1742,8 +1752,8 @@ export const InventoryItemsCard = ({
                                         </>
                                       )}
                                       <div className="flex justify-between text-[11px] pt-1.5 border-t border-slate-100/60">
-                                        <span className="text-blue-500">Allocated Cost</span>
-                                        <span className="font-medium text-blue-600">₹{allocPerUnit.toFixed(2)}</span>
+                                        <span className="text-emerald-600">Allocated Cost</span>
+                                        <span className="font-medium text-emerald-700">₹{allocPerUnit.toFixed(2)}</span>
                                       </div>
                                     </div>
                                     <div className="space-y-1.5">
@@ -1755,7 +1765,7 @@ export const InventoryItemsCard = ({
                                         <>
                                           <div className="flex justify-between text-[11px]">
                                             <span className="text-slate-500">Row GST ({product.taxGst}%)</span>
-                                            <span className="font-medium text-blue-650">+₹{(rowTotal * Number(product.taxGst) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                            <span className="font-medium text-emerald-700">+₹{(rowTotal * Number(product.taxGst) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                           </div>
                                           <div className="flex justify-between text-[11px] font-medium text-slate-750">
                                             <span className="text-slate-600">Row Subtotal (incl. GST)</span>
@@ -1777,7 +1787,7 @@ export const InventoryItemsCard = ({
                                     <div className="mt-4 p-2.5 bg-slate-50 border border-slate-150 rounded-xl flex items-center justify-between text-[11px] text-slate-600">
                                       <span className="font-medium text-slate-400 uppercase tracking-wider text-[9px]">Tax Formula:</span>
                                       <span className="font-medium tabular-nums">
-                                        Base Cost <span className="font-medium text-slate-700">₹{baseCost.toFixed(2)}</span> + GST Cost ({product.taxGst}%) <span className="font-medium text-blue-600">₹{(baseCost * Number(product.taxGst) / 100).toFixed(2)}</span> = Total <span className="font-medium text-slate-800">₹{(baseCost * (1 + Number(product.taxGst) / 100)).toFixed(2)}</span>
+                                        Base Cost <span className="font-medium text-slate-700">₹{baseCost.toFixed(2)}</span> + GST Cost ({product.taxGst}%) <span className="font-medium text-emerald-700">₹{(baseCost * Number(product.taxGst) / 100).toFixed(2)}</span> = Total <span className="font-medium text-slate-800">₹{(baseCost * (1 + Number(product.taxGst) / 100)).toFixed(2)}</span>
                                       </span>
                                     </div>
                                   )}

@@ -1,27 +1,25 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
 import {
   Megaphone, Package, Settings2, AlertCircle,
-  PowerOff,
-  QrCode, X, Download, ExternalLink,
-  Copy,
-  Check,
-  ChevronLeft,
-  ChevronRight,
+  PowerOff, QrCode, X, Download, ExternalLink,
+  Copy, Check, Edit3, Store, Users, ChevronDown,
+  Plus,
 } from "lucide-react";
 import { useToast } from "@/context/ToastContext";
 import { QRCodeSVG } from "qrcode.react";
 import { shopApi } from "@/services/api/shop";
 import { inventoryApi } from "@/services/api/inventory";
-import { SHOP_ID } from "@/services/endpoints";
+import { SHOP_ID, setShopId } from "@/services/endpoints";
+import { fetchMyShops } from "@/services/api/shopHelpers";
 import ProductDashboard from "../pages/StoreProductManagement";
-import Promotions from "../pages/Promotions";
-import { StoreSettingsLayout, SettingSection, SETTING_SIDEBAR_ITEMS } from "./StoreSettingsLayout";
-import { useNavigate } from "react-router-dom";
+import Announcements from "../pages/Announcement";
+import { StoreSettingsLayout } from "./StoreSettingsLayout";
 
 type TabType = "Announcements" | "Products" | "Settings";
 
-// ─── Full API response types ───────────────────────────────────────────────────
+// ─── API response types ─────────────────────────────────────────────────────
 interface OperatingHour {
   id: number;
   shop_id: string;
@@ -83,44 +81,30 @@ interface ShopData {
   created_at?: string;
 }
 
-
-// ─── Skeleton ──────────────────────────────────────────────────────────────────
+// ─── Skeletons ──────────────────────────────────────────────────────────────
 const Skeleton = ({ className }: { className?: string }) => (
   <div className={`animate-pulse bg-slate-200 rounded ${className ?? ""}`} />
 );
 
 const HeaderSkeleton = () => (
   <div className="bg-white border-b border-slate-200">
-    <div className="h-64 sm:h-72 lg:h-80 bg-slate-200 animate-pulse" />
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8 sm:pb-10 pt-3">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 sm:gap-6 min-w-0 flex-1">
-          <Skeleton className="w-28 h-28 sm:w-36 sm:h-36 lg:w-40 lg:h-40 rounded-3xl border-4 border-white shadow-xl shrink-0 -mt-14 sm:-mt-18 lg:-mt-20" />
-          <div className="space-y-3 pt-2 sm:pt-3 flex-1">
-            <Skeleton className="h-9 w-64 rounded-xl" />
-            <Skeleton className="h-4 w-96 rounded-md" />
-            <Skeleton className="h-4 w-72 rounded-md" />
-          </div>
+    <div className="h-56 sm:h-64 lg:h-72 bg-slate-200 animate-pulse" />
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="flex items-center gap-6">
+        <Skeleton className="w-24 h-24 rounded-full" />
+        <div className="space-y-3 flex-1">
+          <Skeleton className="h-8 w-64 rounded-xl" />
+          <Skeleton className="h-4 w-96 rounded-md" />
         </div>
-        <div className="flex items-center gap-3 shrink-0 pt-2 lg:pt-0">
-          <Skeleton className="h-11 w-32 rounded-xl" />
-          <Skeleton className="h-11 w-28 rounded-xl" />
-          <Skeleton className="h-11 w-32 rounded-xl" />
-        </div>
-      </div>
-    </div>
-    <div className="border-t border-slate-200/80">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex gap-6">
-        {[1, 2, 3].map((i) => <Skeleton key={i} className="h-10 w-28 my-3 rounded-lg" />)}
       </div>
     </div>
   </div>
 );
 
-// ─── QR Popup ──────────────────────────────────────────────────────────────────
+// ─── QR Modal ───────────────────────────────────────────────────────────────
 function QRModal({ shop, onClose }: { shop: ShopData; onClose: () => void }) {
-  const storeUrl = shop.additional_infos?.website
-    || `${window.location.origin}/store/${shop.id}`;
+  const storeUrl =
+    shop.additional_infos?.website || `${window.location.origin}/store/${shop.id}`;
 
   useEffect(() => {
     const originalOverflow = document.body.style.overflow;
@@ -138,9 +122,11 @@ function QRModal({ shop, onClose }: { shop: ShopData; onClose: () => void }) {
   const handleDownload = () => {
     const svg = document.getElementById("store-qr-svg") as unknown as SVGSVGElement;
     if (!svg) return;
-    const blob = new Blob([new XMLSerializer().serializeToString(svg)], { type: "image/svg+xml" });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement("a");
+    const blob = new Blob([new XMLSerializer().serializeToString(svg)], {
+      type: "image/svg+xml",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
     a.href = url;
     a.download = `${shop.name.replace(/\s+/g, "-").toLowerCase()}-qr.svg`;
     a.click();
@@ -158,21 +144,20 @@ function QRModal({ shop, onClose }: { shop: ShopData; onClose: () => void }) {
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-150">
       <div className="absolute inset-0" onClick={onClose} />
       <div className="relative bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-[340px] overflow-hidden animate-in zoom-in-95 duration-150">
-
-        {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
           <div className="flex items-center gap-2">
             <QrCode size={16} className="text-[#286038]" />
             <span className="text-sm font-semibold text-slate-800">Store QR Code</span>
           </div>
-          <button onClick={onClose} className="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors cursor-pointer">
+          <button
+            onClick={onClose}
+            className="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+          >
             <X size={14} />
           </button>
         </div>
 
-        {/* QR body */}
         <div className="px-5 py-6 flex flex-col items-center gap-4">
-          {/* Logo + QR */}
           <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
             <QRCodeSVG
               id="store-qr-svg"
@@ -188,14 +173,15 @@ function QRModal({ shop, onClose }: { shop: ShopData; onClose: () => void }) {
             />
           </div>
 
-          {/* Store info */}
           <div className="text-center w-full">
             <p className="text-sm font-semibold text-slate-800">{shop.name}</p>
             {shop.address?.full_address && (
               <p className="text-[11px] text-slate-400 mt-0.5">{shop.address.full_address}</p>
             )}
             <div className="mt-2.5 p-2 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between gap-2 text-left">
-              <span className="text-[11px] text-slate-600 font-mono truncate flex-1" title={storeUrl}>{storeUrl}</span>
+              <span className="text-[11px] text-slate-600 font-mono truncate flex-1" title={storeUrl}>
+                {storeUrl}
+              </span>
               <a
                 href={storeUrl}
                 target="_blank"
@@ -208,7 +194,6 @@ function QRModal({ shop, onClose }: { shop: ShopData; onClose: () => void }) {
             </div>
           </div>
 
-          {/* Actions */}
           <div className="flex gap-2 w-full">
             <button
               onClick={handleCopy}
@@ -235,31 +220,199 @@ function QRModal({ shop, onClose }: { shop: ShopData; onClose: () => void }) {
   );
 }
 
-// ─── Tab config ────────────────────────────────────────────────────────────────
+// ─── Switch Shop Modal ───────────────────────────────────────────────────────
+function SwitchShopModal({
+  currentShopId,
+  onClose,
+}: {
+  currentShopId: string;
+  onClose: () => void;
+}) {
+  const navigate = useNavigate();
+  const [shops, setShops] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// MAIN COMPONENT
-// ═══════════════════════════════════════════════════════════════════════════════
+  useEffect(() => {
+    fetchMyShops()
+      .then((list) => {
+        setShops(Array.isArray(list) ? list : []);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch shops:", err);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []);
+
+  const handleSelectShop = (targetShop: any) => {
+    if (targetShop.id === currentShopId) {
+      onClose();
+      return;
+    }
+    localStorage.setItem("shop_id", targetShop.id);
+    localStorage.setItem("shop_name", targetShop.name);
+    if (targetShop.logo_url) {
+      localStorage.setItem("shop_logo", targetShop.logo_url);
+    } else {
+      localStorage.removeItem("shop_logo");
+    }
+    setShopId(targetShop.id);
+    onClose();
+    window.location.reload();
+  };
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-150">
+      <div className="absolute inset-0" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-150">
+        
+        {/* Modal Header */}
+        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-[#286038] border border-emerald-100 flex items-center justify-center font-bold shrink-0">
+              <Store size={16} />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 leading-tight">Switch Store</h3>
+              <p className="text-[11px] text-slate-500 mt-0.5">Select a store to manage</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-7 h-7 rounded-lg hover:bg-slate-200/60 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+          >
+            <X size={14} />
+          </button>
+        </div>
+
+        {/* Modal List */}
+        <div className="p-4 max-h-[360px] overflow-y-auto space-y-2">
+          {loading ? (
+            <div className="space-y-2 p-2">
+              {[1, 2].map((i) => (
+                <div key={i} className="animate-pulse flex items-center gap-3 p-3 rounded-xl bg-slate-100">
+                  <div className="w-10 h-10 rounded-full bg-slate-200" />
+                  <div className="space-y-1.5 flex-1">
+                    <div className="h-4 bg-slate-200 rounded w-1/2" />
+                    <div className="h-3 bg-slate-200 rounded w-1/3" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : shops.length === 0 ? (
+            <div className="py-8 text-center text-xs text-slate-500">
+              No other stores found for your account.
+            </div>
+          ) : (
+            shops.map((s: any) => {
+              const isCurrent = s.id === currentShopId;
+              const initial = (s.name?.charAt(0) || "S").toUpperCase();
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => handleSelectShop(s)}
+                  className={`w-full flex items-center justify-between p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                    isCurrent
+                      ? "bg-emerald-50/70 border-emerald-300 ring-2 ring-emerald-500/20"
+                      : "bg-white border-slate-200/90 hover:bg-slate-50 hover:border-slate-300"
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-full border border-slate-200 bg-white overflow-hidden shrink-0 flex items-center justify-center text-[#286038] font-bold text-sm">
+                      {s.logo_url ? (
+                        <img src={s.logo_url} alt={s.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <span>{initial}</span>
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-slate-900 truncate">
+                          {s.name}
+                        </span>
+                        {isCurrent && (
+                          <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-1.5 py-0.2 rounded-full">
+                            Current
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                        {s.address?.full_address || s.tagline || "Store"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {isCurrent && (
+                    <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                      <Check size={13} />
+                    </div>
+                  )}
+                </button>
+              );
+            })
+          )}
+        </div>
+
+        {/* Modal Footer */}
+        <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              navigate("/create-shop");
+            }}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#286038] hover:text-[#1e4a2b] transition-colors cursor-pointer"
+          >
+            <Plus size={14} />
+            <span>Create New Store</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-8 px-3 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// MAIN COMPONENT: Digital Store Page
+// ═════════════════════════════════════════════════════════════════════════════
 const DigitalMain = () => {
-  const navigate  = useNavigate();
+  const navigate = useNavigate();
   const { showToast } = useToast();
+
+  // Tabs state
   const [activeTab, setActiveTab] = useState<TabType>("Announcements");
-  const [activeSettingSection, setActiveSettingSection] = useState<SettingSection>("details");
-  const [shop, setShop]           = useState<ShopData | null>(null);
+
+  // Shop data state
+  const [shop, setShop] = useState<ShopData | null>(null);
   const [followersCount, setFollowersCount] = useState<number>(0);
-  const [productsCount, setProductsCount]   = useState<number>(0);
-  const [copiedStoreUrl, setCopiedStoreUrl] = useState(false);
+  const [productsCount, setProductsCount] = useState<number>(0);
+  const [announcementsCount, setAnnouncementsCount] = useState<number>(0);
   const [fallbackImg, setFallbackImg] = useState<string | null>(null);
-  const [loading, setLoading]     = useState(true);
-  const [error, setError]         = useState<string | null>(null);
+  const [copiedStoreUrl, setCopiedStoreUrl] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [needsSetup, setNeedsSetup] = useState(false);
-  const [showQR, setShowQR]       = useState(false);
+
+  // Modals state
+  const [showQR, setShowQR] = useState(false);
+  const [showSwitchShop, setShowSwitchShop] = useState(false);
   const [showTurnOffConfirm, setShowTurnOffConfirm] = useState(false);
   const [updatingVisibility, setUpdatingVisibility] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const handleCopyStoreUrl = () => {
-    const storeUrl = shop?.additional_infos?.website || `${window.location.origin}/store/${shop?.id || SHOP_ID}`;
+    const storeUrl =
+      shop?.additional_infos?.website || `${window.location.origin}/store/${shop?.id || SHOP_ID}`;
     navigator.clipboard.writeText(storeUrl);
     setCopiedStoreUrl(true);
     showToast("Store URL copied to clipboard", "success");
@@ -331,17 +484,33 @@ const DigitalMain = () => {
             return;
           }
           setShop(data);
+          if (Array.isArray(data.announcements)) {
+            setAnnouncementsCount(data.announcements.length);
+          }
 
           if (productsRes.status === "fulfilled") {
             const prodsData = productsRes.value?.data ?? productsRes.value ?? [];
-            const prodsList = Array.isArray(prodsData) ? prodsData : (prodsData.inventories || prodsData.items || []);
+            const prodsList = Array.isArray(prodsData)
+              ? prodsData
+              : prodsData.inventories || prodsData.items || [];
             setProductsCount(prodsList.length);
-            const withImg = prodsList.find((p: any) => p.image_url || p.image || p.datas?.image_url || p.datas?.image);
-            if (withImg) setFallbackImg(withImg.image_url || withImg.image || withImg.datas?.image_url || withImg.datas?.image);
+            const withImg = prodsList.find(
+              (p: any) =>
+                p.image_url || p.image || p.datas?.image_url || p.datas?.image
+            );
+            if (withImg)
+              setFallbackImg(
+                withImg.image_url ||
+                  withImg.image ||
+                  withImg.datas?.image_url ||
+                  withImg.datas?.image
+              );
           }
 
           if (followersRes.status === "fulfilled") {
-            const rawFollowers = followersRes.value?.data ?? (Array.isArray(followersRes.value) ? followersRes.value : []);
+            const rawFollowers =
+              followersRes.value?.data ??
+              (Array.isArray(followersRes.value) ? followersRes.value : []);
             setFollowersCount(Array.isArray(rawFollowers) ? rawFollowers.length : 0);
           }
         } else {
@@ -357,11 +526,23 @@ const DigitalMain = () => {
     load();
   }, [navigate]);
 
-  if (loading) return <div className="min-h-screen bg-slate-50"><HeaderSkeleton /><div className="px-6 pt-6 space-y-4"><Skeleton className="h-64 rounded-xl" /></div></div>;
-  
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <HeaderSkeleton />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-4">
+          <Skeleton className="h-64 rounded-2xl" />
+        </div>
+      </div>
+    );
+  }
+
   if (needsSetup) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6" style={{ fontFamily: "Inter, sans-serif" }}>
+      <div
+        className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6"
+        style={{ fontFamily: "Inter, sans-serif" }}
+      >
         <div className="bg-white rounded-2xl border border-slate-200 p-8 max-w-md w-full text-center shadow-sm">
           <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-5">
             <Settings2 size={28} className="text-blue-500" />
@@ -372,7 +553,7 @@ const DigitalMain = () => {
           </p>
           <button
             onClick={() => navigate("/setup-digital-store")}
-            className="w-full py-3 bg-blue-600 text-white text-[14px] font-bold rounded-xl hover:bg-blue-700 shadow-md shadow-blue-500/20 transition-all cursor-pointer"
+            className="w-full py-3 bg-[#286038] text-white text-[14px] font-bold rounded-xl hover:bg-[#1e4a2b] shadow-md shadow-emerald-950/20 transition-all cursor-pointer"
           >
             Create digital store profile
           </button>
@@ -381,411 +562,334 @@ const DigitalMain = () => {
     );
   }
 
-  if (error || !shop) return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-      <div className="bg-white rounded-xl border border-slate-200 p-8 max-w-sm w-full text-center">
-        <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4"><AlertCircle size={20} className="text-red-500" /></div>
-        <h3 className="font-semibold text-slate-800 mb-1">Failed to load store</h3>
-        <p className="text-sm text-slate-500 mb-5">{error}</p>
-        <button onClick={() => window.location.reload()} className="px-5 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors">Retry</button>
+  if (error || !shop) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+        <div className="bg-white rounded-xl border border-slate-200 p-8 max-w-sm w-full text-center">
+          <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
+            <AlertCircle size={20} className="text-red-500" />
+          </div>
+          <h3 className="font-semibold text-slate-800 mb-1">Failed to load store</h3>
+          <p className="text-sm text-slate-500 mb-5">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-5 py-2 bg-[#286038] text-white text-sm font-semibold rounded-lg hover:bg-[#1e4a2b] transition-colors"
+          >
+            Retry
+          </button>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
 
-  const initials   = shop.name?.charAt(0)?.toUpperCase() ?? "S";
-  
-  
+  const initials = shop.name?.charAt(0)?.toUpperCase() ?? "S";
 
   return (
-    <div className="flex flex-col md:flex-row h-full min-h-[calc(100vh-140px)] bg-white rounded-2xl border border-slate-200/90 overflow-hidden shadow-xs animate-in fade-in duration-300" style={{ fontFamily: "Inter, sans-serif" }}>
-
+    <div
+      className="h-full flex flex-col min-h-0 overflow-hidden bg-slate-50/60"
+      style={{ fontFamily: "Inter, sans-serif" }}
+    >
+      {/* ── Modals ── */}
       {showQR && <QRModal shop={shop} onClose={() => setShowQR(false)} />}
+      {showSwitchShop && (
+        <SwitchShopModal
+          currentShopId={shop.id}
+          onClose={() => setShowSwitchShop(false)}
+        />
+      )}
 
-      {/* ── Left Secondary Navigation Sidebar (Digital Store Nav) ── */}
-      <aside className={`w-full ${isSidebarOpen ? "md:w-64 lg:w-72" : "md:w-[68px]"} border-b md:border-b-0 md:border-r border-slate-200/80 bg-slate-50/70 flex flex-col shrink-0 transition-all duration-200 ease-in-out`}>
+      {/* ── Fixed Top Section Container (Banner + Tabs always visible) ── */}
+      <header className="shrink-0 z-20 shadow-xs">
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          1. HERO / BANNER HEADER (Matching Wireframe Image 1)
+      ═══════════════════════════════════════════════════════════════════════ */}
+      <section className="relative overflow-hidden bg-slate-900 border-b border-slate-200/90 shadow-xs">
         
-        {/* Store Profile Card Header in Sidebar */}
-        <div className={`p-3 md:p-3.5 border-b border-slate-200/80 bg-white flex flex-col ${isSidebarOpen ? "" : "items-center"}`}>
-          <div className={`flex items-center w-full ${isSidebarOpen ? "justify-between" : "justify-center"}`}>
-            <div className="flex items-center gap-2.5 min-w-0">
-              {/* Store Avatar / Logo */}
+        {/* Background Shop Banner with Blur Effect */}
+        {shop.banner_url ? (
+          <div
+            className="absolute inset-0 bg-cover bg-center filter blur-md scale-105 opacity-60 transition-transform duration-700"
+            style={{ backgroundImage: `url(${shop.banner_url})` }}
+          />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-[#122e1b] via-[#1b4328] to-[#0d2214]" />
+        )}
+
+        {/* Dark High-Contrast Backdrop Overlay for Sharp Readability */}
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/85 via-slate-900/75 to-slate-950/90 backdrop-blur-md" />
+
+        {/* Foreground Content Container */}
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6">
+
+            {/* Left side: Circular Shop Logo + Details */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-5 min-w-0">
+              
+              {/* Circular Logo with border & shadow */}
               <div className="relative shrink-0">
-                <div className="w-9 h-9 rounded-xl border border-slate-200 bg-white flex items-center justify-center overflow-hidden shadow-xs">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-3 sm:border-4 border-white/95 shadow-2xl bg-white overflow-hidden flex items-center justify-center">
                   {shop.logo_url ? (
-                    <img src={shop.logo_url} alt={shop.name} className="w-full h-full object-cover" />
+                    <img
+                      src={shop.logo_url}
+                      alt={shop.name}
+                      className="w-full h-full object-cover"
+                    />
                   ) : fallbackImg ? (
-                    <img src={fallbackImg} alt={shop.name} className="w-full h-full object-cover" />
+                    <img
+                      src={fallbackImg}
+                      alt={shop.name}
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
-                    <div className="w-full h-full bg-emerald-50 border border-emerald-100 flex items-center justify-center text-[#286038]">
-                      <span className="text-sm font-semibold">{initials}</span>
+                    <div className="w-full h-full bg-emerald-50 text-[#286038] flex items-center justify-center text-2xl font-black">
+                      {initials}
                     </div>
                   )}
                 </div>
+
+                {/* Online Indicator Badge */}
                 <span
-                  className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${
+                  className={`absolute bottom-0.5 right-0.5 w-4 h-4 rounded-full border-2 border-white shadow-sm ${
                     shop.visible_online ? "bg-emerald-500" : "bg-slate-400"
                   }`}
                   title={shop.visible_online ? "Live Online" : "Offline"}
                 />
               </div>
 
-              {isSidebarOpen && (
-                <div className="min-w-0 flex-1">
-                  <h2 className="text-xs sm:text-sm font-semibold text-slate-800 truncate leading-snug" title={shop.name}>
+              {/* Text Info */}
+              <div className="min-w-0 space-y-1.5">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight leading-tight">
                     {shop.name}
-                  </h2>
-                  <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
-                    <span className={`inline-flex items-center gap-1 text-[10px] font-medium shrink-0 ${
-                      shop.visible_online ? "text-emerald-700" : "text-slate-500"
-                    }`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${shop.visible_online ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`} />
-                      {shop.visible_online ? "Live Online" : "Offline"}
-                    </span>
-                    {followersCount > 0 && (
-                      <span className="text-[10px] text-slate-400 font-medium shrink-0">
-                        • {followersCount} {followersCount === 1 ? "follower" : "followers"}
-                      </span>
-                    )}
-                  </div>
+                  </h1>
+
+                  {/* Online/Offline status pill toggle */}
+                  <button
+                    type="button"
+                    onClick={handleToggleStoreVisibility}
+                    disabled={updatingVisibility}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border cursor-pointer transition-all ${
+                      shop.visible_online
+                        ? "bg-emerald-500/20 text-emerald-300 border-emerald-400/40 hover:bg-emerald-500/30"
+                        : "bg-white/10 text-slate-300 border-white/20 hover:bg-white/20"
+                    }`}
+                    title="Click to toggle store visibility"
+                  >
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        shop.visible_online ? "bg-emerald-400 animate-pulse" : "bg-slate-400"
+                      }`}
+                    />
+                    <span>{shop.visible_online ? "Live Online" : "Store Offline"}</span>
+                  </button>
                 </div>
-              )}
+
+                {/* Followers count */}
+                <div className="flex items-center gap-2 text-xs sm:text-sm text-emerald-300 font-semibold">
+                  <Users size={14} className="text-emerald-400 shrink-0" />
+                  <span>
+                    {followersCount} {followersCount === 1 ? "follower" : "followers"}
+                  </span>
+                  {shop.address?.full_address && (
+                    <>
+                      <span className="text-white/40">•</span>
+                      <span className="text-white/75 truncate text-xs font-normal">
+                        {shop.address.full_address}
+                      </span>
+                    </>
+                  )}
+                </div>
+
+                {/* Tagline / Description */}
+                <p className="text-xs sm:text-sm text-slate-200/90 max-w-xl font-normal leading-relaxed line-clamp-2">
+                  {shop.description ||
+                    shop.tagline ||
+                    "Welcome to our digital storefront. Manage announcements, product catalog, and operational store settings."}
+                </p>
+              </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="hidden md:flex w-7 h-7 rounded-lg items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-              title={isSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
-            >
-              {isSidebarOpen ? <ChevronLeft size={15} /> : <ChevronRight size={15} />}
-            </button>
-          </div>
-
-          {/* Quick Action Pill Bar */}
-          {isSidebarOpen && (
-            <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between gap-2 w-full">
+            {/* Right side: Styled Action Buttons */}
+            <div className="flex flex-wrap sm:flex-col lg:flex-row items-stretch sm:items-end lg:items-center gap-2.5 shrink-0">
+              
+              {/* 1. "Edit Store" button */}
               <button
                 type="button"
-                onClick={handleToggleStoreVisibility}
-                disabled={updatingVisibility}
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10.5px] font-medium transition-all cursor-pointer border ${
-                  shop.visible_online
-                    ? "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100"
-                    : "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200"
-                }`}
+                onClick={() => navigate("/setup-digital-store?mode=edit")}
+                className="h-10 px-4 rounded-xl bg-white/15 hover:bg-white/25 text-white border border-white/25 backdrop-blur-md text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
+                title="Edit digital store profile"
               >
-                <span className={`w-1.5 h-1.5 rounded-full ${shop.visible_online ? "bg-emerald-600" : "bg-slate-400"}`} />
-                <span>{shop.visible_online ? "Store is Online" : "Store is Offline"}</span>
+                <Edit3 size={15} />
+                <span>Edit Store</span>
               </button>
 
-              <a
-                href={shop.additional_infos?.website || `${window.location.origin}/store/${shop.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10.5px] font-medium text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-200 transition-colors"
-                title="View live storefront in new tab"
+              {/* 2. "Switch Shop" button */}
+              <button
+                type="button"
+                onClick={() => setShowSwitchShop(true)}
+                className="h-10 px-4 rounded-xl bg-[#286038] hover:bg-[#1e4a2b] text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-emerald-950/40"
+                title="Switch active store"
               >
-                <span>Preview</span>
-                <ExternalLink size={10} />
-              </a>
+                <Store size={15} />
+                <span>Switch Shop</span>
+                <ChevronDown size={14} className="opacity-80" />
+              </button>
             </div>
-          )}
+          </div>
         </div>
+      </section>
 
-        {/* Digital Store Nav Links (Middle Column) */}
-        <div className="p-2 flex md:flex-col gap-1 overflow-x-auto md:overflow-y-auto no-scrollbar md:custom-scrollbar flex-1">
-          
-          {/* 1. Announcements */}
-          <div className="relative group shrink-0 md:w-full">
-            <button
-              type="button"
-              onClick={() => setActiveTab("Announcements")}
-              className={`w-full flex items-center gap-3 py-2 rounded-xl text-left transition-all duration-150 cursor-pointer ${
-                isSidebarOpen ? "px-3 justify-between" : "px-0 md:justify-center"
-              } ${
-                activeTab === "Announcements"
-                  ? "bg-white text-emerald-950 font-semibold shadow-xs border border-slate-200/90 ring-1 ring-emerald-500/20"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-white/80 border border-transparent"
-              }`}
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
-                  activeTab === "Announcements" ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-500 group-hover:bg-slate-200 group-hover:text-slate-700"
-                }`}>
-                  <Megaphone size={15} />
-                </div>
-                {isSidebarOpen && (
-                  <div className="min-w-0 hidden md:block">
-                    <div className="text-xs font-semibold leading-tight text-slate-800">Announcements</div>
-                    <div className="text-[10px] text-slate-400 font-normal truncate mt-0.5">Promos & broadcasts</div>
-                  </div>
+      {/* ═══════════════════════════════════════════════════════════════════════
+          2. NAVIGATION TABS (Directly Underneath the Hero Header)
+      ═══════════════════════════════════════════════════════════════════════ */}
+      <nav className="bg-white border-b border-slate-200/90 shadow-2xs sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between">
+            
+            {/* Tabs List */}
+            <div className="flex items-center gap-2 sm:gap-6 overflow-x-auto no-scrollbar">
+              
+              {/* 1. Announcements Tab */}
+              <button
+                type="button"
+                onClick={() => setActiveTab("Announcements")}
+                className={`flex items-center gap-2 py-3.5 px-3 border-b-2 text-xs sm:text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${
+                  activeTab === "Announcements"
+                    ? "border-[#286038] text-[#286038]"
+                    : "border-transparent text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                <Megaphone size={16} />
+                <span>Announcements</span>
+                {announcementsCount > 0 && (
+                  <span className="text-[11px] px-2 py-0.2 rounded-full bg-emerald-100 text-[#286038] font-mono font-bold">
+                    {announcementsCount}
+                  </span>
                 )}
-                <span className="text-xs font-medium md:hidden whitespace-nowrap px-1">Announcements</span>
-              </div>
-              {isSidebarOpen && (shop.announcements?.length ?? 0) > 0 && (
-                <span className={`text-[10px] font-medium px-1.5 py-0.2 rounded-full hidden md:inline-block ${
-                  activeTab === "Announcements" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-500"
-                }`}>
-                  {shop.announcements.length}
-                </span>
-              )}
-            </button>
+              </button>
 
-            {!isSidebarOpen && (
-              <div className="absolute left-[calc(100%+8px)] top-1/2 -translate-y-1/2 z-50 hidden md:group-hover:flex flex-col whitespace-nowrap bg-slate-900/95 text-white px-2.5 py-1.5 rounded-lg shadow-xl border border-white/10 pointer-events-none animate-in fade-in zoom-in-95 duration-150">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-semibold text-white">Announcements</span>
-                  {(shop.announcements?.length ?? 0) > 0 && (
-                    <span className="text-[9.5px] bg-emerald-500/30 text-emerald-300 px-1.5 py-0.2 rounded-full font-mono">
-                      {shop.announcements.length}
-                    </span>
-                  )}
-                </div>
-                <span className="text-[10px] text-slate-300 font-normal">Promos & broadcasts</span>
-              </div>
-            )}
-          </div>
-
-          {/* 2. Products */}
-          <div className="relative group shrink-0 md:w-full">
-            <button
-              type="button"
-              onClick={() => setActiveTab("Products")}
-              className={`w-full flex items-center gap-3 py-2 rounded-xl text-left transition-all duration-150 cursor-pointer ${
-                isSidebarOpen ? "px-3 justify-between" : "px-0 md:justify-center"
-              } ${
-                activeTab === "Products"
-                  ? "bg-white text-emerald-950 font-semibold shadow-xs border border-slate-200/90 ring-1 ring-emerald-500/20"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-white/80 border border-transparent"
-              }`}
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
-                  activeTab === "Products" ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-500 group-hover:bg-slate-200 group-hover:text-slate-700"
-                }`}>
-                  <Package size={15} />
-                </div>
-                {isSidebarOpen && (
-                  <div className="min-w-0 hidden md:block">
-                    <div className="text-xs font-semibold leading-tight text-slate-800">Products</div>
-                    <div className="text-[10px] text-slate-400 font-normal truncate mt-0.5">Digital catalog & sync</div>
-                  </div>
+              {/* 2. Products Tab */}
+              <button
+                type="button"
+                onClick={() => setActiveTab("Products")}
+                className={`flex items-center gap-2 py-3.5 px-3 border-b-2 text-xs sm:text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${
+                  activeTab === "Products"
+                    ? "border-[#286038] text-[#286038]"
+                    : "border-transparent text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                <Package size={16} />
+                <span>Products</span>
+                {productsCount > 0 && (
+                  <span className="text-[11px] px-2 py-0.2 rounded-full bg-slate-100 text-slate-600 font-mono font-bold">
+                    {productsCount}
+                  </span>
                 )}
-                <span className="text-xs font-medium md:hidden whitespace-nowrap px-1">Products</span>
-              </div>
-              {isSidebarOpen && productsCount > 0 && (
-                <span className={`text-[10px] font-medium px-1.5 py-0.2 rounded-full hidden md:inline-block ${
-                  activeTab === "Products" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-500"
-                }`}>
-                  {productsCount}
-                </span>
-              )}
-            </button>
+              </button>
 
-            {!isSidebarOpen && (
-              <div className="absolute left-[calc(100%+8px)] top-1/2 -translate-y-1/2 z-50 hidden md:group-hover:flex flex-col whitespace-nowrap bg-slate-900/95 text-white px-2.5 py-1.5 rounded-lg shadow-xl border border-white/10 pointer-events-none animate-in fade-in zoom-in-95 duration-150">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-semibold text-white">Products</span>
-                  {productsCount > 0 && (
-                    <span className="text-[9.5px] bg-emerald-500/30 text-emerald-300 px-1.5 py-0.2 rounded-full font-mono">
-                      {productsCount}
-                    </span>
-                  )}
-                </div>
-                <span className="text-[10px] text-slate-300 font-normal">Digital catalog & sync</span>
-              </div>
-            )}
-          </div>
-
-          {/* 3. Settings */}
-          <div className="pt-2">
-            {isSidebarOpen && (
-              <div className="px-3 pb-1.5 hidden md:flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-wider text-slate-400">
-                <Settings2 size={12} className="text-slate-400" />
+              {/* 3. Settings Tab */}
+              <button
+                type="button"
+                onClick={() => setActiveTab("Settings")}
+                className={`flex items-center gap-2 py-3.5 px-3 border-b-2 text-xs sm:text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${
+                  activeTab === "Settings"
+                    ? "border-[#286038] text-[#286038]"
+                    : "border-transparent text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                <Settings2 size={16} />
                 <span>Settings</span>
-              </div>
-            )}
-            {!isSidebarOpen && <div className="border-t border-slate-200/60 my-1 hidden md:block" />}
-
-            <div className="flex md:flex-col gap-1">
-              {SETTING_SIDEBAR_ITEMS.map((item) => {
-                const isCurrent = activeTab === "Settings" && activeSettingSection === item.id;
-                const isDanger = item.id === "danger";
-                const Icon = item.icon;
-                return (
-                  <div key={item.id} className="relative group shrink-0 md:w-full">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveTab("Settings");
-                        setActiveSettingSection(item.id);
-                      }}
-                      className={`w-full flex items-center gap-2.5 py-1.5 rounded-xl text-left transition-all cursor-pointer ${
-                        isSidebarOpen ? "px-3" : "px-0 md:justify-center"
-                      } ${
-                        isCurrent
-                          ? isDanger
-                            ? "bg-rose-50 text-rose-700 font-semibold border border-rose-200 shadow-2xs"
-                            : "bg-white text-emerald-950 font-semibold shadow-xs border border-slate-200/90 ring-1 ring-emerald-500/20"
-                          : isDanger
-                            ? "text-rose-500 hover:bg-rose-50/60 hover:text-rose-700 border border-transparent"
-                            : "text-slate-600 hover:text-slate-900 hover:bg-white/80 border border-transparent"
-                      }`}
-                    >
-                      <div
-                        className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
-                          isCurrent
-                            ? isDanger ? "bg-rose-600 text-white" : "bg-emerald-600 text-white"
-                            : isDanger ? "bg-rose-50 text-rose-500" : "bg-slate-100 text-slate-500"
-                        }`}
-                      >
-                        <Icon size={14} />
-                      </div>
-                      {isSidebarOpen && (
-                        <div className="min-w-0 hidden md:block flex-1">
-                          <div className="text-xs font-semibold leading-tight truncate text-slate-800">{item.label}</div>
-                          <div className="text-[9.5px] text-slate-400 font-normal truncate mt-0.5">{item.description}</div>
-                        </div>
-                      )}
-                      <span className="text-xs font-medium md:hidden whitespace-nowrap px-1">{item.label}</span>
-                    </button>
-
-                    {!isSidebarOpen && (
-                      <div className="absolute left-[calc(100%+8px)] top-1/2 -translate-y-1/2 z-50 hidden md:group-hover:flex flex-col whitespace-nowrap bg-slate-900/95 text-white px-2.5 py-1.5 rounded-lg shadow-xl border border-white/10 pointer-events-none animate-in fade-in zoom-in-95 duration-150">
-                        <span className={`text-xs font-semibold ${isDanger ? "text-rose-300" : "text-white"}`}>{item.label}</span>
-                        <span className="text-[10px] text-slate-300 font-normal">{item.description}</span>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+              </button>
             </div>
-          </div>
-        </div>
 
-        {/* Secondary Sidebar Footer */}
-        <div className="p-2.5 border-t border-slate-200/80 bg-white/70 hidden md:flex items-center justify-between gap-1.5">
-          {isSidebarOpen ? (
-            <>
+            {/* Quick Actions (Store QR, Copy Link, Preview) */}
+            <div className="hidden sm:flex items-center gap-2 py-2">
               <button
                 type="button"
                 onClick={() => setShowQR(true)}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 h-8 px-2.5 rounded-lg text-[11px] font-medium text-slate-700 hover:text-emerald-700 bg-slate-50 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-200 transition-colors cursor-pointer"
-                title="Store QR Code"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-[#286038] hover:bg-emerald-50/70 border border-slate-200 hover:border-emerald-200 transition-colors cursor-pointer"
+                title="View Store QR Code"
               >
                 <QrCode size={13} className="text-slate-500" />
-                <span>QR Code</span>
+                <span>Store QR</span>
               </button>
 
               <button
                 type="button"
                 onClick={handleCopyStoreUrl}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 h-8 px-2.5 rounded-lg text-[11px] font-medium text-slate-700 hover:text-emerald-700 bg-slate-50 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-200 transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-[#286038] hover:bg-emerald-50/70 border border-slate-200 hover:border-emerald-200 transition-colors cursor-pointer"
                 title="Copy Store URL"
               >
-                {copiedStoreUrl ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} className="text-slate-500" />}
+                {copiedStoreUrl ? (
+                  <Check size={13} className="text-emerald-600" />
+                ) : (
+                  <Copy size={13} className="text-slate-500" />
+                )}
                 <span>{copiedStoreUrl ? "Copied" : "Copy Link"}</span>
               </button>
-            </>
-          ) : (
-            <div className="flex flex-col items-center gap-1.5 w-full">
-              <div className="relative group">
-                <button
-                  type="button"
-                  onClick={() => setShowQR(true)}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-emerald-700 bg-slate-100 hover:bg-emerald-50 border border-slate-200 transition-colors cursor-pointer"
-                >
-                  <QrCode size={14} />
-                </button>
-                <div className="absolute left-[calc(100%+8px)] top-1/2 -translate-y-1/2 z-50 hidden md:group-hover:flex whitespace-nowrap bg-slate-900/95 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-xl border border-white/10 pointer-events-none">
-                  Store QR Code
-                </div>
-              </div>
 
-              <div className="relative group">
-                <button
-                  type="button"
-                  onClick={handleCopyStoreUrl}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-emerald-700 bg-slate-100 hover:bg-emerald-50 border border-slate-200 transition-colors cursor-pointer"
-                >
-                  {copiedStoreUrl ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
-                </button>
-                <div className="absolute left-[calc(100%+8px)] top-1/2 -translate-y-1/2 z-50 hidden md:group-hover:flex whitespace-nowrap bg-slate-900/95 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-xl border border-white/10 pointer-events-none">
-                  {copiedStoreUrl ? "Copied!" : "Copy Store Link"}
-                </div>
-              </div>
+              <a
+                href={
+                  shop.additional_infos?.website || `${window.location.origin}/store/${shop.id}`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-[#286038] hover:bg-[#1e4a2b] shadow-xs transition-colors"
+                title="Open customer storefront in new tab"
+              >
+                <span>Preview Store</span>
+                <ExternalLink size={12} />
+              </a>
             </div>
-          )}
-        </div>
-      </aside>
 
-      {/* ── Right Content Area (Selected Nav Tab Content) ── */}
-      <main className="flex-1 min-w-0 flex flex-col bg-white overflow-hidden">
+          </div>
+        </div>
+      </nav>
+      </header>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          3. SCROLLABLE ACTIVE TAB CONTENT
+      ═══════════════════════════════════════════════════════════════════════ */}
+      <main className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+        <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 pb-28">
         
-        {/* Header Strip */}
-        <header className="px-5 sm:px-6 py-4 border-b border-slate-100 bg-white flex items-center justify-between gap-4 shrink-0">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-100 flex items-center justify-center shrink-0">
-              {activeTab === "Announcements" && <Megaphone size={16} />}
-              {activeTab === "Products" && <Package size={16} />}
-              {activeTab === "Settings" && (
-                (() => {
-                  const currentItem = SETTING_SIDEBAR_ITEMS.find(s => s.id === activeSettingSection);
-                  const Icon = currentItem?.icon || Settings2;
-                  return <Icon size={16} />;
-                })()
-              )}
-            </div>
-
-            <div className="min-w-0">
-              <h1 className="text-sm sm:text-base font-semibold text-slate-800 truncate">
-                {activeTab === "Announcements" && "Store Announcements"}
-                {activeTab === "Products" && "Product Catalog & Sync"}
-                {activeTab === "Settings" && (
-                  SETTING_SIDEBAR_ITEMS.find(s => s.id === activeSettingSection)?.label || "Store Settings"
-                )}
-              </h1>
-              <p className="text-[11px] text-slate-400 font-medium truncate">
-                {activeTab === "Announcements" && "Manage broadcast banners and promotional messages for your digital storefront"}
-                {activeTab === "Products" && "Control products visibility, online pricing, and categories for customer ordering"}
-                {activeTab === "Settings" && (
-                  SETTING_SIDEBAR_ITEMS.find(s => s.id === activeSettingSection)?.description || "Configure digital store preferences"
-                )}
-              </p>
-            </div>
+        {/* Tab 1: Announcements (Two-column layout matching Wireframe Image 2) */}
+        {activeTab === "Announcements" && (
+          <div className="animate-in fade-in duration-200">
+            <Announcements
+              onCountChange={(total) => {
+                setAnnouncementsCount(total);
+              }}
+            />
           </div>
-        </header>
+        )}
 
-        {/* Content Body */}
-        <div className={`flex-1 min-h-0 ${activeTab === "Products" ? "overflow-hidden p-3 sm:p-5 flex flex-col" : "overflow-y-auto p-4 sm:p-6 custom-scrollbar pb-24"}`}>
-          <div
-            key={`${activeTab}-${activeSettingSection}`}
-            className={activeTab === "Products" ? "flex-1 min-h-0 flex flex-col h-full" : undefined}
-            style={{ animation: "fadeIn 0.15s ease" }}
-          >
-            {activeTab === "Announcements" && <Promotions />}
-            {activeTab === "Products" && <ProductDashboard />}
-            {activeTab === "Settings" && (
-              <StoreSettingsLayout
-                shop={shop}
-                activeSection={activeSettingSection}
-                onSectionChange={setActiveSettingSection}
-                hideInternalNav={true}
-              />
-            )}
+        {/* Tab 2: Products (StoreProductManagement) */}
+        {activeTab === "Products" && (
+          <div className="animate-in fade-in duration-200">
+            <ProductDashboard />
           </div>
+        )}
+
+        {/* Tab 3: Settings (StoreSettingsLayout) */}
+        {activeTab === "Settings" && (
+          <div className="animate-in fade-in duration-200">
+            <StoreSettingsLayout shop={shop} hideInternalNav={false} />
+          </div>
+        )}
         </div>
-
-        {/* ── Fixed Bottom Action Bar Section ── */}
-        <footer className="shrink-0 bg-white/95 backdrop-blur-md border-t border-slate-200/90 px-4 sm:px-6 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] z-20 flex items-center justify-between gap-3 min-h-[60px]">
-          <div id="digital-store-bottom-status" className="flex items-center gap-2 min-w-0 flex-1">
-            <span className="text-xs text-slate-400 font-medium">Digital Store Actions</span>
-          </div>
-          <div id="digital-store-bottom-actions" className="flex items-center gap-2.5 sm:gap-3 shrink-0 ml-auto" />
-        </footer>
       </main>
 
-      {/* ── Confirmation Modal for Turning Off Digital Store ── */}
+      {/* ── Fixed Bottom Action Bar Section (Compatible with Action Portal) ── */}
+      <footer className="fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-slate-200 px-4 sm:px-8 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] z-20 flex items-center justify-between gap-3 min-h-[56px]">
+        <div id="digital-store-bottom-status" className="flex items-center gap-2 min-w-0 flex-1">
+          <span className="text-xs text-slate-400 font-medium">Digital Store Controls</span>
+        </div>
+        <div id="digital-store-bottom-actions" className="flex items-center gap-2.5 sm:gap-3 shrink-0 ml-auto" />
+      </footer>
+
+      {/* ── Turn Off Store Confirmation Modal ── */}
       {showTurnOffConfirm &&
         createPortal(
           <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-150">
@@ -826,10 +930,6 @@ const DigitalMain = () => {
           </div>,
           document.body
         )}
-
-      <style>{`
-        @keyframes fadeIn { from { opacity:0; transform:translateY(4px) } to { opacity:1; transform:translateY(0) } }
-      `}</style>
     </div>
   );
 };

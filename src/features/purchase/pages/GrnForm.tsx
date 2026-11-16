@@ -521,12 +521,16 @@ const GrnForm = () => {
         else if (costMethod === "Equally" && products.length > 0)
           allocated = stats.totalCharges / products.length / (q > 0 ? q : 1);
         const finalCost = baseCost + allocated;
-        let finalSellPrice =
-          p.marginType === "percent"
-            ? finalCost * (1 + (Number(p.marginPercent) || 0) / 100)
-            : p.marginType === "amount"
-            ? finalCost + (Number(p.marginAmount) || 0)
-            : Number(p.sellingPrice) || 0;
+        const gstRate = Number(p.taxGst || 0);
+        let finalSellPrice = Number(p.sellingPrice) || 0;
+        if (p.marginType === "percent" && Number(p.marginPercent) > 0) {
+          const m = Number(p.marginPercent);
+          const computedBase = m < 100 ? finalCost / (1 - m / 100) : finalCost * (1 + m / 100);
+          finalSellPrice = Math.round(computedBase * (1 + gstRate / 100) * 100) / 100;
+        } else if (p.marginType === "amount" && Number(p.marginAmount) > 0) {
+          const computedBase = finalCost + Number(p.marginAmount);
+          finalSellPrice = Math.round(computedBase * (1 + gstRate / 100) * 100) / 100;
+        }
         return {
           inventory_id: p.inventory_id || null,
           variant_id: p.variant_id || null,

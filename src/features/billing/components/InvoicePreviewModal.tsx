@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { Download, X, Loader2, CheckCircle2, Plus, Printer } from "lucide-react";
 import { BiLogoWhatsapp } from "react-icons/bi";
 import type { BillingItem } from "../types";
-import type { BillTotals } from "@/utils/pricing";
+import { formatINR, type BillTotals } from "@/utils/pricing";
 import { shopApi } from "../../../services/api/shop";
 import { InvoiceRenderer } from "./InvoiceRenderer";
 
@@ -34,6 +34,11 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
   billDiscount, billTotals,
   isSubmitting, onConfirm, orderId, onNewBill
 }) => {
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  const totalPaid = round2(payments.reduce((s, p) => s + (p.amount || 0), 0));
+  const isOverpaid = totalPaid > round2(finalAmount) + 0.01;
+  const isUnderpaid = round2(finalAmount) - totalPaid > 0.01;
+
   const invoiceRef = useRef<HTMLDivElement>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const today   = new Date();
@@ -473,9 +478,20 @@ ${(err as Error)?.message ?? String(err)}`);
                   Cancel
                 </button>
                 <button
-                  onClick={() => onConfirm("COMPLETED")}
-                  disabled={isSubmitting}
-                  className={`flex items-center gap-1.5 px-5 py-2 rounded-lg text-[12px] font-semibold text-white transition-all duration-200 ${isSubmitting ? "bg-slate-300 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 shadow-sm"}`}
+                  onClick={() => {
+                    if (isOverpaid) {
+                      alert(`Total paid amount (₹${formatINR(totalPaid)}) cannot exceed the bill amount (₹${formatINR(finalAmount)}).`);
+                      return;
+                    }
+                    if (isUnderpaid) {
+                      alert("Please pay the full balance amount first.");
+                      return;
+                    }
+                    onConfirm("COMPLETED");
+                  }}
+                  disabled={isSubmitting || isOverpaid || isUnderpaid}
+                  title={isOverpaid ? `Total paid amount (₹${formatINR(totalPaid)}) cannot exceed the bill amount (₹${formatINR(finalAmount)}).` : undefined}
+                  className={`flex items-center gap-1.5 px-5 py-2 rounded-lg text-[12px] font-semibold text-white transition-all duration-200 ${isSubmitting || isOverpaid || isUnderpaid ? "bg-slate-300 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700 shadow-sm"}`}
                 >
                   {isSubmitting ? <><Loader2 size={13} className="animate-spin" /> Saving...</> : <><CheckCircle2 size={14} /> Confirm Order</>}
                 </button>

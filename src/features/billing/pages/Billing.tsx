@@ -366,6 +366,18 @@ const Billing = () => {
     const filledItems = items.filter(i => !!i.name);
     if (filledItems.length === 0) return;
 
+    const round2Val = (n: number) => Math.round(n * 100) / 100;
+    const totalPaid = round2Val(paymentsArg.reduce((s, p) => s + (p.amount || 0), 0));
+    const billTotal = round2Val(billTotals?.payable ?? finalAmount);
+    if (totalPaid > billTotal + 0.01) {
+      showToast(`Total paid amount (₹${formatINR(totalPaid)}) cannot exceed the bill amount (₹${formatINR(billTotal)}).`, "error");
+      return;
+    }
+    if (billTotal - totalPaid > 0.01) {
+      showToast("Please pay the full balance amount first.", "warning");
+      return;
+    }
+
     // Ensure cart session is active; initiate if missing
     let activeSid = sessionIdRef.current;
     if (!activeSid) {
@@ -596,8 +608,19 @@ const Billing = () => {
       showToast("Cannot complete empty bill. Please add products first.", "warning");
       return;
     }
+    const round2Val = (n: number) => Math.round(n * 100) / 100;
+    const totalPaid = round2Val(payments.reduce((s, p) => s + (p.amount || 0), 0));
+    const billTotal = round2Val(billTotals?.payable ?? finalAmount);
+    if (totalPaid > billTotal + 0.01) {
+      showToast(`Total paid amount (₹${formatINR(totalPaid)}) cannot exceed the bill amount (₹${formatINR(billTotal)}).`, "error");
+      return;
+    }
+    if (billTotal - totalPaid > 0.01) {
+      showToast("Please pay the full balance amount first.", "warning");
+      return;
+    }
     handleConfirmOrder(payments, includeGst, "COMPLETED", "BILL");
-  }, [items, payments, includeGst, handleConfirmOrder, showToast]);
+  }, [items, payments, includeGst, handleConfirmOrder, showToast, billTotals, finalAmount]);
 
   useRegisterShortcut("bill_print", () => {
     if (successDetails) {

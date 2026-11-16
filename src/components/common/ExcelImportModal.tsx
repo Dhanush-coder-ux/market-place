@@ -43,7 +43,9 @@ import {
   ArrowRight,
   Search,
   CheckCheck,
+  Plus,
 } from "lucide-react";
+import { QuickCreateProductModal } from "@/features/common/QuickCreate/QuickCreateProductModal";
 import {
   ImportColumnDef,
   EntityType,
@@ -636,6 +638,7 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [showStockConfirmModal, setShowStockConfirmModal] = useState(false);
+  const [showQuickCreate, setShowQuickCreate] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
   const [rows, setRows] = useState<ParsedRow[]>([]);
   const [rowErrors, setRowErrors] = useState<RowValidationError[]>([]);
@@ -937,6 +940,29 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
                   >
                     <CheckCheck size={13} />
                     All stocks imported successfully
+                  </button>
+                </div>
+              )}
+              {entityType === "inventory" && (
+                <div className="rounded-xl border border-indigo-200 bg-gradient-to-r from-indigo-50/90 to-blue-50/70 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                      <Plus size={20} />
+                    </div>
+                    <div>
+                      <p className="text-[13px] font-bold text-slate-800">Have Variants or Batch Products?</p>
+                      <p className="text-[11px] text-slate-500 leading-relaxed">
+                        Excel import only supports simple products. Use the Product Creator to enter opening stocks directly for Variant, Batch, and Variant + Batch products.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowQuickCreate(true)}
+                    className="w-full sm:w-auto px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-[12px] font-bold transition-all shadow-sm shrink-0 flex items-center justify-center gap-1.5 active:scale-95"
+                  >
+                    <Plus size={14} />
+                    Add Product (Opening Stock)
                   </button>
                 </div>
               )}
@@ -1343,6 +1369,18 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
               </div>
             </div>
           </div>
+        )}
+
+        {showQuickCreate && (
+          <QuickCreateProductModal
+            isOpen={showQuickCreate}
+            onClose={() => setShowQuickCreate(false)}
+            isInitialStockMode={true}
+            onSuccess={() => {
+              setShowQuickCreate(false);
+              onSuccess();
+            }}
+          />
         )}
 
       <style>{`

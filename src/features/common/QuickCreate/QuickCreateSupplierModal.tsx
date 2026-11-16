@@ -221,7 +221,7 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
               value={form.address}
               onChange={handleChange}
               rows={3}
-              className="w-full bg-slate-50 border border-slate-100 rounded-lg md:rounded-lg px-4 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-100 transition-all placeholder:text-slate-300 resize-none"
+              className="w-full bg-slate-50 border border-slate-100 rounded-lg md:rounded-lg px-4 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-emerald-100 transition-all placeholder:text-slate-300 resize-none"
               placeholder="Enter full address details..."
             />
           </div>
@@ -237,13 +237,13 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
         .every((f) => customFieldValues[f.id] !== undefined && String(customFieldValues[f.id]).trim() !== ""),
       content: (
         <div className="space-y-6">
-          <div className="p-4 md:p-6 rounded-lg bg-blue-50 border border-blue-100 flex gap-3 md:gap-4 items-start">
-            <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-blue-600 shadow-sm shrink-0">
+          <div className="p-4 md:p-6 rounded-lg bg-emerald-50/50 border border-emerald-100 flex gap-3 md:gap-4 items-start">
+            <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-emerald-600 shadow-sm shrink-0">
               <Tag size={20} />
             </div>
             <div className="space-y-1">
-              <p className="text-xs font-black text-blue-800 tracking-tight">Tax Identity</p>
-              <p className="text-[10px] font-bold text-blue-600 leading-relaxed uppercase tracking-wider">
+              <p className="text-xs font-black text-emerald-900 tracking-tight">Tax Identity</p>
+              <p className="text-[10px] font-bold text-emerald-700 leading-relaxed uppercase tracking-wider">
                 Ensure the Tax ID is valid for generating B2B invoices and claiming ITC.
               </p>
             </div>
@@ -268,7 +268,7 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
               value={form.notes}
               onChange={handleChange}
               rows={4}
-              className="w-full bg-slate-50 border border-slate-100 rounded-lg md:rounded-lg px-4 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-blue-100 transition-all placeholder:text-slate-300 resize-none"
+              className="w-full bg-slate-50 border border-slate-100 rounded-lg md:rounded-lg px-4 py-3 text-sm font-bold text-slate-700 focus:ring-2 focus:ring-emerald-100 transition-all placeholder:text-slate-300 resize-none"
               placeholder="Additional comments about this partner..."
             />
           </div>
@@ -348,7 +348,7 @@ export const QuickCreateSupplierModal: React.FC<QuickCreateSupplierModalProps> =
               </div>
               <div className="text-right">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider leading-none">Tax ID</p>
-                <p className="text-sm font-black text-blue-600 mt-1">{form.gst_number || "NOT PROVIDED"}</p>
+                <p className="text-sm font-black text-emerald-600 mt-1">{form.gst_number || "NOT PROVIDED"}</p>
               </div>
             </div>
 

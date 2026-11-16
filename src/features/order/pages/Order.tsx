@@ -15,6 +15,7 @@ import { orderApi } from "@/services/api/order";
 import { inventoryApi } from "@/services/api/inventory";
 import { customerApi } from "@/services/api/customer";
 import type { OrderRecord } from "@/types/api";
+import { useToast } from "@/context/ToastContext";
 import { VerifyDeliveryModal } from "../components/VerifyDeliveryModal";
 import { ReturnRequestCard } from "../components/ReturnRequestCard";
 import { CreateReturnRequestModal } from "../components/CreateReturnRequestModal";
@@ -29,6 +30,7 @@ import { buildSerialAssignmentItems } from "../utils/orderSerialHelper";
 
 const Order = () => {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const { loading, error, clearError } = useApi();
   const rawId = getShopId() || localStorage.getItem("shop_id") || SHOP_ID || "";
   const currentShopId = rawId && rawId !== "string" ? rawId : "";
@@ -177,6 +179,12 @@ const Order = () => {
       await orderApi.updateReturnRequestStatus(requestId, { status: newStatus, admin_notes: notes });
       setReturnRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: newStatus, admin_notes: notes } : r));
       setRefreshKey(k => k + 1);
+      if (newStatus === "ACCEPTED") {
+        showToast(
+          "Return request accepted! Please go to Sales to execute the return for this product.",
+          "warning"
+        );
+      }
     } catch (e) {
       console.error("Failed to update return request status", e);
     }

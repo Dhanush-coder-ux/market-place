@@ -83,6 +83,13 @@ export interface BillTotals {
 
 export function isShopGstRegistered(): boolean {
   try {
+    const purchaseSettings = localStorage.getItem("purchaseSettings");
+    if (purchaseSettings) {
+      const parsed = JSON.parse(purchaseSettings);
+      if (parsed?.gstType === "registered") return true;
+      if (parsed?.gstType === "non-registered") return false;
+    }
+
     const shopGstFlag = localStorage.getItem("shop_gst_registered");
     if (shopGstFlag === "true") return true;
     if (shopGstFlag === "false") return false;

@@ -21,9 +21,11 @@ import {
   Plus,
   Trash2,
   History,
-  FileUp
+  FileUp,
+  CheckCheck,
 } from "lucide-react";
 import ExcelImportModal from "@/components/common/ExcelImportModal";
+import { QuickCreateProductModal } from "@/features/common/QuickCreate/QuickCreateProductModal";
 import ActionMenu, { ActionMenuItem } from "@/components/common/ActionMenu";
 import { VariantRows, BatchCards, SerialBadgeList, analyzeProductStock, calculateProductStock } from "../components/StockTree";
 import { Modal } from "@/components/common/SuperUI";
@@ -1093,6 +1095,8 @@ const InventoryPage = () => {
 
   const [refreshKey, setRefreshKey] = useState(0);
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
+  const [showFinishConfirm, setShowFinishConfirm] = useState(false);
   const [isStockImportCompleted, setIsStockImportCompleted] = useState<boolean>(() => {
     const sid = getShopId();
     return Boolean(sid && localStorage.getItem(`stock_import_completed_${sid}`) === "true");
@@ -1144,13 +1148,32 @@ const InventoryPage = () => {
           </button>
         )}
         {!isStockImportCompleted && (
-          <button
-            onClick={() => setIsImportOpen(true)}
-            className="h-8 px-3 rounded-md border border-slate-200 text-slate-600 font-medium text-[12px] bg-white hover:bg-slate-50 transition-colors flex items-center gap-1.5"
-          >
-            <FileUp size={13} />
-            Import
-          </button>
+          <>
+            <button
+              onClick={() => setIsImportOpen(true)}
+              className="h-8 px-3 rounded-md border border-slate-200 text-slate-600 font-medium text-[12px] bg-white hover:bg-slate-50 transition-colors flex items-center gap-1.5"
+              title="Bulk import initial stocks from Excel"
+            >
+              <FileUp size={13} />
+              Import Excel
+            </button>
+            <button
+              onClick={() => setIsQuickCreateOpen(true)}
+              className="h-8 px-3 rounded-md border border-emerald-300 text-emerald-700 font-medium text-[12px] bg-emerald-50 hover:bg-emerald-100 transition-colors flex items-center gap-1.5"
+              title="Add product with variants, batches, and opening stock"
+            >
+              <Plus size={13} />
+              Add Product (Opening Stock)
+            </button>
+            <button
+              onClick={() => setShowFinishConfirm(true)}
+              className="h-8 px-3 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-[12px] transition-colors flex items-center gap-1.5 shadow-xs"
+              title="Finish initial stock import for this shop"
+            >
+              <CheckCheck size={13} />
+              Finish Initial Stock
+            </button>
+          </>
         )}
       </div>
     );
@@ -1933,6 +1956,71 @@ const InventoryPage = () => {
           showToast("All stocks marked as imported successfully. Stock import option has been removed.", "success");
         }}
       />
+
+      {/* ── Quick Create Product Modal (Initial Opening Stock Mode) ── */}
+      {isQuickCreateOpen && !isStockImportCompleted && (
+        <QuickCreateProductModal
+          isOpen={isQuickCreateOpen}
+          onClose={() => setIsQuickCreateOpen(false)}
+          isInitialStockMode={true}
+          onSuccess={() => {
+            setIsQuickCreateOpen(false);
+            setRefreshKey((prev: number) => prev + 1);
+          }}
+        />
+      )}
+
+      {/* ── Finish Initial Stock Confirmation Modal ── */}
+      {showFinishConfirm && (
+        <div
+          className="fixed inset-0 z-[10000] flex items-center justify-center p-4"
+          style={{ background: "rgba(15,23,42,0.6)", backdropFilter: "blur(4px)" }}
+        >
+          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full animate-in zoom-in-95 duration-200">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mb-4">
+                <CheckCheck size={28} />
+              </div>
+              <h3 className="text-[16px] font-bold text-slate-800 mb-2">
+                Finish Initial Stock Import?
+              </h3>
+              <p className="text-[12px] text-slate-500 leading-relaxed mb-6">
+                Once confirmed, all initial stock options will be permanently removed for this shop. Opening stocks cannot be added directly on product creation; future stock must be added via Purchases or Stock Adjustments.
+              </p>
+              <div className="flex items-center gap-3 w-full">
+                <button
+                  type="button"
+                  onClick={() => setShowFinishConfirm(false)}
+                  className="flex-1 h-9 rounded-lg border border-slate-200 text-slate-600 text-[12px] font-semibold hover:bg-slate-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const currentShopId = getShopId();
+                    try {
+                      if (currentShopId) {
+                        await shopApi.completeInitialStockImport(currentShopId);
+                        localStorage.setItem(`stock_import_completed_${currentShopId}`, "true");
+                      }
+                    } catch (err) {
+                      console.error("Failed to complete initial stock import:", err);
+                    }
+                    setShowFinishConfirm(false);
+                    setIsStockImportCompleted(true);
+                    setRefreshKey(prev => prev + 1);
+                    showToast("Initial stock import completed successfully!", "success");
+                  }}
+                  className="flex-1 h-9 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[12px] font-bold transition-colors shadow-sm"
+                >
+                  Yes, Finish
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

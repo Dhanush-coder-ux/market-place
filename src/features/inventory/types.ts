@@ -243,10 +243,13 @@ export interface InventoryCustomFieldDefinition {
   category_id?: string | null;
   field_name: string;
   label_name: string;
-  type: string;     // 'text' | 'number' | 'date' | 'boolean'
+  type: string;     // 'text' | 'number' | 'date' | 'boolean' | 'select' | 'dropdown'
   required: boolean;
   visible_online: boolean;
   has_values?: boolean;
+  usage_count?: number;
+  options?: string[] | string | null;
+  default_value?: string | null;
   created_at?: string;
   updated_at?: string;
 }

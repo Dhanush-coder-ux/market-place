@@ -77,12 +77,12 @@ export const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className={`w-full ${maxWidthClass} bg-white rounded-t-2xl sm:rounded-lg shadow-2xl overflow-hidden flex flex-col border border-white/20 sm:my-auto max-h-[92dvh] sm:max-h-[90dvh] pb-[env(safe-area-inset-bottom)] sm:pb-0 shadow-blue-200/20`}
+        className={`w-full ${maxWidthClass} bg-white rounded-t-2xl sm:rounded-lg shadow-2xl overflow-hidden flex flex-col border border-white/20 sm:my-auto max-h-[92dvh] sm:max-h-[90dvh] pb-[env(safe-area-inset-bottom)] sm:pb-0 shadow-emerald-200/20`}
       >
         {/* Header */}
         <div className="px-4 sm:px-8 py-4 sm:py-5 flex items-center justify-between border-b border-slate-100 bg-slate-50/50 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-1.5 h-6 bg-blue-600 rounded-full" />
+            <div className="w-1.5 h-6 bg-emerald-600 rounded-full" />
             <h2 className="text-[14px] font-black text-slate-800 uppercase tracking-tight">
               {title}
             </h2>
@@ -106,7 +106,7 @@ export const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
                 <div
                   className={`w-7 h-7 md:w-9 md:h-9 rounded-lg md:rounded-lg flex items-center justify-center text-[10px] md:text-xs font-black transition-all duration-300 ${
                     isActive
-                      ? "bg-blue-600 text-white shadow-lg shadow-blue-200 scale-110"
+                      ? "bg-emerald-600 text-white shadow-lg shadow-emerald-200 scale-110"
                       : isPassed
                         ? "bg-emerald-100 text-emerald-600 border border-emerald-200"
                         : "bg-slate-50 text-slate-400 border border-slate-100"
@@ -116,7 +116,7 @@ export const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
                 </div>
                 <span
                   className={`text-[7px] md:text-[8px] font-black  tracking-[0.05em] md:tracking-[0.1em] ${
-                    isActive ? "text-blue-600" : "text-slate-400"
+                    isActive ? "text-emerald-600 font-bold" : "text-slate-400"
                   }`}
                 >
                   {step.title}
@@ -168,7 +168,7 @@ export const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
             <GradientButton
               onClick={handleNext}
               disabled={isSubmitting || (steps[currentStep].isValid === false)}
-              className="rounded-lg px-5 md:px-8 h-9 md:h-10 text-[9px] md:text-[10px] font-black   shadow-lg shadow-blue-100 flex items-center gap-1 md:gap-2"
+              className="rounded-lg px-5 md:px-8 h-9 md:h-10 text-[9px] md:text-[10px] font-black   shadow-lg shadow-emerald-100 flex items-center gap-1 md:gap-2"
             >
               {isSubmitting ? (
                 "Wait..."

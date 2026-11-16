@@ -285,11 +285,13 @@ export interface CreateInventoryCustomFieldPayload {
   field_infos: Array<{
     field_name: string;
     label_name: string;
-    type: string;          // 'text' | 'number' | 'date' | 'boolean'
+    type: string;          // 'text' | 'number' | 'date' | 'boolean' | 'select' | 'dropdown'
     category_id?: string | null;
     required?: boolean;
     visible_online?: boolean;
     has_values?: boolean;
+    options?: string[] | string | null;
+    default_value?: string | null;
   }>;
 }
 
@@ -301,6 +303,8 @@ export interface UpdateInventoryCustomFieldPayload {
   type?: string | null;
   required?: boolean | null;
   visible_online?: boolean | null;
+  options?: string[] | string | null;
+  default_value?: string | null;
 }
 
 export interface UpsertInventoryFieldValuePayload {
@@ -329,14 +333,69 @@ export const inventoryCustomFieldsApi = {
   },
 
   /** GET /inventory-fields/{shop_id} — All field definitions for a shop */
-  getAllFields: async (shopId: string, categoryId?: string): Promise<InventoryCustomFieldDefinition[]> => {
+  getAllFields: async (
+    shopId: string,
+    paramsOrCategory?: string | { search?: string; category_id?: string; field_type?: string; page?: number; limit?: number }
+  ): Promise<InventoryCustomFieldDefinition[]> => {
     try {
-      const url = categoryId ? `${CF}/${shopId}?category_id=${encodeURIComponent(categoryId)}` : `${CF}/${shopId}`;
-      const res = await apiClient.get(url);
+      let query = "";
+      if (typeof paramsOrCategory === "string") {
+        query = `?category_id=${encodeURIComponent(paramsOrCategory)}&limit=100`;
+      } else if (paramsOrCategory) {
+        const q = new URLSearchParams();
+        if (paramsOrCategory.category_id && paramsOrCategory.category_id !== "ALL") q.append("category_id", paramsOrCategory.category_id);
+        if (paramsOrCategory.search) q.append("search", paramsOrCategory.search);
+        if (paramsOrCategory.field_type && paramsOrCategory.field_type !== "ALL") q.append("field_type", paramsOrCategory.field_type);
+        if (paramsOrCategory.page) q.append("page", String(paramsOrCategory.page));
+        if (paramsOrCategory.limit) q.append("limit", String(paramsOrCategory.limit));
+        query = q.toString() ? `?${q.toString()}` : "";
+      }
+      const res = await apiClient.get(`${CF}/${shopId}${query}`);
       const raw = res?.data ?? res;
-      return Array.isArray(raw) ? raw : [];
+      if (Array.isArray(raw)) return raw;
+      if (Array.isArray(raw?.items)) return raw.items;
+      return [];
     } catch {
       return [];
+    }
+  },
+
+  /** GET /inventory-fields/{shop_id} — Paginated, filtered field definitions for a shop */
+  getPaginatedFields: async (
+    shopId: string,
+    params?: { search?: string; category_id?: string; field_type?: string; page?: number; limit?: number }
+  ): Promise<{ items: InventoryCustomFieldDefinition[]; total: number; page: number; limit: number; total_pages: number }> => {
+    try {
+      const q = new URLSearchParams();
+      if (params?.category_id && params.category_id !== "ALL") q.append("category_id", params.category_id);
+      if (params?.search) q.append("search", params.search);
+      if (params?.field_type && params.field_type !== "ALL") q.append("field_type", params.field_type);
+      if (params?.page) q.append("page", String(params.page));
+      if (params?.limit) q.append("limit", String(params.limit));
+      const queryString = q.toString() ? `?${q.toString()}` : "";
+      const res = await apiClient.get(`${CF}/${shopId}${queryString}`);
+      const raw = res?.data ?? res;
+      if (raw && typeof raw === "object" && Array.isArray(raw.items)) {
+        return {
+          items: raw.items,
+          total: raw.total ?? raw.items.length,
+          page: raw.page ?? params?.page ?? 1,
+          limit: raw.limit ?? params?.limit ?? 10,
+          total_pages: raw.total_pages ?? Math.ceil((raw.total ?? raw.items.length) / (raw.limit ?? 10)),
+        };
+      }
+      if (Array.isArray(raw)) {
+        return {
+          items: raw,
+          total: raw.length,
+          page: params?.page ?? 1,
+          limit: params?.limit ?? 10,
+          total_pages: Math.ceil(raw.length / (params?.limit ?? 10)) || 1,
+        };
+      }
+      return { items: [], total: 0, page: 1, limit: 10, total_pages: 0 };
+    } catch {
+      return { items: [], total: 0, page: 1, limit: 10, total_pages: 0 };
     }
   },
 

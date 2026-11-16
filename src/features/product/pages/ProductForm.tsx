@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
-  Package, Save, Pencil, Trash2, Cpu, AlertCircle, Layers, Zap,
+  Package, Save, Pencil, Trash2, Cpu, AlertCircle, AlertTriangle, Layers, Zap,
   Plus, Info, ImagePlus, X, UploadCloud,
   BarChart3, Check, FileText,
-  IndianRupee, Barcode, Boxes, ScanLine, SlidersHorizontal,
+  IndianRupee, Barcode, Boxes, ScanLine, SlidersHorizontal, Loader2,
 } from "lucide-react";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { useApi } from "@/context/ApiContext";
@@ -190,8 +190,8 @@ const InputField: React.FC<InputFieldProps> = ({ label, required, hint, leftEl, 
 
 /* Section Card Wrapper */
 const SectionCard: React.FC<{ icon: React.ReactNode; iconBg: string; title: string; subtitle?: string; children: React.ReactNode; extra?: React.ReactNode }> = ({ icon, iconBg, title, children, extra }) => (
-  <div className="pf-card bg-white rounded-xl border border-slate-200/80 overflow-hidden">
-    <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+  <div className="pf-card bg-white rounded-xl border border-slate-200/80 overflow-visible">
+    <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between rounded-t-xl">
       <div className="flex items-center gap-3">
         <div className={`w-8 h-8 rounded-lg ${iconBg} flex items-center justify-center shrink-0`}>
           {icon}
@@ -373,6 +373,29 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   customFieldValuesRef.current = customFieldValues;
   const handleSubmitRef = useRef<any>(null);
 
+  const [isStockImportCompleted, setIsStockImportCompleted] = useState<boolean>(() => {
+    return Boolean(SHOP_ID && localStorage.getItem(`stock_import_completed_${SHOP_ID}`) === "true");
+  });
+
+  useEffect(() => {
+    if (SHOP_ID) {
+      import("@/services/api/shop").then(({ shopApi }) => {
+        shopApi.getShopById(SHOP_ID).then((res: any) => {
+          const shopData = res?.data || res;
+          const isImported = Boolean(
+            shopData?.initial_stock_imported ||
+            shopData?.additional_infos?.initial_stock_imported ||
+            shopData?.datas?.initial_stock_imported
+          );
+          setIsStockImportCompleted(isImported);
+          if (isImported) {
+            localStorage.setItem(`stock_import_completed_${SHOP_ID}`, "true");
+          }
+        }).catch(() => {});
+      });
+    }
+  }, []);
+
   // Sidebar creation / editing form state
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
@@ -383,6 +406,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   const [newFieldRequired, setNewFieldRequired] = useState(false);
   const [newFieldVisible, setNewFieldVisible] = useState(false);
   const [newFieldHasValues, setNewFieldHasValues] = useState(false);
+  const [newFieldOptions, setNewFieldOptions] = useState("");
+  const [newFieldDefaultValue, setNewFieldDefaultValue] = useState("");
+
+  const [deleteConfirmCustomField, setDeleteConfirmCustomField] = useState<any | null>(null);
+  const [deleteCustomFieldLoading, setDeleteCustomFieldLoading] = useState(false);
 
   const handleOpenCreateCustomField = () => {
     setEditingFieldId(null);
@@ -393,6 +421,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     setNewFieldRequired(false);
     setNewFieldVisible(false);
     setNewFieldHasValues(false);
+    setNewFieldOptions("");
+    setNewFieldDefaultValue("");
     setIsSidebarOpen(true);
   };
 
@@ -404,26 +434,43 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     setNewFieldType(field.type || "text");
     setNewFieldRequired(!!field.required);
     setNewFieldVisible(!!field.visible_online);
-    setNewFieldHasValues(!!field.has_values);
+    setNewFieldHasValues(!!field.has_values || (field.usage_count ?? 0) > 0);
+    setNewFieldOptions(
+      Array.isArray(field.options) ? field.options.join(", ") : (field.options || "")
+    );
+    setNewFieldDefaultValue(field.default_value || "");
     setIsSidebarOpen(true);
   };
 
-  const handleDeleteCustomField = async (field: any) => {
-    if (field.has_values) {
-      showToast(`Cannot delete "${field.label_name}" because it already contains saved values.`, "error");
-      return;
-    }
-    if (!window.confirm(`Are you sure you want to delete custom field "${field.label_name}"?`)) {
-      return;
-    }
+  const handleDeleteCustomField = (field: any) => {
+    setDeleteConfirmCustomField(field);
+  };
+
+  const handleExecuteDeleteCustomField = async () => {
+    if (!deleteConfirmCustomField) return;
+    setDeleteCustomFieldLoading(true);
     try {
-      await inventoryCustomFields.deleteField(SHOP_ID, field.id);
-      showToast("Custom field deleted successfully", "success");
+      await inventoryCustomFields.deleteField(SHOP_ID, deleteConfirmCustomField.id);
+      const usageCount = deleteConfirmCustomField.usage_count ?? (deleteConfirmCustomField.has_values ? 1 : 0);
+      if (usageCount > 0) {
+        showToast(`Custom field and its values across ${usageCount} product(s) permanently deleted`, "success");
+      } else {
+        showToast("Custom field deleted successfully", "success");
+      }
+      setCustomFieldValues((prev) => {
+        const copy = { ...prev };
+        delete copy[deleteConfirmCustomField.id];
+        if (deleteConfirmCustomField.field_name) delete copy[deleteConfirmCustomField.field_name];
+        return copy;
+      });
       const fields = await inventoryCustomFields.getAllFields(SHOP_ID);
       setCustomFieldDefs(fields);
+      setDeleteConfirmCustomField(null);
     } catch (err: any) {
       const msg = err?.detail?.description || err?.detail?.msg || err?.message || "Failed to delete custom field";
       showToast(msg, "error");
+    } finally {
+      setDeleteCustomFieldLoading(false);
     }
   };
 
@@ -1325,6 +1372,15 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         discount_percent: variantDiscPercent,
         offer_valid_until: form.offer_valid_until || null,
         visible_online: form.visible_online,
+        ...(!id && !isStockImportCompleted && combo.stock && Number(combo.stock) > 0 ? { stocks: Number(combo.stock) } : {}),
+        ...(form.batch_tracking && combo.batch?.name?.trim() ? {
+          batches: [{
+            name: combo.batch.name.trim(),
+            manufacturing_date: combo.batch.manufacturing_date || undefined,
+            expiry_date: combo.batch.expiry_date || undefined,
+            stocks: !id && !isStockImportCompleted && combo.stock ? Number(combo.stock) : undefined,
+          }]
+        } : {}),
       };
     });
 
@@ -1494,8 +1550,21 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         visible_online: form.visible_online,
         custom_fields: {
           ...customFieldsBlob,
+          opening_stock: (!id && !isStockImportCompleted && form.opening_stock) ? Number(form.opening_stock) : 0,
         },
       };
+
+      if (!id && !isStockImportCompleted && !form.has_variants && !form.batch_tracking && form.opening_stock && Number(form.opening_stock) > 0) {
+        payload.stocks = Number(form.opening_stock);
+      }
+      if (!id && !form.has_variants && form.batch_tracking && form.batch_name?.trim()) {
+        payload.batches = [{
+          name: form.batch_name.trim(),
+          manufacturing_date: form.mfg_date || undefined,
+          expiry_date: form.exp_date || undefined,
+          stocks: !isStockImportCompleted && form.opening_stock ? Number(form.opening_stock) : undefined,
+        }];
+      }
     }
 
     // ── API call ─────────────────────────────────────────────────────────────
@@ -1602,6 +1671,14 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     }
     try {
       const categoryIdVal = newFieldCategory.trim() || null;
+      const parsedOptions =
+        newFieldType === "select" || newFieldType === "dropdown"
+          ? newFieldOptions
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean)
+          : null;
+
       if (editingFieldId) {
         await inventoryCustomFields.updateField({
           shop_id: SHOP_ID,
@@ -1611,6 +1688,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
           type: newFieldHasValues ? undefined : newFieldType,
           required: newFieldRequired,
           visible_online: newFieldVisible,
+          options: parsedOptions,
+          default_value: newFieldDefaultValue.trim() || null,
         });
         showToast("Custom field updated successfully", "success");
       } else {
@@ -1624,6 +1703,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
             type: newFieldType,
             required: newFieldRequired,
             visible_online: newFieldVisible,
+            options: parsedOptions,
+            default_value: newFieldDefaultValue.trim() || null,
           }]
         });
         showToast("Custom field created successfully", "success");
@@ -1894,6 +1975,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         variantTypes={variantTypes}
                         onChange={setCombinations}
                         trackStock={form.track_stock}
+                        showOpeningStock={!id && !isStockImportCompleted}
+                        hasBatch={form.batch_tracking}
                         baseMrp={numMrp}
                         productId={id}
                         onCheckStock={handleVariantCheckStock}
@@ -2177,6 +2260,42 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                       />
                     </div>
 
+                    {!id && !form.has_variants && (
+                      <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/50 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-emerald-900">Opening Stock</span>
+                            {!isStockImportCompleted ? (
+                              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">Initial Stock Mode</span>
+                            ) : (
+                              <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">Import Completed</span>
+                            )}
+                          </div>
+                        </div>
+                        {!isStockImportCompleted ? (
+                          <>
+                            <p className="text-[11px] text-emerald-700/80">
+                              Enter the initial physical stock count on creation. This will be recorded as opening stock.
+                            </p>
+                            <InputField
+                              label="Opening Stock"
+                              name="opening_stock"
+                              type="number"
+                              min="0"
+                              value={form.opening_stock}
+                              onChange={handleChange}
+                              placeholder="0"
+                              tooltip="Initial stock recorded as opening stock for this product."
+                            />
+                          </>
+                        ) : (
+                          <p className="text-[11px] text-slate-500">
+                            Initial stock import has already been completed for this shop. Opening stock cannot be added directly. Add stock via Purchases or Stock Adjustments.
+                          </p>
+                        )}
+                      </div>
+                    )}
+
                     {/* Live GST Split & Dynamic Field State Helper */}
                     <div className="space-y-2 pt-1">
                       {priceCalc && isGstReg && gstRateNum > 0 && (
@@ -2443,7 +2562,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                     placeholder="e.g. 1905"
                     tooltip="Harmonized System of Nomenclature code for GST."
                   />
-                  {/* Barcode — full width of remaining col, popup opens upward */}
+                  {/* Barcode — full width of remaining col, popup opens downward */}
                   <div className="relative">
                     <Label text="UI_ID / Barcode" hint="optional" tooltip="Unique UI_ID or Barcode / EAN for this product." />
                     <div className="relative">
@@ -2464,7 +2583,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                       </button>
                     </div>
                     {showBarcodeGen && (
-                      <div className="absolute bottom-full right-0 mb-2 w-60 p-3 bg-white border border-slate-200 shadow-2xl rounded-xl z-[100]">
+                      <div className="absolute top-full right-0 mt-2 w-64 p-3 bg-white border border-slate-200 shadow-2xl rounded-xl z-[150]">
                         <h4 className="text-xs font-bold text-slate-800 mb-2 flex items-center gap-1.5"><Barcode size={12} className="text-[#286038]" />Generate Barcode</h4>
                         <div className="space-y-2">
                           <input
@@ -2479,8 +2598,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                             <button type="button" onClick={handleGenerateBarcode} disabled={generatingBarcode} className="flex-1 py-1.5 text-[10px] font-bold text-white bg-[#286038] rounded-lg hover:bg-[#103020] transition-colors disabled:opacity-50">{generatingBarcode ? "…" : "Generate"}</button>
                           </div>
                         </div>
-                        {/* Arrow pointing down */}
-                        <div className="absolute bottom-[-6px] right-4 w-3 h-3 bg-white border-r border-b border-slate-200 rotate-45" />
+                        {/* Arrow pointing up */}
+                        <div className="absolute top-[-6px] right-4 w-3 h-3 bg-white border-l border-t border-slate-200 rotate-45" />
                       </div>
                     )}
                   </div>
@@ -2533,9 +2652,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                               All Categories
                             </span>
                           )}
-                          {field.has_values && (
-                            <span className="text-[9px] font-bold px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded border border-blue-100 leading-none">
-                              Has data
+                          {(field.usage_count > 0 || field.has_values) && (
+                            <span
+                              title={`This field contains saved values across ${field.usage_count || 1} product(s)`}
+                              className="text-[9px] font-bold px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded border border-blue-200/80 leading-none inline-flex items-center gap-1"
+                            >
+                              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                              Used across {field.usage_count ?? (field.has_values ? 1 : 0)} product{(field.usage_count ?? 1) === 1 ? "" : "s"}
                             </span>
                           )}
                         </div>
@@ -2551,8 +2674,12 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                           <button
                             type="button"
                             onClick={() => handleDeleteCustomField(field)}
-                            title={field.has_values ? "Cannot delete: field has saved values" : "Delete field"}
-                            className={`p-1 rounded transition-colors ${field.has_values ? "text-slate-300 hover:text-rose-400 hover:bg-rose-50" : "text-slate-400 hover:text-rose-600 hover:bg-rose-50"}`}
+                            title={
+                              (field.usage_count > 0 || field.has_values)
+                                ? `Used in ${field.usage_count ?? 1} product(s) - click to cascade delete`
+                                : "Delete field"
+                            }
+                            className="p-1 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
                           >
                             <Trash2 size={13} />
                           </button>
@@ -2603,6 +2730,20 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                             );
                           })()}
                         </div>
+                      ) : field.type === 'select' || field.type === 'dropdown' ? (
+                        <select
+                          value={customFieldValues[field.id] || ''}
+                          onChange={(e) =>
+                            setCustomFieldValues((prev) => ({ ...prev, [field.id]: e.target.value }))
+                          }
+                          required={field.required}
+                          className="w-full h-10 px-4 rounded-lg border border-slate-200 text-sm text-slate-900 bg-slate-50/30 font-semibold focus:border-[#286038] focus:ring-4 focus:ring-[#88B878]/30 outline-none cursor-pointer"
+                        >
+                          <option value="">Select {field.label_name.toLowerCase()}…</option>
+                          {(Array.isArray(field.options) ? field.options : (typeof field.options === 'string' ? field.options.split(',').map((s: string) => s.trim()) : [])).map((opt: string) => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
+                        </select>
                       ) : (
                         <input
                           type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
@@ -2735,6 +2876,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                 { label: "Number", value: "number" },
                 { label: "Date", value: "date" },
                 { label: "Yes / No (Boolean)", value: "boolean" },
+                { label: "Dropdown / Select", value: "select" },
               ]}
               placeholder="Select Type"
             />
@@ -2742,6 +2884,26 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
               <p className="text-[10px] text-slate-400 mt-1 ml-1 font-medium">Type is locked because field has existing data</p>
             )}
           </div>
+          {(newFieldType === "select" || newFieldType === "dropdown") && (
+            <div>
+              <InputField
+                label="Dropdown Options (Comma separated)"
+                required
+                value={newFieldOptions}
+                onChange={(e) => setNewFieldOptions(e.target.value)}
+                placeholder="e.g. Small, Medium, Large"
+              />
+              <p className="text-[10px] text-slate-400 mt-1 ml-1 font-medium">
+                Enter selectable options separated by commas.
+              </p>
+            </div>
+          )}
+          <InputField
+            label="Default Value (optional)"
+            value={newFieldDefaultValue}
+            onChange={(e) => setNewFieldDefaultValue(e.target.value)}
+            placeholder="e.g. Standard"
+          />
           <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50 border border-slate-100">
             <span className="text-xs font-bold text-slate-500">Required Field <span className="font-normal text-slate-400 text-[11px]">(optional)</span></span>
             <Switch
@@ -2758,6 +2920,95 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
           </div>
         </div>
       </RightSidebarFilter>
+
+      {/* Custom Field Cascade Delete Confirmation Modal */}
+      {deleteConfirmCustomField &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+            <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 w-full max-w-md overflow-hidden">
+              <div className="p-6 text-center">
+                <div
+                  className={`w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4 ${
+                    (deleteConfirmCustomField.usage_count ?? 0) > 0 || deleteConfirmCustomField.has_values
+                      ? "bg-rose-50 text-rose-600 border border-rose-100"
+                      : "bg-amber-50 text-amber-600 border border-amber-100"
+                  }`}
+                >
+                  <AlertTriangle size={24} />
+                </div>
+
+                <h3 className="text-base font-bold text-slate-900 mb-2">
+                  {(deleteConfirmCustomField.usage_count ?? 0) > 0 || deleteConfirmCustomField.has_values
+                    ? "⚠️ Delete Custom Field"
+                    : "Delete Custom Field"}
+                </h3>
+
+                <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 mb-4 inline-block text-left w-full">
+                  <div className="text-xs font-bold text-slate-800">
+                    {deleteConfirmCustomField.label_name}
+                  </div>
+                  <div className="text-[10px] font-mono text-slate-500">
+                    key: {deleteConfirmCustomField.field_name}
+                  </div>
+                </div>
+
+                {(deleteConfirmCustomField.usage_count ?? 0) > 0 || deleteConfirmCustomField.has_values ? (
+                  <div className="p-3.5 bg-rose-50/80 border border-rose-200 rounded-xl text-left text-xs text-rose-900 space-y-2 mb-4 leading-relaxed font-medium">
+                    <p>
+                      <strong>⚠️ Delete Custom Field:</strong> This field is currently used in{" "}
+                      <strong>
+                        {deleteConfirmCustomField.usage_count ?? (deleteConfirmCustomField.has_values ? 1 : 0)} product(s)
+                      </strong>
+                      . Deleting it will permanently remove this field and its values across all{" "}
+                      <strong>
+                        {deleteConfirmCustomField.usage_count ?? (deleteConfirmCustomField.has_values ? 1 : 0)} product(s)
+                      </strong>
+                      .
+                    </p>
+                    <p className="text-[11px] font-bold text-rose-800">
+                      This action cannot be undone.
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-500 mb-4 leading-relaxed">
+                    Are you sure you want to delete custom field &quot;{deleteConfirmCustomField.label_name}&quot;?
+                  </p>
+                )}
+
+                <div className="flex items-center justify-end gap-2.5">
+                  <button
+                    type="button"
+                    disabled={deleteCustomFieldLoading}
+                    onClick={() => setDeleteConfirmCustomField(null)}
+                    className="flex-1 py-2 text-xs font-bold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={deleteCustomFieldLoading}
+                    onClick={handleExecuteDeleteCustomField}
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-xs transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+                  >
+                    {deleteCustomFieldLoading ? (
+                      <>
+                        <Loader2 size={13} className="animate-spin" />
+                        Deleting…
+                      </>
+                    ) : (
+                      <>
+                        {(deleteConfirmCustomField.usage_count ?? 0) > 0 || deleteConfirmCustomField.has_values
+                          ? "Permanently Delete"
+                          : "Delete Field"}
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </>
   );
 };

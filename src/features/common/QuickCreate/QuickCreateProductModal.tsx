@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import {
   Zap,
@@ -8,7 +8,8 @@ import {
   Barcode,
   Plus,
   X,
-  IndianRupee
+  IndianRupee,
+  AlertCircle
 } from "lucide-react";
 import { QuickCreateModal, QuickCreateStep } from "./QuickCreateModal";
 import Input from "@/components/ui/Input";
@@ -117,7 +118,7 @@ const QuickCreateDropdownModal: React.FC<QuickCreateDropdownModalProps> = ({ isO
             <input
               type="text"
               autoFocus
-              className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all shadow-sm"
+              className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all shadow-sm"
               placeholder={`e.g. ${type === "Category" ? "Beverages" : "Box"}`}
               value={name}
               onChange={e => {
@@ -136,7 +137,7 @@ const QuickCreateDropdownModal: React.FC<QuickCreateDropdownModalProps> = ({ isO
               </label>
               <input
                 type="text"
-                className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all shadow-sm uppercase font-mono"
+                className="w-full h-10 px-3 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all shadow-sm uppercase font-mono"
                 placeholder="e.g. BX, PCS, KG"
                 value={shortName}
                 onChange={e => setShortName(e.target.value)}
@@ -150,7 +151,7 @@ const QuickCreateDropdownModal: React.FC<QuickCreateDropdownModalProps> = ({ isO
             </label>
             <textarea
               rows={2}
-              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all shadow-sm resize-none"
+              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all shadow-sm resize-none"
               placeholder="Brief description..."
               value={description}
               onChange={e => setDescription(e.target.value)}
@@ -162,7 +163,7 @@ const QuickCreateDropdownModal: React.FC<QuickCreateDropdownModalProps> = ({ isO
           <button
             onClick={handleSave}
             disabled={!name.trim() || (type === "Unit" && !shortName.trim()) || loading}
-            className="px-4 h-9 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 h-9 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? "Saving..." : "Save"}
           </button>
@@ -178,6 +179,7 @@ interface QuickCreateProductModalProps {
   onClose: () => void;
   initialName?: string;
   onSuccess: (product: any) => void;
+  isInitialStockMode?: boolean;
 }
 
 export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = ({
@@ -185,10 +187,53 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
   onClose,
   initialName = "",
   onSuccess,
+  isInitialStockMode,
 }) => {
-  const { postData } = useApi();
-  const { showToast } = useToast();
+  const { postData, getLastError } = useApi();
+  const { showToast, showError, showSuccess } = useToast();
   const [submitting, setSubmitting] = useState(false);
+  const [creationError, setCreationError] = useState<string | null>(null);
+
+  const [isStockImportCompleted, setIsStockImportCompleted] = useState<boolean>(() => {
+    return Boolean(SHOP_ID && localStorage.getItem(`stock_import_completed_${SHOP_ID}`) === "true");
+  });
+
+  useEffect(() => {
+    if (isOpen && SHOP_ID) {
+      import("@/services/api/shop").then(({ shopApi }) => {
+        shopApi.getShopById(SHOP_ID).then((res: any) => {
+          const shopData = res?.data || res;
+          const isImported = Boolean(
+            shopData?.initial_stock_imported ||
+            shopData?.additional_infos?.initial_stock_imported ||
+            shopData?.datas?.initial_stock_imported
+          );
+          setIsStockImportCompleted(isImported);
+          if (isImported) {
+            localStorage.setItem(`stock_import_completed_${SHOP_ID}`, "true");
+          }
+        }).catch(() => {});
+      });
+    }
+  }, [isOpen]);
+
+  const isInitialStockActive = Boolean(isInitialStockMode || !isStockImportCompleted);
+
+  const [batches, setBatches] = useState<{
+    id: string;
+    name: string;
+    manufacturing_date: string;
+    expiry_date: string;
+    stocks: string;
+  }[]>([
+    {
+      id: "b_1",
+      name: "",
+      manufacturing_date: "",
+      expiry_date: "",
+      stocks: "0",
+    }
+  ]);
 
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [units, setUnits] = useState<{ id: string; name: string }[]>([]);
@@ -352,6 +397,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    if (creationError) setCreationError(null);
     const { name, value } = e.target;
     if (name === "name") {
       setForm((p) => {
@@ -392,6 +438,16 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
     }
   }, [variantTypes, form.has_variants, form.buy_price, form.sell_price, form.mrp, form.reorder_point]);
 
+  const totalOpeningStock = useMemo(() => {
+    if (form.has_variants) {
+      return combinations.filter(c => c.active).reduce((sum, c) => sum + (Number(c.stock) || 0), 0);
+    }
+    if (form.batch_tracking) {
+      return batches.reduce((sum, b) => sum + (Number(b.stocks) || 0), 0);
+    }
+    return Number(form.opening_stock) || 0;
+  }, [form.has_variants, form.batch_tracking, form.opening_stock, combinations, batches]);
+
   const steps: QuickCreateStep[] = [
     {
       id: 1,
@@ -418,34 +474,35 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
                   value={form.barcode}
                   onChange={handleChange}
                   placeholder="Scan or type"
-                  className="w-full h-10 px-3 pr-10 text-sm border border-slate-200 rounded-lg bg-white text-slate-800 placeholder-slate-300 focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/5 transition-all shadow-sm"
+                  className="w-full h-10 px-3 pr-10 text-sm border border-slate-200 rounded-lg bg-white text-slate-800 placeholder-slate-300 focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all shadow-sm"
                 />
                 <button
                   type="button"
                   onClick={() => setShowBarcodeGen(!showBarcodeGen)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-500 transition-colors"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-emerald-600 transition-colors"
                   title="Generate barcode"
                 >
                   <Barcode size={16} />
                 </button>
               </div>
               {showBarcodeGen && (
-                <div className="absolute bottom-full right-0 mb-2 w-60 max-w-[calc(100vw-2rem)] p-3 bg-white border border-slate-200 shadow-2xl rounded-xl z-[100]">
-                  <h4 className="text-xs font-bold text-slate-800 mb-2 flex items-center gap-1.5"><Barcode size={12} className="text-indigo-500" />Generate Barcode</h4>
+                <div className="absolute top-full right-0 mt-2 w-64 max-w-[calc(100vw-2rem)] p-3 bg-white border border-slate-200 shadow-2xl rounded-xl z-[150]">
+                  <h4 className="text-xs font-bold text-slate-800 mb-2 flex items-center gap-1.5"><Barcode size={12} className="text-emerald-600" />Generate Barcode</h4>
                   <div className="space-y-2">
                     <input
                       type="text"
                       placeholder="Prefix (Optional)"
-                      className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded-lg outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                      className="w-full text-xs px-2.5 py-1.5 border border-slate-200 rounded-lg outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                       value={barcodePrefix}
                       onChange={e => setBarcodePrefix(e.target.value)}
                     />
                     <div className="flex gap-2">
                       <button type="button" onClick={() => { setShowBarcodeGen(false); setBarcodePrefix(""); }} className="flex-1 py-1.5 text-[10px] font-bold text-slate-500 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors">Cancel</button>
-                      <button type="button" onClick={handleGenerateBarcode} disabled={generatingBarcode} className="flex-1 py-1.5 text-[10px] font-bold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50">{generatingBarcode ? "…" : "Generate"}</button>
+                      <button type="button" onClick={handleGenerateBarcode} disabled={generatingBarcode} className="flex-1 py-1.5 text-[10px] font-bold text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50">{generatingBarcode ? "…" : "Generate"}</button>
                     </div>
                   </div>
-                  <div className="absolute bottom-[-6px] right-4 w-3 h-3 bg-white border-r border-b border-slate-200 rotate-45" />
+                  {/* Arrow pointing up */}
+                  <div className="absolute top-[-6px] right-4 w-3 h-3 bg-white border-l border-t border-slate-200 rotate-45" />
                 </div>
               )}
             </div>
@@ -464,7 +521,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
                 footer={
                   <button
                     onClick={() => setModalState({ type: "Category", query: "" })}
-                    className="w-full flex items-center justify-center gap-2 py-2 text-xs font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors"
+                    className="w-full flex items-center justify-center gap-2 py-2 text-xs font-bold text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition-colors"
                   >
                     <Plus size={14} />
                     Create New Category
@@ -484,7 +541,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
                 footer={
                   <button
                     onClick={() => setModalState({ type: "Unit", query: "" })}
-                    className="w-full flex items-center justify-center gap-2 py-2 text-xs font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition-colors"
+                    className="w-full flex items-center justify-center gap-2 py-2 text-xs font-bold text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition-colors"
                   >
                     <Plus size={14} />
                     Create New Unit
@@ -526,9 +583,45 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
           </div>
 
           <div className="space-y-4 pt-2">
+            {!form.has_variants && !form.batch_tracking && (
+              <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/50 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-emerald-900">Opening Stock</span>
+                    {isInitialStockActive ? (
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">Initial Stock</span>
+                    ) : (
+                      <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">Import Completed</span>
+                    )}
+                  </div>
+                </div>
+                {isInitialStockActive ? (
+                  <>
+                    <p className="text-[11px] text-emerald-700/80">
+                      Enter the initial stock count for this product. This will be recorded as opening stock.
+                    </p>
+                    <Input
+                      label="Opening Stock Quantity"
+                      name="opening_stock"
+                      type="number"
+                      min="0"
+                      value={form.opening_stock}
+                      onChange={handleChange}
+                      placeholder="0"
+                      className="font-semibold text-emerald-900"
+                    />
+                  </>
+                ) : (
+                  <p className="text-[11px] text-slate-500">
+                    Initial stock import has already been completed for this shop. Opening stock cannot be added directly. Add stock via Purchases or Stock Adjustments.
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className="flex items-center justify-between p-3 md:p-4 rounded-lg border border-slate-100 bg-slate-50/50">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-blue-600 shadow-sm border border-slate-100">
+                <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-emerald-600 shadow-sm border border-slate-100">
                   <BarChart2 size={18} />
                 </div>
                 <div>
@@ -539,9 +632,108 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
               <Switch checked={form.batch_tracking} onCheckedChange={(val) => setForm(f => ({ ...f, batch_tracking: val }))} />
             </div>
 
+            {form.batch_tracking && !form.has_variants && (
+              <div className="p-4 rounded-xl border border-amber-200 bg-amber-50/40 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-xs font-bold text-amber-900">Batch Information</h4>
+                    <p className="text-[10px] text-amber-700/80">
+                      {isInitialStockActive
+                        ? "Enter batch numbers, dates, and opening stock for each batch"
+                        : "Enter batch numbers and dates"}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setBatches(prev => [
+                      ...prev,
+                      { id: `b_${Date.now()}`, name: "", manufacturing_date: "", expiry_date: "", stocks: "0" }
+                    ])}
+                    className="px-2.5 py-1 text-[11px] font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 rounded-lg transition-colors flex items-center gap-1"
+                  >
+                    <Plus size={12} /> Add Batch
+                  </button>
+                </div>
+
+                <div className="space-y-2.5">
+                  {batches.map((batch, bIdx) => (
+                    <div key={batch.id} className="p-3 bg-white rounded-lg border border-amber-100 shadow-xs space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-amber-900 uppercase">Batch #{bIdx + 1}</span>
+                        {batches.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => setBatches(prev => prev.filter(b => b.id !== batch.id))}
+                            className="text-slate-400 hover:text-red-500 transition-colors p-1"
+                          >
+                            <X size={14} />
+                          </button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-500 mb-1 block">Batch Number *</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. BATCH-001"
+                            value={batch.name}
+                            onChange={e => {
+                              const v = e.target.value;
+                              setBatches(prev => prev.map(b => b.id === batch.id ? { ...b, name: v } : b));
+                            }}
+                            className="w-full h-8 px-2.5 text-xs border border-slate-200 rounded-md outline-none focus:border-amber-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-500 mb-1 block">Mfg Date</label>
+                          <input
+                            type="date"
+                            value={batch.manufacturing_date}
+                            onChange={e => {
+                              const v = e.target.value;
+                              setBatches(prev => prev.map(b => b.id === batch.id ? { ...b, manufacturing_date: v } : b));
+                            }}
+                            className="w-full h-8 px-2 text-xs border border-slate-200 rounded-md outline-none focus:border-amber-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-500 mb-1 block">Expiry Date</label>
+                          <input
+                            type="date"
+                            value={batch.expiry_date}
+                            onChange={e => {
+                              const v = e.target.value;
+                              setBatches(prev => prev.map(b => b.id === batch.id ? { ...b, expiry_date: v } : b));
+                            }}
+                            className="w-full h-8 px-2 text-xs border border-slate-200 rounded-md outline-none focus:border-amber-500"
+                          />
+                        </div>
+                        {isInitialStockActive && (
+                          <div>
+                            <label className="text-[10px] font-bold text-emerald-700 mb-1 block">Opening Stock *</label>
+                            <input
+                              type="number"
+                              min="0"
+                              placeholder="0"
+                              value={batch.stocks}
+                              onChange={e => {
+                                const v = e.target.value;
+                                setBatches(prev => prev.map(b => b.id === batch.id ? { ...b, stocks: v } : b));
+                              }}
+                              className="w-full h-8 px-2.5 text-xs border border-emerald-300 bg-emerald-50/50 rounded-md outline-none focus:border-emerald-500 font-semibold text-emerald-900"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="flex items-center justify-between p-3 md:p-4 rounded-lg border border-slate-100 bg-slate-50/50">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-violet-600 shadow-sm border border-slate-100">
+                <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-emerald-600 shadow-sm border border-slate-100">
                   <Layers size={18} />
                 </div>
                 <div>
@@ -561,14 +753,14 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
       subtitle: "Product attributes & combinations",
       content: (
         <div className="space-y-6">
-          <div className="flex items-center justify-between p-4 md:p-5 rounded-lg bg-indigo-50 border border-indigo-100 mb-4">
+          <div className="flex items-center justify-between p-4 md:p-5 rounded-lg bg-emerald-50/50 border border-emerald-100 mb-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-indigo-600 shadow-sm border border-indigo-50">
+              <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-emerald-600 shadow-sm border border-emerald-100">
                 <Zap size={20} />
               </div>
               <div>
-                <p className="text-xs font-black text-indigo-900 tracking-tight">Enable Variants</p>
-                <p className="text-[10px] font-bold text-indigo-400">Multiple sizes, colors, etc.</p>
+                <p className="text-xs font-black text-emerald-950 tracking-tight">Enable Variants</p>
+                <p className="text-[10px] font-bold text-emerald-600">Multiple sizes, colors, etc.</p>
               </div>
             </div>
             <Switch checked={form.has_variants} onCheckedChange={(val) => setForm(f => ({ ...f, has_variants: val }))} />
@@ -589,6 +781,8 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
                     variantTypes={variantTypes}
                     onChange={setCombinations}
                     trackStock={false}
+                    showOpeningStock={isInitialStockActive}
+                    hasBatch={form.batch_tracking}
                     baseMrp={form.mrp ? Number(form.mrp) : undefined}
                   />
                 </div>
@@ -641,7 +835,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
 
             <div className="flex flex-wrap gap-2 pt-4">
               {form.has_variants && (
-                <span className="px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 text-[9px] font-black  ">
+                <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[9px] font-black  ">
                   {combinations.length} Variants
                 </span>
               )}
@@ -651,8 +845,13 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
                 </span>
               )}
               {form.serial_tracking && (
-                <span className="px-3 py-1 rounded-full bg-violet-100 text-violet-700 text-[9px] font-black  ">
+                <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[9px] font-black  ">
                   Serial Tracked
+                </span>
+              )}
+              {isInitialStockActive && totalOpeningStock > 0 && (
+                <span className="px-3 py-1 rounded-full bg-emerald-600 text-white text-[9px] font-black shadow-xs">
+                  Opening Stock: {totalOpeningStock} units
                 </span>
               )}
             </div>
@@ -662,7 +861,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
             <div className="bg-white rounded-lg md:rounded-lg border border-slate-200 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700">
               <div className="px-6 py-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
                 <h3 className="text-[10px] font-black text-slate-400  ">Active Variants Details</h3>
-                <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                   {combinations.filter(c => c.active).length} Active
                 </span>
               </div>
@@ -688,17 +887,31 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
             </div>
           )}
 
-          <div className="p-4 md:p-6 rounded-lg md:rounded-lg bg-blue-50/50 border border-blue-100 flex gap-3 md:gap-4 items-start">
-            <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-blue-600 shadow-sm shrink-0">
-              <CheckCircle2 size={20} />
+          {creationError ? (
+            <div className="p-4 md:p-5 rounded-xl bg-rose-50 border border-rose-200 flex gap-3 md:gap-4 items-start animate-in fade-in duration-200">
+              <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-rose-600 shadow-sm shrink-0 border border-rose-100">
+                <AlertCircle size={20} />
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs font-black text-rose-900">Creation Failed</p>
+                <p className="text-[11px] font-semibold text-rose-700 leading-relaxed">
+                  {creationError}
+                </p>
+              </div>
             </div>
-            <div className="space-y-1">
-              <p className="text-xs font-black text-blue-800  ">Ready for Creation</p>
-              <p className="text-[10px] font-bold text-blue-600 leading-relaxed  ">
-                Click complete below to finalize the registration of this product into your inventory.
-              </p>
+          ) : (
+            <div className="p-4 md:p-6 rounded-lg md:rounded-lg bg-emerald-50/50 border border-emerald-100 flex gap-3 md:gap-4 items-start">
+              <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-emerald-600 shadow-sm shrink-0">
+                <CheckCircle2 size={20} />
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs font-black text-emerald-900  ">Ready for Creation</p>
+                <p className="text-[10px] font-bold text-emerald-700 leading-relaxed  ">
+                  Click complete below to finalize the registration of this product into your inventory.
+                </p>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )
     }
@@ -708,6 +921,21 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
     if (!form.name) return showToast("Product name is required", "error");
     if (!form.category) return showToast("Category is required", "error");
     if (!form.unit) return showToast("Unit is required", "error");
+
+    if (form.batch_tracking && !form.has_variants) {
+      if (batches.some(b => !b.name.trim())) {
+        return showToast("Please provide a Batch Number for each batch", "error");
+      }
+    }
+
+    if (form.has_variants && form.batch_tracking) {
+      for (const combo of combinations.filter(c => c.active)) {
+        if (combo.stock && Number(combo.stock) > 0 && !combo.batch?.name?.trim()) {
+          const varLabel = Object.values(combo.attributes).join(" / ") || "variant";
+          return showToast(`Please provide a Batch Number for variant "${varLabel}"`, "error");
+        }
+      }
+    }
 
     setSubmitting(true);
     try {
@@ -727,6 +955,28 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
           mrp: combo.mrp ? Number(combo.mrp) : parsedMrp,
           visible_online: false,
         };
+
+        if (isInitialStockActive && combo.stock && Number(combo.stock) > 0) {
+          vData.stocks = Number(combo.stock);
+        }
+
+        if (form.batch_tracking) {
+          if (combo.batches && combo.batches.length > 0) {
+            vData.batches = combo.batches.map(b => ({
+              name: b.name.trim(),
+              manufacturing_date: b.manufacturing_date || undefined,
+              expiry_date: b.expiry_date || undefined,
+              stocks: isInitialStockActive && b.stocks ? Number(b.stocks) : undefined,
+            }));
+          } else if (combo.batch?.name?.trim()) {
+            vData.batches = [{
+              name: combo.batch.name.trim(),
+              manufacturing_date: combo.batch.manufacturing_date || undefined,
+              expiry_date: combo.batch.expiry_date || undefined,
+              stocks: isInitialStockActive && combo.stock ? Number(combo.stock) : undefined,
+            }];
+          }
+        }
 
         return vData;
       }) : null;
@@ -760,16 +1010,36 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
           hsn: form.hsn,
           sku: "",
           supplier: "",
-          opening_stock: 0,
+          opening_stock: isInitialStockActive && form.opening_stock ? Number(form.opening_stock) : 0,
           is_active: form.is_active,
           variant_types: form.has_variants ? variantTypes : [],
         }
       };
 
+      if (isInitialStockActive && !form.has_variants && !form.batch_tracking && form.opening_stock && Number(form.opening_stock) > 0) {
+        payload.stocks = Number(form.opening_stock);
+      }
+
+      if (!form.has_variants && form.batch_tracking) {
+        const validBatches = batches.filter(b => b.name.trim()).map(b => ({
+          name: b.name.trim(),
+          manufacturing_date: b.manufacturing_date || undefined,
+          expiry_date: b.expiry_date || undefined,
+          stocks: isInitialStockActive && b.stocks ? Number(b.stocks) : undefined,
+        }));
+        if (validBatches.length > 0) {
+          payload.batches = validBatches;
+        }
+      }
+
       const res = await postData(ENDPOINTS.INVENTORIES, payload);
 
       if (res) {
-        showToast("Product created successfully", "success");
+        window.dispatchEvent(new CustomEvent('clear-api-cache'));
+        const successMsg = isInitialStockActive && totalOpeningStock > 0
+          ? `Product created successfully with ${totalOpeningStock} units opening stock!`
+          : "Product created successfully";
+        showSuccess(successMsg);
         const createdProduct = res.data || res;
 
         // Inject names so the caller can use them
@@ -790,9 +1060,15 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
 
         onSuccess(createdProduct);
         onClose();
+      } else {
+        const errorMsg = getLastError?.() || "Failed to create product. Please check your data and try again.";
+        setCreationError(errorMsg);
+        showError(errorMsg);
       }
     } catch (error: any) {
-      showToast(error?.message || "Failed to create product", "error");
+      const errorMsg = error?.message || getLastError?.() || "Failed to create product";
+      setCreationError(errorMsg);
+      showError(errorMsg);
     } finally {
       setSubmitting(false);
     }

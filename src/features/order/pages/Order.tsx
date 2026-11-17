@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  LayoutGrid, List, X, Inbox, RotateCcw
+  LayoutGrid, List, X, Inbox, RotateCcw, RefreshCw
 } from "lucide-react";
+import { useHeader } from "@/context/HeaderContext";
 import OrdersHeader from "../components/OrdersHeader";
 import OrdersCard from "../components/OrdersCard";
 import Drawer from "@/components/common/Drawer";
@@ -30,6 +31,7 @@ import { buildSerialAssignmentItems } from "../utils/orderSerialHelper";
 
 const Order = () => {
   const navigate = useNavigate();
+  const { setActions } = useHeader();
   const { showToast } = useToast();
   const { loading, error, clearError } = useApi();
   const rawId = getShopId() || localStorage.getItem("shop_id") || SHOP_ID || "";
@@ -44,6 +46,31 @@ const Order = () => {
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [selectedOrder, setSelectedOrder] = useState<OrderDetailType | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    window.dispatchEvent(new CustomEvent('clear-api-cache'));
+    setRefreshKey(prev => prev + 1);
+    setTimeout(() => setIsRefreshing(false), 800);
+  }, []);
+
+  useEffect(() => {
+    setActions(
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          disabled={isRefreshing}
+          onClick={handleRefresh}
+          className="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0 disabled:opacity-70"
+          title="Refresh"
+        >
+          <RefreshCw size={13} className={isRefreshing ? "animate-spin text-emerald-600" : ""} />
+        </button>
+      </div>
+    );
+    return () => setActions(null);
+  }, [setActions, isRefreshing, handleRefresh]);
 
   // Return Requests state
   const [returnRequests, setReturnRequests] = useState<ReturnRequestRecord[]>([]);

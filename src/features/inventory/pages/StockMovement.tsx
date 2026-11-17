@@ -5,7 +5,7 @@ import {
   User, TrendingUp, TrendingDown, Activity,
   Filter,
   FileText, Layers, Hash, Zap, Copy, ExternalLink,
-  ChevronRight, Eye, Trash2
+  ChevronRight, Eye, Trash2, RefreshCw
 } from "lucide-react";
 
 import { GradientButton, SearchBar, Button } from "@/components/ui";
@@ -469,6 +469,8 @@ export default function StockMovementPage() {
   };
 
   const { setActions } = useHeader();
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [search, setSearch] = useState(() => {
     return location.state?.product?.name || location.state?.product?.ui_id || "";
   });
@@ -490,13 +492,18 @@ export default function StockMovementPage() {
 
   const { showToast } = useToast();
 
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    window.dispatchEvent(new CustomEvent('clear-api-cache'));
+    setRefreshKey(prev => prev + 1);
+    setTimeout(() => setIsRefreshing(false), 800);
+  }, []);
+
   const copyToClipboard = (e: React.MouseEvent, text: string) => {
     e.stopPropagation();
     navigator.clipboard.writeText(text);
     showToast("Copied to clipboard!", "success");
   };
-
-
 
   // Dynamic Column State
   const [availableKeys] = useState<string[]>(["source", "destination", "user", "notes"]);
@@ -513,10 +520,19 @@ export default function StockMovementPage() {
   useEffect(() => {
     setActions(
       <div className="flex items-center gap-2">
+        <button
+          type="button"
+          disabled={isRefreshing}
+          onClick={handleRefresh}
+          className="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0 disabled:opacity-70"
+          title="Refresh"
+        >
+          <RefreshCw size={13} className={isRefreshing ? "animate-spin text-emerald-600" : ""} />
+        </button>
         {!isCleanMode && (
           <button
             onClick={handleOpenNewTab}
-            className="h-8 w-8 flex items-center justify-center rounded-md border border-slate-200 text-slate-650 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0"
+            className="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-650 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0"
             title="Open in New Tab"
           >
             <ExternalLink size={13} />
@@ -525,14 +541,14 @@ export default function StockMovementPage() {
 
         <GradientButton
           onClick={() => navigate("/stock-adjustment")}
-          className="h-8 flex items-center px-4 text-[12px] rounded-md"
+          className="h-8 flex items-center px-4 text-[12px] rounded-lg"
         >
           + Add Adjustment
         </GradientButton>
       </div>
     );
     return () => setActions(null);
-  }, [setActions, navigate, isCleanMode]);
+  }, [setActions, navigate, isCleanMode, isRefreshing, handleRefresh]);
 
   const { setBottomActions } = useHeader();
   const [selectedMovements, setSelectedMovements] = useState<Set<string>>(new Set());
@@ -603,7 +619,7 @@ export default function StockMovementPage() {
         });
       }
     }).catch(() => {});
-  }, [getData]);
+  }, [getData, refreshKey]);
 
   const handleBulkDelete = () => {
     if (selectedMovements.size === 0) return;
@@ -739,7 +755,7 @@ export default function StockMovementPage() {
       stats: null,
       total: adjMovements.length
     };
-  }, [getData]);
+  }, [getData, refreshKey]);
 
 
   const filters = useMemo(() => ({
@@ -750,14 +766,24 @@ export default function StockMovementPage() {
     dateFrom,
     dateTo,
     sortField,
-    sortDir
-  }), [debouncedSearch, typeFilter, statusFilter, warehouseFilter, dateFrom, dateTo, sortField, sortDir]);
+    sortDir,
+    refreshKey,
+  }), [debouncedSearch, typeFilter, statusFilter, warehouseFilter, dateFrom, dateTo, sortField, sortDir, refreshKey]);
 
-  const { items: filtered, loading, loadingMore, hasMore, totalCount, lastElementRef } = useInfiniteScroll({
+  const { items: filtered, loading, loadingMore, hasMore, totalCount, lastElementRef, loadMore } = useInfiniteScroll({
     fetchPage,
     filters,
     limit: 20
   });
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    if (scrollHeight - scrollTop - clientHeight < 350 && hasMore && !loading && !loadingMore) {
+      loadMore();
+    }
+  };
+
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
 
   const pageData = useMemo(() => {
     let result = [...filtered];
@@ -965,7 +991,7 @@ export default function StockMovementPage() {
       {/* ── Table Section ── */}
       <div className="bg-white border border-slate-100 rounded-lg shadow-sm min-w-0 overflow-hidden flex flex-col flex-1 min-h-0 mt-2">
         {/* Mobile Card View */}
-        <div className="md:hidden flex-1 overflow-y-auto p-2.5 space-y-2.5">
+        <div onScroll={handleScroll} className="md:hidden flex-1 overflow-y-auto p-2.5 space-y-2.5">
           {pageData.length === 0 ? (
             <div className="py-16 text-center text-sm text-slate-400 font-medium">No movements found.</div>
           ) : (
@@ -1055,9 +1081,11 @@ export default function StockMovementPage() {
               );
             })
           )}
+          <div ref={isMobile ? lastElementRef : null} className="h-4 w-full" />
         </div>
 
         <div
+          onScroll={handleScroll}
           className="hidden md:block overflow-auto flex-1 scrollbar-thin scrollbar-thumb-slate-200"
         >
           <table className="w-full text-left border-collapse table-fixed">
@@ -1269,17 +1297,18 @@ export default function StockMovementPage() {
               })}
             </tbody>
           </table>
+          <div ref={!isMobile ? lastElementRef : null} className="h-4 w-full" />
         </div>
 
         {loadingMore && <div className="py-4 text-center text-xs text-slate-500">Loading more...</div>}
         {/* Infinite Scroll Footer */}
         <div className="flex items-center justify-between px-5 py-3 border-t border-slate-200 bg-slate-50/50">
           <span className="text-xs font-medium text-slate-500">
-            Showing <strong className="text-slate-900">{pageData.length}</strong> {totalCount > 0 ? <>of <strong className="text-slate-900">{totalCount}</strong></> : ''} records
+            Showing <strong className="text-slate-900">{pageData.length}</strong> {totalCount > 0 ? <>of <strong className="text-slate-900">{Math.max(pageData.length, totalCount || pageData.length)}</strong></> : ''} records
           </span>
-          {hasMore && (
-            <span className="text-[10px] font-bold text-slate-400 animate-pulse">Scroll down to load more ↓</span>
-          )}
+          <span className="text-[10px] font-bold text-slate-400">
+            {hasMore ? "Scroll down to load more ↓" : "All loaded"}
+          </span>
         </div>
       </div>
 

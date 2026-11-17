@@ -12,11 +12,11 @@ import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { ColumnPicker } from '@/components/common/ColumnPicker';
 import { RightSidebarFilter } from '@/components/common/RightSidebarFilter';
 import { employeeApi } from '@/services/api/employee';
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import ActionMenu, { ActionMenuItem } from '@/components/common/ActionMenu';
 
 export default function Employee() {
-  const { getData, deleteData, loading, error, clearError } = useApi();
+  const { getData, postData, deleteData, loading, error, clearError } = useApi();
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -42,11 +42,20 @@ export default function Employee() {
   const [toDate, setToDate] = useState<string>("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState<EmployeeRecord | null>(null);
   const [selectedEmployees, setSelectedEmployees] = useState<Set<string>>(new Set());
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const menuBtnRef = useRef<HTMLButtonElement>(null);
+
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    window.dispatchEvent(new CustomEvent('clear-api-cache'));
+    setRefreshKey(prev => prev + 1);
+    setTimeout(() => setIsRefreshing(false), 800);
+  }, []);
 
   // Dynamic Column State
   const [availableKeys, setAvailableKeys] = useState<string[]>([]);
@@ -59,32 +68,31 @@ export default function Employee() {
     setActions(
       <div className="flex items-center gap-2">
         <button
-          onClick={() => {
-            window.dispatchEvent(new CustomEvent('clear-api-cache'));
-            setRefreshKey(prev => prev + 1);
-          }}
-          className="h-8 w-8 flex items-center justify-center rounded-md border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0"
+          type="button"
+          disabled={isRefreshing}
+          onClick={handleRefresh}
+          className="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0 disabled:opacity-70"
           title="Refresh"
         >
-          <RefreshCw size={13} />
+          <RefreshCw size={13} className={isRefreshing ? "animate-spin text-emerald-600" : ""} />
         </button>
         {!isCleanMode && (
           <button
             onClick={handleOpenNewTab}
-            className="h-8 w-8 flex items-center justify-center rounded-md border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0"
+            className="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0"
             title="Open in New Tab"
           >
             <ExternalLink size={13} />
           </button>
         )}
 
-        <GradientButton path="/employee/add" className="h-8 flex items-center px-4 text-[12px] rounded-md">
+        <GradientButton path="/employee/add" className="h-8 flex items-center px-4 text-[12px] rounded-lg">
           + Add Employee
         </GradientButton>
       </div>
     );
     return () => setActions(null);
-  }, [setActions, navigate, isCleanMode]);
+  }, [setActions, navigate, isCleanMode, isRefreshing, handleRefresh]);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
@@ -147,18 +155,36 @@ export default function Employee() {
     }
   };
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (selectedEmployees.size === 0) return;
-    if (!window.confirm(`Are you sure you want to delete these ${selectedEmployees.size} employees?`)) return;
+    setIsBulkDeleteDialogOpen(true);
+  };
+
+  const handleBulkDeleteConfirm = async () => {
+    if (selectedEmployees.size === 0) return;
+    setIsBulkDeleteDialogOpen(false);
+    const targetShopId = localStorage.getItem('shop_id') || SHOP_ID;
     try {
-      for (const id of Array.from(selectedEmployees)) {
-        await deleteData(`${ENDPOINTS.EMPLOYEES}/${SHOP_ID}/${id}`);
+      const res: any = await postData(
+        `${ENDPOINTS.EMPLOYEES}/${targetShopId}/bulk-delete`,
+        { ids: Array.from(selectedEmployees) }
+      );
+      const resData = res?.data || res;
+      const deletedCount = resData?.deleted_count ?? 0;
+      const failedCount = resData?.failed_count ?? 0;
+      const total = resData?.total ?? selectedEmployees.size;
+
+      if (failedCount === 0) {
+        showToast(`Successfully deleted all ${deletedCount} selected employees.`, "success");
+      } else if (deletedCount > 0) {
+        showToast(`Deleted ${deletedCount} of ${total} employees. ${failedCount} could not be deleted.`, "warning");
+      } else {
+        showToast(`Could not delete selected employees (${failedCount} failed).`, "error");
       }
-      showToast("Selected employees deleted successfully", "success");
       setSelectedEmployees(new Set());
       setRefreshKey(prev => prev + 1);
     } catch (e: any) {
-      showToast(e?.message || "Failed to delete some employees", "error");
+      showToast(e?.message || "Failed to bulk delete employees", "error");
     }
   };
 
@@ -603,6 +629,16 @@ export default function Employee() {
         title="Remove Employee"
         description={`Are you sure you want to remove ${employeeToDelete?.name}? This action cannot be undone.`}
         confirmText="Remove Member"
+        type="danger"
+      />
+
+      <ConfirmDialog
+        isOpen={isBulkDeleteDialogOpen}
+        onClose={() => setIsBulkDeleteDialogOpen(false)}
+        onConfirm={handleBulkDeleteConfirm}
+        title="Delete Selected Employees"
+        description={`Are you sure you want to delete all ${selectedEmployees.size} selected employees? This action cannot be undone.`}
+        confirmText={`Delete ${selectedEmployees.size} Employees`}
         type="danger"
       />
     </div>

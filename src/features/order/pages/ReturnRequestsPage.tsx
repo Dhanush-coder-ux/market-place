@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   RotateCcw, Clock, CheckCircle2, XCircle, RefreshCw,
@@ -6,6 +6,7 @@ import {
   Inbox, Phone, User, Calendar, LayoutGrid, List,
   ExternalLink, IndianRupee, ListFilter, AlertTriangle, Loader2
 } from "lucide-react";
+import { useHeader } from "@/context/HeaderContext";
 import { orderApi } from "@/services/api/order";
 import { customerApi } from "@/services/api/customer";
 import { getShopId, SHOP_ID } from "@/services/endpoints";
@@ -23,6 +24,7 @@ import { SearchBar } from "@/components/ui";
 
 export const ReturnRequestsPage: React.FC = () => {
   const navigate = useNavigate();
+  const { setActions } = useHeader();
   const { showToast } = useToast();
   const rawId = getShopId() || localStorage.getItem("shop_id") || SHOP_ID || "";
   const currentShopId = rawId && rawId !== "string" ? rawId : "";
@@ -32,6 +34,7 @@ export const ReturnRequestsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Filters & Search
   const [statusFilter, setStatusFilter] = useState<"ALL" | "PENDING" | "ACCEPTED" | "REJECTED">("ALL");
@@ -210,9 +213,29 @@ export const ReturnRequestsPage: React.FC = () => {
     setIsReturnDrawerOpen(true);
   };
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    window.dispatchEvent(new CustomEvent('clear-api-cache'));
     setRefreshKey((k) => k + 1);
-  };
+    setTimeout(() => setIsRefreshing(false), 800);
+  }, []);
+
+  useEffect(() => {
+    setActions(
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          disabled={isRefreshing}
+          onClick={handleRefresh}
+          className="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0 disabled:opacity-70"
+          title="Refresh"
+        >
+          <RefreshCw size={13} className={isRefreshing ? "animate-spin text-emerald-600" : ""} />
+        </button>
+      </div>
+    );
+    return () => setActions(null);
+  }, [setActions, isRefreshing, handleRefresh]);
 
   // Open original order detail in drawer
   const handleOpenOrderById = async (orderId: string, e?: React.MouseEvent) => {

@@ -55,6 +55,7 @@ export interface ProductItem {
   has_batch?: boolean;
   has_serialno?: boolean;
   has_variant?: boolean;
+  is_variant?: boolean;
   variants?: {
     id: string;
     name: string;
@@ -533,7 +534,7 @@ const GridCard = ({ po, selected, onClick }: { po: DirectPurchaseData; selected?
                   <span className="text-zinc-600 truncate group-hover:text-zinc-800 transition-colors text-xs font-semibold">{p.name}</span>
                   {(firstRow?.variant || firstRow?.batch) && (
                     <div className="flex flex-wrap gap-1 mt-0.5">
-                      {firstRow.variant && (
+                      {firstRow.variant && firstRow.variant !== p.name && (
                         <AntBadge variant="lb-variant" type="tag">V: {firstRow.variant}</AntBadge>
                       )}
                       {firstRow.batch && (
@@ -642,7 +643,7 @@ const AmountWithReturnHover = ({ total, returns, refundAmount }: { total: number
   );
 };
 
-const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef, loadingMore, onRefresh }: { data: DirectPurchaseData[]; selectedIds: Set<string>; onSelect: (po: DirectPurchaseData) => void; totalCount: number; lastElementRef?: any; loadingMore?: boolean; onRefresh?: () => void }) => {
+const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef, loadingMore, onRefresh, onScroll, hasMore }: { data: DirectPurchaseData[]; selectedIds: Set<string>; onSelect: (po: DirectPurchaseData) => void; totalCount: number; lastElementRef?: any; loadingMore?: boolean; onRefresh?: () => void; onScroll?: (e: React.UIEvent<HTMLDivElement>) => void; hasMore?: boolean }) => {
   const navigate = useNavigate();
   const { purchase } = useBusinessApi();
   const { showToast } = useToast();
@@ -659,7 +660,7 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
 
   return (
     <div className="bg-white border border-slate-100 rounded-lg shadow-sm overflow-hidden flex flex-col flex-1 min-h-0">
-      <div className="overflow-x-auto overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-slate-200">
+      <div onScroll={onScroll} className="overflow-x-auto overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-slate-200">
         <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
           <thead className="sticky top-0 z-20 bg-slate-50 border-b border-slate-100">
             <tr>
@@ -905,13 +906,14 @@ const VerticalTable = ({ data, selectedIds, onSelect, totalCount, lastElementRef
             })}
           </tbody>
         </table>
+        <div ref={lastElementRef} className="h-4 w-full" />
         {loadingMore && <div className="py-4 text-center text-xs text-slate-500">Loading more...</div>}
       </div>
 
       {/* Footer */}
       <div className="border-t border-slate-50 px-4 py-2 flex items-center justify-between bg-white shrink-0">
         <span className="text-[11px] text-slate-400 font-medium">
-          {data.length} {totalCount > 0 ? `of ${totalCount}` : ''} purchase{data.length !== 1 ? "s" : ""}
+          {data.length} of {Math.max(data.length, totalCount || data.length)} purchases ({hasMore ? "scroll for more" : "all loaded"})
         </span>
       </div>
       <GroupedItemsDrawer record={drawerRecord} onClose={() => setDrawerRecord(null)} type="purchase" />
@@ -1030,7 +1032,20 @@ const PurchaseHistory = () => {
   const isCleanMode = new URLSearchParams(location.search).get("mode") === "clean";
   const { setActions, setBottomActions } = useHeader();
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [suppliersList, setSuppliersList] = useState<{ id: string; name: string }[]>([]);
+  const [summaryStats, setSummaryStats] = useState<{ total: number; outstanding: number; returns: number }>({
+    total: 0,
+    outstanding: 0,
+    returns: 0,
+  });
+
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    window.dispatchEvent(new CustomEvent('clear-api-cache'));
+    setRefreshKey(prev => prev + 1);
+    setTimeout(() => setIsRefreshing(false), 800);
+  }, []);
 
   useEffect(() => {
     supplier.getByShop(localStorage.getItem('shop_id') || SHOP_ID).then((res: any) => {
@@ -1067,19 +1082,18 @@ const PurchaseHistory = () => {
     setActions(
       <div className="flex items-center gap-2">
         <button
-          onClick={() => {
-            window.dispatchEvent(new CustomEvent('clear-api-cache'));
-            setRefreshKey(prev => prev + 1);
-          }}
-          className="h-8 w-8 flex items-center justify-center rounded-md border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0"
+          type="button"
+          disabled={isRefreshing}
+          onClick={handleRefresh}
+          className="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0 disabled:opacity-70"
           title="Refresh"
         >
-          <RotateCw size={13} />
+          <RotateCw size={13} className={isRefreshing ? "animate-spin text-emerald-600" : ""} />
         </button>
         {!isCleanMode && (
           <button
             onClick={handleOpenNewTab}
-            className="h-8 w-8 flex items-center justify-center rounded-md border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0"
+            className="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0"
             title="Open in New Tab"
           >
             <ExternalLink size={13} />
@@ -1087,21 +1101,16 @@ const PurchaseHistory = () => {
         )}
         <GradientButton
           path="/purchase/add"
-          className="h-8 flex items-center px-4 text-[12px] rounded-md"
+          className="h-8 flex items-center px-4 text-[12px] rounded-lg"
         >
           + Add Purchase
         </GradientButton>
       </div>
     );
     return () => setActions(null);
-  }, [setActions, isCleanMode, setRefreshKey]);
+  }, [setActions, isCleanMode, isRefreshing, handleRefresh]);
 
   const [activeKpi, setActiveKpi] = useState("All Purchases");
-  const [summaryStats, setSummaryStats] = useState<{ total: number; outstanding: number; returns: number }>({
-    total: 0,
-    outstanding: 0,
-    returns: 0,
-  });
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
@@ -1253,11 +1262,18 @@ const PurchaseHistory = () => {
     refreshKey
   }), [debouncedSearch, filterVendor, fromDate, toDate, filterStatus, filterPaymentStatus, filterPaymentMethod, activeKpi, refreshKey]);
 
-  const { items, loading, loadingMore, totalCount, lastElementRef } = useInfiniteScroll<DirectPurchaseData, any>({
+  const { items, loading, loadingMore, hasMore, loadMore, totalCount, lastElementRef } = useInfiniteScroll<DirectPurchaseData, any>({
     fetchPage,
     filters,
     limit: 50
   });
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    if (scrollHeight - scrollTop - clientHeight < 350 && hasMore && !loading && !loadingMore) {
+      loadMore();
+    }
+  };
 
   const filtered = useMemo(() => {
     let result = items as DirectPurchaseData[];
@@ -1553,18 +1569,19 @@ const PurchaseHistory = () => {
             <p className="text-xs mt-1">Try adjusting your filters</p>
           </div>
         ) : viewMode === "grid" ? (
-          <div className="overflow-y-auto bg-white border border-slate-100 rounded-lg shadow-sm p-2.5 sm:p-4 flex-1 min-h-0">
+          <div onScroll={handleScroll} className="overflow-y-auto bg-white border border-slate-100 rounded-lg shadow-sm p-2.5 sm:p-4 flex-1 min-h-0">
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-5">
-              {filtered.map((po, index) => (
-                <div key={po.id} ref={index === filtered.length - 1 ? lastElementRef : null}>
+              {filtered.map((po) => (
+                <div key={po.id}>
                   <GridCard po={po} selected={selectedPurchases.has(po.id)} onClick={() => handleCardClick(po)} />
                 </div>
               ))}
             </div>
+            <div ref={lastElementRef} className="h-4 w-full" />
             {loadingMore && <div className="py-4 text-center text-xs text-slate-500">Loading more...</div>}
           </div>
         ) : (
-          <VerticalTable data={filtered} selectedIds={selectedPurchases} onSelect={(po) => toggleSelectPurchase(po.id)} totalCount={totalCount || filtered.length} lastElementRef={lastElementRef} loadingMore={loadingMore} onRefresh={() => setRefreshKey(prev => prev + 1)} />
+          <VerticalTable data={filtered} selectedIds={selectedPurchases} onSelect={(po) => toggleSelectPurchase(po.id)} totalCount={totalCount || filtered.length} lastElementRef={lastElementRef} loadingMore={loadingMore} onRefresh={() => setRefreshKey(prev => prev + 1)} onScroll={handleScroll} hasMore={hasMore} />
         )}
       </div>
       <ConfirmDialog

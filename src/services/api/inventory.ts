@@ -109,6 +109,24 @@ export const inventoryApi = {
   },
 
   /**
+   * Get all product names for a shop to check for duplicates.
+   * Backend: GET /inventories/names/{shop_id}
+   */
+  getProductNames: async (shopId: string) => {
+    const resolvedShopId = shopId || getShopId() || (typeof window !== "undefined" ? localStorage.getItem("shop_id") : "") || SHOP_ID;
+    return await apiClient.get(`${INV}/names/${resolvedShopId}`);
+  },
+
+  /**
+   * Check if a product name is allowed or duplicate/similar in a shop.
+   * Backend: POST /inventories/check-name
+   */
+  checkProductName: async (shopId: string, name: string) => {
+    const resolvedShopId = shopId || getShopId() || (typeof window !== "undefined" ? localStorage.getItem("shop_id") : "") || SHOP_ID;
+    return await apiClient.post(`${INV}/check-name`, { shop_id: resolvedShopId, name });
+  },
+
+  /**
    * Get inventories for a specific shop — main list endpoint.
    * Backend: GET /inventories/by/shop/{shop_id}
    * Params: query, limit, offset, active, include_serialno

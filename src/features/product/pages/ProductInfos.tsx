@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useMemo, Fragment } from "react";
+import React, { useRef, useState, useEffect, useMemo, useCallback, Fragment } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Package, Search, Filter, Trash2,
@@ -12,7 +12,8 @@ import ExcelImportModal from "@/components/common/ExcelImportModal";
 import { VariantRows, BatchCards, SerialBadgeList, analyzeProductStock } from "../../inventory/components/StockTree";
 import { Modal } from "@/components/common/SuperUI";
 import { useHeader } from "@/context/HeaderContext";
-import { useApi, useApiLoading } from "@/context/ApiContext";
+import { useApi } from "@/context/ApiContext";
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { useToast } from "@/context/ToastContext";
 import { ColumnPicker } from "@/components/common/ColumnPicker";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
@@ -396,6 +397,7 @@ const ProductRow = React.memo(
     toggleExpand,
     selectedKeys,
     onDelete,
+    innerRef: _innerRef,
   }: {
     p: InventoryRecord;
     isSelected: boolean;
@@ -404,6 +406,7 @@ const ProductRow = React.memo(
     toggleExpand: (id: string) => void;
     selectedKeys: string[];
     onDelete: (p: InventoryRecord) => void;
+    innerRef?: React.Ref<HTMLTableRowElement>;
   }) => {
     const navigate = useNavigate();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -523,6 +526,7 @@ const ProductRow = React.memo(
     return (
       <Fragment key={p.id}>
         <tr
+          ref={_innerRef}
           className={`group border-b border-slate-200 transition-colors cursor-pointer ${isSelected ? "bg-blue-50 border-l-2 border-l-blue-500" : isExpanded ? "bg-slate-50/70" : "hover:bg-slate-50/60"
             }`}
           onClick={() => toggleExpand(p.id)}
@@ -1273,11 +1277,9 @@ const ProductInfos = () => {
   };
 
   const { setActions, setBottomActions } = useHeader();
-  const { getData, deleteData, error, clearError } = useApi();
-  const loading = useApiLoading("products-list");
+  const { getData, postData, deleteData, error, clearError } = useApi();
   const { showToast } = useToast();
 
-  const [products, setProducts] = useState<InventoryRecord[]>([]);
   const [activeKpi, setActiveKpi] = useState("All Products");
   const [summaryStats, setSummaryStats] = useState<{ total: number; inactive: number; nonTracking: number }>({
     total: 0,
@@ -1294,7 +1296,15 @@ const ProductInfos = () => {
   const [filterTracking, setFilterTracking] = useState("All");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
+
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    window.dispatchEvent(new CustomEvent('clear-api-cache'));
+    setRefreshKey(prev => prev + 1);
+    setTimeout(() => setIsRefreshing(false), 800);
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
@@ -1302,7 +1312,7 @@ const ProductInfos = () => {
   }, [searchTerm]);
 
   useEffect(() => {
-    getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}`, { shop_id: SHOP_ID, limit: "100", offset: "1" }).then((res) => {
+    getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}`, { shop_id: SHOP_ID, limit: "10000", offset: "1" }).then((res) => {
       if (res) {
         const data: InventoryRecord[] = Array.isArray(res?.data)
           ? res.data
@@ -1324,6 +1334,7 @@ const ProductInfos = () => {
   }, [error, showToast, clearError]);
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<InventoryRecord | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
@@ -1342,19 +1353,18 @@ const ProductInfos = () => {
     setActions(
       <div className="flex items-center gap-2">
         <button
-          onClick={() => {
-            window.dispatchEvent(new CustomEvent('clear-api-cache'));
-            setRefreshKey(prev => prev + 1);
-          }}
-          className="h-8 w-8 flex items-center justify-center rounded-md border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0"
+          type="button"
+          disabled={isRefreshing}
+          onClick={handleRefresh}
+          className="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0 disabled:opacity-70"
           title="Refresh"
         >
-          <RefreshCw size={13} />
+          <RefreshCw size={13} className={isRefreshing ? "animate-spin text-emerald-600" : ""} />
         </button>
         {!isCleanMode && (
           <button
             onClick={handleOpenNewTab}
-            className="h-8 w-8 flex items-center justify-center rounded-md border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0"
+            className="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0"
             title="Open in New Tab"
           >
             <ExternalLink size={13} />
@@ -1363,7 +1373,7 @@ const ProductInfos = () => {
 
         <button
           onClick={() => setIsImportOpen(true)}
-          className="h-8 px-3 rounded-md border border-slate-200 text-slate-600 font-medium text-[12px] bg-white hover:bg-slate-50 transition-colors flex items-center gap-1.5"
+          className="h-8 px-3 rounded-lg border border-slate-200 text-slate-600 font-medium text-[12px] bg-white hover:bg-slate-50 transition-colors flex items-center gap-1.5"
         >
           <FileUp size={13} />
           Import
@@ -1371,60 +1381,95 @@ const ProductInfos = () => {
 
         <GradientButton
           path="/product/add"
-          className="h-8 flex items-center px-4 text-[12px] rounded-md"
+          className="h-8 flex items-center px-4 text-[12px] rounded-lg"
         >
           + Add product
         </GradientButton>
       </div>
     );
     return () => setActions(null);
-  }, [setActions, navigate, isCleanMode, setRefreshKey]);
+  }, [setActions, navigate, isCleanMode, isRefreshing, handleRefresh]);
 
-  useEffect(() => {
+  const fetchPage = useCallback(async (limit: number, offset: number, filters: any) => {
     const params: Record<string, string> = {
       shop_id: SHOP_ID,
-      limit: "100",
-      offset: "1",
+      limit: limit.toString(),
+      offset: offset.toString(),
     };
-    if (debouncedSearch) params.q = debouncedSearch;
-    
-    if (activeKpi === "Inactive Products") {
+    if (filters.search) params.q = filters.search;
+
+    if (filters.activeKpi === "Inactive Products") {
       params.exclude_active = "true";
       params.exclude_non_tracking = "true";
     }
-    if (activeKpi === "Stock Not Tracking") params.exclude_tracking = "true";
+    if (filters.activeKpi === "Stock Not Tracking") {
+      params.exclude_tracking = "true";
+    }
 
+    const res = await getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}`, params, {
+      cacheKey: offset === 1 ? "products-list" : undefined,
+    });
 
+    let itemsRaw: InventoryRecord[] = [];
+    if (res) {
+      itemsRaw = Array.isArray(res?.data)
+        ? res.data
+        : (res?.data?.inventories ?? (Array.isArray(res?.datas) ? res.datas : (res?.datas?.inventories ?? [])));
+    }
 
-    getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}`, params, { cacheKey: "products-list" }).then(
-      (res) => {
-        if (res) {
-          const data: InventoryRecord[] = Array.isArray(res?.data)
-            ? res.data
-            : (res?.data?.inventories ?? (Array.isArray(res?.datas) ? res.datas : (res?.datas?.inventories ?? [])));
-          setProducts(data);
+    return {
+      items: itemsRaw,
+      hasMore: itemsRaw.length === limit,
+    };
+  }, [getData]);
 
-          const keys = new Set<string>();
-          data.forEach((p: any) => {
-            const datas = p.additional_infos || p.datas;
-            if (datas) {
-              Object.keys(datas).forEach((k) => {
-                if (
-                  !["name", "id", "shop_id", "variantTypes", "is_active", "images"].includes(k) &&
-                  !hiddenProductColumns.has(k)
-                )
-                  keys.add(k);
-              });
-            }
-            ["category", "sell_price", "buy_price", "stocks", "status", "barcode", "serial_number"].forEach((k) =>
-              keys.add(k)
-            );
-          });
-          setAvailableKeys(sortKeys(Array.from(keys).filter((key) => !hiddenProductColumns.has(key))));
-        }
+  const infiniteFilters = useMemo(() => ({
+    search: debouncedSearch,
+    activeKpi,
+    refreshKey,
+  }), [debouncedSearch, activeKpi, refreshKey]);
+
+  const {
+    items: products,
+    loading,
+    loadingMore,
+    hasMore,
+    lastElementRef,
+    loadMore,
+  } = useInfiniteScroll<InventoryRecord, typeof infiniteFilters>({
+    fetchPage,
+    filters: infiniteFilters,
+    limit: 100,
+  });
+
+  useEffect(() => {
+    const keys = new Set<string>();
+    (products || []).forEach((p: any) => {
+      const datas = p.additional_infos || p.datas;
+      if (datas) {
+        Object.keys(datas).forEach((k) => {
+          if (
+            !["name", "id", "shop_id", "variantTypes", "is_active", "images"].includes(k) &&
+            !hiddenProductColumns.has(k)
+          )
+            keys.add(k);
+        });
       }
-    );
-  }, [refreshKey, debouncedSearch, activeKpi, getData]);
+      ["category", "sell_price", "buy_price", "stocks", "status", "barcode", "serial_number"].forEach((k) =>
+        keys.add(k)
+      );
+    });
+    setAvailableKeys(sortKeys(Array.from(keys).filter((key) => !hiddenProductColumns.has(key))));
+  }, [products]);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    if (scrollHeight - scrollTop - clientHeight < 300) {
+      if (hasMore && !loading && !loadingMore) {
+        loadMore();
+      }
+    }
+  };
 
   const toggleSelectProduct = (id: string) => {
     setSelectedProducts(prev => {
@@ -1461,18 +1506,35 @@ const ProductInfos = () => {
     }
   };
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (selectedProducts.size === 0) return;
-    if (!window.confirm(`Are you sure you want to delete these ${selectedProducts.size} products?`)) return;
+    setIsBulkDeleteDialogOpen(true);
+  };
+
+  const handleBulkDeleteConfirm = async () => {
+    if (selectedProducts.size === 0) return;
+    setIsBulkDeleteDialogOpen(false);
     try {
-      for (const id of Array.from(selectedProducts)) {
-        await deleteData(`${ENDPOINTS.INVENTORIES}/${SHOP_ID}/${id}`);
+      const res: any = await postData(
+        `${ENDPOINTS.INVENTORIES}/${SHOP_ID}/bulk-delete`,
+        { ids: Array.from(selectedProducts) }
+      );
+      const resData = res?.data || res;
+      const deletedCount = resData?.deleted_count ?? 0;
+      const failedCount = resData?.failed_count ?? 0;
+      const total = resData?.total ?? selectedProducts.size;
+
+      if (failedCount === 0) {
+        showToast(`Successfully deleted all ${deletedCount} selected products.`, "success");
+      } else if (deletedCount > 0) {
+        showToast(`Deleted ${deletedCount} of ${total} products. ${failedCount} could not be deleted (still has active stock or orders).`, "warning");
+      } else {
+        showToast(`Could not delete selected products (${failedCount} failed). Products with active stock cannot be deleted.`, "error");
       }
-      showToast("Selected products deleted successfully", "success");
       setSelectedProducts(new Set());
       setRefreshKey((prev: number) => prev + 1);
     } catch (e: any) {
-      showToast(e?.message || "Failed to delete some products", "error");
+      showToast(e?.message || "Failed to bulk delete products", "error");
     }
   };
 
@@ -1848,7 +1910,7 @@ const ProductInfos = () => {
       <div className="bg-white rounded-lg shadow-sm border border-slate-100 min-w-0 overflow-hidden flex flex-col flex-1 min-h-0 mt-2">
 
         {/* Mobile Card View */}
-        <div className="md:hidden flex-1 overflow-y-auto p-2.5 space-y-2.5">
+        <div onScroll={handleScroll} className="md:hidden flex-1 overflow-y-auto p-2.5 space-y-2.5">
           {filteredProducts.length === 0 ? (
             <div className="py-16 text-center flex flex-col items-center gap-2">
               {searchTerm ? (
@@ -1871,26 +1933,27 @@ const ProductInfos = () => {
               )}
             </div>
           ) : (
-            filteredProducts.map((p: any) => {
-              const pDatas = p.additional_infos || p.datas || {};
-              const imgRaw = p.image_url || p.image || pDatas.image_url || pDatas.image || p.images?.[0];
-              const imgSrc = Array.isArray(imgRaw) ? imgRaw[0] : imgRaw;
-              const category = p.category_infos?.name || pDatas.category || p.category;
-              const sellPrice = p.pricing_infos?.sell_price ?? pDatas.sell_price ?? p.sell_price;
-              const buyPrice = p.pricing_infos?.buy_price ?? pDatas.buy_price ?? p.buy_price;
-              const stockQty = calculateProductStock(p);
-              const isUntracked = p.have_tracking === false || p.track_stock === false || p.is_stock_tracked === false || p.type === "service";
-              const variantsCount = Array.isArray(p.variant_infos || p.variants) ? (p.variant_infos || p.variants).filter((v: any) => v && v.id !== null).length : 0;
-              const isSelected = selectedProducts.has(p.id);
+            filteredProducts.map((p: any, index: number) => {
+                const pDatas = p.additional_infos || p.datas || {};
+                const imgRaw = p.image_url || p.image || pDatas.image_url || pDatas.image || p.images?.[0];
+                const imgSrc = Array.isArray(imgRaw) ? imgRaw[0] : imgRaw;
+                const category = p.category_infos?.name || pDatas.category || p.category;
+                const sellPrice = p.pricing_infos?.sell_price ?? pDatas.sell_price ?? p.sell_price;
+                const buyPrice = p.pricing_infos?.buy_price ?? pDatas.buy_price ?? p.buy_price;
+                const stockQty = calculateProductStock(p);
+                const isUntracked = p.have_tracking === false || p.track_stock === false || p.is_stock_tracked === false || p.type === "service";
+                const variantsCount = Array.isArray(p.variant_infos || p.variants) ? (p.variant_infos || p.variants).filter((v: any) => v && v.id !== null).length : 0;
+                const isSelected = selectedProducts.has(p.id);
 
-              return (
-                <div
-                  key={`mob-prod-${p.id}`}
-                  onClick={() => navigate(`/product/${p.id}`)}
-                  className={`rounded-xl border p-3 transition-all active:scale-[0.99] cursor-pointer ${
-                    isSelected ? "border-blue-400 bg-blue-50/30" : "border-slate-200 bg-white shadow-xs"
-                  }`}
-                >
+                return (
+                  <div
+                    key={`mob-prod-${p.id}`}
+                    ref={(typeof window !== "undefined" && window.innerWidth < 768) && index === filteredProducts.length - 1 ? lastElementRef : null}
+                    onClick={() => navigate(`/product/${p.id}`)}
+                    className={`rounded-xl border p-3 transition-all active:scale-[0.99] cursor-pointer ${
+                      isSelected ? "border-blue-400 bg-blue-50/30" : "border-slate-200 bg-white shadow-xs"
+                    }`}
+                  >
                   <div className="flex items-start gap-2.5">
                     <input
                       type="checkbox"
@@ -1993,10 +2056,11 @@ const ProductInfos = () => {
               );
             })
           )}
+          <div ref={(typeof window !== "undefined" && window.innerWidth < 768) ? lastElementRef : null} className="h-4 w-full" />
         </div>
 
-        {/* Table */}
-        <div className="hidden md:block overflow-x-auto overflow-y-auto flex-1">
+      {/* Table */}
+      <div onScroll={handleScroll} className="hidden md:block overflow-x-auto overflow-y-auto flex-1">
           <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
 
             {/* Sticky header */}
@@ -2096,10 +2160,11 @@ const ProductInfos = () => {
                   </td>
                 </tr>
               ) : (
-                filteredProducts.map((p) => (
+                filteredProducts.map((p, index) => (
                   <ProductRow
                     key={p.id}
                     p={p}
+                    innerRef={!(typeof window !== "undefined" && window.innerWidth < 768) && index === filteredProducts.length - 1 ? lastElementRef : null}
                     isSelected={selectedProducts.has(p.id)}
                     onSelect={(prod) => toggleSelectProduct(prod.id)}
                     isExpanded={expandedRows.has(p.id)}
@@ -2114,14 +2179,21 @@ const ProductInfos = () => {
               )}
             </tbody>
           </table>
+          <div ref={!(typeof window !== "undefined" && window.innerWidth < 768) ? lastElementRef : null} className="h-4 w-full" />
+          {loadingMore && (
+            <div className="py-3 text-center text-xs text-slate-500 font-medium">
+              Loading more products...
+            </div>
+          )}
         </div>
 
         {/* Footer */}
         {!loading && products.length > 0 && (
           <div className="border-t border-slate-50 px-4 py-2 flex items-center justify-between">
             <span className="text-[11px] text-slate-400 font-medium">
-              {filteredProducts.length} of {products.length} product
-              {products.length !== 1 ? "s" : ""}
+              {filteredProducts.length} of {Math.max(products.length, summaryStats.total)} product
+              {Math.max(products.length, summaryStats.total) !== 1 ? "s" : ""}
+              {hasMore ? " (scroll for more)" : " (all loaded)"}
             </span>
             <span className="text-[11px] text-slate-300 font-medium">
               {expandedRows.size > 0 && `${expandedRows.size} expanded`}
@@ -2137,6 +2209,16 @@ const ProductInfos = () => {
         title="Remove product"
         description="This action cannot be undone. This will permanently remove the product and all associated data."
         confirmText="Remove product"
+        type="danger"
+      />
+
+      <ConfirmDialog
+        isOpen={isBulkDeleteDialogOpen}
+        onClose={() => setIsBulkDeleteDialogOpen(false)}
+        onConfirm={handleBulkDeleteConfirm}
+        title="Delete Selected Products"
+        description={`Are you sure you want to delete all ${selectedProducts.size} selected products? Products with active stock (> 0) will be skipped and protected. This action cannot be undone.`}
+        confirmText={`Delete ${selectedProducts.size} Products`}
         type="danger"
       />
 

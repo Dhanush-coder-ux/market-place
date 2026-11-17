@@ -547,6 +547,9 @@ const ProductionForm = () => {
         isOpen={modalState.type === "Product"}
         onClose={() => setModalState({ type: null, query: "" })}
         initialName={modalState.query}
+        hideBuyPrice={true}
+        fromPurchase={true}
+        source="purchase"
         onSuccess={(newProduct: any) => {
           const emptyIndex = products.findIndex(p => !p.name && !p.inventory_id);
           const hasBatchTracking = !!newProduct.has_batch || !!(newProduct.datas && newProduct.datas.has_batch);

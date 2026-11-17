@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { Building2, Phone, ExternalLink, Filter, ChevronRight, Eye, Pencil, Trash2, MoreVertical, Plus, FileUp, RefreshCw } from "lucide-react";
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import ExcelImportModal from "@/components/common/ExcelImportModal";
 import { GradientButton, ReusableSelect, SearchBar, Button } from "@/components/ui";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -117,7 +118,7 @@ const Supplier = () => {
   const location = useLocation();
   const isCleanMode = new URLSearchParams(location.search).get("mode") === "clean";
 
-  const { getData, loading } = useApi();
+  const { getData } = useApi();
   const { setActions, setBottomActions } = useHeader();
   const { showToast } = useToast();
   const { openQuickCreate } = useQuickCreate();
@@ -125,8 +126,6 @@ const Supplier = () => {
   const handleOpenNewTab = () => {
     window.open(`${window.location.pathname}?mode=clean`, "_blank", "noopener,noreferrer");
   };
-
-  const [suppliers, setSuppliers] = useState<SupplierRecord[]>([]);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -143,6 +142,7 @@ const Supplier = () => {
   }, [searchTerm]);
 
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [supplierToDelete, setSupplierToDelete] = useState<SupplierRecord | null>(null);
   const [selectedSupplier, setSelectedSupplier] = useState<SupplierRecord | null>(null);
@@ -150,6 +150,65 @@ const Supplier = () => {
   const [toDate, setToDate] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
+
+  const fetchPage = useCallback(async (limit: number, offset: number, filtersState: any) => {
+    const params: Record<string, string> = { limit: limit.toString(), offset: offset.toString() };
+    if (filtersState.search) params.q = filtersState.search;
+    if (filtersState.fromDate) params.from_date = filtersState.fromDate;
+    if (filtersState.toDate) params.to_date = filtersState.toDate;
+    if (filtersState.status === "Outstanding") params.exclude_non_outstanding = "true";
+    if (filtersState.status === "Cleared") params.exclude_outstanding = "true";
+    if (filtersState.type && filtersState.type !== "All") params.type = filtersState.type;
+    if (filtersState.city && filtersState.city !== "All") params.city = filtersState.city;
+    if (filtersState.state && filtersState.state !== "All") params.state = filtersState.state;
+
+    const res = await getData(`${ENDPOINTS.SUPPLIERS}/by/shop/${SHOP_ID}`, params);
+    let data: SupplierRecord[] = [];
+    let total = 0;
+    if (res) {
+      const rawData = res.data;
+      data = Array.isArray(rawData) ? rawData : (rawData?.datas ?? []);
+      total = res.data?.total_count ?? res.data?.total ?? (res as any)?.total_count ?? (res as any)?.total ?? 0;
+    }
+    return {
+      items: data,
+      hasMore: data.length === limit,
+      total
+    };
+  }, [getData]);
+
+  const infiniteFilters = useMemo(() => ({
+    search: debouncedSearch,
+    fromDate,
+    toDate,
+    status: filters.status,
+    type: filters.type,
+    city: filters.city,
+    state: filters.state,
+    refreshKey
+  }), [debouncedSearch, fromDate, toDate, filters.status, filters.type, filters.city, filters.state, refreshKey]);
+
+  const { items: suppliers, loading, loadingMore, hasMore, loadMore, totalCount, lastElementRef } = useInfiniteScroll<SupplierRecord, typeof infiniteFilters>({
+    fetchPage,
+    filters: infiniteFilters,
+    limit: 50
+  });
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    if (scrollHeight - scrollTop - clientHeight < 350 && hasMore && !loading && !loadingMore) {
+      loadMore();
+    }
+  };
+
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    window.dispatchEvent(new CustomEvent('clear-api-cache'));
+    setRefreshKey(prev => prev + 1);
+    setTimeout(() => setIsRefreshing(false), 800);
+  }, []);
   
   const availableTypes = useMemo(() => {
     const standard = ["Vendor", "Manufacturer", "Distributor", "Service Provider"];
@@ -231,19 +290,18 @@ const Supplier = () => {
     setActions(
       <div className="flex items-center gap-2">
         <button
-          onClick={() => {
-            window.dispatchEvent(new CustomEvent('clear-api-cache'));
-            setRefreshKey(prev => prev + 1);
-          }}
-          className="h-8 w-8 flex items-center justify-center rounded-md border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0"
+          type="button"
+          disabled={isRefreshing}
+          onClick={handleRefresh}
+          className="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0 disabled:opacity-70"
           title="Refresh"
         >
-          <RefreshCw size={13} />
+          <RefreshCw size={13} className={isRefreshing ? "animate-spin text-emerald-600" : ""} />
         </button>
         {!isCleanMode && (
           <button
             onClick={handleOpenNewTab}
-            className="h-8 w-8 flex items-center justify-center rounded-md border border-slate-200 text-slate-650 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0"
+            className="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-650 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0"
             title="Open in New Tab"
           >
             <ExternalLink size={13} />
@@ -251,7 +309,7 @@ const Supplier = () => {
         )}
         <button
           onClick={() => setIsImportOpen(true)}
-          className="h-8 px-3 rounded-md border border-slate-200 text-slate-650 font-medium text-[12px] bg-white hover:bg-slate-50 transition-colors flex items-center gap-1.5"
+          className="h-8 px-3 rounded-lg border border-slate-200 text-slate-650 font-medium text-[12px] bg-white hover:bg-slate-50 transition-colors flex items-center gap-1.5"
         >
           <FileUp size={13} />
           Import
@@ -259,14 +317,14 @@ const Supplier = () => {
 
         <GradientButton
           onClick={() => navigate("/supplier/add")}
-          className="h-8 flex items-center px-4 text-[12px] rounded-md"
+          className="h-8 flex items-center px-4 text-[12px] rounded-lg"
         >
           + Add Supplier
         </GradientButton>
       </div>
     );
     return () => setActions(null);
-  }, [setActions, navigate, openQuickCreate, isCleanMode]);
+  }, [setActions, navigate, openQuickCreate, isCleanMode, isRefreshing, handleRefresh]);
 
   useEffect(() => {
     if (selectedSupplier) {
@@ -326,63 +384,39 @@ const Supplier = () => {
         }
       })
       .catch(() => {});
-  }, [getData]);
+  }, [getData, refreshKey]);
 
   useEffect(() => {
-    const params: Record<string, string> = { limit: "50", offset: "1" };
-    if (debouncedSearch) params.q = debouncedSearch;
-    if (fromDate) params.from_date = fromDate;
-    if (toDate) params.to_date = toDate;
-    if (filters.status === "Outstanding") params.exclude_non_outstanding = "true";
-    if (filters.status === "Cleared") params.exclude_outstanding = "true";
-    if (filters.type && filters.type !== "All") params.type = filters.type;
-    if (filters.city && filters.city !== "All") params.city = filters.city;
-    if (filters.state && filters.state !== "All") params.state = filters.state;
+    const keys = new Set<string>();
+    suppliers.forEach((s: any) => {
+      if (!s) return;
+      const standardKeys = ["email", "mobile_number", "gst_no", "current_outstanding"];
+      standardKeys.forEach(k => keys.add(k));
 
-    getData(`${ENDPOINTS.SUPPLIERS}/by/shop/${SHOP_ID}`, params).then((res) => {
-      if (res) {
-        const rawData = res.data;
-        const data: SupplierRecord[] = Array.isArray(rawData) ? rawData : (rawData?.datas ?? []);
-        
-        setSuppliers(data);
+      if (s.contact_person_infos?.name || s.contact_info?.name) keys.add("contact_person");
+      if (s.contact_person_infos?.email || s.contact_info?.email) keys.add("contact_email");
+      if (s.contact_person_infos?.mobile_number || s.contact_info?.mobile_number) keys.add("contact_mobile");
 
-        // Detect unique keys from both root and datas field
-        const keys = new Set<string>();
-        data.forEach((s: any) => {
-          if (!s) return;
-          // Root level keys that we want in column picker
-          const standardKeys = ["email", "mobile_number", "gst_no", "current_outstanding"];
-          standardKeys.forEach(k => keys.add(k));
+      if (s.location_infos) {
+        if (s.location_infos.city || s.datas?.address?.city || s.additional_infos?.city) keys.add("city");
+        if (s.location_infos.zipcode) keys.add("zipcode");
+        if (s.location_infos.full_address) keys.add("address");
+      } else if (s.datas?.address) {
+        if (s.datas.address.city) keys.add("city");
+        if (s.datas.address.zipcode) keys.add("zipcode");
+        if (s.datas.address.full_address) keys.add("address");
+      }
 
-          // Map contact_infos and contact_person_infos
-          if (s.contact_person_infos?.name || s.contact_info?.name) keys.add("contact_person");
-          if (s.contact_person_infos?.email || s.contact_info?.email) keys.add("contact_email");
-          if (s.contact_person_infos?.mobile_number || s.contact_info?.mobile_number) keys.add("contact_mobile");
-
-          // Map location_infos
-          if (s.location_infos) {
-            if (s.location_infos.city || s.datas?.address?.city || s.additional_infos?.city) keys.add("city");
-            if (s.location_infos.zipcode) keys.add("zipcode");
-            if (s.location_infos.full_address) keys.add("address");
-          } else if (s.datas?.address) {
-            if (s.datas.address.city) keys.add("city");
-            if (s.datas.address.zipcode) keys.add("zipcode");
-            if (s.datas.address.full_address) keys.add("address");
-          }
-
-          // Other data fields
-          if (s.additional_infos || s.datas) {
-            const dataObj = s.additional_infos || s.datas || {};
-            Object.keys(dataObj).forEach(k => {
-              if (k !== "address" && k !== "internal_notes") keys.add(k);
-            });
-          }
+      if (s.additional_infos || s.datas) {
+        const dataObj = s.additional_infos || s.datas || {};
+        Object.keys(dataObj).forEach(k => {
+          if (k !== "address" && k !== "internal_notes") keys.add(k);
         });
-        const sortedKeys = Array.from(keys).sort();
-        setAvailableKeys(sortedKeys);
       }
     });
-  }, [refreshKey, debouncedSearch, fromDate, toDate, filters.status, filters.type, filters.city, filters.state]);
+    const sortedKeys = Array.from(keys).sort();
+    setAvailableKeys(sortedKeys);
+  }, [suppliers]);
 
   const filteredSuppliers = useMemo(() => {
     let result = suppliers;
@@ -646,7 +680,7 @@ const Supplier = () => {
       {/* Table Section */}
       <div className="bg-white rounded-lg shadow-sm border border-slate-100 min-w-0 overflow-hidden flex flex-col flex-1 min-h-0 mt-2">
         {/* Mobile Card View */}
-        <div className="md:hidden flex-1 overflow-y-auto p-2.5 space-y-2.5">
+        <div onScroll={handleScroll} className="md:hidden flex-1 overflow-y-auto p-2.5 space-y-2.5">
           {filteredSuppliers.length === 0 ? (
             <div className="py-16 text-center text-slate-400 font-medium italic text-sm">No suppliers matching your filters.</div>
           ) : (
@@ -721,9 +755,11 @@ const Supplier = () => {
               );
             })
           )}
+          {loadingMore && <div className="py-4 text-center text-xs text-slate-500">Loading more...</div>}
+          <div ref={isMobile ? lastElementRef : null} className="h-4 w-full" />
         </div>
 
-        <div className="hidden md:block overflow-x-auto overflow-y-auto flex-1 pf-scroll">
+        <div onScroll={handleScroll} className="hidden md:block overflow-x-auto overflow-y-auto flex-1 pf-scroll">
           <table className="w-full text-left border-collapse relative">
             <thead className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0]">
               <tr>
@@ -762,7 +798,18 @@ const Supplier = () => {
               )}
             </tbody>
           </table>
+          <div ref={!isMobile ? lastElementRef : null} className="h-4 w-full" />
+          {loadingMore && <div className="py-4 text-center text-xs text-slate-500">Loading more...</div>}
         </div>
+
+        {/* Footer */}
+        {!loading && filteredSuppliers.length > 0 && (
+          <div className="border-t border-slate-50 px-4 py-2 flex items-center justify-between">
+            <span className="text-[11px] text-slate-400 font-medium">
+              {filteredSuppliers.length} of {Math.max(filteredSuppliers.length, totalCount || filteredSuppliers.length)} suppliers ({hasMore ? "scroll for more" : "all loaded"})
+            </span>
+          </div>
+        )}
       </div>
 
       <ConfirmDialog

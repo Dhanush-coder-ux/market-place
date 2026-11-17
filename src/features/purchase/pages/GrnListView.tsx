@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Eye, Search, SlidersHorizontal, Package,
   Calendar, Building2, FileText, LayoutGrid, List, ArrowRight, X,
-  Copy, Check, Truck
+  Copy, Check, Truck, RefreshCw
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useHeader } from "@/context/HeaderContext";
@@ -237,8 +237,33 @@ const GRNCardView = () => {
   const [viewMode, setViewMode] = useState<ViewMode>(() => (typeof window !== "undefined" && window.innerWidth < 768 ? "grid" : "vertical"));
   const [selectedGRN, setSelectedGRN] = useState<ReturnType<typeof toGrnShape> | null>(null);
   const [viewingGRN, setViewingGRN] = useState<ReturnType<typeof toGrnShape> | null>(null);
-  const [refreshKey] = useState(0);
-  const { setBottomActions } = useHeader();
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { setActions, setBottomActions } = useHeader();
+
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    window.dispatchEvent(new CustomEvent('clear-api-cache'));
+    setRefreshKey(prev => prev + 1);
+    setTimeout(() => setIsRefreshing(false), 800);
+  }, []);
+
+  useEffect(() => {
+    setActions(
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          disabled={isRefreshing}
+          onClick={handleRefresh}
+          className="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0 disabled:opacity-70"
+          title="Refresh"
+        >
+          <RefreshCw size={13} className={isRefreshing ? "animate-spin text-emerald-600" : ""} />
+        </button>
+      </div>
+    );
+    return () => setActions(null);
+  }, [setActions, isRefreshing, handleRefresh]);
 
   const handleReceive = (id: string) => {
     navigate(`/po-grn/update?poId=${id}`);
@@ -296,6 +321,14 @@ const GRNCardView = () => {
 
   const records = purchases.map(toGrnShape);
 
+  const grnStats = useMemo(() => {
+    const totalOrders = purchases.length;
+    const pendingDeliveries = records.filter(r => r.status === "Pending").length;
+    const partiallyReceived = records.filter(r => r.status === "Partial").length;
+    const receivedValue = records.reduce((sum, r) => sum + r.totalValue, 0);
+    return { totalOrders, pendingDeliveries, partiallyReceived, receivedValue };
+  }, [purchases, records]);
+
   const filtered = records.filter((r) =>
     r.poReference.toLowerCase().includes(search.toLowerCase()) ||
     r.supplier.toLowerCase().includes(search.toLowerCase()) ||
@@ -305,7 +338,7 @@ const GRNCardView = () => {
   return (
     <>
       <div className="space-y-5 pb-12">
-        <GrnHeader />
+        <GrnHeader stats={grnStats} />
 
         {error && (
           <div className="flex items-center justify-between gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">

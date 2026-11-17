@@ -100,22 +100,57 @@ export interface ToastContextType {
 
 // ─── Message Extractor Helper ─────────────────────────────────────────────────
 
+export function compactToastText(input: unknown, maxLen: number = 120): string {
+  if (input === null || input === undefined) return "";
+  let clean = String(input).trim();
+
+  // If contains semicolons, split and take first distinct message + (+N more errors)
+  if (clean.includes(";")) {
+    const parts = clean.split(/;\s*/).map((p) => p.trim()).filter(Boolean);
+    if (parts.length > 1) {
+      clean = `${parts[0]} (+${parts.length - 1} more errors)`;
+    } else if (parts.length === 1) {
+      clean = parts[0];
+    }
+  }
+
+  if (clean.length > maxLen) {
+    clean = clean.slice(0, maxLen - 1).trimEnd() + "…";
+  }
+  return clean;
+}
+
 export function extractMessage(message: unknown): { title: string; description?: string } {
   if (typeof message === "string") {
-    const trimmed = message.trim();
+    let trimmed = message.trim();
+
+    // If string contains multiple semicolons, format cleanly before splitting
+    if (trimmed.includes(";")) {
+      const parts = trimmed.split(/;\s*/).map((p) => p.trim()).filter(Boolean);
+      if (parts.length > 1) {
+        trimmed = `${parts[0]} (+${parts.length - 1} more errors)`;
+      } else if (parts.length === 1) {
+        trimmed = parts[0];
+      }
+    }
+
     if (trimmed.includes("\n")) {
       const [first, ...rest] = trimmed.split("\n");
-      return { title: first.trim(), description: rest.join("\n").trim() || undefined };
+      const title = compactToastText(first, 60);
+      const desc = compactToastText(rest.join("\n"), 120);
+      return { title, description: desc || undefined };
     }
+
     const colonIdx = trimmed.indexOf(": ");
-    if (colonIdx > 0 && colonIdx <= 35 && !trimmed.slice(0, colonIdx).includes("http")) {
-      const title = trimmed.slice(0, colonIdx).trim();
-      const desc = trimmed.slice(colonIdx + 2).trim();
+    if (colonIdx > 0 && colonIdx <= 45 && !trimmed.slice(0, colonIdx).includes("http")) {
+      const title = compactToastText(trimmed.slice(0, colonIdx), 60);
+      const desc = compactToastText(trimmed.slice(colonIdx + 2), 120);
       if (desc) {
         return { title, description: desc };
       }
     }
-    return { title: trimmed };
+
+    return { title: compactToastText(trimmed, 60) };
   }
 
   if (message && typeof message === "object") {
@@ -141,12 +176,12 @@ export function extractMessage(message: unknown): { title: string; description?:
         : undefined;
 
     return {
-      title: String(titleCandidate).trim(),
-      description: descCandidate ? String(descCandidate).trim() : undefined,
+      title: compactToastText(titleCandidate, 60),
+      description: descCandidate ? compactToastText(descCandidate, 120) : undefined,
     };
   }
 
-  return { title: String(message || "") };
+  return { title: compactToastText(String(message || ""), 60) };
 }
 
 // Normalize progress between 0 and 1
@@ -177,17 +212,22 @@ function shouldRateLimit(key: string, cooldownMs = 1200): boolean {
 // Can be called anywhere (even outside React components, e.g. in API interceptors)
 export const toast = {
   show: (message: string | any, type: ToastType = "success", options?: Partial<ToastOptions>): string => {
-    const { title, description } = extractMessage(message);
-    if (!title && !options?.title) return "";
+    const extracted = extractMessage(message);
+    const title = compactToastText(options?.title || extracted.title, 60);
+    const description = (options?.description || extracted.description)
+      ? compactToastText(options?.description || extracted.description, 120)
+      : undefined;
+
+    if (!title) return "";
 
     const key = `${type}:${title}:${description || ""}`;
     if (shouldRateLimit(key)) return "";
 
     const opts: ToastOptions = {
-      title: options?.title || title,
-      description: options?.description || description,
       duration: options?.duration ?? (type === "error" ? 5000 : 3800),
       ...options,
+      title,
+      description,
     };
 
     switch (type) {
@@ -231,11 +271,11 @@ export const toast = {
   ): string => {
     const norm = normalizeProgress(progress);
     return dynaura.loading({
-      title,
-      description,
       progress: norm,
       duration: null,
       ...options,
+      title: compactToastText(title, 60),
+      description: description ? compactToastText(description, 120) : undefined,
     });
   },
 
@@ -248,8 +288,8 @@ export const toast = {
     const norm = normalizeProgress(progress);
     dynaura.update(id, {
       progress: norm,
-      ...(title ? { title } : {}),
-      ...(description !== undefined ? { description } : {}),
+      ...(title ? { title: compactToastText(title, 60) } : {}),
+      ...(description !== undefined ? { description: compactToastText(description, 120) } : {}),
     });
   },
 
@@ -260,8 +300,8 @@ export const toast = {
   ): void => {
     dynaura.update(id, {
       type: "success",
-      title,
-      description,
+      title: compactToastText(title, 60),
+      description: description ? compactToastText(description, 120) : undefined,
       progress: undefined,
       duration: 4000,
       confetti: true,
@@ -275,8 +315,8 @@ export const toast = {
   ): void => {
     dynaura.update(id, {
       type: "error",
-      title,
-      description,
+      title: compactToastText(title, 60),
+      description: description ? compactToastText(description, 120) : undefined,
       progress: undefined,
       duration: 5000,
     });
@@ -402,7 +442,7 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
       {/* Dynamic Island Global Toaster mounted across all pages */}
       <Toaster
         position="top"
-        theme="dark"
+        theme="light"
         queue={true}
         offset={18}
       />

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useMemo } from "react";
+import { createPortal } from "react-dom";
 import {
   Plus,
   Trash2,
@@ -6,8 +7,10 @@ import {
   ChevronDown,
   RefreshCw,
   Plus as PlusIcon,
-  Zap
+  Zap,
+  ScanLine
 } from "lucide-react";
+import { InlineSerialManager } from "@/components/common/InlineSerialManager";
 
 
 // --- Types ---
@@ -40,11 +43,15 @@ export interface VariantCombination {
   stock: string;
   active: boolean;
   serials: SerialEntry[];
+  serial_numbers?: string[];
   batch?: {
     name: string;
     expiry_date: string;
     manufacturing_date: string;
     stocks?: string;
+    serial_numbers?: string[];
+    buy_price?: string;
+    sell_price?: string;
   };
   batches?: {
     id: string;
@@ -52,6 +59,9 @@ export interface VariantCombination {
     expiry_date: string;
     manufacturing_date: string;
     stocks: string;
+    serial_numbers?: string[];
+    buy_price?: string;
+    sell_price?: string;
   }[];
   reorder_point: string;
   location?: string;
@@ -246,22 +256,54 @@ interface VariantMatrixTableProps {
   trackStock?: boolean;
   showOpeningStock?: boolean;
   hasBatch?: boolean;
+  hasSerial?: boolean;
+  serialLabel?: string;
   baseMrp?: number;
+  baseBuyPrice?: number;
+  baseSellPrice?: number;
   productId?: string;
   onCheckStock?: (combo: VariantCombination) => Promise<boolean>;
   onStockError?: (msg: string) => void;
 }
 
 export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
-  combinations, onChange, trackStock: _trackStock, showOpeningStock = false, hasBatch = false, baseMrp, productId: _productId, onCheckStock, onStockError
+  combinations, onChange, trackStock: _trackStock, showOpeningStock = false, hasBatch = false, hasSerial = false, serialLabel = "Serial Number", baseMrp, baseBuyPrice, baseSellPrice, productId: _productId, onCheckStock, onStockError
 }) => {
 
   const [barcodeBase, setbarcodeBase] = useState("");
   const [checkingId, setCheckingId] = useState<string | null>(null);
+  const [serialModalComboId, setSerialModalComboId] = useState<string | null>(null);
 
   const update = (id: string, updates: Partial<VariantCombination>) => {
     onChange(combinations.map(c => c.id === id ? { ...c, ...updates } : c));
   };
+
+  const handleUpdateSerials = (comboId: string, newSerials: string[]) => {
+    const target = combinations.find(c => c.id === comboId);
+    update(comboId, {
+      serial_numbers: newSerials,
+      ...(target?.batch ? { batch: { ...target.batch, serial_numbers: newSerials } } : {})
+    });
+  };
+
+  const handleStockChange = (combo: VariantCombination, newStockStr: string) => {
+    const numStock = Number(newStockStr) || 0;
+    const currentSerials = combo.serial_numbers || [];
+    const updatedSerials = currentSerials.length > numStock ? currentSerials.slice(0, numStock) : currentSerials;
+    update(combo.id, {
+      stock: newStockStr,
+      serial_numbers: updatedSerials,
+      ...(combo.batch ? {
+        batch: {
+          ...combo.batch,
+          stocks: newStockStr,
+          serial_numbers: updatedSerials
+        }
+      } : {})
+    });
+  };
+
+  const activeSerialCombo = combinations.find(c => c.id === serialModalComboId);
 
   const activeCount = combinations.filter(c => c.active).length;
 
@@ -441,6 +483,14 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
     });
   };
 
+  const handleBuyPriceChange = (combo: VariantCombination, val: string) => {
+    const clean = val.replace(/[^0-9.]/g, "");
+    update(combo.id, {
+      buy_price: clean,
+      ...(combo.batch ? { batch: { ...combo.batch, buy_price: clean } } : {})
+    });
+  };
+
   const handleSellPriceChange = (combo: VariantCombination, val: string) => {
     const clean = val.replace(/[^0-9.]/g, "");
     const sp = parseFloat(clean) || 0;
@@ -461,6 +511,7 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
     update(combo.id, {
       price: clean,
       discount_percent: newDiscPercent,
+      ...(combo.batch ? { batch: { ...combo.batch, sell_price: clean } } : {})
     });
   };
 
@@ -510,7 +561,7 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
       {/* Table Container */}
       <div className="border border-slate-200 rounded-lg overflow-hidden shadow-sm bg-white">
         <div className="overflow-x-auto custom-scrollbar">
-          <table className="w-full text-left border-collapse min-w-[950px]">
+          <table className="w-full text-left border-collapse min-w-[1050px]">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100">
                 {attrKeys.map(k => (
@@ -526,12 +577,18 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                     <th className="px-4 py-3.5 text-[10px] font-black uppercase text-amber-700 bg-amber-50/70 whitespace-nowrap">Exp Date</th>
                   </>
                 )}
+                <th className="px-4 py-3.5 text-center text-[10px] font-black uppercase text-slate-400 whitespace-nowrap">Buy Price</th>
                 <th className="px-4 py-3.5 text-center text-[10px] font-black uppercase text-slate-400 whitespace-nowrap">MRP</th>
                 <th className="px-4 py-3.5 text-center text-[10px] font-black uppercase text-slate-400 whitespace-nowrap">Discount</th>
                 <th className="px-4 py-3.5 text-center text-[10px] font-black uppercase text-slate-400 whitespace-nowrap">Sell Price</th>
                 {showOpeningStock && (
                   <th className="px-4 py-3.5 text-center text-[10px] font-black uppercase text-emerald-700 bg-emerald-50/80 whitespace-nowrap">
                     Opening Stock
+                  </th>
+                )}
+                {showOpeningStock && hasSerial && (
+                  <th className="px-4 py-3.5 text-center text-[10px] font-black uppercase text-violet-700 bg-violet-50/80 whitespace-nowrap">
+                    {serialLabel || "Serial Numbers"}
                   </th>
                 )}
                 <th className="px-4 py-3.5 text-[10px] font-black uppercase text-slate-400 whitespace-nowrap">Storage Location</th>
@@ -639,6 +696,24 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                         </>
                       )}
 
+                      {/* Buy Price Column */}
+                      <td className="px-4 py-3.5">
+                        <div className="flex flex-col items-center">
+                          <div className="relative">
+                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-semibold">₹</span>
+                            <input
+                              className="h-9 pl-6 pr-2 text-xs border border-slate-200 rounded-lg w-24 text-right font-mono focus:ring-2 focus:ring-emerald-100 outline-none"
+                              placeholder={baseBuyPrice !== undefined && baseBuyPrice > 0 ? String(baseBuyPrice) : "0.00"}
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={combo.buy_price || ""}
+                              onChange={e => handleBuyPriceChange(combo, e.target.value)}
+                            />
+                          </div>
+                        </div>
+                      </td>
+
                       {/* MRP Column */}
                       <td className="px-4 py-3.5">
                         <div className="flex flex-col items-center">
@@ -701,7 +776,7 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                                   ? "border-red-300 bg-red-50/50 text-red-700 font-bold"
                                   : "border-slate-200"
                               }`}
-                              placeholder="0.00"
+                              placeholder={baseSellPrice !== undefined && baseSellPrice > 0 ? String(baseSellPrice) : "0.00"}
                               type="number"
                               min="0"
                               step="0.01"
@@ -731,8 +806,35 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
                             type="number"
                             min="0"
                             value={combo.stock || ""}
-                            onChange={e => update(combo.id, { stock: e.target.value })}
+                            onChange={e => handleStockChange(combo, e.target.value)}
                           />
+                        </td>
+                      )}
+
+                      {showOpeningStock && hasSerial && (
+                        <td className="px-4 py-3.5 text-center bg-violet-50/20">
+                          {Number(combo.stock) > 0 ? (
+                            <button
+                              type="button"
+                              onClick={() => setSerialModalComboId(combo.id)}
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                                (combo.serial_numbers || []).length === Number(combo.stock)
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                                  : "bg-white text-violet-700 border-violet-200 hover:bg-violet-50 hover:border-violet-300 shadow-2xs"
+                              }`}
+                            >
+                              <ScanLine size={13} className={(combo.serial_numbers || []).length === Number(combo.stock) ? "text-emerald-600" : "text-violet-600"} />
+                              <span>
+                                {(combo.serial_numbers || []).length === Number(combo.stock)
+                                  ? `✓ ${(combo.serial_numbers || []).length}/${combo.stock}`
+                                  : `Add Serials (${(combo.serial_numbers || []).length}/${combo.stock})`}
+                              </span>
+                            </button>
+                          ) : (
+                            <span className="text-[10px] text-slate-400 font-medium italic">
+                              Enter stock
+                            </span>
+                          )}
                         </td>
                       )}
 
@@ -785,6 +887,66 @@ export const VariantMatrixTable: React.FC<VariantMatrixTableProps> = ({
           </table>
         </div>
       </div>
+
+      {activeSerialCombo && createPortal(
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-100">
+            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center text-violet-600">
+                  <ScanLine size={16} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800 text-sm">
+                    {serialLabel || "Serial Number"}s Management
+                  </h3>
+                  <p className="text-[11px] text-slate-500 font-medium">
+                    Variant: <span className="font-bold text-slate-700">{Object.values(activeSerialCombo.attributes).join(" / ")}</span>
+                    {hasBatch && activeSerialCombo.batch?.name && (
+                      <span className="ml-2 font-bold text-amber-700">({activeSerialCombo.batch.name})</span>
+                    )}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSerialModalComboId(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-5 max-h-[70vh] overflow-y-auto custom-scrollbar">
+              <InlineSerialManager
+                serials={activeSerialCombo.serial_numbers || []}
+                serialLabel={serialLabel || "Serial Number"}
+                limit={Number(activeSerialCombo.stock) || 0}
+                onUpdate={(newSerials) => handleUpdateSerials(activeSerialCombo.id, newSerials)}
+                onValidationError={(msg) => onStockError?.(msg)}
+              />
+            </div>
+            <div className="px-5 py-3.5 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between">
+              <div className="text-[11px] font-bold">
+                {(activeSerialCombo.serial_numbers || []).length === Number(activeSerialCombo.stock) ? (
+                  <span className="text-emerald-600">✓ All {activeSerialCombo.stock} serials added</span>
+                ) : (
+                  <span className="text-amber-600">
+                    {Number(activeSerialCombo.stock) - (activeSerialCombo.serial_numbers || []).length} remaining
+                  </span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setSerialModalComboId(null)}
+                className="px-4 py-1.5 bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs rounded-lg transition-colors shadow-xs"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 };
@@ -864,6 +1026,7 @@ export const generateCombinations = (
       stock: "0",
       active: true,
       serials: [],
+      serial_numbers: [],
     };
   });
 };

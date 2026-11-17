@@ -272,7 +272,7 @@ export const PRODUCT_IMPORT_COLUMNS: ImportColumnDef[] = [
     label: "Reorder Point",
     required: false,
     type: "number",
-    example: "5",
+    example: "1",
   },
   {
     key: "storage_location",
@@ -336,14 +336,14 @@ export const INVENTORY_IMPORT_COLUMNS: ImportColumnDef[] = [
   {
     key: "buy_price",
     label: "Buy Price",
-    required: false,
+    required: true,
     type: "number",
     example: "8000",
   },
   {
     key: "sell_price",
     label: "Sell Price",
-    required: false,
+    required: true,
     type: "number",
     example: "12000",
   },
@@ -367,7 +367,7 @@ export const INVENTORY_IMPORT_COLUMNS: ImportColumnDef[] = [
     label: "Reorder Point",
     required: false,
     type: "number",
-    example: "5",
+    example: "1",
   },
   {
     key: "storage_location",
@@ -499,8 +499,18 @@ export function transformRowToPayload(
     if (entity === "product") {
       if (payload.have_tracking === undefined) payload.have_tracking = true;
       payload.stocks = 0;
+      payload.is_active = false; // Product list import: always inactive
     } else {
-      if (payload.have_tracking === undefined) payload.have_tracking = false;
+      const trackingEnabled = isStockTrackingEnabled(row, entity);
+      payload.have_tracking = trackingEnabled;
+      if (!trackingEnabled) {
+        // If stock tracking is false, stock is not needed and ignored even if given
+        payload.stocks = 0;
+      } else {
+        const numStock = Number(payload.stocks);
+        payload.stocks = !isNaN(numStock) && numStock >= 0 ? numStock : 0;
+      }
+      payload.is_active = true; // Live stock list import: always active
     }
     if (!payload.type_infos)
       payload.type_infos = {
@@ -509,7 +519,7 @@ export function transformRowToPayload(
         has_serialno: false,
       };
     if (!payload.gst) payload.gst = "0%";
-    if (payload.reorder_point === undefined) payload.reorder_point = 5;
+    if (payload.reorder_point === undefined) payload.reorder_point = 1;
     if (payload.mrp === undefined || payload.mrp === null || Number(payload.mrp) <= 0) {
       if (payload.sell_price && Number(payload.sell_price) > 0) {
         payload.mrp = Number(payload.sell_price);
@@ -522,15 +532,51 @@ export function transformRowToPayload(
   return payload;
 }
 
+export function isStockTrackingEnabled(row: Record<string, any>, entity?: EntityType): boolean {
+  if (entity === "product") return true;
+  const rawTracking = row["have_tracking"];
+  if (rawTracking === undefined || rawTracking === null || String(rawTracking).trim() === "") {
+    // Default to true for inventory stocks if not specified
+    return true;
+  }
+  const str = String(rawTracking).trim().toLowerCase();
+  return ["true", "1", "yes"].includes(str);
+}
+
+export interface RowValidationError {
+  rowIndex: number;
+  errors: Record<string, string>;
+}
+
+function normalizeTokens(name: string): string[] {
+  return name.toLowerCase().replace(/[^a-z0-9]/g, " ").split(/\s+/).filter(Boolean);
+}
+
+export function isSimilarName(name1: string, name2: string): boolean {
+  if (!name1 || !name2) return false;
+  const n1 = name1.toLowerCase().trim();
+  const n2 = name2.toLowerCase().trim();
+  if (n1 === n2) return true;
+  const t1 = normalizeTokens(name1);
+  const t2 = normalizeTokens(name2);
+  if (t1.length === 0 || t2.length === 0) return false;
+  if (t1.slice().sort().join(" ") === t2.slice().sort().join(" ")) return true;
+  return false;
+}
+
 /**
  * Validates a single flat row against the column definitions.
  * Returns a map of { columnKey: errorMessage } or an empty map if valid.
  */
 export function validateRow(
   row: Record<string, any>,
-  columns: ImportColumnDef[]
+  columns: ImportColumnDef[],
+  entity?: EntityType,
+  existingProductNames?: string[],
+  seenBatchNames?: Set<string>
 ): Record<string, string> {
   const errors: Record<string, string> = {};
+  const trackingEnabled = isStockTrackingEnabled(row, entity);
 
   for (const col of columns) {
     const val = row[col.key];
@@ -538,6 +584,21 @@ export function validateRow(
       val === undefined ||
       val === null ||
       String(val).trim() === "";
+
+    // Specific rule for stock list / inventory import:
+    // When stock tracking is True -> stock is mandatory
+    // When stock tracking is False -> stock is not needed (and ignored even if given)
+    if (col.key === "stocks" && (entity === "inventory" || columns.some(c => c.key === "stocks"))) {
+      if (trackingEnabled) {
+        if (isEmpty) {
+          errors[col.key] = `"${col.label}" is required when stock tracking is enabled`;
+          continue;
+        }
+      } else {
+        // Stock tracking is disabled: stock is not needed and ignored
+        continue;
+      }
+    }
 
     if (col.required && isEmpty) {
       errors[col.key] = `"${col.label}" is required`;
@@ -549,7 +610,9 @@ export function validateRow(
         const numVal = Number(val);
         if (isNaN(numVal)) {
           errors[col.key] = `"${col.label}" must be a number`;
-        } else if (col.key === "stocks" && numVal <= 0) {
+        } else if ((col.key === "stocks" || col.key === "buy_price" || col.key === "sell_price") && numVal < 0) {
+          errors[col.key] = `"${col.label}" cannot be negative`;
+        } else if (col.required && (col.key === "buy_price" || col.key === "sell_price") && numVal <= 0) {
           errors[col.key] = `"${col.label}" must be greater than 0`;
         }
       }
@@ -562,6 +625,26 @@ export function validateRow(
       ) {
         errors[col.key] = `"${col.label}" must be true or false`;
       }
+
+      // Check product name uniqueness against existing products and in-batch duplicates
+      if (col.key === "name" && (entity === "inventory" || entity === "product")) {
+        const cleanVal = String(val).trim().toLowerCase();
+        if (cleanVal) {
+          if (existingProductNames && existingProductNames.length > 0) {
+            const existingMatch = existingProductNames.find(
+              (en) => en && (en.trim().toLowerCase() === cleanVal || isSimilarName(val, en))
+            );
+            if (existingMatch) {
+              errors[col.key] = `Product "${val}" already exists in this shop${
+                existingMatch.trim().toLowerCase() !== cleanVal ? ` (similar to "${existingMatch}")` : ""
+              }`;
+            }
+          }
+          if (!errors[col.key] && seenBatchNames && seenBatchNames.has(cleanVal)) {
+            errors[col.key] = `Duplicate product "${val}" in file`;
+          }
+        }
+      }
     }
   }
 
@@ -573,4 +656,30 @@ export function validateRow(
   }
 
   return errors;
+}
+
+/**
+ * Validates an entire list of rows, checking field validations, shop-level existing names,
+ * and within-file batch duplicate names sequentially.
+ */
+export function validateAllRows(
+  rows: Record<string, any>[],
+  columns: ImportColumnDef[],
+  entity?: EntityType,
+  existingProductNames?: string[]
+): RowValidationError[] {
+  const errs: RowValidationError[] = [];
+  const seenBatchNames = new Set<string>();
+
+  rows.forEach((row) => {
+    const e = validateRow(row, columns, entity, existingProductNames, seenBatchNames);
+    if (row.name && String(row.name).trim()) {
+      seenBatchNames.add(String(row.name).trim().toLowerCase());
+    }
+    if (Object.keys(e).length > 0) {
+      errs.push({ rowIndex: row._rowIndex, errors: e });
+    }
+  });
+
+  return errs;
 }

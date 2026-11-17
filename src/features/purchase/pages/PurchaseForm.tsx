@@ -841,7 +841,7 @@ const PurchaseForm = () => {
           serialTracking: hasSerialTracking
         }]);
       }
-    }, { name: query });
+    }, { name: query, source: "purchase", fromPurchase: true, hideBuyPrice: true });
   }, [openQuickCreate, products, updateProductFields, defaultProductRow]);
 
   return (

@@ -9,11 +9,14 @@ import {
   Plus,
   X,
   IndianRupee,
-  AlertCircle
+  AlertCircle,
+  ScanLine,
+  ChevronDown
 } from "lucide-react";
 import { QuickCreateModal, QuickCreateStep } from "./QuickCreateModal";
 import Input from "@/components/ui/Input";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
+import { InlineSerialManager } from "@/components/common/InlineSerialManager";
 
 import { useApi } from "@/context/ApiContext";
 import { useToast } from "@/context/ToastContext";
@@ -180,6 +183,9 @@ interface QuickCreateProductModalProps {
   initialName?: string;
   onSuccess: (product: any) => void;
   isInitialStockMode?: boolean;
+  hideBuyPrice?: boolean;
+  fromPurchase?: boolean;
+  source?: string;
 }
 
 export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = ({
@@ -188,7 +194,11 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
   initialName = "",
   onSuccess,
   isInitialStockMode,
+  hideBuyPrice = false,
+  fromPurchase = false,
+  source,
 }) => {
+  const shouldHideBuyPrice = hideBuyPrice || fromPurchase || source === "purchase";
   const { postData, getLastError } = useApi();
   const { showToast, showError, showSuccess } = useToast();
   const [submitting, setSubmitting] = useState(false);
@@ -217,7 +227,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
     }
   }, [isOpen]);
 
-  const isInitialStockActive = Boolean(isInitialStockMode || !isStockImportCompleted);
+  const isInitialStockActive = Boolean(isInitialStockMode && !isStockImportCompleted);
 
   const [batches, setBatches] = useState<{
     id: string;
@@ -225,6 +235,9 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
     manufacturing_date: string;
     expiry_date: string;
     stocks: string;
+    buy_price?: string;
+    sell_price?: string;
+    serial_numbers?: string[];
   }[]>([
     {
       id: "b_1",
@@ -232,8 +245,14 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
       manufacturing_date: "",
       expiry_date: "",
       stocks: "0",
+      buy_price: "",
+      sell_price: "",
+      serial_numbers: [],
     }
   ]);
+
+  const [simpleSerials, setSimpleSerials] = useState<string[]>([]);
+  const [expandedBatchSerialId, setExpandedBatchSerialId] = useState<string | null>(null);
 
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [units, setUnits] = useState<{ id: string; name: string }[]>([]);
@@ -353,6 +372,20 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
       }
     } else {
       setBaseName("");
+      setSimpleSerials([]);
+      setExpandedBatchSerialId(null);
+      setBatches([
+        {
+          id: "b_1",
+          name: "",
+          manufacturing_date: "",
+          expiry_date: "",
+          stocks: "0",
+          buy_price: "",
+          sell_price: "",
+          serial_numbers: [],
+        }
+      ]);
     }
   }, [isOpen, initialName]);
 
@@ -418,10 +451,20 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
         name: fullName,
       }));
     } else if (name === "mrp") {
-      setForm((prev) => ({ ...prev, mrp: value, sell_price: value }));
+      setForm((prev) => ({
+        ...prev,
+        mrp: value,
+        sell_price: (!prev.sell_price || prev.sell_price === prev.mrp) ? value : prev.sell_price,
+      }));
+    } else if (name === "sell_price") {
+      setForm((prev) => ({ ...prev, sell_price: value }));
     } else if (name === "gst") {
       const sanitized = value.replace(/[^0-9.]/g, "");
       setForm((prev) => ({ ...prev, gst: sanitized }));
+    } else if (name === "opening_stock") {
+      const num = Number(value) || 0;
+      setForm((prev) => ({ ...prev, opening_stock: value }));
+      setSimpleSerials((prev) => (num < prev.length ? prev.slice(0, num) : prev));
     } else {
       setForm((prev) => ({ ...prev, [name]: value }));
     }
@@ -448,12 +491,198 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
     return Number(form.opening_stock) || 0;
   }, [form.has_variants, form.batch_tracking, form.opening_stock, combinations, batches]);
 
+  const isStep1Valid = useMemo(() => {
+    if (!form.name || !form.name.trim()) return false;
+    if (!form.category) return false;
+    if (!form.unit) return false;
+    if (form.mrp && form.sell_price && Number(form.sell_price) > Number(form.mrp)) return false;
+    if (isInitialStockActive && !form.has_variants) {
+      if (!form.buy_price || Number(form.buy_price) <= 0) return false;
+      if (!form.sell_price || Number(form.sell_price) <= 0) return false;
+    }
+    return true;
+  }, [form.name, form.category, form.unit, form.mrp, form.sell_price, form.buy_price, isInitialStockActive, form.has_variants]);
+
+  const isStep2Valid = useMemo(() => {
+    if (isInitialStockActive) {
+      if (!form.has_variants && !form.batch_tracking) {
+        const stock = Number(form.opening_stock) || 0;
+        if (stock <= 0) return false;
+        if (!form.buy_price || Number(form.buy_price) <= 0) return false;
+        if (!form.sell_price || Number(form.sell_price) <= 0) return false;
+        if (form.serial_tracking && simpleSerials.length !== stock) return false;
+      }
+      if (!form.has_variants && form.batch_tracking) {
+        if (batches.length === 0) return false;
+        for (const b of batches) {
+          if (!b.name.trim()) return false;
+          const stock = Number(b.stocks) || 0;
+          if (stock <= 0) return false;
+          const bBuy = b.buy_price || form.buy_price;
+          if (!bBuy || Number(bBuy) <= 0) return false;
+          const bSell = b.sell_price || form.sell_price || form.mrp;
+          if (!bSell || Number(bSell) <= 0) return false;
+          if (form.serial_tracking && (b.serial_numbers || []).length !== stock) return false;
+        }
+      }
+    }
+    return true;
+  }, [isInitialStockActive, form.buy_price, form.sell_price, form.mrp, form.serial_tracking, form.has_variants, form.batch_tracking, form.opening_stock, simpleSerials, batches]);
+
+  const isStep3Valid = useMemo(() => {
+    if (!form.has_variants) return true;
+    const activeCombos = combinations.filter(c => c.active);
+    if (activeCombos.length === 0) return false;
+    if (isInitialStockActive) {
+      for (const combo of activeCombos) {
+        const stock = Number(combo.stock) || 0;
+        if (stock <= 0) return false;
+        const buyPrice = combo.buy_price || form.buy_price;
+        if (!buyPrice || Number(buyPrice) <= 0) return false;
+        const sellPrice = combo.price || form.sell_price || form.mrp;
+        if (!sellPrice || Number(sellPrice) <= 0) return false;
+        if (combo.mrp && Number(sellPrice) > Number(combo.mrp)) return false;
+        if (form.serial_tracking && (combo.serial_numbers || []).length !== stock) return false;
+        if (form.batch_tracking && !combo.batch?.name?.trim()) return false;
+      }
+    }
+    return true;
+  }, [form.has_variants, isInitialStockActive, form.serial_tracking, form.batch_tracking, form.buy_price, form.sell_price, form.mrp, combinations]);
+
+  const handleBeforeNext = (stepIdx: number): boolean => {
+    if (stepIdx === 0) {
+      if (!form.name || !form.name.trim()) {
+        showToast("Product name is required", "error");
+        return false;
+      }
+      if (!form.category) {
+        showToast("Category is required", "error");
+        return false;
+      }
+      if (!form.unit) {
+        showToast("Unit is required", "error");
+        return false;
+      }
+      if (form.mrp && form.sell_price && Number(form.sell_price) > Number(form.mrp)) {
+        showToast(`Selling price (₹${form.sell_price}) cannot exceed MRP (₹${form.mrp})`, "error");
+        return false;
+      }
+      if (isInitialStockActive && !form.has_variants) {
+        if (!form.buy_price || Number(form.buy_price) <= 0) {
+          showToast("Buy price is mandatory and must be greater than 0 for initial stock.", "error");
+          return false;
+        }
+        if (!form.sell_price || Number(form.sell_price) <= 0) {
+          showToast("Sell price is mandatory and must be greater than 0 for initial stock.", "error");
+          return false;
+        }
+      }
+      return true;
+    }
+
+    if (stepIdx === 1) {
+      if (isInitialStockActive) {
+        if (!form.has_variants && !form.batch_tracking) {
+          if (!form.opening_stock || Number(form.opening_stock) <= 0) {
+            showToast("Opening stock is mandatory and must be greater than 0 for initial stock.", "error");
+            return false;
+          }
+          if (form.serial_tracking && simpleSerials.length !== Number(form.opening_stock)) {
+            showToast(`Please enter all ${form.opening_stock} ${config.serialLabel || "serial number"}s (currently ${simpleSerials.length}/${form.opening_stock})`, "error");
+            return false;
+          }
+        }
+        if (!form.has_variants && form.batch_tracking) {
+          if (batches.length === 0) {
+            showToast("At least one batch is required", "error");
+            return false;
+          }
+          for (let i = 0; i < batches.length; i++) {
+            const b = batches[i];
+            const batchName = b.name.trim() || `Batch #${i + 1}`;
+            if (!b.name.trim()) {
+              showToast("Batch number is required for all batches", "error");
+              return false;
+            }
+            if (!b.stocks || Number(b.stocks) <= 0) {
+              showToast(`Opening stock is mandatory and must be greater than 0 for batch "${batchName}".`, "error");
+              return false;
+            }
+            const bBuy = b.buy_price || form.buy_price;
+            if (!bBuy || Number(bBuy) <= 0) {
+              showToast(`Buy price is mandatory and must be greater than 0 for batch "${batchName}".`, "error");
+              return false;
+            }
+            const bSell = b.sell_price || form.sell_price || form.mrp;
+            if (!bSell || Number(bSell) <= 0) {
+              showToast(`Sell price is mandatory and must be greater than 0 for batch "${batchName}".`, "error");
+              return false;
+            }
+            if (form.serial_tracking && (b.serial_numbers || []).length !== Number(b.stocks)) {
+              showToast(`Please enter all ${b.stocks} ${config.serialLabel || "serial number"}s for batch "${batchName}"`, "error");
+              return false;
+            }
+          }
+        }
+      }
+      return true;
+    }
+
+    if (stepIdx === 2) {
+      if (form.has_variants) {
+        const activeCombos = combinations.filter(c => c.active);
+        if (activeCombos.length === 0) {
+          showToast("At least one variant must be enabled and active", "error");
+          return false;
+        }
+        if (isInitialStockActive) {
+          for (const combo of activeCombos) {
+            const varLabel = Object.values(combo.attributes).join(" / ") || "variant";
+            const cBuy = combo.buy_price || form.buy_price;
+            if (!cBuy || Number(cBuy) <= 0) {
+              showToast(`Buy price is mandatory and must be greater than 0 for variant "${varLabel}".`, "error");
+              return false;
+            }
+            const cSell = combo.price || form.sell_price || form.mrp;
+            if (!cSell || Number(cSell) <= 0) {
+              showToast(`Sell price is mandatory and must be greater than 0 for variant "${varLabel}".`, "error");
+              return false;
+            }
+            const cMrp = combo.mrp ? Number(combo.mrp) : (form.mrp ? Number(form.mrp) : null);
+            if (cMrp && Number(cSell) > cMrp) {
+              showToast(`Selling price (₹${cSell}) cannot exceed MRP (₹${cMrp}) for variant "${varLabel}"`, "error");
+              return false;
+            }
+            const stock = Number(combo.stock) || 0;
+            if (stock <= 0) {
+              showToast(`Opening stock is mandatory and must be greater than 0 for variant "${varLabel}".`, "error");
+              return false;
+            }
+            if (form.serial_tracking && (combo.serial_numbers || []).length !== stock) {
+              showToast(`Please enter all ${stock} ${config.serialLabel || "serial number"}s for variant "${varLabel}"`, "error");
+              return false;
+            }
+            if (form.batch_tracking) {
+              if (!combo.batch?.name?.trim()) {
+                showToast(`Please provide a Batch Number for variant "${varLabel}"`, "error");
+                return false;
+              }
+            }
+          }
+        }
+      }
+      return true;
+    }
+
+    return true;
+  };
+
   const steps: QuickCreateStep[] = [
     {
       id: 1,
       title: "Product Identity",
       subtitle: "Basic identification",
-      isValid: !!form.name,
+      isValid: isStep1Valid,
       content: (
         <div className="space-y-6">
           <Input
@@ -520,6 +749,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
                 onScrollEnd={fetchMoreCategories}
                 footer={
                   <button
+                    type="button"
                     onClick={() => setModalState({ type: "Category", query: "" })}
                     className="w-full flex items-center justify-center gap-2 py-2 text-xs font-bold text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition-colors"
                   >
@@ -540,6 +770,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
                 onScrollEnd={fetchMoreUnits}
                 footer={
                   <button
+                    type="button"
                     onClick={() => setModalState({ type: "Unit", query: "" })}
                     className="w-full flex items-center justify-center gap-2 py-2 text-xs font-bold text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition-colors"
                   >
@@ -549,24 +780,66 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
                 }
               />
             </div>
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-slate-400 ml-1">GST Rate <span className="normal-case font-normal text-slate-400">(optional)</span></label>
-              <ReusableSelect
-                value={form.gst}
-                onValueChange={(val) => setForm(p => ({ ...p, gst: val }))}
-                options={["0", "5", "12", "18", "28"].map(r => ({ value: r, label: `${r}%` }))}
-                placeholder="18%"
+          </div>
+
+          {/* Dedicated Pricing & Taxation Section */}
+          <div className="pt-2">
+            <h4 className="text-xs font-bold text-slate-700 mb-3 flex items-center gap-1.5">
+              <IndianRupee size={14} className="text-emerald-600" /> Pricing & Taxation
+            </h4>
+            <div className={`grid grid-cols-1 sm:grid-cols-2 ${shouldHideBuyPrice ? "lg:grid-cols-3" : "lg:grid-cols-4"} gap-4`}>
+              {!shouldHideBuyPrice && (
+                <Input
+                  label="Buy Price (Cost Price)"
+                  name="buy_price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.buy_price}
+                  onChange={handleChange}
+                  placeholder="0.00"
+                  leftIcon={<IndianRupee size={14} />}
+                  required={isInitialStockActive}
+                />
+              )}
+              <Input
+                label="Sell Price"
+                name="sell_price"
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.sell_price}
+                onChange={handleChange}
+                placeholder="0.00"
+                leftIcon={<IndianRupee size={14} />}
+                required={isInitialStockActive}
+                error={
+                  form.mrp && form.sell_price && Number(form.sell_price) > Number(form.mrp)
+                    ? "Cannot exceed MRP"
+                    : undefined
+                }
               />
+              <Input
+                label="MRP (optional)"
+                name="mrp"
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.mrp}
+                onChange={handleChange}
+                placeholder="0.00"
+                leftIcon={<IndianRupee size={14} />}
+              />
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 ml-1">GST Rate (optional)</label>
+                <ReusableSelect
+                  value={form.gst}
+                  onValueChange={(val) => setForm(p => ({ ...p, gst: val }))}
+                  options={["0", "5", "12", "18", "28"].map(r => ({ value: r, label: `${r}%` }))}
+                  placeholder="18%"
+                />
+              </div>
             </div>
-            <Input
-              label="MRP (optional)"
-              name="mrp"
-              type="number"
-              value={form.mrp}
-              onChange={handleChange}
-              placeholder="0.00"
-              leftIcon={<IndianRupee size={14} />}
-            />
           </div>
         </div>
       )
@@ -575,6 +848,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
       id: 2,
       title: "Tracking & Inventory",
       subtitle: "Management settings",
+      isValid: isStep2Valid,
       content: (
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -583,38 +857,63 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
           </div>
 
           <div className="space-y-4 pt-2">
-            {!form.has_variants && !form.batch_tracking && (
-              <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/50 space-y-2">
+            {!form.has_variants && !form.batch_tracking && isInitialStockActive && (
+              <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/50 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-emerald-900">Opening Stock</span>
-                    {isInitialStockActive ? (
-                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">Initial Stock</span>
-                    ) : (
-                      <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">Import Completed</span>
+                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">Initial Stock</span>
+                  </div>
+                </div>
+                <p className="text-[11px] text-emerald-700/80">
+                  Enter the initial stock count for this product. Pricing configured in Step 1 applies to this opening inventory.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Input
+                    label="Opening Stock Quantity"
+                    name="opening_stock"
+                    type="number"
+                    min="0"
+                    value={form.opening_stock}
+                    onChange={handleChange}
+                    placeholder="0"
+                    className="font-semibold text-emerald-900"
+                  />
+                  <div className="p-3 bg-white rounded-lg border border-emerald-200/80 flex flex-col justify-center">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Applicable Pricing</span>
+                    <div className="flex items-center gap-2.5 mt-1 text-xs font-bold text-slate-700 flex-wrap">
+                      {!shouldHideBuyPrice && (
+                        <>
+                          <span>Buy: <span className={form.buy_price && Number(form.buy_price) > 0 ? "text-emerald-700 font-mono" : "text-amber-600"}>{form.buy_price ? `₹${form.buy_price}` : "Not set"}</span></span>
+                          <span>•</span>
+                        </>
+                      )}
+                      <span>Sell: <span className={form.sell_price && Number(form.sell_price) > 0 ? "text-emerald-700 font-mono" : "text-amber-600"}>{form.sell_price ? `₹${form.sell_price}` : (form.mrp ? `₹${form.mrp}` : "Not set")}</span></span>
+                      {form.mrp && (
+                        <>
+                          <span>•</span>
+                          <span className="text-slate-400 font-mono">MRP: ₹{form.mrp}</span>
+                        </>
+                      )}
+                    </div>
+                    {Number(form.opening_stock) > 0 && ((!shouldHideBuyPrice && (!form.buy_price || Number(form.buy_price) <= 0)) || !form.sell_price || Number(form.sell_price) <= 0) && (
+                      <span className="text-[10px] text-red-500 font-semibold mt-1">
+                        * {shouldHideBuyPrice ? "Sell Price is required for opening stock. Please set it in Step 1." : "Both Buy Price and Sell Price are required for opening stock. Please set them in Step 1."}
+                      </span>
                     )}
                   </div>
                 </div>
-                {isInitialStockActive ? (
-                  <>
-                    <p className="text-[11px] text-emerald-700/80">
-                      Enter the initial stock count for this product. This will be recorded as opening stock.
-                    </p>
-                    <Input
-                      label="Opening Stock Quantity"
-                      name="opening_stock"
-                      type="number"
-                      min="0"
-                      value={form.opening_stock}
-                      onChange={handleChange}
-                      placeholder="0"
-                      className="font-semibold text-emerald-900"
+
+                {form.serial_tracking && Number(form.opening_stock) > 0 && (
+                  <div className="pt-2 animate-in fade-in duration-300">
+                    <InlineSerialManager
+                      serials={simpleSerials}
+                      serialLabel={config.serialLabel || "Serial Number"}
+                      limit={Number(form.opening_stock)}
+                      onUpdate={setSimpleSerials}
+                      onValidationError={(msg) => showToast(msg, "error")}
                     />
-                  </>
-                ) : (
-                  <p className="text-[11px] text-slate-500">
-                    Initial stock import has already been completed for this shop. Opening stock cannot be added directly. Add stock via Purchases or Stock Adjustments.
-                  </p>
+                  </div>
                 )}
               </div>
             )}
@@ -647,7 +946,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
                     type="button"
                     onClick={() => setBatches(prev => [
                       ...prev,
-                      { id: `b_${Date.now()}`, name: "", manufacturing_date: "", expiry_date: "", stocks: "0" }
+                      { id: `b_${Date.now()}`, name: "", manufacturing_date: "", expiry_date: "", stocks: "0", buy_price: "", sell_price: "", serial_numbers: [] }
                     ])}
                     className="px-2.5 py-1 text-[11px] font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 rounded-lg transition-colors flex items-center gap-1"
                   >
@@ -670,7 +969,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
                           </button>
                         )}
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2.5">
                         <div>
                           <label className="text-[10px] font-bold text-slate-500 mb-1 block">Batch Number *</label>
                           <input
@@ -718,13 +1017,93 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
                               value={batch.stocks}
                               onChange={e => {
                                 const v = e.target.value;
-                                setBatches(prev => prev.map(b => b.id === batch.id ? { ...b, stocks: v } : b));
+                                const num = Number(v) || 0;
+                                setBatches(prev => prev.map(b => {
+                                  if (b.id !== batch.id) return b;
+                                  const currentSerials = b.serial_numbers || [];
+                                  return {
+                                    ...b,
+                                    stocks: v,
+                                    serial_numbers: num < currentSerials.length ? currentSerials.slice(0, num) : currentSerials,
+                                  };
+                                }));
                               }}
                               className="w-full h-8 px-2.5 text-xs border border-emerald-300 bg-emerald-50/50 rounded-md outline-none focus:border-emerald-500 font-semibold text-emerald-900"
                             />
                           </div>
                         )}
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-500 mb-1 block">Buy Price</label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder={form.buy_price ? String(form.buy_price) : "0.00"}
+                            value={batch.buy_price || ""}
+                            onChange={e => {
+                              const v = e.target.value;
+                              setBatches(prev => prev.map(b => b.id === batch.id ? { ...b, buy_price: v } : b));
+                            }}
+                            className="w-full h-8 px-2.5 text-xs border border-slate-200 rounded-md outline-none focus:border-amber-500 font-mono"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-slate-500 mb-1 block">Sell Price</label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder={form.sell_price ? String(form.sell_price) : (form.mrp ? String(form.mrp) : "0.00")}
+                            value={batch.sell_price || ""}
+                            onChange={e => {
+                              const v = e.target.value;
+                              setBatches(prev => prev.map(b => b.id === batch.id ? { ...b, sell_price: v } : b));
+                            }}
+                            className="w-full h-8 px-2.5 text-xs border border-slate-200 rounded-md outline-none focus:border-amber-500 font-mono"
+                          />
+                        </div>
                       </div>
+
+                      {isInitialStockActive && form.serial_tracking && Number(batch.stocks) > 0 && (
+                        <div className="pt-2 border-t border-amber-100 flex flex-col gap-2">
+                          <div className="flex items-center justify-between">
+                            <button
+                              type="button"
+                              onClick={() => setExpandedBatchSerialId(prev => prev === batch.id ? null : batch.id)}
+                              className={`px-2.5 py-1 text-xs font-bold rounded-lg border flex items-center gap-1.5 transition-all ${
+                                (batch.serial_numbers || []).length === Number(batch.stocks)
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                                  : "bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100 shadow-2xs"
+                              }`}
+                            >
+                              <ScanLine size={13} className={(batch.serial_numbers || []).length === Number(batch.stocks) ? "text-emerald-600" : "text-violet-600"} />
+                              <span>{config.serialLabel || "Serial"} Numbers ({(batch.serial_numbers || []).length}/{batch.stocks})</span>
+                              <ChevronDown size={12} className={`transition-transform duration-200 ${expandedBatchSerialId === batch.id ? "rotate-180" : ""}`} />
+                            </button>
+                            {(batch.serial_numbers || []).length === Number(batch.stocks) ? (
+                              <span className="text-[10px] text-emerald-600 font-bold">✓ All Serials Added</span>
+                            ) : (
+                              <span className="text-[10px] text-amber-600 font-bold">
+                                {Number(batch.stocks) - (batch.serial_numbers || []).length} remaining
+                              </span>
+                            )}
+                          </div>
+
+                          {expandedBatchSerialId === batch.id && (
+                            <div className="mt-1 animate-in fade-in duration-200">
+                              <InlineSerialManager
+                                serials={batch.serial_numbers || []}
+                                serialLabel={config.serialLabel || "Serial Number"}
+                                limit={Number(batch.stocks)}
+                                onUpdate={(newSerials) => {
+                                  setBatches(prev => prev.map(b => b.id === batch.id ? { ...b, serial_numbers: newSerials } : b));
+                                }}
+                                onValidationError={(msg) => showToast(msg, "error")}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -743,6 +1122,13 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
               </div>
               <Switch checked={form.serial_tracking} onCheckedChange={(val) => setForm(f => ({ ...f, serial_tracking: val }))} />
             </div>
+
+            {!isStep2Valid && (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs font-semibold text-amber-800 flex items-center gap-2 animate-in fade-in">
+                <AlertCircle size={15} className="text-amber-600 shrink-0" />
+                <span>Please register all required serial numbers for opening stock to proceed.</span>
+              </div>
+            )}
           </div>
         </div>
       )
@@ -751,6 +1137,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
       id: 3,
       title: "Variants",
       subtitle: "Product attributes & combinations",
+      isValid: isStep3Valid,
       content: (
         <div className="space-y-6">
           <div className="flex items-center justify-between p-4 md:p-5 rounded-lg bg-emerald-50/50 border border-emerald-100 mb-4">
@@ -775,7 +1162,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
               />
 
               {variantTypes.some(t => t.values.length > 0) && (
-                <div className="pt-4 border-t border-slate-100">
+                <div className="pt-4 border-t border-slate-100 space-y-4">
                   <VariantMatrixTable
                     combinations={combinations}
                     variantTypes={variantTypes}
@@ -783,8 +1170,20 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
                     trackStock={false}
                     showOpeningStock={isInitialStockActive}
                     hasBatch={form.batch_tracking}
+                    hasSerial={form.serial_tracking}
+                    serialLabel={config.serialLabel || "Serial Number"}
                     baseMrp={form.mrp ? Number(form.mrp) : undefined}
+                    baseBuyPrice={form.buy_price ? Number(form.buy_price) : undefined}
+                    baseSellPrice={form.sell_price ? Number(form.sell_price) : undefined}
+                    onStockError={(msg) => showToast(msg, "error")}
                   />
+
+                  {!isStep3Valid && (
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs font-semibold text-amber-800 flex items-center gap-2 animate-in fade-in">
+                      <AlertCircle size={15} className="text-amber-600 shrink-0" />
+                      <span>Please register all required serial numbers for active variants with opening stock to proceed.</span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -822,14 +1221,24 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-slate-200/60">
+            <div className={`grid grid-cols-2 ${shouldHideBuyPrice ? "md:grid-cols-3" : "md:grid-cols-4"} gap-4 pt-6 border-t border-slate-200/60`}>
+              {!shouldHideBuyPrice && (
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black text-slate-400">Buy Price</p>
+                  <p className="text-sm font-bold text-slate-700">{form.buy_price ? `₹${form.buy_price}` : "N/A"}</p>
+                </div>
+              )}
               <div className="space-y-1">
-                <p className="text-[10px] font-black text-slate-400">Tax (GST)</p>
-                <p className="text-sm font-bold text-slate-700">{form.gst}%</p>
+                <p className="text-[10px] font-black text-slate-400">Sell Price</p>
+                <p className="text-sm font-bold text-slate-700">{form.sell_price ? `₹${form.sell_price}` : (form.mrp ? `₹${form.mrp}` : "N/A")}</p>
               </div>
               <div className="space-y-1">
                 <p className="text-[10px] font-black text-slate-400">MRP</p>
                 <p className="text-sm font-bold text-slate-700">{form.mrp ? `₹${form.mrp}` : "N/A"}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] font-black text-slate-400">Tax (GST)</p>
+                <p className="text-sm font-bold text-slate-700">{form.gst}%</p>
               </div>
             </div>
 
@@ -857,30 +1266,145 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
             </div>
           </div>
 
+          {!form.has_variants && !form.batch_tracking && form.serial_tracking && isInitialStockActive && Number(form.opening_stock) > 0 && (
+            <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-xs space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-800 flex items-center gap-2">
+                  <ScanLine size={15} className="text-violet-600" />
+                  {config.serialLabel || "Serial"} Numbers ({simpleSerials.length}/{form.opening_stock})
+                </span>
+                {simpleSerials.length === Number(form.opening_stock) ? (
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                    ✓ All Registered
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                    {Number(form.opening_stock) - simpleSerials.length} Missing
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto custom-scrollbar">
+                {simpleSerials.map((s, i) => (
+                  <span key={i} className="px-2 py-0.5 bg-violet-50 text-violet-700 text-[10px] font-mono font-bold rounded border border-violet-100">
+                    {s}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!form.has_variants && form.batch_tracking && batches.length > 0 && (
+            <div className="bg-white rounded-lg border border-slate-200 shadow-xs overflow-hidden">
+              <div className="px-5 py-3 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Batch Summary</h3>
+                <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                  {batches.length} Batch{batches.length !== 1 ? "es" : ""}
+                </span>
+              </div>
+              <div className="divide-y divide-slate-100">
+                {batches.map((batch, bIdx) => (
+                  <div key={batch.id} className="p-3.5 space-y-2 hover:bg-slate-50/50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="w-5 h-5 rounded bg-amber-100 text-amber-800 text-[10px] font-bold flex items-center justify-center">
+                          {bIdx + 1}
+                        </span>
+                        <span className="text-xs font-bold text-slate-800">{batch.name || `Batch #${bIdx + 1}`}</span>
+                        {isInitialStockActive && Number(batch.stocks) > 0 && (
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100">
+                            Stock: {batch.stocks}
+                          </span>
+                        )}
+                        <span className="text-[10px] text-slate-500 font-mono">
+                          Buy: ₹{batch.buy_price || form.buy_price || "0"} • Sell: ₹{batch.sell_price || form.sell_price || form.mrp || "0"}
+                        </span>
+                      </div>
+                      {form.serial_tracking && isInitialStockActive && Number(batch.stocks) > 0 && (
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                          (batch.serial_numbers || []).length === Number(batch.stocks)
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            : "bg-amber-50 text-amber-700 border-amber-200"
+                        }`}>
+                          {(batch.serial_numbers || []).length === Number(batch.stocks)
+                            ? `✓ ${(batch.serial_numbers || []).length} Serials`
+                            : `Serials: ${(batch.serial_numbers || []).length}/${batch.stocks}`}
+                        </span>
+                      )}
+                    </div>
+                    {form.serial_tracking && isInitialStockActive && (batch.serial_numbers || []).length > 0 && (
+                      <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto custom-scrollbar pt-1">
+                        {(batch.serial_numbers || []).map((sn, sIdx) => (
+                          <span key={sIdx} className="px-1.5 py-0.5 bg-violet-50 text-violet-700 text-[9px] font-mono font-bold rounded border border-violet-100">
+                            {sn}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {form.has_variants && combinations.filter(c => c.active).length > 0 && (
             <div className="bg-white rounded-lg md:rounded-lg border border-slate-200 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700">
               <div className="px-6 py-4 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
-                <h3 className="text-[10px] font-black text-slate-400  ">Active Variants Details</h3>
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Active Variants Details</h3>
                 <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                   {combinations.filter(c => c.active).length} Active
                 </span>
               </div>
               <div className="divide-y divide-slate-50">
                 {combinations.filter(c => c.active).map((combo, idx) => (
-                  <div key={combo.id} className="p-4 flex items-center justify-between hover:bg-slate-50 transition-colors">
-                    <div className="flex items-center gap-4">
-                      <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500">
-                        {idx + 1}
-                      </div>
-                      <div>
-                        <p className="text-xs font-black text-slate-800  tracking-tight">
-                          {Object.values(combo.attributes).join(" / ")}
-                        </p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-[9px] font-bold text-slate-400  ">SKU: {combo.barcode || "N/A"}</span>
+                  <div key={combo.id} className="p-4 space-y-2 hover:bg-slate-50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500">
+                          {idx + 1}
+                        </div>
+                        <div>
+                          <p className="text-xs font-black text-slate-800 tracking-tight">
+                            {Object.values(combo.attributes).join(" / ")}
+                          </p>
+                          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                            <span className="text-[9px] font-bold text-slate-400">SKU: {combo.barcode || "N/A"}</span>
+                            <span className="text-[9px] font-bold text-slate-600 font-mono">
+                              Buy: ₹{combo.buy_price || form.buy_price || "0"} • Sell: ₹{combo.price || form.sell_price || form.mrp || "0"}
+                            </span>
+                            {isInitialStockActive && Number(combo.stock) > 0 && (
+                              <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100">
+                                Stock: {combo.stock}
+                              </span>
+                            )}
+                            {form.batch_tracking && combo.batch?.name && (
+                              <span className="text-[9px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100">
+                                Batch: {combo.batch.name}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
+                      {form.serial_tracking && isInitialStockActive && Number(combo.stock) > 0 && (
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                          (combo.serial_numbers || []).length === Number(combo.stock)
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            : "bg-amber-50 text-amber-700 border-amber-200"
+                        }`}>
+                          {(combo.serial_numbers || []).length === Number(combo.stock)
+                            ? `✓ ${(combo.serial_numbers || []).length} Serials`
+                            : `Serials: ${(combo.serial_numbers || []).length}/${combo.stock}`}
+                        </span>
+                      )}
                     </div>
+                    {form.serial_tracking && isInitialStockActive && (combo.serial_numbers || []).length > 0 && (
+                      <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto custom-scrollbar pl-11">
+                        {(combo.serial_numbers || []).map((sn, sIdx) => (
+                          <span key={sIdx} className="px-1.5 py-0.5 bg-violet-50 text-violet-700 text-[9px] font-mono font-bold rounded border border-violet-100">
+                            {sn}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -922,6 +1446,26 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
     if (!form.category) return showToast("Category is required", "error");
     if (!form.unit) return showToast("Unit is required", "error");
 
+    const parsedMrp = form.mrp && !isNaN(Number(form.mrp)) && Number(form.mrp) > 0 ? Number(form.mrp) : null;
+    const parsedSellPrice = form.sell_price && !isNaN(Number(form.sell_price)) && Number(form.sell_price) > 0 ? Number(form.sell_price) : parsedMrp;
+    const parsedBuyPrice = form.buy_price && !isNaN(Number(form.buy_price)) ? Number(form.buy_price) : 0;
+
+    // Selling price vs MRP validation
+    if (parsedMrp && parsedSellPrice && parsedSellPrice > parsedMrp) {
+      return showToast(`Selling price (₹${parsedSellPrice}) cannot exceed MRP (₹${parsedMrp})`, "error");
+    }
+
+    if (form.has_variants) {
+      for (const combo of combinations.filter(c => c.active)) {
+        const cMrp = combo.mrp && !isNaN(Number(combo.mrp)) && Number(combo.mrp) > 0 ? Number(combo.mrp) : parsedMrp;
+        const cSell = combo.price && !isNaN(Number(combo.price)) ? Number(combo.price) : parsedSellPrice;
+        if (cMrp && cSell && cSell > cMrp) {
+          const varLabel = Object.values(combo.attributes).join(" / ") || "variant";
+          return showToast(`Selling price (₹${cSell}) cannot exceed MRP (₹${cMrp}) for variant "${varLabel}"`, "error");
+        }
+      }
+    }
+
     if (form.batch_tracking && !form.has_variants) {
       if (batches.some(b => !b.name.trim())) {
         return showToast("Please provide a Batch Number for each batch", "error");
@@ -937,10 +1481,106 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
       }
     }
 
+    // Opening Stock validations
+    if (isInitialStockActive) {
+      if (!form.has_variants && !form.batch_tracking) {
+        const numStock = Number(form.opening_stock) || 0;
+        if (numStock <= 0) {
+          return showToast("Opening stock is mandatory and must be greater than 0 for initial stock.", "error");
+        }
+        if (!shouldHideBuyPrice && (!parsedBuyPrice || parsedBuyPrice <= 0)) {
+          return showToast("Buy price is mandatory and must be greater than 0 for initial stock.", "error");
+        }
+        if (!parsedSellPrice || parsedSellPrice <= 0) {
+          return showToast("Sell price is mandatory and must be greater than 0 for initial stock.", "error");
+        }
+      }
+
+      if (!form.has_variants && form.batch_tracking) {
+        if (batches.length === 0) {
+          return showToast("At least one batch is required", "error");
+        }
+        for (let i = 0; i < batches.length; i++) {
+          const b = batches[i];
+          const batchName = b.name.trim() || `Batch #${i + 1}`;
+          if (!b.name.trim()) {
+            return showToast("Please provide a Batch Number for each batch", "error");
+          }
+          const req = Number(b.stocks) || 0;
+          if (req <= 0) {
+            return showToast(`Opening stock is mandatory and must be greater than 0 for batch "${batchName}".`, "error");
+          }
+          const bBuy = b.buy_price && !isNaN(Number(b.buy_price)) ? Number(b.buy_price) : parsedBuyPrice;
+          const bSell = b.sell_price && !isNaN(Number(b.sell_price)) ? Number(b.sell_price) : parsedSellPrice;
+          if (!shouldHideBuyPrice && (!bBuy || bBuy <= 0)) {
+            return showToast(`Buy price is mandatory and must be greater than 0 for batch "${batchName}".`, "error");
+          }
+          if (!bSell || bSell <= 0) {
+            return showToast(`Sell price is mandatory and must be greater than 0 for batch "${batchName}".`, "error");
+          }
+        }
+      }
+
+      if (form.has_variants) {
+        const activeCombos = combinations.filter(c => c.active);
+        if (activeCombos.length === 0) {
+          return showToast("At least one variant must be enabled and active", "error");
+        }
+        for (const combo of activeCombos) {
+          const varLabel = Object.values(combo.attributes).join(" / ") || "variant";
+          const req = Number(combo.stock) || 0;
+          if (req <= 0) {
+            return showToast(`Opening stock is mandatory and must be greater than 0 for variant "${varLabel}".`, "error");
+          }
+          const cBuy = combo.buy_price && !isNaN(Number(combo.buy_price)) ? Number(combo.buy_price) : parsedBuyPrice;
+          const cSell = combo.price && !isNaN(Number(combo.price)) ? Number(combo.price) : parsedSellPrice;
+          if (!shouldHideBuyPrice && (!cBuy || cBuy <= 0)) {
+            return showToast(`Buy price is mandatory and must be greater than 0 for variant "${varLabel}".`, "error");
+          }
+          if (!cSell || cSell <= 0) {
+            return showToast(`Sell price is mandatory and must be greater than 0 for variant "${varLabel}".`, "error");
+          }
+          if (form.batch_tracking && !combo.batch?.name?.trim()) {
+            return showToast(`Please provide a Batch Number for variant "${varLabel}"`, "error");
+          }
+        }
+      }
+    }
+
+    if (form.serial_tracking && isInitialStockActive) {
+      if (!form.has_variants && !form.batch_tracking) {
+        const req = Number(form.opening_stock) || 0;
+        if (req > 0 && simpleSerials.length !== req) {
+          return showToast(`Please enter all ${req} ${config.serialLabel || "serial number"}s (currently ${simpleSerials.length}/${req})`, "error");
+        }
+      }
+
+      if (!form.has_variants && form.batch_tracking) {
+        for (let i = 0; i < batches.length; i++) {
+          const b = batches[i];
+          const req = Number(b.stocks) || 0;
+          const count = (b.serial_numbers || []).length;
+          if (req > 0 && count !== req) {
+            const batchName = b.name.trim() || `Batch #${i + 1}`;
+            return showToast(`Please enter all ${req} ${config.serialLabel || "serial number"}s for batch "${batchName}" (currently ${count}/${req})`, "error");
+          }
+        }
+      }
+
+      if (form.has_variants) {
+        for (const combo of combinations.filter(c => c.active)) {
+          const req = Number(combo.stock) || 0;
+          const count = (combo.serial_numbers || []).length;
+          if (req > 0 && count !== req) {
+            const varLabel = Object.values(combo.attributes).join(" / ") || "variant";
+            return showToast(`Please enter all ${req} ${config.serialLabel || "serial number"}s for variant "${varLabel}" (currently ${count}/${req})`, "error");
+          }
+        }
+      }
+    }
+
     setSubmitting(true);
     try {
-      const parsedMrp = form.mrp && !isNaN(Number(form.mrp)) && Number(form.mrp) > 0 ? Number(form.mrp) : null;
-
       const mappedVariants = form.has_variants ? combinations.filter(c => c.active).map(combo => {
         const variantName = Object.values(combo.attributes).join(" / ");
 
@@ -950,14 +1590,18 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
           sku: combo.sku?.trim() || combo.barcode?.trim() || null,
           storage_location: combo.location?.trim() || form.location || null,
           reorder_point: Number(combo.reorder_point) || Number(form.reorder_point) || 1,
-          buy_price: combo.buy_price ? Number(combo.buy_price) : 0,
-          sell_price: combo.price ? Number(combo.price) : (parsedMrp || 0),
-          mrp: combo.mrp ? Number(combo.mrp) : parsedMrp,
+          buy_price: combo.buy_price && !isNaN(Number(combo.buy_price)) ? Number(combo.buy_price) : (parsedBuyPrice || 0),
+          sell_price: combo.price && !isNaN(Number(combo.price)) ? Number(combo.price) : (parsedSellPrice || parsedMrp || 0),
+          online_sell_price: combo.price && !isNaN(Number(combo.price)) ? Number(combo.price) : (parsedSellPrice || parsedMrp || 0),
+          mrp: combo.mrp && !isNaN(Number(combo.mrp)) ? Number(combo.mrp) : parsedMrp,
           visible_online: false,
         };
 
         if (isInitialStockActive && combo.stock && Number(combo.stock) > 0) {
           vData.stocks = Number(combo.stock);
+          if (form.serial_tracking && combo.serial_numbers && combo.serial_numbers.length > 0) {
+            vData.serial_numbers = combo.serial_numbers;
+          }
         }
 
         if (form.batch_tracking) {
@@ -967,6 +1611,9 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
               manufacturing_date: b.manufacturing_date || undefined,
               expiry_date: b.expiry_date || undefined,
               stocks: isInitialStockActive && b.stocks ? Number(b.stocks) : undefined,
+              buy_price: b.buy_price && !isNaN(Number(b.buy_price)) ? Number(b.buy_price) : (vData.buy_price || undefined),
+              sell_price: b.sell_price && !isNaN(Number(b.sell_price)) ? Number(b.sell_price) : (vData.sell_price || undefined),
+              serial_numbers: isInitialStockActive && form.serial_tracking ? (b.serial_numbers || combo.serial_numbers) : undefined,
             }));
           } else if (combo.batch?.name?.trim()) {
             vData.batches = [{
@@ -974,6 +1621,9 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
               manufacturing_date: combo.batch.manufacturing_date || undefined,
               expiry_date: combo.batch.expiry_date || undefined,
               stocks: isInitialStockActive && combo.stock ? Number(combo.stock) : undefined,
+              buy_price: combo.batch.buy_price && !isNaN(Number(combo.batch.buy_price)) ? Number(combo.batch.buy_price) : (vData.buy_price || undefined),
+              sell_price: combo.batch.sell_price && !isNaN(Number(combo.batch.sell_price)) ? Number(combo.batch.sell_price) : (vData.sell_price || undefined),
+              serial_numbers: isInitialStockActive && form.serial_tracking ? (combo.batch.serial_numbers || combo.serial_numbers) : undefined,
             }];
           }
         }
@@ -995,11 +1645,14 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
           has_serialno: form.serial_tracking,
         },
         have_tracking: true,
+        is_active: isInitialStockActive ? true : form.is_active,
+        ...(isInitialStockActive ? { is_initial_stock: true } : {}),
         variant_types: form.has_variants ? variantTypes.map(vt => ({ name: vt.name, values: vt.values })) : null,
         variant_infos: mappedVariants,
         storage_location: form.location || null,
-        buy_price: null,
-        sell_price: parsedMrp,
+        buy_price: parsedBuyPrice,
+        sell_price: parsedSellPrice,
+        online_sell_price: parsedSellPrice || 0,
         mrp: parsedMrp,
         gst: form.gst ? (form.gst.includes("%") ? form.gst : `${form.gst}%`) : "18%",
         reorder_point: Number(form.reorder_point) || 1,
@@ -1007,17 +1660,23 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
         custom_fields: {
           brand: form.brand,
           mrp: parsedMrp || 0,
+          sell_price: parsedSellPrice,
+          buy_price: parsedBuyPrice,
           hsn: form.hsn,
           sku: "",
           supplier: "",
           opening_stock: isInitialStockActive && form.opening_stock ? Number(form.opening_stock) : 0,
-          is_active: form.is_active,
+          is_active: isInitialStockActive ? true : form.is_active,
           variant_types: form.has_variants ? variantTypes : [],
+          ...(!form.has_variants && form.serial_tracking && simpleSerials.length > 0 ? { serial_numbers: simpleSerials } : {}),
         }
       };
 
       if (isInitialStockActive && !form.has_variants && !form.batch_tracking && form.opening_stock && Number(form.opening_stock) > 0) {
         payload.stocks = Number(form.opening_stock);
+        if (form.serial_tracking && simpleSerials.length > 0) {
+          payload.serial_numbers = simpleSerials;
+        }
       }
 
       if (!form.has_variants && form.batch_tracking) {
@@ -1026,6 +1685,9 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
           manufacturing_date: b.manufacturing_date || undefined,
           expiry_date: b.expiry_date || undefined,
           stocks: isInitialStockActive && b.stocks ? Number(b.stocks) : undefined,
+          buy_price: b.buy_price && !isNaN(Number(b.buy_price)) ? Number(b.buy_price) : (parsedBuyPrice || undefined),
+          sell_price: b.sell_price && !isNaN(Number(b.sell_price)) ? Number(b.sell_price) : (parsedSellPrice || undefined),
+          serial_numbers: isInitialStockActive && form.serial_tracking && b.serial_numbers && b.serial_numbers.length > 0 ? b.serial_numbers : undefined,
         }));
         if (validBatches.length > 0) {
           payload.batches = validBatches;
@@ -1052,7 +1714,16 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
           createdProduct.mrp = parsedMrp;
           if (!createdProduct.custom_fields) createdProduct.custom_fields = {};
           createdProduct.custom_fields.mrp = parsedMrp;
-          if (!createdProduct.sell_price) createdProduct.sell_price = parsedMrp;
+        }
+        if (parsedSellPrice !== null) {
+          createdProduct.sell_price = parsedSellPrice;
+          if (!createdProduct.custom_fields) createdProduct.custom_fields = {};
+          createdProduct.custom_fields.sell_price = parsedSellPrice;
+        }
+        if (parsedBuyPrice !== null) {
+          createdProduct.buy_price = parsedBuyPrice;
+          if (!createdProduct.custom_fields) createdProduct.custom_fields = {};
+          createdProduct.custom_fields.buy_price = parsedBuyPrice;
         }
         if (form.gst) {
           createdProduct.gst = form.gst;
@@ -1085,6 +1756,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
         isSubmitting={submitting}
         submitLabel="Complete Creation"
         size="xl"
+        onBeforeNext={handleBeforeNext}
       />
       <QuickCreateDropdownModal
         isOpen={modalState.type !== null}

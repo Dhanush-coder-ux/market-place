@@ -21,6 +21,7 @@ interface QuickCreateModalProps {
   isSubmitting: boolean;
   submitLabel?: string;
   size?: "md" | "lg" | "xl" | "2xl";
+  onBeforeNext?: (currentStep: number) => boolean;
 }
 
 export const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
@@ -31,7 +32,8 @@ export const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
   onSubmit,
   isSubmitting,
   submitLabel = "Complete Creation",
-  size = "xl"
+  size = "xl",
+  onBeforeNext
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
 
@@ -50,6 +52,13 @@ export const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
   if (!isOpen) return null;
 
   const handleNext = () => {
+    if (onBeforeNext) {
+      const canProceed = onBeforeNext(currentStep);
+      if (!canProceed) return;
+    }
+    if (steps[currentStep].isValid === false) {
+      return;
+    }
     if (currentStep < steps.length - 1) {
       setCurrentStep((prev) => prev + 1);
     } else {
@@ -167,8 +176,10 @@ export const QuickCreateModal: React.FC<QuickCreateModalProps> = ({
 
             <GradientButton
               onClick={handleNext}
-              disabled={isSubmitting || (steps[currentStep].isValid === false)}
-              className="rounded-lg px-5 md:px-8 h-9 md:h-10 text-[9px] md:text-[10px] font-black   shadow-lg shadow-emerald-100 flex items-center gap-1 md:gap-2"
+              disabled={isSubmitting || (!onBeforeNext && steps[currentStep].isValid === false)}
+              className={`rounded-lg px-5 md:px-8 h-9 md:h-10 text-[9px] md:text-[10px] font-black shadow-lg shadow-emerald-100 flex items-center gap-1 md:gap-2 ${
+                steps[currentStep].isValid === false ? "opacity-75" : ""
+              }`}
             >
               {isSubmitting ? (
                 "Wait..."

@@ -58,6 +58,17 @@ const ApiContext = createContext<ApiContextType | null>(null);
 const parseError = async (res: Response): Promise<string> => {
   // 1. 500+ Internal / Gateway Server Errors
   if (res.status >= 500) {
+    try {
+      const body = await res.clone().json();
+      const desc =
+        body?.detail?.description ||
+        body?.detail?.msg ||
+        (typeof body?.detail === "string" ? body.detail : null) ||
+        body?.message;
+      if (desc && typeof desc === "string" && desc.trim().length > 0) {
+        return desc;
+      }
+    } catch { /* ignore */ }
     return "System error, please try again sometime";
   }
 

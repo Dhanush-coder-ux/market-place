@@ -994,7 +994,7 @@ export const InventoryItemsCard = ({
                         value={product.inventory_id}
                         onCreateNew={(query) => {
                           if (openQuickCreate) {
-                            openQuickCreate("PRODUCT", (newProduct: any) => executeProductSelect(index, newProduct.id, newProduct), { name: query });
+                            openQuickCreate("PRODUCT", (newProduct: any) => executeProductSelect(index, newProduct.id, newProduct), { name: query, source: "purchase", fromPurchase: true, hideBuyPrice: true });
                           } else if (onAddNewProduct) {
                             onAddNewProduct(query);
                           }
@@ -1327,7 +1327,7 @@ export const InventoryItemsCard = ({
                                   if (openQuickCreate) {
                                     openQuickCreate("PRODUCT", (newProduct: any) => {
                                       handleProductSelect(newProduct.id, newProduct);
-                                    }, { name: query });
+                                    }, { name: query, source: "purchase", fromPurchase: true, hideBuyPrice: true });
                                   } else if (onAddNewProduct) {
                                     onAddNewProduct(query);
                                   }

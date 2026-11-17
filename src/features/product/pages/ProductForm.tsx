@@ -373,28 +373,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   customFieldValuesRef.current = customFieldValues;
   const handleSubmitRef = useRef<any>(null);
 
-  const [isStockImportCompleted, setIsStockImportCompleted] = useState<boolean>(() => {
-    return Boolean(SHOP_ID && localStorage.getItem(`stock_import_completed_${SHOP_ID}`) === "true");
-  });
-
-  useEffect(() => {
-    if (SHOP_ID) {
-      import("@/services/api/shop").then(({ shopApi }) => {
-        shopApi.getShopById(SHOP_ID).then((res: any) => {
-          const shopData = res?.data || res;
-          const isImported = Boolean(
-            shopData?.initial_stock_imported ||
-            shopData?.additional_infos?.initial_stock_imported ||
-            shopData?.datas?.initial_stock_imported
-          );
-          setIsStockImportCompleted(isImported);
-          if (isImported) {
-            localStorage.setItem(`stock_import_completed_${SHOP_ID}`, "true");
-          }
-        }).catch(() => {});
-      });
-    }
-  }, []);
+  // Add Product form does not manage opening stocks (stocks are handled via Live Stock List or Purchases)
+  const isInitialStockActive = false;
 
   // Sidebar creation / editing form state
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -485,7 +465,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     category: (propInitialData.category as string) || "",
     unit: (propInitialData.unit as string) || "Piece (pcs)",
     description: (propInitialData.description as string) || "",
-    is_active: (propInitialData.is_active as boolean) ?? true,
+    is_active: (propInitialData.is_active as boolean) ?? false,
     mrp: (propInitialData.mrp as string) || "",
     selling_price: (propInitialData.selling_price as string) || "",
     discount_percent: (propInitialData.discount_percent as string) || "0",
@@ -1305,9 +1285,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     if (form.has_variants) {
       for (const combo of activeCombinations) {
         const comboMrp = combo.mrp !== "" && !isNaN(Number(combo.mrp)) ? Number(combo.mrp) : numMrp;
-        const comboSp = combo.price !== "" && !isNaN(Number(combo.price)) ? Number(combo.price) : 0;
+        const comboSp = combo.price !== "" && !isNaN(Number(combo.price)) ? Number(combo.price) : (numSp || 0);
+        const varLabel = Object.values(combo.attributes).join(" / ") || "variant";
+
         if (comboMrp > 0 && comboSp > 0 && comboSp > comboMrp) {
-          const varLabel = Object.values(combo.attributes).join(" / ") || "variant";
           showToast(`Selling price (₹${comboSp.toFixed(2)}) cannot exceed MRP (₹${comboMrp.toFixed(2)}) for variant "${varLabel}".`, "error");
           isSubmittingRef.current = false;
           setIsSubmitting(false);
@@ -1372,13 +1353,19 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         discount_percent: variantDiscPercent,
         offer_valid_until: form.offer_valid_until || null,
         visible_online: form.visible_online,
-        ...(!id && !isStockImportCompleted && combo.stock && Number(combo.stock) > 0 ? { stocks: Number(combo.stock) } : {}),
+        ...(isInitialStockActive && combo.stock && Number(combo.stock) > 0 ? {
+          stocks: Number(combo.stock),
+          ...(combo.serial_numbers && combo.serial_numbers.length > 0 ? { serial_numbers: combo.serial_numbers } : {}),
+        } : {}),
         ...(form.batch_tracking && combo.batch?.name?.trim() ? {
           batches: [{
             name: combo.batch.name.trim(),
             manufacturing_date: combo.batch.manufacturing_date || undefined,
             expiry_date: combo.batch.expiry_date || undefined,
-            stocks: !id && !isStockImportCompleted && combo.stock ? Number(combo.stock) : undefined,
+            stocks: isInitialStockActive && combo.stock ? Number(combo.stock) : undefined,
+            buy_price: combo.batch.buy_price && !isNaN(Number(combo.batch.buy_price)) ? Number(combo.batch.buy_price) : parsedBuyPrice,
+            sell_price: combo.batch.sell_price && !isNaN(Number(combo.batch.sell_price)) ? Number(combo.batch.sell_price) : parsedSellPrice,
+            serial_numbers: isInitialStockActive && combo.serial_numbers && combo.serial_numbers.length > 0 ? combo.serial_numbers : undefined,
           }]
         } : {}),
       };
@@ -1548,22 +1535,31 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         gst: gstFormatted,
         reorder_point: Number(form.reorder_point) || 1,
         visible_online: form.visible_online,
+        is_active: false,
         custom_fields: {
           ...customFieldsBlob,
-          opening_stock: (!id && !isStockImportCompleted && form.opening_stock) ? Number(form.opening_stock) : 0,
+          is_active: false,
         },
       };
 
-      if (!id && !isStockImportCompleted && !form.has_variants && !form.batch_tracking && form.opening_stock && Number(form.opening_stock) > 0) {
-        payload.stocks = Number(form.opening_stock);
-      }
       if (!id && !form.has_variants && form.batch_tracking && form.batch_name?.trim()) {
         payload.batches = [{
           name: form.batch_name.trim(),
           manufacturing_date: form.mfg_date || undefined,
           expiry_date: form.exp_date || undefined,
-          stocks: !isStockImportCompleted && form.opening_stock ? Number(form.opening_stock) : undefined,
+          stocks: isInitialStockActive && form.opening_stock ? Number(form.opening_stock) : undefined,
+          buy_price: form.cost_to_make !== "" && !isNaN(Number(form.cost_to_make)) ? Number(form.cost_to_make) : undefined,
+          sell_price: form.selling_price !== "" && !isNaN(Number(form.selling_price)) ? Number(form.selling_price) : undefined,
         }];
+      }
+      if (!id && isInitialStockActive && !form.has_variants && !form.batch_tracking && form.opening_stock && Number(form.opening_stock) > 0) {
+        payload.stocks = Number(form.opening_stock);
+        if (baseSerials.length > 0) {
+          payload.serial_numbers = baseSerials;
+        }
+      }
+      if (!id && isInitialStockActive && form.opening_stock) {
+        payload.custom_fields.opening_stock = Number(form.opening_stock);
       }
     }
 
@@ -1975,9 +1971,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         variantTypes={variantTypes}
                         onChange={setCombinations}
                         trackStock={form.track_stock}
-                        showOpeningStock={!id && !isStockImportCompleted}
+                        showOpeningStock={false}
                         hasBatch={form.batch_tracking}
                         baseMrp={numMrp}
+                        baseBuyPrice={numCostToMake}
+                        baseSellPrice={numSellingPrice}
                         productId={id}
                         onCheckStock={handleVariantCheckStock}
                         onStockError={(msg) => showToast(msg, "error")}
@@ -2259,42 +2257,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                         tooltip="Physical location where this product is stored."
                       />
                     </div>
-
-                    {!id && !form.has_variants && (
-                      <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/50 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-emerald-900">Opening Stock</span>
-                            {!isStockImportCompleted ? (
-                              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">Initial Stock Mode</span>
-                            ) : (
-                              <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">Import Completed</span>
-                            )}
-                          </div>
-                        </div>
-                        {!isStockImportCompleted ? (
-                          <>
-                            <p className="text-[11px] text-emerald-700/80">
-                              Enter the initial physical stock count on creation. This will be recorded as opening stock.
-                            </p>
-                            <InputField
-                              label="Opening Stock"
-                              name="opening_stock"
-                              type="number"
-                              min="0"
-                              value={form.opening_stock}
-                              onChange={handleChange}
-                              placeholder="0"
-                              tooltip="Initial stock recorded as opening stock for this product."
-                            />
-                          </>
-                        ) : (
-                          <p className="text-[11px] text-slate-500">
-                            Initial stock import has already been completed for this shop. Opening stock cannot be added directly. Add stock via Purchases or Stock Adjustments.
-                          </p>
-                        )}
-                      </div>
-                    )}
 
                     {/* Live GST Split & Dynamic Field State Helper */}
                     <div className="space-y-2 pt-1">

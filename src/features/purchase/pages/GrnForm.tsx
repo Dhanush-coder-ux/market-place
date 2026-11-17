@@ -693,7 +693,7 @@ const GrnForm = () => {
               },
             ]);
         },
-        { name: query }
+        { name: query, source: "purchase", fromPurchase: true, hideBuyPrice: true }
       );
     },
     [products, defaultProductRow, openQuickCreate, updateProductFields]

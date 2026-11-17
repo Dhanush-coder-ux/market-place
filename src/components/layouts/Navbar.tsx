@@ -295,7 +295,7 @@ export const Navbar = () => {
             <button
               type="button"
               onClick={() => setIsMobileSearchOpen(true)}
-              className="md:hidden w-9 h-9 flex items-center justify-center rounded-full bg-slate-100/80 text-slate-600 active:scale-95 transition-all"
+              className="md:hidden w-9 h-9 flex items-center justify-center rounded-lg bg-slate-100/80 text-slate-600 active:scale-95 transition-all"
               title="Quick Navigation Search"
             >
               <Search className="w-4 h-4" />
@@ -319,7 +319,7 @@ export const Navbar = () => {
 
             <Link to="/notifications" className="group">
               <button 
-                className="relative flex items-center gap-2 px-2.5 sm:px-3 py-1.5 bg-blue-500/10 backdrop-blur-md hover:bg-blue-500/20 text-blue-600 rounded-full transition-all duration-300 ease-out shadow-sm overflow-hidden border border-blue-500/20 min-h-9"
+                className="relative flex items-center gap-2 px-2.5 sm:px-3 py-1.5 bg-blue-500/10 backdrop-blur-md hover:bg-blue-500/20 text-blue-600 rounded-lg transition-all duration-300 ease-out shadow-sm overflow-hidden border border-blue-500/20 min-h-9"
                 title="View Notifications"
               >
                 <div className="relative flex shrink-0 items-center justify-center">
@@ -341,7 +341,7 @@ export const Navbar = () => {
               </button>
             </Link>
             <Link to={"/settings"}>
-              <button className="w-9 h-9 flex items-center justify-center text-slate-500 md:hover:bg-slate-100 md:hover:text-slate-700 rounded-full md:transition-colors group active:scale-95">
+              <button className="w-9 h-9 flex items-center justify-center text-slate-500 md:hover:bg-slate-100 md:hover:text-slate-700 rounded-lg md:transition-colors group active:scale-95">
                 <Settings className="w-5 h-5 md:group-hover:rotate-45 md:transition-transform md:duration-300" />
               </button>
             </Link>

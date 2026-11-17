@@ -78,20 +78,65 @@ export function useInfiniteScroll<T, F>({ fetchPage, filters, limit = 50 }: UseI
 
   // The ref callback to attach to the last element in the list
   const observerRef = useRef<IntersectionObserver | null>(null);
+  const scrollCleanupRef = useRef<(() => void) | null>(null);
+
   const lastElementRef = useCallback((node: HTMLElement | null) => {
-    if (loading || loadingMore) return;
-    if (observerRef.current) observerRef.current.disconnect();
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+      observerRef.current = null;
+    }
+    if (scrollCleanupRef.current) {
+      scrollCleanupRef.current();
+      scrollCleanupRef.current = null;
+    }
+
+    if (!node || loading || loadingMore || !hasMore) return;
+
+    const scrollContainer = node.closest('.overflow-y-auto, [class*="overflow-y"]') as HTMLElement | null;
 
     observerRef.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && hasMore) {
+      if (entries[0].isIntersecting && hasMore && !loading && !loadingMore) {
         loadMore();
       }
     }, {
+      root: scrollContainer || null,
       rootMargin: "200px" // Start loading slightly before reaching the bottom
     });
 
-    if (node) observerRef.current.observe(node);
+    observerRef.current.observe(node);
+
+    const handleScroll = () => {
+      if (loading || loadingMore || !hasMore) return;
+      if (scrollContainer) {
+        const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+        if (scrollHeight - scrollTop - clientHeight < 350) {
+          loadMore();
+        }
+      } else {
+        const docElem = document.documentElement;
+        if (docElem.scrollHeight - docElem.scrollTop - docElem.clientHeight < 350) {
+          loadMore();
+        }
+      }
+    };
+
+    const targetListener: EventTarget = scrollContainer || window;
+    targetListener.addEventListener("scroll", handleScroll as EventListener, { passive: true });
+    scrollCleanupRef.current = () => {
+      targetListener.removeEventListener("scroll", handleScroll as EventListener);
+    };
   }, [loading, loadingMore, hasMore, loadMore]);
+
+  useEffect(() => {
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
+      if (scrollCleanupRef.current) {
+        scrollCleanupRef.current();
+      }
+    };
+  }, []);
 
   return {
     items,
@@ -101,6 +146,7 @@ export function useInfiniteScroll<T, F>({ fetchPage, filters, limit = 50 }: UseI
     totalCount,
     stats,
     lastElementRef,
+    loadMore,
     reload: loadInitial
   };
 }

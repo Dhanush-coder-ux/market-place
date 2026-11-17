@@ -1,6 +1,6 @@
 import {
   Users, Filter, Trash2, Edit3,
-  Eye, Banknote, Wallet, ExternalLink
+  Eye, Banknote, Wallet, ExternalLink, RefreshCw
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useHeader } from "@/context/HeaderContext";
@@ -14,7 +14,7 @@ import { useToast } from "@/context/ToastContext";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { ColumnPicker } from "@/components/common/ColumnPicker";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { RecordPaymentModal } from "@/features/customer/components/RecordPaymentModal";
 
 
@@ -37,8 +37,16 @@ export default function CustomerBalanceSummary() {
   const [toDate, setToDate] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [customerToDelete, setCustomerToDelete] = useState<CustomerRecord | null>(null);
+
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    window.dispatchEvent(new CustomEvent('clear-api-cache'));
+    setRefreshKey(prev => prev + 1);
+    setTimeout(() => setIsRefreshing(false), 800);
+  }, []);
 
   // Payment Modal State
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -54,23 +62,32 @@ export default function CustomerBalanceSummary() {
   useEffect(() => {
     setActions(
       <div className="flex items-center gap-2">
+        <button
+          type="button"
+          disabled={isRefreshing}
+          onClick={handleRefresh}
+          className="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0 disabled:opacity-70"
+          title="Refresh"
+        >
+          <RefreshCw size={13} className={isRefreshing ? "animate-spin text-emerald-600" : ""} />
+        </button>
         {!isCleanMode && (
           <button
             onClick={handleOpenNewTab}
-            className="h-8 w-8 flex items-center justify-center rounded-md border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0"
+            className="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0"
             title="Open in New Tab"
           >
             <ExternalLink size={13} />
           </button>
         )}
 
-        <GradientButton path="/customers/add" className="h-8 flex items-center px-4 text-[12px] rounded-md">
+        <GradientButton path="/customers/add" className="h-8 flex items-center px-4 text-[12px] rounded-lg">
           + Add Customer
         </GradientButton>
       </div>
     );
     return () => setActions(null);
-  }, [setActions, navigate, isCleanMode]);
+  }, [setActions, navigate, isCleanMode, isRefreshing, handleRefresh]);
 
   useEffect(() => {
     const params: Record<string, string> = { limit: "100", offset: "1" };

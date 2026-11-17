@@ -6,6 +6,7 @@ import {
   Loader2, Eye, Pencil, MoreVertical, Trash2, Plus, FileUp, RefreshCw
 } from "lucide-react";
 import ExcelImportModal from "@/components/common/ExcelImportModal";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import ActionMenu, { ActionMenuItem, ActionMenuDivider } from "@/components/common/ActionMenu";
 import SkeletonLoader from "@/components/common/SkeletonLoader";
 import { RecordPaymentModal } from "@/features/customer/components/RecordPaymentModal";
@@ -35,10 +36,19 @@ const CustomerList = () => {
   const [toDate, setToDate] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [filterOutstanding, setFilterOutstanding] = useState("All");
   const [isImportOpen, setIsImportOpen] = useState(false);
 
-  const { getData, deleteData } = useApi();
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    window.dispatchEvent(new CustomEvent('clear-api-cache'));
+    setRefreshKey(prev => prev + 1);
+    setTimeout(() => setIsRefreshing(false), 800);
+  }, []);
+
+  const { getData, postData } = useApi();
+  const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
   const [analyticsStats, setAnalyticsStats] = useState<any>(null);
   const [summaryStats, setSummaryStats] = useState<{ total: number; outstanding: number }>({
     total: 0,
@@ -83,28 +93,27 @@ const CustomerList = () => {
     setActions(
       <div className="flex items-center gap-2">
         <button
-          onClick={() => {
-            window.dispatchEvent(new CustomEvent('clear-api-cache'));
-            setRefreshKey(prev => prev + 1);
-          }}
-          className="h-8 w-8 flex items-center justify-center rounded-md border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0"
+          type="button"
+          disabled={isRefreshing}
+          onClick={handleRefresh}
+          className="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0 disabled:opacity-70"
           title="Refresh"
         >
-          <RefreshCw size={13} />
+          <RefreshCw size={13} className={isRefreshing ? "animate-spin text-emerald-600" : ""} />
         </button>
         <button
           onClick={() => setIsImportOpen(true)}
-          className="h-8 px-3 rounded-md border border-slate-200 text-slate-650 font-medium text-[12px] bg-white hover:bg-slate-50 transition-colors flex items-center gap-1.5"
+          className="h-8 px-3 rounded-lg border border-slate-200 text-slate-650 font-medium text-[12px] bg-white hover:bg-slate-50 transition-colors flex items-center gap-1.5"
         >
           <FileUp size={13} />
           Import
         </button>
 
-        <GradientButton path="/customers/add" className="h-8 flex items-center px-4 text-[12px] rounded-md">+ Add Customer</GradientButton>
+        <GradientButton path="/customers/add" className="h-8 flex items-center px-4 text-[12px] rounded-lg">+ Add Customer</GradientButton>
       </div>
     );
     return () => setActions(null);
-  }, [setActions, navigate]);
+  }, [setActions, navigate, isRefreshing, handleRefresh]);
 
   /* ── Fetch Page ── */
   const fetchPage = useCallback(async (limit: number, offset: number, filters: any) => {
@@ -146,11 +155,20 @@ const CustomerList = () => {
     refreshKey
   }), [debouncedSearch, fromDate, toDate, filterOutstanding, refreshKey]);
 
-  const { items: filteredCustomers, loading, loadingMore, totalCount, lastElementRef } = useInfiniteScroll({
+  const { items: filteredCustomers, loading, loadingMore, hasMore, loadMore, totalCount, lastElementRef } = useInfiniteScroll({
     fetchPage,
     filters: apiFilters,
     limit: 50
   });
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    if (scrollHeight - scrollTop - clientHeight < 350 && hasMore && !loading && !loadingMore) {
+      loadMore();
+    }
+  };
+
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
 
   const activeFilters = useMemo(() => {
     let count = 0;
@@ -178,18 +196,36 @@ const CustomerList = () => {
     });
   };
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (selectedCustomers.size === 0) return;
-    if (!window.confirm(`Are you sure you want to delete these ${selectedCustomers.size} customers?`)) return;
+    setIsBulkDeleteDialogOpen(true);
+  };
+
+  const handleBulkDeleteConfirm = async () => {
+    if (selectedCustomers.size === 0) return;
+    setIsBulkDeleteDialogOpen(false);
+    const targetShopId = localStorage.getItem('shop_id') || SHOP_ID;
     try {
-      for (const id of Array.from(selectedCustomers)) {
-        await deleteData(`${ENDPOINTS.CUSTOMERS}/${localStorage.getItem('shop_id') || SHOP_ID}/${id}`);
+      const res: any = await postData(
+        `${ENDPOINTS.CUSTOMERS}/${targetShopId}/bulk-delete`,
+        { ids: Array.from(selectedCustomers) }
+      );
+      const resData = res?.data || res;
+      const deletedCount = resData?.deleted_count ?? 0;
+      const failedCount = resData?.failed_count ?? 0;
+      const total = resData?.total ?? selectedCustomers.size;
+
+      if (failedCount === 0) {
+        showToast(`Successfully deleted all ${deletedCount} selected customers.`, "success");
+      } else if (deletedCount > 0) {
+        showToast(`Deleted ${deletedCount} of ${total} customers. ${failedCount} could not be deleted.`, "warning");
+      } else {
+        showToast(`Could not delete selected customers (${failedCount} failed).`, "error");
       }
-      showToast("Selected customers deleted successfully", "success");
       setSelectedCustomers(new Set());
       setRefreshKey(prev => prev + 1);
     } catch (e: any) {
-      showToast(e?.message || "Failed to delete some customers", "error");
+      showToast(e?.message || "Failed to bulk delete customers", "error");
     }
   };
 
@@ -361,7 +397,7 @@ const CustomerList = () => {
       {/* ── Table Card ── */}
       <div className="bg-white rounded-lg shadow-sm border border-slate-100 min-w-0 overflow-hidden flex flex-col flex-1 min-h-0 mt-1">
         {/* Mobile Card View */}
-        <div className="md:hidden flex-1 overflow-y-auto p-2.5 space-y-2.5">
+        <div onScroll={handleScroll} className="md:hidden flex-1 overflow-y-auto p-2.5 space-y-2.5">
           {filteredCustomers.length === 0 ? (
             <div className="py-16 text-center text-sm text-slate-400 font-medium">
               No customers found matching your filters.
@@ -472,9 +508,10 @@ const CustomerList = () => {
               <Loader2 size={16} className="animate-spin text-blue-500 mx-auto" />
             </div>
           )}
+          <div ref={isMobile ? lastElementRef : null} className="h-4 w-full" />
         </div>
 
-        <div className="hidden md:block overflow-auto flex-1 scrollbar-thin scrollbar-thumb-slate-100">
+        <div onScroll={handleScroll} className="hidden md:block overflow-auto flex-1 scrollbar-thin scrollbar-thumb-slate-100">
           <table className="w-full text-left min-w-[700px] border-collapse relative">
             <thead className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#e2e8f0]">
               <tr>
@@ -631,7 +668,17 @@ const CustomerList = () => {
               )}
             </tbody>
           </table>
+          <div ref={!isMobile ? lastElementRef : null} className="h-4 w-full" />
         </div>
+
+        {/* Footer row count */}
+        {!loading && filteredCustomers.length > 0 && (
+          <div className="border-t border-slate-50 px-4 py-2 flex items-center justify-between">
+            <span className="text-[11px] text-slate-400 font-medium">
+              {filteredCustomers.length} of {Math.max(filteredCustomers.length, totalCount || filteredCustomers.length)} customers ({hasMore ? "scroll for more" : "all loaded"})
+            </span>
+          </div>
+        )}
       </div>
       </div>
 
@@ -651,6 +698,16 @@ const CustomerList = () => {
         onClose={() => setIsImportOpen(false)}
         onSuccess={() => { setIsImportOpen(false); setRefreshKey(prev => prev + 1); }}
         entityType="customer"
+      />
+
+      <ConfirmDialog
+        isOpen={isBulkDeleteDialogOpen}
+        onClose={() => setIsBulkDeleteDialogOpen(false)}
+        onConfirm={handleBulkDeleteConfirm}
+        title="Delete Selected Customers"
+        description={`Are you sure you want to delete all ${selectedCustomers.size} selected customers? This action cannot be undone.`}
+        confirmText={`Delete ${selectedCustomers.size} Customers`}
+        type="danger"
       />
     </>
   );

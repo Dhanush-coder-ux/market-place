@@ -123,7 +123,7 @@ const NavigationDialog = ({
       {
         label: "Inventory",
         items: [
-          { name: "Stocks List", icon: Database, path: "/inventory" },
+          { name: "Live Stock List", icon: Database, path: "/inventory" },
           { name: "Stock Movements", icon: History, path: "/stock-movement" },
           { name: "Stock Adjustments", icon: RefreshCw, path: "/stock-adjustment" },
         ],

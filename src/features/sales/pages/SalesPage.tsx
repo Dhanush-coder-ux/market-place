@@ -170,25 +170,34 @@ const SalesListPage: React.FC = () => {
     window.open(`${window.location.pathname}?mode=clean`, "_blank", "noopener,noreferrer");
   };
 
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
+
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    window.dispatchEvent(new CustomEvent('clear-api-cache'));
+    window.dispatchEvent(new CustomEvent('refresh-sales'));
+    setRefreshKey(prev => prev + 1);
+    setTimeout(() => setIsRefreshing(false), 800);
+  }, []);
 
   useEffect(() => {
     setActions(
       <div className="flex items-center gap-2">
         <button
-          onClick={() => {
-            window.dispatchEvent(new CustomEvent('clear-api-cache'));
-            window.dispatchEvent(new CustomEvent('refresh-sales'));
-          }}
-          className="h-8 w-8 flex items-center justify-center rounded-md border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0"
+          type="button"
+          disabled={isRefreshing}
+          onClick={handleRefresh}
+          className="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0 disabled:opacity-70"
           title="Refresh"
         >
-          <RotateCw size={13} />
+          <RotateCw size={13} className={isRefreshing ? "animate-spin text-emerald-600" : ""} />
         </button>
         {!isCleanMode && (
           <button
             onClick={handleOpenNewTab}
-            className="h-8 w-8 flex items-center justify-center rounded-md border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0"
+            className="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0"
             title="Open in New Tab"
           >
             <ExternalLink size={13} />
@@ -196,7 +205,7 @@ const SalesListPage: React.FC = () => {
         )}
         <button
           onClick={() => setIsExportOpen(true)}
-          className="h-8 px-3 rounded-md border border-slate-200 text-slate-650 font-medium text-[12px] bg-white hover:bg-slate-50 transition-colors flex items-center gap-1.5 shadow-sm"
+          className="h-8 px-3 rounded-lg border border-slate-200 text-slate-650 font-medium text-[12px] bg-white hover:bg-slate-50 transition-colors flex items-center gap-1.5 shadow-sm"
           title="Export Sales"
         >
           <FileDown size={13} />
@@ -205,7 +214,7 @@ const SalesListPage: React.FC = () => {
       </div>
     );
     return () => setActions(null);
-  }, [setActions, isCleanMode]);
+  }, [setActions, isCleanMode, isRefreshing, handleRefresh]);
 
   // Hook to handle the global refresh event
   useEffect(() => {
@@ -724,7 +733,7 @@ const SalesListPage: React.FC = () => {
         discountedAmount: discAmt,
       });
     }).catch(() => { });
-  }, [api.getData]);
+  }, [api.getData, refreshKey]);
 
   const filters = useMemo(() => ({
     search: debouncedSearch,
@@ -734,13 +743,21 @@ const SalesListPage: React.FC = () => {
     fromDate,
     toDate,
     activeKpi,
-  }), [debouncedSearch, filterOrigin, filterPayment, filterStatus, fromDate, toDate, activeKpi]);
+    refreshKey,
+  }), [debouncedSearch, filterOrigin, filterPayment, filterStatus, fromDate, toDate, activeKpi, refreshKey]);
 
-  const { items, loading, loadingMore, totalCount, lastElementRef, reload } = useInfiniteScroll({
+  const { items, loading, loadingMore, hasMore, loadMore, totalCount, lastElementRef, reload } = useInfiniteScroll({
     fetchPage,
     filters,
     limit: 50
   });
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    if (scrollHeight - scrollTop - clientHeight < 350 && hasMore && !loading && !loadingMore) {
+      loadMore();
+    }
+  };
 
   useEffect(() => {
     const handleDoRefresh = () => {
@@ -991,7 +1008,7 @@ const SalesListPage: React.FC = () => {
 
       {/* ── Table Card ── */}
       <div className="bg-white rounded-lg shadow-sm border border-slate-100 min-w-0 overflow-hidden flex flex-col flex-1 min-h-0 mt-2">
-        <div className="overflow-auto flex-1 scrollbar-thin scrollbar-thumb-slate-100">
+        <div onScroll={handleScroll} className="overflow-auto flex-1 scrollbar-thin scrollbar-thumb-slate-100">
 
           {/* ── Mobile Order Cards (< md) ── */}
           <div className="block md:hidden divide-y divide-slate-100">
@@ -1355,6 +1372,7 @@ const SalesListPage: React.FC = () => {
               })}
             </tbody>
           </table>
+          <div ref={lastElementRef} className="h-4 w-full" />
         </div>
 
         {loadingMore && <div className="py-4 text-center text-xs text-slate-500">Loading more...</div>}
@@ -1366,10 +1384,10 @@ const SalesListPage: React.FC = () => {
               {totalCount > 0 && (
                 <>
                   {' '}of{' '}
-                  <span className="font-semibold text-slate-600">{totalCount}</span>
+                  <span className="font-semibold text-slate-600">{Math.max(filtered.length, totalCount || filtered.length)}</span>
                 </>
               )}
-              {' '}records
+              {' '}records ({hasMore ? "scroll for more" : "all loaded"})
             </p>
             <span className="text-xs text-slate-500 font-medium">
               Filtered revenue:{' '}

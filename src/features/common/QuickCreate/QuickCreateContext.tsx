@@ -51,6 +51,9 @@ export const QuickCreateProvider: React.FC<{ children: React.ReactNode }> = ({ c
           onClose={closeQuickCreate}
           onSuccess={handleSuccess}
           initialName={state.initialData?.name}
+          hideBuyPrice={state.initialData?.hideBuyPrice || state.initialData?.fromPurchase || state.initialData?.source === 'purchase'}
+          fromPurchase={state.initialData?.fromPurchase}
+          source={state.initialData?.source}
         />
       )}
 

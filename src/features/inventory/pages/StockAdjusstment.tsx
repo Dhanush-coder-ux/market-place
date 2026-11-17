@@ -576,7 +576,7 @@ export default function StockAdjustmentPage() {
       >
         <div className="space-y-2">
           {summary.impactList.map((stat, i) => (
-            <div key={i} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50/50 border border-slate-150/60 hover:border-blue-200 hover:bg-white transition-all shadow-sm">
+            <div key={i} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50/50 border border-slate-150/60 hover:border-emerald-200 hover:bg-white transition-all shadow-sm">
               <div className="flex flex-col">
                 <span className="text-xs font-semibold text-slate-700">{stat.name}</span>
                 <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400 mt-0.5">{stat.type === 'INCREMENT' ? 'Inbound' : 'Outbound'}</span>
@@ -622,12 +622,12 @@ export default function StockAdjustmentPage() {
                       onClick={() => setSelectedVariant(variant.id)}
                       className={`relative p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer flex flex-col justify-between h-32
                         ${isSelected
-                          ? 'border-blue-500 bg-blue-50/40 shadow-md shadow-blue-100/30'
-                          : 'border-slate-200/80 hover:border-blue-300 hover:shadow-md bg-white'
+                          ? 'border-emerald-500 bg-emerald-50/40 shadow-md shadow-emerald-100/30'
+                          : 'border-slate-200/80 hover:border-emerald-300 hover:shadow-md bg-white'
                         }
                       `}
                     >
-                      <div className={`absolute top-3 right-3 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-blue-600 border-blue-600 text-white shadow-sm' : 'border-slate-350 bg-white'}`}>
+                      <div className={`absolute top-3 right-3 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm' : 'border-slate-350 bg-white'}`}>
                         {isSelected && <Check size={11} strokeWidth={3.5} />}
                       </div>
 
@@ -644,7 +644,7 @@ export default function StockAdjustmentPage() {
                           Stock: {stockNum}
                         </span>
                         {batchCount > 0 && (
-                          <span className="inline-flex px-2 py-0.5 rounded bg-violet-50 text-violet-700 text-[9px] font-extrabold border border-violet-100 leading-none">
+                          <span className="inline-flex px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[9px] font-extrabold border border-emerald-100 leading-none">
                             {batchCount} {batchCount === 1 ? 'Batch' : 'Batches'}
                           </span>
                         )}
@@ -657,7 +657,7 @@ export default function StockAdjustmentPage() {
 
             <div className="p-4 border-t border-slate-100 bg-white flex justify-between items-center shrink-0">
               <span className="text-[11px] font-bold text-slate-500">
-                {selectedVariant ? <span className="text-blue-600">1 variant selected</span> : "Please pick a variant"}
+                {selectedVariant ? <span className="text-emerald-700">1 variant selected</span> : "Please pick a variant"}
               </span>
               <div className="flex gap-2.5">
                 <button
@@ -701,11 +701,11 @@ export default function StockAdjustmentPage() {
                   <div
                     key={batch.id}
                     onClick={() => confirmBatch(batch)}
-                    className="group relative p-4 rounded-xl border border-slate-200/80 bg-white hover:border-blue-400 hover:shadow-lg hover:shadow-blue-500/5 transition-all cursor-pointer"
+                    className="group relative p-4 rounded-xl border border-slate-200/80 bg-white hover:border-emerald-400 hover:shadow-lg hover:shadow-emerald-500/5 transition-all cursor-pointer"
                   >
                     <div className="flex items-center justify-between mb-2">
                       <h4 className="font-extrabold text-slate-800 text-[13px]">{batch.name || batch.batch}</h4>
-                      <div className="w-5 h-5 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="w-5 h-5 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                         <Check size={12} strokeWidth={2.5} />
                       </div>
                     </div>
@@ -757,16 +757,16 @@ export default function StockAdjustmentPage() {
             <div className="bg-white rounded-3xl border border-slate-200/80 shadow-lg shadow-slate-100/50 overflow-hidden">
 
               {/* Header */}
-              <div className="px-4 py-3.5 bg-gradient-to-r from-indigo-50/30 to-transparent border-b border-slate-100 flex items-center justify-between">
+              <div className="px-4 py-3.5 bg-gradient-to-r from-emerald-50/40 to-transparent border-b border-slate-100 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-700">
                     <Package size={15} />
                   </div>
                   <h2 className="text-sm font-extrabold text-slate-800 tracking-tight">Inventory Items</h2>
                 </div>
                 <button
                   onClick={handleAddItem}
-                  className="flex items-center gap-1 px-3 h-8 rounded-lg bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 transition-all shadow-sm shadow-blue-500/10 active:scale-95"
+                  className="flex items-center gap-1 px-3 h-8 rounded-lg bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition-all shadow-sm shadow-emerald-500/10 active:scale-95"
                 >
                   <Plus size={14} />
                   Add Product
@@ -786,7 +786,7 @@ export default function StockAdjustmentPage() {
                     </div>
                     <button
                       onClick={handleAddItem}
-                      className="px-5 h-9 rounded-lg bg-white border border-slate-200 text-slate-700 font-extrabold text-xs hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all shadow-sm active:scale-95"
+                      className="px-5 h-9 rounded-lg bg-white border border-slate-200 text-slate-700 font-extrabold text-xs hover:bg-emerald-700 hover:text-white hover:border-emerald-700 transition-all shadow-sm active:scale-95"
                     >
                       Start Adding
                     </button>
@@ -804,7 +804,7 @@ export default function StockAdjustmentPage() {
 
                           <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
                             <div className="flex items-center gap-3">
-                              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white text-[11px] font-black shadow-md shadow-blue-100">
+                              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-600 to-emerald-700 flex items-center justify-center text-white text-[11px] font-black shadow-md shadow-emerald-100">
                                 {index + 1}
                               </div>
                               <div>
@@ -930,7 +930,7 @@ export default function StockAdjustmentPage() {
                                   {item.variant_name && (
                                     <div className="flex flex-col">
                                       <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider ml-1 mb-0.5">Variation</span>
-                                      <div className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-[10px] font-extrabold border border-blue-100 shadow-sm leading-none">
+                                      <div className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 text-[10px] font-extrabold border border-emerald-100 shadow-sm leading-none">
                                         {item.variant_name}
                                       </div>
                                     </div>
@@ -1018,7 +1018,7 @@ export default function StockAdjustmentPage() {
                     <div className="pt-4 flex justify-center w-full">
                       <button
                         onClick={handleAddItem}
-                        className="w-full group flex items-center justify-center gap-3 px-8 py-4 rounded-xl border-2 border-dashed border-slate-200 text-slate-400 font-extrabold text-xs hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50/30 transition-all active:scale-95 shadow-sm"
+                        className="w-full group flex items-center justify-center gap-3 px-8 py-4 rounded-xl border-2 border-dashed border-slate-200 text-slate-400 font-extrabold text-xs hover:border-emerald-500 hover:text-emerald-700 hover:bg-emerald-50/30 transition-all active:scale-95 shadow-sm"
                       >
                         <Plus size={16} className="group-hover:rotate-90 transition-transform duration-350" />
                         Add Next Product
@@ -1068,19 +1068,19 @@ export default function StockAdjustmentPage() {
                 {summary.impactList.length > 0 && (
                   <button
                     onClick={() => setIsImpactModalOpen(true)}
-                    className="w-full flex items-center justify-between p-3 rounded-xl bg-blue-50/50 border border-blue-100/80 hover:bg-blue-100/50 transition-all text-left shadow-sm"
+                    className="w-full flex items-center justify-between p-3 rounded-xl bg-emerald-50/50 border border-emerald-100/80 hover:bg-emerald-100/50 transition-all text-left shadow-sm"
                   >
                     <div className="flex flex-col overflow-hidden gap-0.5">
-                      <span className="text-[10px] font-extrabold text-blue-700 truncate pr-2">
+                      <span className="text-[10px] font-extrabold text-emerald-800 truncate pr-2">
                         {summary.impactList[0].name}
                       </span>
                       {summary.impactList.length > 1 && (
-                        <span className="text-[9px] font-extrabold text-blue-400 uppercase tracking-wider leading-none">
+                        <span className="text-[9px] font-extrabold text-emerald-600 uppercase tracking-wider leading-none">
                           +{summary.impactList.length - 1} more items
                         </span>
                       )}
                     </div>
-                    <ChevronDown size={14} className="text-blue-600 shrink-0" />
+                    <ChevronDown size={14} className="text-emerald-700 shrink-0" />
                   </button>
                 )}
               </div>

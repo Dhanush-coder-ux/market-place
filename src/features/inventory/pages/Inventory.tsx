@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import ExcelImportModal from "@/components/common/ExcelImportModal";
 import { QuickCreateProductModal } from "@/features/common/QuickCreate/QuickCreateProductModal";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import ActionMenu, { ActionMenuItem } from "@/components/common/ActionMenu";
 import { VariantRows, BatchCards, SerialBadgeList, analyzeProductStock, calculateProductStock } from "../components/StockTree";
 import { Modal } from "@/components/common/SuperUI";
@@ -1082,18 +1083,20 @@ const ProductRow = React.memo(
 );
 
 const InventoryPage = () => {
-  const { getData, deleteData, error, clearError } = useApi();
+  const { getData, postData, error, clearError } = useApi();
   const { showToast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
   const isCleanMode = new URLSearchParams(location.search).get("mode") === "clean";
   const { setActions, setBottomActions } = useHeader();
+  const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
 
   const handleOpenNewTab = () => {
     window.open(`${window.location.pathname}?mode=clean`, "_blank", "noopener,noreferrer");
   };
 
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
   const [showFinishConfirm, setShowFinishConfirm] = useState(false);
@@ -1101,6 +1104,13 @@ const InventoryPage = () => {
     const sid = getShopId();
     return Boolean(sid && localStorage.getItem(`stock_import_completed_${sid}`) === "true");
   });
+
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    window.dispatchEvent(new CustomEvent('clear-api-cache'));
+    setRefreshKey(prev => prev + 1);
+    setTimeout(() => setIsRefreshing(false), 800);
+  }, []);
 
   useEffect(() => {
     // Check DB-level initial stock import completion
@@ -1129,19 +1139,18 @@ const InventoryPage = () => {
     setActions(
       <div className="flex items-center gap-2">
         <button
-          onClick={() => {
-            window.dispatchEvent(new CustomEvent('clear-api-cache'));
-            setRefreshKey(prev => prev + 1);
-          }}
-          className="h-8 w-8 flex items-center justify-center rounded-md border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0"
+          type="button"
+          disabled={isRefreshing}
+          onClick={handleRefresh}
+          className="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0 disabled:opacity-70"
           title="Refresh"
         >
-          <RefreshCw size={13} />
+          <RefreshCw size={13} className={isRefreshing ? "animate-spin text-emerald-600" : ""} />
         </button>
         {!isCleanMode && (
           <button
             onClick={handleOpenNewTab}
-            className="h-8 w-8 flex items-center justify-center rounded-md border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0"
+            className="h-8 w-8 flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 active:scale-95 transition-all shadow-sm shrink-0"
             title="Open in New Tab"
           >
             <ExternalLink size={13} />
@@ -1151,7 +1160,7 @@ const InventoryPage = () => {
           <>
             <button
               onClick={() => setIsImportOpen(true)}
-              className="h-8 px-3 rounded-md border border-slate-200 text-slate-600 font-medium text-[12px] bg-white hover:bg-slate-50 transition-colors flex items-center gap-1.5"
+              className="h-8 px-3 rounded-lg border border-slate-200 text-slate-600 font-medium text-[12px] bg-white hover:bg-slate-50 transition-colors flex items-center gap-1.5"
               title="Bulk import initial stocks from Excel"
             >
               <FileUp size={13} />
@@ -1159,7 +1168,7 @@ const InventoryPage = () => {
             </button>
             <button
               onClick={() => setIsQuickCreateOpen(true)}
-              className="h-8 px-3 rounded-md border border-emerald-300 text-emerald-700 font-medium text-[12px] bg-emerald-50 hover:bg-emerald-100 transition-colors flex items-center gap-1.5"
+              className="h-8 px-3 rounded-lg border border-emerald-300 text-emerald-700 font-medium text-[12px] bg-emerald-50 hover:bg-emerald-100 transition-colors flex items-center gap-1.5"
               title="Add product with variants, batches, and opening stock"
             >
               <Plus size={13} />
@@ -1167,7 +1176,7 @@ const InventoryPage = () => {
             </button>
             <button
               onClick={() => setShowFinishConfirm(true)}
-              className="h-8 px-3 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-[12px] transition-colors flex items-center gap-1.5 shadow-xs"
+              className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-[12px] transition-colors flex items-center gap-1.5 shadow-xs"
               title="Finish initial stock import for this shop"
             >
               <CheckCheck size={13} />
@@ -1178,7 +1187,7 @@ const InventoryPage = () => {
       </div>
     );
     return () => setActions(null);
-  }, [setActions, isCleanMode, setRefreshKey, isStockImportCompleted]);
+  }, [setActions, isCleanMode, isStockImportCompleted, isRefreshing, handleRefresh]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -1186,6 +1195,12 @@ const InventoryPage = () => {
     const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  const [summaryStats, setSummaryStats] = useState<{ available: number; low: number; outOfStock: number }>({
+    available: 0,
+    low: 0,
+    outOfStock: 0,
+  });
 
   useEffect(() => {
     getData(`${ENDPOINTS.INVENTORIES}/by/shop/${SHOP_ID}`, {
@@ -1215,11 +1230,6 @@ const InventoryPage = () => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [stockStatus, setStockStatus] = useState<string>("");
-  const [summaryStats, setSummaryStats] = useState<{ available: number; low: number; outOfStock: number }>({
-    available: 0,
-    low: 0,
-    outOfStock: 0,
-  });
   const [filtersState, setFiltersState] = useState({
     category: "All",
     brand: "All",
@@ -1242,18 +1252,35 @@ const InventoryPage = () => {
 
 
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (selectedItems.size === 0) return;
-    if (!window.confirm(`Are you sure you want to delete these ${selectedItems.size} products?`)) return;
+    setIsBulkDeleteDialogOpen(true);
+  };
+
+  const handleBulkDeleteConfirm = async () => {
+    if (selectedItems.size === 0) return;
+    setIsBulkDeleteDialogOpen(false);
     try {
-      for (const id of Array.from(selectedItems)) {
-        await deleteData(`${ENDPOINTS.INVENTORIES}/${SHOP_ID}/${id}`);
+      const res: any = await postData(
+        `${ENDPOINTS.INVENTORIES}/${SHOP_ID}/bulk-delete`,
+        { ids: Array.from(selectedItems) }
+      );
+      const resData = res?.data || res;
+      const deletedCount = resData?.deleted_count ?? 0;
+      const failedCount = resData?.failed_count ?? 0;
+      const total = resData?.total ?? selectedItems.size;
+
+      if (failedCount === 0) {
+        showToast(`Successfully deleted all ${deletedCount} selected products.`, "success");
+      } else if (deletedCount > 0) {
+        showToast(`Deleted ${deletedCount} of ${total} products. ${failedCount} could not be deleted (still has active stock or orders).`, "warning");
+      } else {
+        showToast(`Could not delete selected products (${failedCount} failed). Products with active stock cannot be deleted.`, "error");
       }
-      showToast("Selected products deleted successfully", "success");
       setSelectedItems(new Set());
       setRefreshKey((prev: number) => prev + 1);
     } catch (e: any) {
-      showToast(e?.message || "Failed to delete some products", "error");
+      showToast(e?.message || "Failed to bulk delete products", "error");
     }
   };
 
@@ -1357,7 +1384,7 @@ const InventoryPage = () => {
       } else if (res.datas?.overall_stats) {
         fetchedStats = res.datas.overall_stats;
       }
-      total = res.data.total_count || 0;
+      total = res.data.total_count ?? res.data.total ?? (res as any).total_count ?? (res as any).total ?? 0;
     }
 
     return {
@@ -1376,11 +1403,20 @@ const InventoryPage = () => {
     refreshKey
   }), [debouncedSearch, fromDate, toDate, stockStatus, refreshKey]);
 
-  const { items: inventory, loading, loadingMore, totalCount, lastElementRef } = useInfiniteScroll({
+  const { items: inventory, loading, loadingMore, hasMore, loadMore, totalCount, lastElementRef } = useInfiniteScroll({
     fetchPage,
     filters,
     limit: 50
   });
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    if (scrollHeight - scrollTop - clientHeight < 350 && hasMore && !loading && !loadingMore) {
+      loadMore();
+    }
+  };
+
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
 
   const availableCategories = useMemo(() => {
     const set = new Set<string>();
@@ -1704,7 +1740,10 @@ const InventoryPage = () => {
         ) : (
           <>
           {/* Mobile Card View */}
-          <div className="md:hidden flex-1 overflow-y-auto p-2.5 space-y-2.5">
+          <div
+            onScroll={handleScroll}
+            className="md:hidden flex-1 overflow-y-auto p-2.5 space-y-2.5"
+          >
             {filteredInventory.length === 0 ? (
               <div className="py-16 flex flex-col items-center gap-2 text-center">
                 <Search size={18} className="text-slate-300" />
@@ -1715,7 +1754,7 @@ const InventoryPage = () => {
                 </p>
               </div>
             ) : (
-              filteredInventory.map((item: InventoryItem, index) => {
+              filteredInventory.map((item: InventoryItem) => {
                 const itemAny: any = item;
                 const iDatas: any = item.datas || {};
                 const imgRaw = itemAny.image_url || iDatas.image_url || itemAny.images?.[0];
@@ -1728,12 +1767,10 @@ const InventoryPage = () => {
                   ? { label: "Low Stock", cls: "bg-amber-50 text-amber-700 border-amber-200" }
                   : { label: "In Stock", cls: "bg-emerald-50 text-emerald-700 border-emerald-200" };
                 const isSelected = selectedItems.has(item.id);
-                const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
 
                 return (
                   <div
                     key={`mob-inv-${item.id}`}
-                    ref={isMobile && index === filteredInventory.length - 1 ? lastElementRef : null}
                     onClick={() => navigate(`/product/${item.id}`)}
                     className={`rounded-xl border p-3 transition-all active:scale-[0.99] cursor-pointer ${
                       isSelected ? "border-blue-400 bg-blue-50/30" : "border-slate-200 bg-white shadow-xs"
@@ -1834,9 +1871,13 @@ const InventoryPage = () => {
               })
             )}
             {loadingMore && <div className="py-4 text-center text-xs text-slate-500">Loading more...</div>}
+            <div ref={isMobile ? lastElementRef : null} className="h-4 w-full" />
           </div>
 
-          <div className="hidden md:block overflow-x-auto overflow-y-auto flex-1">
+          <div
+            onScroll={handleScroll}
+            className="hidden md:block overflow-x-auto overflow-y-auto flex-1"
+          >
             <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
 
               {/* Sticky header */}
@@ -1901,7 +1942,7 @@ const InventoryPage = () => {
               </thead>
 
               <tbody className="divide-y divide-slate-200 bg-white">
-                {filteredInventory.map((item: InventoryItem, index) => (
+                {filteredInventory.map((item: InventoryItem) => (
                   <ProductRow
                     key={item.id}
                     item={item}
@@ -1909,11 +1950,11 @@ const InventoryPage = () => {
                     onSelect={(prod) => toggleSelectItem(prod.id)}
                     isExpanded={expandedRows.has(item.id)}
                     toggleExpand={toggleExpand}
-                    innerRef={!(typeof window !== "undefined" && window.innerWidth < 768) && index === filteredInventory.length - 1 ? lastElementRef : null}
                   />
                 ))}
               </tbody>
             </table>
+            <div ref={!isMobile ? lastElementRef : null} className="h-4 w-full" />
             {loadingMore && <div className="py-4 text-center text-xs text-slate-500">Loading more...</div>}
 
             {/* Empty search result */}
@@ -1934,8 +1975,7 @@ const InventoryPage = () => {
         {!loading && inventory.length > 0 && (
           <div className="border-t border-slate-50 px-4 py-2 flex items-center justify-between">
             <span className="text-[11px] text-slate-400 font-medium">
-              {inventory.length} {totalCount > 0 ? `of ${totalCount}` : ''} item
-              {inventory.length !== 1 ? "s" : ""}
+              {filteredInventory.length} of {Math.max(inventory.length, totalCount || inventory.length)} items ({hasMore ? "scroll for more" : "all loaded"})
             </span>
             <span className="text-[11px] text-slate-300 font-medium">
               {expandedRows.size > 0 && `${expandedRows.size} expanded`}
@@ -2021,6 +2061,15 @@ const InventoryPage = () => {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        isOpen={isBulkDeleteDialogOpen}
+        onClose={() => setIsBulkDeleteDialogOpen(false)}
+        onConfirm={handleBulkDeleteConfirm}
+        title="Delete Selected Products"
+        description={`Are you sure you want to delete all ${selectedItems.size} selected products? Products with active stock (> 0) will be skipped and protected. This action cannot be undone.`}
+        confirmText={`Delete ${selectedItems.size} Products`}
+        type="danger"
+      />
     </div>
   );
 };

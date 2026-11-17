@@ -1,54 +1,282 @@
 /* ─────────────────────────────────────────────────────────────────────────────
-   Dynamic Island Toast Styles - Brand Theme Green
-   Overrides dynaura default black background (#000000) with brand theme green.
+   Dynamic Island Toast Styles - Type-Based Mild Colors
+   Mild colors tailored per notification type:
+   - Success: Mild green (soft emerald/mint background, rich green text, matching badge)
+   - Error: Mild red (soft rose/red background, rich red text, matching badge)
+   - Warning: Mild amber (soft amber/yellow background, rich amber text, matching badge)
+   - Info: Mild blue (soft sky/blue background, rich blue text, matching badge)
+   - Loading / Progress: Mild slate with brand accent
    ───────────────────────────────────────────────────────────────────────────── */
 
-.dynaura-root,
-.dynaura-root[data-theme="dark"],
-.dynaura-root[data-theme="light"],
-.dynaura-root[data-theme="system"] {
-  --dynaura-bg: #15803d;
-  --dynaura-fg: #ffffff;
-  --dynaura-muted: rgba(255, 255, 255, 0.9);
-  --dynaura-ring: rgba(255, 255, 255, 0.25);
-  --dynaura-btn: rgba(255, 255, 255, 0.22);
-}
-
+/* Common Island Base Styling */
 .dynaura-island {
-  background: #15803d !important;
-  color: #ffffff !important;
-  border: 1px solid rgba(255, 255, 255, 0.22) !important;
-  box-shadow: 0 10px 25px -5px rgba(21, 128, 61, 0.45), 0 8px 10px -6px rgba(21, 128, 61, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.15) !important;
+  border-radius: 14px !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  transition: all 280ms cubic-bezier(0.34, 1.45, 0.64, 1) !important;
+  font-family: inherit !important;
+  max-width: min(480px, 90vw) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  box-sizing: border-box !important;
 }
 
 .dynaura-title {
-  color: #ffffff !important;
   font-weight: 600 !important;
+  letter-spacing: -0.01em !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  display: -webkit-box !important;
+  -webkit-box-orient: vertical !important;
+  -webkit-line-clamp: 2 !important;
 }
 
 .dynaura-desc {
-  color: rgba(255, 255, 255, 0.92) !important;
+  font-size: 12px !important;
+  line-height: 1.4 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  display: -webkit-box !important;
+  -webkit-box-orient: vertical !important;
+  -webkit-line-clamp: 2 !important;
+  max-width: 420px !important;
+  word-break: break-word !important;
 }
 
 .dynaura-badge {
-  background: rgba(255, 255, 255, 0.22) !important;
-  color: #ffffff !important;
+  display: grid !important;
+  place-items: center !important;
+  width: 26px !important;
+  height: 26px !important;
+  border-radius: 8px !important;
+  flex-shrink: 0 !important;
 }
 
 .dynaura-badge svg {
-  color: #ffffff !important;
-  stroke: #ffffff !important;
+  width: 14px !important;
+  height: 14px !important;
 }
 
-.dynaura-trailing {
-  color: rgba(255, 255, 255, 0.85) !important;
+/* ── 1. SUCCESS (Mild Green) ────────────────────────────────────────────────── */
+.dynaura-island[data-type="success"],
+.dynaura-island:not([data-type]) {
+  background: #f0fdf4 !important;
+  color: #14532d !important;
+  border: 1px solid #86efac !important;
+  box-shadow: 0 10px 25px -5px rgba(22, 163, 74, 0.22),
+              0 4px 10px -2px rgba(22, 163, 74, 0.12),
+              0 0 0 1px rgba(34, 197, 94, 0.15) !important;
 }
 
-.dynaura-island .dynaura-close {
-  color: rgba(255, 255, 255, 0.85) !important;
+.dynaura-island[data-type="success"] .dynaura-title,
+.dynaura-island:not([data-type]) .dynaura-title {
+  color: #14532d !important;
 }
 
-.dynaura-island .dynaura-close:hover {
-  color: #ffffff !important;
-  background: rgba(255, 255, 255, 0.25) !important;
+.dynaura-island[data-type="success"] .dynaura-desc,
+.dynaura-island:not([data-type]) .dynaura-desc {
+  color: #166534 !important;
+}
+
+.dynaura-island[data-type="success"] .dynaura-badge,
+.dynaura-island:not([data-type]) .dynaura-badge {
+  background: #dcfce7 !important;
+  color: #16a34a !important;
+}
+
+.dynaura-island[data-type="success"] .dynaura-badge svg,
+.dynaura-island:not([data-type]) .dynaura-badge svg {
+  color: #16a34a !important;
+  stroke: #16a34a !important;
+}
+
+.dynaura-island[data-type="success"] .dynaura-bar,
+.dynaura-island:not([data-type]) .dynaura-bar {
+  background: #22c55e !important;
+}
+
+.dynaura-island[data-type="success"] .dynaura-close,
+.dynaura-island:not([data-type]) .dynaura-close {
+  color: #166534 !important;
+}
+
+.dynaura-island[data-type="success"] .dynaura-close:hover,
+.dynaura-island:not([data-type]) .dynaura-close:hover {
+  background: rgba(22, 163, 74, 0.12) !important;
+  color: #14532d !important;
+}
+
+/* ── 2. ERROR (Mild Red) ────────────────────────────────────────────────────── */
+.dynaura-island[data-type="error"] {
+  background: #fef2f2 !important;
+  color: #991b1b !important;
+  border: 1px solid #fca5a5 !important;
+  box-shadow: 0 10px 25px -5px rgba(220, 38, 38, 0.22),
+              0 4px 10px -2px rgba(220, 38, 38, 0.12),
+              0 0 0 1px rgba(239, 68, 68, 0.15) !important;
+}
+
+.dynaura-island[data-type="error"] .dynaura-title {
+  color: #991b1b !important;
+}
+
+.dynaura-island[data-type="error"] .dynaura-desc {
+  color: #b91c1c !important;
+}
+
+.dynaura-island[data-type="error"] .dynaura-badge {
+  background: #fee2e2 !important;
+  color: #dc2626 !important;
+}
+
+.dynaura-island[data-type="error"] .dynaura-badge svg {
+  color: #dc2626 !important;
+  stroke: #dc2626 !important;
+}
+
+.dynaura-island[data-type="error"] .dynaura-bar {
+  background: #ef4444 !important;
+}
+
+.dynaura-island[data-type="error"] .dynaura-close {
+  color: #991b1b !important;
+}
+
+.dynaura-island[data-type="error"] .dynaura-close:hover {
+  background: rgba(220, 38, 38, 0.12) !important;
+  color: #7f1d1d !important;
+}
+
+/* ── 3. WARNING (Mild Amber / Yellow) ───────────────────────────────────────── */
+.dynaura-island[data-type="warning"] {
+  background: #fffbeb !important;
+  color: #92400e !important;
+  border: 1px solid #fde68a !important;
+  box-shadow: 0 10px 25px -5px rgba(217, 119, 6, 0.22),
+              0 4px 10px -2px rgba(217, 119, 6, 0.12),
+              0 0 0 1px rgba(245, 158, 11, 0.15) !important;
+}
+
+.dynaura-island[data-type="warning"] .dynaura-title {
+  color: #92400e !important;
+}
+
+.dynaura-island[data-type="warning"] .dynaura-desc {
+  color: #b45309 !important;
+}
+
+.dynaura-island[data-type="warning"] .dynaura-badge {
+  background: #fef3c7 !important;
+  color: #d97706 !important;
+}
+
+.dynaura-island[data-type="warning"] .dynaura-badge svg {
+  color: #d97706 !important;
+  stroke: #d97706 !important;
+}
+
+.dynaura-island[data-type="warning"] .dynaura-bar {
+  background: #f59e0b !important;
+}
+
+.dynaura-island[data-type="warning"] .dynaura-close {
+  color: #92400e !important;
+}
+
+.dynaura-island[data-type="warning"] .dynaura-close:hover {
+  background: rgba(217, 119, 6, 0.12) !important;
+  color: #78350f !important;
+}
+
+/* ── 4. INFO (Mild Blue) ────────────────────────────────────────────────────── */
+.dynaura-island[data-type="info"] {
+  background: #eff6ff !important;
+  color: #1e40af !important;
+  border: 1px solid #bfdbfe !important;
+  box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.22),
+              0 4px 10px -2px rgba(37, 99, 235, 0.12),
+              0 0 0 1px rgba(59, 130, 246, 0.15) !important;
+}
+
+.dynaura-island[data-type="info"] .dynaura-title {
+  color: #1e40af !important;
+}
+
+.dynaura-island[data-type="info"] .dynaura-desc {
+  color: #2563eb !important;
+}
+
+.dynaura-island[data-type="info"] .dynaura-badge {
+  background: #dbeafe !important;
+  color: #2563eb !important;
+}
+
+.dynaura-island[data-type="info"] .dynaura-badge svg {
+  color: #2563eb !important;
+  stroke: #2563eb !important;
+}
+
+.dynaura-island[data-type="info"] .dynaura-bar {
+  background: #3b82f6 !important;
+}
+
+.dynaura-island[data-type="info"] .dynaura-close {
+  color: #1e40af !important;
+}
+
+.dynaura-island[data-type="info"] .dynaura-close:hover {
+  background: rgba(37, 99, 235, 0.12) !important;
+  color: #1e3a8a !important;
+}
+
+/* ── 5. LOADING / PROGRESS / LIVE (Mild Slate) ──────────────────────────────── */
+.dynaura-island[data-type="loading"],
+.dynaura-island[data-type="progress"],
+.dynaura-island[data-type="live"] {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.16),
+              0 4px 10px -2px rgba(15, 23, 42, 0.08),
+              0 0 0 1px rgba(148, 163, 184, 0.15) !important;
+}
+
+.dynaura-island[data-type="loading"] .dynaura-title,
+.dynaura-island[data-type="progress"] .dynaura-title,
+.dynaura-island[data-type="live"] .dynaura-title {
+  color: #0f172a !important;
+}
+
+.dynaura-island[data-type="loading"] .dynaura-desc,
+.dynaura-island[data-type="progress"] .dynaura-desc,
+.dynaura-island[data-type="live"] .dynaura-desc {
+  color: #475569 !important;
+}
+
+.dynaura-island[data-type="loading"] .dynaura-badge,
+.dynaura-island[data-type="progress"] .dynaura-badge,
+.dynaura-island[data-type="live"] .dynaura-badge {
+  background: #e2e8f0 !important;
+  color: #059669 !important;
+}
+
+.dynaura-island[data-type="loading"] .dynaura-bar,
+.dynaura-island[data-type="progress"] .dynaura-bar,
+.dynaura-island[data-type="live"] .dynaura-bar {
+  background: #10b981 !important;
+}
+
+.dynaura-island[data-type="loading"] .dynaura-close,
+.dynaura-island[data-type="progress"] .dynaura-close,
+.dynaura-island[data-type="live"] .dynaura-close {
+  color: #475569 !important;
+}
+
+.dynaura-island[data-type="loading"] .dynaura-close:hover,
+.dynaura-island[data-type="progress"] .dynaura-close:hover,
+.dynaura-island[data-type="live"] .dynaura-close:hover {
+  background: rgba(15, 23, 42, 0.08) !important;
+  color: #0f172a !important;
 }

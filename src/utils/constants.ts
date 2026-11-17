@@ -114,7 +114,7 @@ export const sidebarLinks: SidebarLink[] = [
     name: "Inventory",
     icon: Database,
     subLinks: [
-      { name: "Stocks List", path: "/inventory", icon: Package, addPath: "/product/add" },
+      { name: "Live Stock List", path: "/inventory", icon: Package, addPath: "/product/add" },
       { name: "Stock Movements", path: "/stock-movement", icon: History, addPath: "/stock-adjustment" },
       { name: "Stock Adjustments", path: "/stock-adjustment", icon: ClipboardList },
       { name: "Saved Drafts", path: "/stock-adjustment/drafts", icon: Bookmark },

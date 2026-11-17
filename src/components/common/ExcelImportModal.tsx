@@ -44,20 +44,23 @@ import {
   Search,
   CheckCheck,
   Plus,
+  RefreshCw,
 } from "lucide-react";
 import { QuickCreateProductModal } from "@/features/common/QuickCreate/QuickCreateProductModal";
 import {
   ImportColumnDef,
   EntityType,
   getColumnsForEntity,
-  validateRow,
+  validateAllRows,
   transformRowToPayload,
+  isStockTrackingEnabled,
 } from "./excelImportSchemas";
 import { useApi } from "@/context/ApiContext";
 import { useToast } from "@/context/ToastContext";
 import { ENDPOINTS, getShopId } from "@/services/endpoints";
 import { utilityApi } from "@/services/api/utility";
 import { shopApi } from "@/services/api/shop";
+import { inventoryApi } from "@/services/api/inventory";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -81,6 +84,12 @@ interface RowValidationError {
   errors: Record<string, string>;
 }
 
+interface FailedImportItem {
+  rowNumber: number;
+  name: string;
+  error: string;
+}
+
 interface BackendRecord { id: string; name: string; }
 
 // ─── Entity meta ─────────────────────────────────────────────────────────────
@@ -102,14 +111,14 @@ const ENTITY_META = {
   },
   inventory: {
     label: "Initial Stocks",
-    bulkEndpoint: ENDPOINTS.INVENTORIES + "/bulk",
+    bulkEndpoint: ENDPOINTS.INVENTORIES + "/bulk-import",
     gradientFrom: "#059669",
     gradientTo: "#10b981",
     hasCategoryUnit: true,
   },
   product: {
     label: "Products",
-    bulkEndpoint: ENDPOINTS.INVENTORIES + "/bulk",
+    bulkEndpoint: ENDPOINTS.INVENTORIES + "/bulk-import",
     gradientFrom: "#0284c7",
     gradientTo: "#38bdf8",
     hasCategoryUnit: true,
@@ -267,9 +276,10 @@ const DataTable: FC<{
   units: BackendRecord[];
   categoryMapping: Record<string, string>;
   unitMapping: Record<string, string>;
+  entityType?: EntityType;
   onRowChange?: (rowIndex: number, key: string, value: any) => void;
-}> = ({ rows, columns, hasCategoryUnit, rowErrors, categories, units, categoryMapping, unitMapping, onRowChange }) => {
-  const displayCols = columns.slice(0, 7);
+}> = ({ rows, columns, hasCategoryUnit, rowErrors, categories, units, categoryMapping, unitMapping, entityType, onRowChange }) => {
+  const displayCols = columns;
 
   return (
     <div className="flex-1 min-w-0 overflow-hidden flex flex-col">
@@ -299,12 +309,14 @@ const DataTable: FC<{
               <th className="px-3 py-2.5 text-left font-semibold whitespace-nowrap w-16">Status</th>
               {displayCols.map((col) => (
                 <th key={col.key} className="px-3 py-2.5 text-left font-semibold whitespace-nowrap">
-                  {col.label}{col.required && <span className="text-red-400 ml-0.5">*</span>}
+                  {col.label}
+                  {col.key === "stocks" && entityType === "inventory" ? (
+                    <span className="text-amber-400 ml-0.5 text-[11px]" title="Mandatory when stock tracking is True">*</span>
+                  ) : (
+                    col.required && <span className="text-red-400 ml-0.5">*</span>
+                  )}
                 </th>
               ))}
-              {columns.length > 7 && (
-                <th className="px-3 py-2.5 text-slate-400 text-left font-semibold">+{columns.length - 7} more</th>
-              )}
               {hasCategoryUnit && (
                 <>
                   <th className="px-3 py-2.5 text-left font-semibold whitespace-nowrap">
@@ -360,16 +372,49 @@ const DataTable: FC<{
                     const cellErr = rowErr?.errors[col.key];
                     const val = row[col.key];
 
-                    if (col.key === "stocks" && (val === 0 || val === "0" || val === "" || val === undefined || val === null)) {
+                    if (col.key === "stocks") {
+                      const isTracking = isStockTrackingEnabled(row, entityType);
                       return (
                         <td key={col.key} className="px-3 py-2 whitespace-nowrap">
-                          <input
-                            type="number"
-                            className={`w-20 text-[11px] border ${cellErr ? 'border-red-400' : 'border-slate-200'} rounded px-2 py-1 focus:border-blue-400 focus:outline-none`}
-                            value={val === undefined || val === null ? "" : val}
-                            onChange={(e) => onRowChange && onRowChange(row._rowIndex, col.key, e.target.value)}
-                            placeholder="Stock"
-                          />
+                          {isTracking ? (
+                            <input
+                              type="number"
+                              min="0"
+                              className={`w-20 text-[11px] border ${cellErr ? 'border-red-400 bg-red-50/20' : 'border-slate-200'} rounded px-2 py-1 focus:border-blue-400 focus:outline-none`}
+                              value={val === undefined || val === null ? "" : val}
+                              onChange={(e) => onRowChange && onRowChange(row._rowIndex, col.key, e.target.value)}
+                              placeholder="0"
+                            />
+                          ) : (
+                            <span
+                              className="text-[10px] font-medium text-slate-400 bg-slate-100 px-2 py-1 rounded border border-slate-200 inline-block select-none"
+                              title="Stock tracking is disabled for this product; stock count is not needed and will be ignored."
+                            >
+                              Ignored (Untracked)
+                            </span>
+                          )}
+                        </td>
+                      );
+                    }
+
+                    if (col.key === "buy_price" || col.key === "sell_price") {
+                      return (
+                        <td key={col.key} className="px-3 py-2 whitespace-nowrap">
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              step="any"
+                              min="0"
+                              className={`w-24 text-[11px] border ${cellErr ? 'border-red-400 bg-red-50/40' : 'border-slate-200'} rounded px-2 py-1 focus:border-blue-400 focus:outline-none font-medium`}
+                              value={val === undefined || val === null ? "" : val}
+                              onChange={(e) => onRowChange && onRowChange(row._rowIndex, col.key, e.target.value)}
+                              placeholder="0.00"
+                              title={cellErr || undefined}
+                            />
+                            {cellErr && (
+                              <span className="text-[10px] text-red-500 font-semibold" title={cellErr}>*</span>
+                            )}
+                          </div>
                         </td>
                       );
                     }
@@ -389,7 +434,6 @@ const DataTable: FC<{
                       </td>
                     );
                   })}
-                  {columns.length > 7 && <td className="px-3 py-2 text-slate-300 text-center">…</td>}
                   {hasCategoryUnit && (
                     <>
                       <td className="px-3 py-2 whitespace-nowrap">
@@ -642,6 +686,7 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
   const [parseError, setParseError] = useState<string | null>(null);
   const [rows, setRows] = useState<ParsedRow[]>([]);
   const [rowErrors, setRowErrors] = useState<RowValidationError[]>([]);
+  const [existingProductNames, setExistingProductNames] = useState<string[]>([]);
 
   // Category / Unit backend data
   const [categories, setCategories] = useState<BackendRecord[]>([]);
@@ -654,7 +699,14 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
 
   // Submit result
   const [submitProgress, setSubmitProgress] = useState(0);
-  const [submitResult, setSubmitResult] = useState<{ success: boolean; message: string; count?: number } | null>(null);
+  const isBackgroundRef = useRef(false);
+  const [submitResult, setSubmitResult] = useState<{
+    success: boolean;
+    message: string;
+    count?: number;
+    failedCount?: number;
+    failedItems?: FailedImportItem[];
+  } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -664,19 +716,12 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
       const rowIdx = newRows.findIndex((r) => r._rowIndex === rowIndex);
       if (rowIdx > -1) {
         newRows[rowIdx] = { ...newRows[rowIdx], [key]: value };
-
-        const newErr = validateRow(newRows[rowIdx], columns);
-        setRowErrors((prevErrs) => {
-          const otherErrs = prevErrs.filter((e) => e.rowIndex !== rowIndex);
-          if (Object.keys(newErr).length > 0) {
-            return [...otherErrs, { rowIndex, errors: newErr }];
-          }
-          return otherErrs;
-        });
+        const errs = validateAllRows(newRows, columns, entityType, existingProductNames);
+        setRowErrors(errs);
       }
       return newRows;
     });
-  }, [columns]);
+  }, [columns, entityType, existingProductNames]);
 
   // ── Reset on open/close ───────────────────────────────────────────────────
   useEffect(() => {
@@ -720,6 +765,28 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
       .finally(() => setLoadingDropdowns(false));
   }, [open, hasCategoryUnit]);
 
+  // ── Fetch existing product names when modal opens ────────────────────────
+  useEffect(() => {
+    if (!open) return;
+    const currentShopId = getShopId() || (typeof window !== "undefined" ? localStorage.getItem("shop_id") || "" : "");
+    if (!currentShopId) return;
+    if (entityType === "product" || entityType === "inventory") {
+      inventoryApi.getProductNames(currentShopId)
+        .then((res: any) => {
+          const names = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+          setExistingProductNames(names);
+        })
+        .catch(() => {});
+    }
+  }, [open, entityType]);
+
+  // Re-run validation whenever existingProductNames finishes loading
+  useEffect(() => {
+    if (rows.length > 0) {
+      setRowErrors(validateAllRows(rows, columns, entityType, existingProductNames));
+    }
+  }, [existingProductNames]);
+
   // ── Computed: unmatched values ────────────────────────────────────────────
   const unmatchedCategories = useMemo(() => {
     if (!hasCategoryUnit || rows.length === 0) return [];
@@ -758,18 +825,14 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
         }
         const normalized = normalizeRows(rawRows, columns, hasCategoryUnit);
         setRows(normalized);
-        const errs: RowValidationError[] = [];
-        normalized.forEach((row) => {
-          const e = validateRow(row, columns);
-          if (Object.keys(e).length > 0) errs.push({ rowIndex: row._rowIndex, errors: e });
-        });
+        const errs = validateAllRows(normalized, columns, entityType, existingProductNames);
         setRowErrors(errs);
         setStep("mapping");
       } catch {
         setParseError("Failed to parse the file. Please use the provided sample template.");
       }
     },
-    [columns, hasCategoryUnit]
+    [columns, hasCategoryUnit, entityType, existingProductNames]
   );
 
   const handleDrop = useCallback(
@@ -795,6 +858,29 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
       });
       setStep("result");
       return;
+    }
+
+    // Pre-validation guard: block submission if there are duplicate product errors
+    if (entityType === "inventory" || entityType === "product") {
+      const currentErrors = validateAllRows(rows, columns, entityType, existingProductNames);
+      const nameErrors = currentErrors.filter((e) => e.errors.name);
+      if (nameErrors.length > 0) {
+        setSubmitResult({
+          success: false,
+          message: `Cannot import: ${nameErrors.length} product(s) already exist in this shop or have duplicate names in the file.`,
+          failedCount: nameErrors.length,
+          failedItems: nameErrors.map((e) => {
+            const rowItem = rows.find((r) => r._rowIndex === e.rowIndex);
+            return {
+              rowNumber: e.rowIndex,
+              name: String(rowItem?.name || `Row ${e.rowIndex}`),
+              error: e.errors.name,
+            };
+          }),
+        });
+        setStep("result");
+        return;
+      }
     }
 
     const payloads = rows.map((row) => {
@@ -827,47 +913,182 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
       return payload;
     });
 
-    const toastId = showProgress(`Importing ${meta.label}...`, 0, `0 of ${rows.length} rows processed`);
+    setStep("submitting");
+    setSubmitProgress(0);
+    isBackgroundRef.current = false;
+
+    const CHUNK_SIZE = 100;
+    const totalItems = payloads.length;
+    const totalChunks = Math.ceil(totalItems / CHUNK_SIZE);
+    let successfulCount = 0;
+    const failedItems: FailedImportItem[] = [];
+
+    const toastId = showProgress(
+      `Importing ${meta.label}...`,
+      0,
+      `0 of ${totalItems} items processed`
+    );
+
     try {
-      let prog = 0;
-      const interval = setInterval(() => {
-        prog = Math.min(prog + 4, 88);
-        setSubmitProgress(prog);
-        updateProgress(toastId, prog, `Importing ${meta.label}...`, `${Math.round((prog / 100) * rows.length)} of ${rows.length} rows`);
-      }, 80);
+      for (let chunkIdx = 0; chunkIdx < totalChunks; chunkIdx++) {
+        const start = chunkIdx * CHUNK_SIZE;
+        const end = Math.min(start + CHUNK_SIZE, totalItems);
+        const chunk = payloads.slice(start, end);
+        const chunkRows = rows.slice(start, end);
 
-      const res = await postData(meta.bulkEndpoint, payloads);
+        const currentProg = Math.round((start / totalItems) * 100);
+        setSubmitProgress(currentProg);
+        updateProgress(
+          toastId,
+          currentProg,
+          `Importing ${meta.label}...`,
+          `Processing items ${start + 1}–${end} of ${totalItems} (${currentProg}%)`
+        );
 
-      clearInterval(interval);
+        try {
+          const res = await postData(meta.bulkEndpoint, chunk);
+          if (res === null) {
+            const errDetail = getLastError() || "The server rejected this batch.";
+            chunkRows.forEach((r) => {
+              const rName = (r.name as string) || (r.title as string) || `Row ${r._rowIndex}`;
+              let rowMsg = errDetail;
+              if (errDetail.includes(";")) {
+                const parts = errDetail.split(";").map((p: string) => p.trim()).filter(Boolean);
+                const matchingPart = parts.find((p: string) => rName && p.toLowerCase().includes(rName.toLowerCase()));
+                if (matchingPart) {
+                  rowMsg = matchingPart.replace(new RegExp(`^['"]?${rName}['"]?:?\\s*`, "i"), "").trim() || matchingPart;
+                } else {
+                  rowMsg = parts[0] || errDetail;
+                }
+              }
+              failedItems.push({
+                rowNumber: r._rowIndex,
+                name: rName,
+                error: rowMsg,
+              });
+            });
+          } else {
+            successfulCount += chunk.length;
+          }
+        } catch (chunkErr: any) {
+          const errDetail = chunkErr?.message || "Failed to process batch";
+          chunkRows.forEach((r) => {
+            const rName = (r.name as string) || (r.title as string) || `Row ${r._rowIndex}`;
+            let rowMsg = errDetail;
+            if (errDetail.includes(";")) {
+              const parts = errDetail.split(";").map((p: string) => p.trim()).filter(Boolean);
+              const matchingPart = parts.find((p: string) => rName && p.toLowerCase().includes(rName.toLowerCase()));
+              if (matchingPart) {
+                rowMsg = matchingPart.replace(new RegExp(`^['"]?${rName}['"]?:?\\s*`, "i"), "").trim() || matchingPart;
+              } else {
+                rowMsg = parts[0] || errDetail;
+              }
+            }
+            failedItems.push({
+              rowNumber: r._rowIndex,
+              name: rName,
+              error: rowMsg,
+            });
+          });
+        }
+      }
+
       setSubmitProgress(100);
 
-      if (res === null) {
-        const errorDetail = getLastError();
-        const errorMsg = errorDetail || "The server rejected the request. Check your data and try again.";
-        setSubmitResult({
-          success: false,
-          message: errorMsg,
-        });
-        failProgress(toastId, "Import Failed", errorMsg);
-      } else {
-        const successMsg = `Successfully imported ${rows.length} ${meta.label.toLowerCase()}.`;
+      if (failedItems.length === 0) {
+        const successMsg = `Successfully imported all ${successfulCount} ${meta.label.toLowerCase()}.`;
         setSubmitResult({
           success: true,
           message: successMsg,
-          count: rows.length,
+          count: successfulCount,
         });
         completeProgress(toastId, "Import Complete!", successMsg);
         onSuccess();
+      } else if (successfulCount > 0) {
+        const partialMsg = `Import completed with ${successfulCount} succeeded and ${failedItems.length} failed.`;
+        setSubmitResult({
+          success: false,
+          message: partialMsg,
+          count: successfulCount,
+          failedCount: failedItems.length,
+          failedItems,
+        });
+        failProgress(
+          toastId,
+          "Import Completed with Errors",
+          `${successfulCount} imported, ${failedItems.length} failed.`
+        );
+        onSuccess();
+      } else {
+        const rawFirstErr = failedItems[0]?.error || "The server rejected the request.";
+        // Semicolon cleanup for individual item error
+        let cleanFirst = rawFirstErr.includes(";")
+          ? rawFirstErr.split(";")[0].trim()
+          : rawFirstErr.trim();
+
+        // Check how many items failed because they already exist
+        const existsCount = failedItems.filter((item) => {
+          const lower = item.error.toLowerCase();
+          return lower.includes("already exist") || lower.includes("duplicate");
+        }).length;
+
+        let toastDesc = cleanFirst;
+        let resultMsg = `Failed to import ${meta.label.toLowerCase()}: ${cleanFirst}`;
+
+        const isMostlyExists = existsCount > 0 && existsCount >= Math.ceil(failedItems.length * 0.5);
+
+        if (isMostlyExists) {
+          if (failedItems.length === 1) {
+            const firstName = failedItems[0]?.name ? `'${failedItems[0].name}'` : "Product";
+            toastDesc = `${firstName} already exists in this shop.`;
+            resultMsg = `${firstName} already exists in this shop.`;
+          } else {
+            const firstName = failedItems[0]?.name ? `'${failedItems[0].name}'` : "Product";
+            toastDesc = `${firstName} and ${failedItems.length - 1} other products already exist.`;
+            resultMsg = `${failedItems.length} products already exist in this shop.`;
+          }
+        } else if (failedItems.length > 1) {
+          const shortFirst = cleanFirst.length > 55 ? cleanFirst.slice(0, 52) + "…" : cleanFirst;
+          toastDesc = `${shortFirst} (+${failedItems.length - 1} more)`;
+          resultMsg = `Failed to import ${failedItems.length} ${meta.label.toLowerCase()}: ${cleanFirst}`;
+        }
+
+        // Keep toast description strictly under 100 characters
+        if (toastDesc.length > 95) {
+          toastDesc = toastDesc.slice(0, 92) + "…";
+        }
+
+        setSubmitResult({
+          success: false,
+          message: resultMsg,
+          count: 0,
+          failedCount: failedItems.length,
+          failedItems,
+        });
+        failProgress(toastId, "Import Failed", toastDesc);
       }
     } catch (err: any) {
-      const errMsg = err?.message ?? "Unexpected error during import.";
+      let errMsg = err?.message ?? "Unexpected error during import.";
+      if (errMsg.includes(";")) {
+        const parts = errMsg.split(";").map((p: string) => p.trim()).filter(Boolean);
+        errMsg = parts.length > 1 ? `${parts[0]} (+${parts.length - 1} more)` : parts[0];
+      }
+      if (errMsg.length > 95) {
+        errMsg = errMsg.slice(0, 92) + "…";
+      }
       setSubmitResult({
         success: false,
         message: errMsg,
+        count: successfulCount,
+        failedCount: totalItems - successfulCount,
+        failedItems,
       });
       failProgress(toastId, "Import Failed", errMsg);
     }
-    setStep("result");
+
+    if (!isBackgroundRef.current) {
+      setStep("result");
+    }
   };
 
   if (!open) return null;
@@ -1085,6 +1306,7 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
                   units={units}
                   categoryMapping={categoryMapping}
                   unitMapping={unitMapping}
+                  entityType={entityType}
                   onRowChange={handleRowChange}
                 />
               </div>
@@ -1197,7 +1419,9 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
               </div>
               <div className="text-center">
                 <p className="text-[16px] font-bold text-slate-800">Importing {meta.label}…</p>
-                <p className="text-[12px] text-slate-500 mt-1">Submitting {rows.length} records to the server</p>
+                <p className="text-[12px] text-slate-500 mt-1">
+                  Processing in batches of 100 items ({rows.length} total records)
+                </p>
               </div>
               <div className="w-full max-w-sm space-y-2">
                 <div className="flex justify-between text-[11px] font-medium text-slate-600">
@@ -1211,32 +1435,72 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
                   />
                 </div>
               </div>
+              <button
+                type="button"
+                onClick={() => {
+                  isBackgroundRef.current = true;
+                  onClose();
+                }}
+                className="mt-2 px-4 py-2 rounded-lg border border-slate-200 hover:bg-slate-50 text-[12px] font-semibold text-slate-600 transition-colors shadow-sm"
+              >
+                Run in Background
+              </button>
             </div>
           )}
 
           {/* ═══ RESULT ═══ */}
           {step === "result" && submitResult && (
-            <div className="flex-1 flex flex-col items-center justify-center gap-5 p-8">
+            <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6 overflow-y-auto">
               <div
-                className={`w-16 h-16 rounded-full flex items-center justify-center ${submitResult.success ? "bg-emerald-100" : "bg-red-100"
+                className={`w-14 h-14 rounded-full flex items-center justify-center shrink-0 ${submitResult.success ? "bg-emerald-100" : "bg-red-100"
                   }`}
               >
                 {submitResult.success ? (
-                  <CheckCircle2 className="text-emerald-600" size={32} />
+                  <CheckCircle2 className="text-emerald-600" size={28} />
                 ) : (
-                  <AlertTriangle className="text-red-600" size={32} />
+                  <AlertTriangle className="text-red-600" size={28} />
                 )}
               </div>
-              <div className="text-center max-w-sm">
-                <p className="text-[17px] font-black text-slate-800">
-                  {submitResult.success ? "Import Complete!" : "Import Failed"}
+              <div className="text-center max-w-md">
+                <p className="text-[16px] font-black text-slate-800">
+                  {submitResult.success
+                    ? "Import Complete!"
+                    : submitResult.count && submitResult.count > 0
+                      ? "Import Completed with Warnings"
+                      : "Import Failed"}
                 </p>
-                <p className="text-[13px] text-slate-500 mt-2 leading-relaxed">{submitResult.message}</p>
+                <p className="text-[12px] text-slate-500 mt-1.5 leading-relaxed">{submitResult.message}</p>
               </div>
-              {submitResult.success && (
-                <div className="flex items-center gap-3 px-4 py-2 rounded-lg border border-slate-200 bg-slate-50 text-slate-700">
-                  <CheckCircle2 size={16} />
-                  <span className="text-[13px] font-bold">{submitResult.count} {meta.label} imported</span>
+
+              {submitResult.count !== undefined && submitResult.count > 0 && (
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-700 text-[12px] font-bold">
+                  <CheckCircle2 size={14} className="text-emerald-600" />
+                  <span>{submitResult.count} {meta.label} successfully imported</span>
+                </div>
+              )}
+
+              {/* Detailed Failed Items Breakdown */}
+              {submitResult.failedItems && submitResult.failedItems.length > 0 && (
+                <div className="w-full max-w-lg mt-2 border border-red-200 bg-red-50/50 rounded-xl p-3.5 max-h-56 overflow-y-auto">
+                  <div className="flex items-center justify-between mb-2 pb-1 border-b border-red-100">
+                    <span className="text-[12px] font-bold text-red-700">
+                      Failed Records ({submitResult.failedItems.length})
+                    </span>
+                    <span className="text-[10px] text-red-500 font-medium">Please review before retrying</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {submitResult.failedItems.map((item, idx) => (
+                      <div key={idx} className="flex items-start gap-2 bg-white p-2 rounded-lg border border-red-100 text-[11px] shadow-xs">
+                        <span className="font-bold text-slate-700 shrink-0">Row {item.rowNumber}:</span>
+                        <span className="font-semibold text-slate-800 truncate max-w-[130px] shrink-0" title={item.name}>
+                          {item.name}
+                        </span>
+                        <span className="text-red-600 break-words flex-1 select-text" title={item.error}>
+                          {item.error}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -1261,6 +1525,14 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
                 className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-500 hover:text-slate-700 transition-colors"
               >
                 <ChevronLeft size={14} /> Back
+              </button>
+            )}
+            {step === "result" && (
+              <button
+                onClick={() => setStep("mapping")}
+                className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-600 hover:text-slate-800 transition-colors h-9 px-3.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 shadow-xs"
+              >
+                <ChevronLeft size={14} /> Back to Preview
               </button>
             )}
           </div>
@@ -1309,12 +1581,22 @@ const ExcelImportModal: FC<ExcelImportModalProps> = ({
             )}
 
             {step === "result" && (
-              <button
-                onClick={onClose}
-                className="h-9 px-5 rounded-md bg-slate-900 text-white text-[12px] font-medium flex items-center gap-1.5 hover:bg-slate-800 transition-colors"
-              >
-                Done
-              </button>
+              <div className="flex items-center gap-2">
+                {submitResult && !submitResult.success && (
+                  <button
+                    onClick={handleSubmit}
+                    className="h-9 px-4 rounded-lg bg-emerald-600 text-white text-[12px] font-semibold flex items-center gap-1.5 hover:bg-emerald-700 transition-colors shadow-sm"
+                  >
+                    <RefreshCw size={13} /> Retry Import
+                  </button>
+                )}
+                <button
+                  onClick={onClose}
+                  className="h-9 px-5 rounded-md bg-slate-900 text-white text-[12px] font-medium flex items-center gap-1.5 hover:bg-slate-800 transition-colors"
+                >
+                  Done
+                </button>
+              </div>
             )}
           </div>
         </div>

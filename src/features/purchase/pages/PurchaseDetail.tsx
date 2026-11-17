@@ -70,28 +70,58 @@ const getVariantName = (itemOrVariant: any): string | null => {
   if (!itemOrVariant) return null;
   if (typeof itemOrVariant === 'string') return itemOrVariant;
 
+  // If item explicitly states it is not a variant
+  if (itemOrVariant.has_variant === false || itemOrVariant.is_variant === false) {
+    return null;
+  }
+
+  // Check if item has variant-specific properties
   const target = itemOrVariant.variant_infos ||
                  itemOrVariant.variant_info ||
                  itemOrVariant.product_variant_infos ||
                  itemOrVariant.product_variant_info ||
                  itemOrVariant.variant ||
-                 itemOrVariant;
+                 itemOrVariant.variant_details;
 
-  if (typeof target === 'string') return target;
-  if (typeof target === 'object' && target !== null) {
-    if (target.variant_name) return target.variant_name;
-    if (target.variantName) return target.variantName;
-    if (target.name) return target.name;
-    if (target.title) return target.title;
-    if (target.label) return target.label;
-    if (target.combination_name) return target.combination_name;
-    if (target.variant && typeof target.variant === 'string') return target.variant;
-    if (target.variant && typeof target.variant === 'object') {
-      return target.variant.variant_name || target.variant.name || null;
-    }
+  let resolvedName: string | null = null;
+
+  if (typeof target === 'string') {
+    resolvedName = target;
+  } else if (typeof target === 'object' && target !== null) {
+    resolvedName = target.variant_name ||
+                   target.variantName ||
+                   target.combination_name ||
+                   (target.variant && typeof target.variant === 'string' ? target.variant : null) ||
+                   (target.variant && typeof target.variant === 'object' ? (target.variant.variant_name || target.variant.name) : null) ||
+                   target.name ||
+                   target.title ||
+                   target.label ||
+                   null;
   }
 
-  return itemOrVariant.variant_name || itemOrVariant.variantName || (typeof itemOrVariant.variant === 'string' ? itemOrVariant.variant : null);
+  if (!resolvedName) {
+    resolvedName = itemOrVariant.variant_name ||
+                   itemOrVariant.variantName ||
+                   (typeof itemOrVariant.variant === 'string' ? itemOrVariant.variant : null);
+  }
+
+  // If target wasn't found in variant sub-objects, and itemOrVariant itself is a variant object
+  if (!resolvedName && (itemOrVariant.combination_name || (itemOrVariant.has_variant && (itemOrVariant.name || itemOrVariant.title)))) {
+    resolvedName = itemOrVariant.combination_name || itemOrVariant.name || itemOrVariant.title || null;
+  }
+
+  if (!resolvedName) return null;
+
+  // Check if resolvedName is identical to product name (in which case it's not a variant badge)
+  const prodName = itemOrVariant.product_name || itemOrVariant.inventory_name;
+  if (prodName && resolvedName.trim().toLowerCase() === prodName.trim().toLowerCase()) {
+    return null;
+  }
+  if (itemOrVariant.name && !itemOrVariant.has_variant && resolvedName.trim().toLowerCase() === itemOrVariant.name.trim().toLowerCase()) {
+    return null;
+  }
+
+  return resolvedName;
 };
 
 const getBatchName = (itemOrBatch: any): string | null => {
@@ -389,7 +419,7 @@ export const PurchaseReturnDialog = ({
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <p className="text-sm font-bold text-slate-800 truncate">{item.name}</p>
-                            {item.variant && (
+                            {item.variant && item.variant !== item.name && (
                               <AntBadge variant="at-variant" type="tag">V: {item.variant}</AntBadge>
                             )}
                             {item.batch && (
@@ -521,7 +551,7 @@ export const PurchaseReturnDialog = ({
                     <div key={idx} className="flex justify-between items-center text-xs">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="text-slate-700 font-medium">{item.name}</span>
-                        {item.variant && (
+                        {item.variant && item.variant !== item.name && (
                           <AntBadge variant="at-variant" type="tag">V: {item.variant}</AntBadge>
                         )}
                         {item.batch && (
@@ -1335,8 +1365,10 @@ const PurchaseDetail = () => {
 
                                   {/* Flat Format (PurchaseReadModel) Batches & Serials */}
                                   {(() => {
+                                    if (product.has_variant === false || product.is_variant === false) return null;
                                     const vDisplay = getVariantName(product);
                                     if (!vDisplay) return null;
+                                    if (product.name && vDisplay.trim().toLowerCase() === product.name.trim().toLowerCase()) return null;
                                     return (
                                       <div className="mt-2 pl-3 border-l-2 border-indigo-100 space-y-2.5">
                                         <AntBadge variant="at-variant" type="tag">V: {vDisplay}</AntBadge>
@@ -1375,7 +1407,7 @@ const PurchaseDetail = () => {
                                   )}
 
                                   {/* Old Nested Format Variant-Level Batches & Serials */}
-                                  {(product.variants?.length ?? 0) > 0 && (
+                                  {(product.has_variant !== false && product.is_variant !== false && (product.variants?.length ?? 0) > 0) && (
                                     <div className="mt-2 pl-3 border-l-2 border-indigo-100 space-y-2.5">
                                       {product.variants?.map((v, vIdx) => (
                                         <div key={vIdx} className="space-y-1">
@@ -1734,11 +1766,12 @@ const PurchaseDetail = () => {
                                 {Array.isArray(ret.items) && ret.items.length > 0 && (
                                   <div className="mt-0.5 space-y-1">
                                     {ret.items.slice(0, 3).map((item: any, iIdx: number) => {
-                                      const vName = getVariantName(item) || item.variant_name;
+                                      const pName = item.inventory_name || item.product_name || item.name || "Item";
+                                      const vName = getVariantName(item) || (item.variant_name && item.variant_name !== pName && item.variant_name !== item.name ? item.variant_name : null);
                                       const bName = getBatchName(item) || item.batch_name;
                                       return (
                                         <div key={iIdx} className="text-[10px] text-slate-500 font-medium flex items-center gap-1 flex-wrap">
-                                          <span>{item.inventory_name || item.product_name || item.name || "Item"}</span>
+                                          <span>{pName}</span>
                                           {vName && (
                                             <AntBadge variant="at-variant" type="tag">V: {vName}</AntBadge>
                                           )}

@@ -154,7 +154,6 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
       if (shopId) queryParams.set("shop_id", shopId);
       if (token) {
         queryParams.set("token", token);
-        queryParams.set("auth_token", token);
       }
       const queryString = queryParams.toString() ? `?${queryParams.toString()}` : "";
       const wsUrl = `${wsBase}/notifications/ws/${effectiveId}${queryString}`;
@@ -239,18 +238,32 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     refreshNotifications();
     connectWebSocket();
 
-    // Listen for storage or shop change events
+    // Fallback polling interval every 15 seconds to keep notifications synced even if WS reconnects
+    const fallbackPollInterval = setInterval(() => {
+      refreshNotifications();
+    }, 15000);
+
+    // Listen for storage, shop change, or tab focus events
     const handleStorageChange = () => {
       refreshNotifications();
       connectWebSocket();
     };
+    const handleWindowFocus = () => {
+      refreshNotifications();
+    };
+
     window.addEventListener("storage", handleStorageChange);
     window.addEventListener("shop_changed", handleStorageChange);
+    window.addEventListener("focus", handleWindowFocus);
+    document.addEventListener("visibilitychange", handleWindowFocus);
 
     return () => {
       isMountedRef.current = false;
+      clearInterval(fallbackPollInterval);
       window.removeEventListener("storage", handleStorageChange);
       window.removeEventListener("shop_changed", handleStorageChange);
+      window.removeEventListener("focus", handleWindowFocus);
+      document.removeEventListener("visibilitychange", handleWindowFocus);
       if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
       if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current);
       if (socketRef.current) {

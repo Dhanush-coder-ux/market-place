@@ -1,0 +1,580 @@
+/* BillingReceiptSettings.css - Thermal Receipt POS 80mm & 58mm Settings */
+
+.rcp-wrap {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  color: #0f172a;
+}
+
+/* Header */
+.rcp-header {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 24px 12px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+}
+.rcp-title-group h1 {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+  margin: 0 0 4px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.rcp-title-group p {
+  font-size: 12.5px;
+  color: #64748b;
+  margin: 0;
+}
+
+/* Main Grid */
+.rcp-grid {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  padding: 16px 24px 20px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(360px, 0.95fr);
+  gap: 24px;
+  align-items: stretch;
+  overflow: hidden;
+}
+@media (max-width: 1024px) {
+  .rcp-wrap {
+    height: auto;
+    overflow: visible;
+  }
+  .rcp-grid {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
+    padding-bottom: 80px;
+  }
+}
+
+/* Left Form Column: ONLY THIS IS SCROLLABLE */
+.rcp-form-col {
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 10px;
+  padding-bottom: 100px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+.rcp-form-col::-webkit-scrollbar {
+  width: 6px;
+}
+.rcp-form-col::-webkit-scrollbar-track {
+  background: transparent;
+}
+.rcp-form-col::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 99px;
+}
+@media (max-width: 1024px) {
+  .rcp-form-col {
+    height: auto;
+    overflow: visible;
+    padding-bottom: 20px;
+  }
+}
+
+/* Cards */
+.rcp-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 20px 22px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+.rcp-card-h {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.rcp-card-h h2 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 4px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rcp-card-h p {
+  font-size: 12.5px;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* Width Toggle Selector */
+.rcp-width-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.rcp-width-card {
+  appearance: none;
+  border: 2px solid #e2e8f0;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 14px 16px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+}
+.rcp-width-card:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+.rcp-width-card.active {
+  border-color: #166534;
+  background: #f0fdf4;
+}
+.rcp-width-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.rcp-width-card.active .rcp-width-title {
+  color: #166534;
+}
+.rcp-width-sub {
+  font-size: 11.5px;
+  color: #64748b;
+}
+
+/* Template Cards Grid */
+.rcp-tmpl-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+.rcp-tmpl-btn {
+  appearance: none;
+  border: 1.5px solid #e2e8f0;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.rcp-tmpl-btn:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+.rcp-tmpl-btn.active {
+  border-color: #166534;
+  background: #f0fdf4;
+  box-shadow: 0 0 0 1px #166534;
+}
+.rcp-tmpl-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.rcp-tmpl-btn.active .rcp-tmpl-name {
+  color: #166534;
+}
+.rcp-tmpl-desc {
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+/* Toggle rows */
+.rcp-switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+.rcp-switch-row:last-child {
+  border-bottom: none;
+}
+.rcp-switch-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.rcp-switch-label span {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+}
+.rcp-switch-label small {
+  font-size: 11px;
+  color: #64748b;
+}
+
+/* iOS-style toggle switch */
+.rcp-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+.rcp-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.rcp-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: #cbd5e1;
+  transition: 0.2s;
+  border-radius: 24px;
+}
+.rcp-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.2s;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+input:checked + .rcp-slider {
+  background-color: #166534;
+}
+input:checked + .rcp-slider:before {
+  transform: translateX(20px);
+}
+
+/* Inputs & textareas */
+.rcp-input {
+  width: 100%;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #0f172a;
+  background: #ffffff;
+  outline: none;
+  transition: all 0.15s;
+}
+.rcp-input:focus {
+  border-color: #166534;
+  box-shadow: 0 0 0 3px rgba(22, 101, 52, 0.12);
+}
+.rcp-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #0f172a;
+  background: #ffffff;
+  outline: none;
+  resize: vertical;
+  min-height: 64px;
+  transition: all 0.15s;
+}
+.rcp-textarea:focus {
+  border-color: #166534;
+  box-shadow: 0 0 0 3px rgba(22, 101, 52, 0.12);
+}
+
+/* Right Pinned Preview Stage */
+.rcp-preview-aside {
+  height: 100%;
+  min-height: 0;
+  position: static;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow: hidden;
+}
+@media (max-width: 1024px) {
+  .rcp-preview-aside {
+    height: auto;
+    overflow: visible;
+  }
+}
+.rcp-preview-box {
+  height: 100%;
+  min-height: 0;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+}
+.rcp-stage {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 24px;
+  background: #f1f5f9;
+  background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+  background-size: 16px 16px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  scrollbar-width: thin;
+}
+.rcp-preview-header {
+  padding: 14px 18px;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fafafa;
+}
+.rcp-preview-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rcp-badge-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 99px;
+  text-transform: uppercase;
+}
+.rcp-badge-live::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background: #16a34a;
+  border-radius: 50%;
+}
+
+.rcp-stage {
+  padding: 24px;
+  background: #f1f5f9;
+  background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+  background-size: 16px 16px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 520px;
+  overflow-x: auto;
+}
+
+/* Thermal Paper Roll Simulation */
+.rcp-roll {
+  background: #ffffff;
+  color: #000000;
+  font-family: 'JetBrains Mono', 'Courier New', Courier, monospace;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  position: relative;
+  box-sizing: border-box;
+  margin: 0 auto;
+  user-select: none;
+}
+.rcp-roll.w-80mm {
+  width: 320px;
+  padding: 16px 14px;
+  font-size: 11.5px;
+  line-height: 1.35;
+}
+.rcp-roll.w-58mm {
+  width: 240px;
+  padding: 12px 10px;
+  font-size: 10px;
+  line-height: 1.3;
+}
+
+/* Jagged Paper Cut Effects */
+.rcp-roll::before,
+.rcp-roll::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background-size: 10px 6px;
+}
+.rcp-roll::before {
+  top: -6px;
+  background-image: radial-gradient(circle at 5px 6px, transparent 5px, #ffffff 5px);
+}
+.rcp-roll::after {
+  bottom: -6px;
+  background-image: radial-gradient(circle at 5px 0, transparent 5px, #ffffff 5px);
+}
+
+/* Thermal Receipt Typography & Layout */
+.rcp-r-center {
+  text-align: center;
+}
+.rcp-r-bold {
+  font-weight: 800;
+}
+.rcp-r-double {
+  font-size: 1.3em;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+}
+.rcp-r-small {
+  font-size: 0.88em;
+  opacity: 0.85;
+}
+.rcp-r-divider {
+  border-top: 1px dashed #000000;
+  margin: 7px 0;
+}
+.rcp-r-divider-double {
+  border-top: 1px dashed #000000;
+  border-bottom: 1px dashed #000000;
+  height: 4px;
+  margin: 7px 0;
+}
+.rcp-r-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 6px;
+}
+.rcp-r-right {
+  text-align: right;
+}
+.rcp-r-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.rcp-r-table th {
+  padding: 3px 0;
+  font-weight: 800;
+  border-top: 1px dashed #000;
+  border-bottom: 1px dashed #000;
+  font-size: 0.95em;
+}
+.rcp-r-table td {
+  padding: 3px 0;
+  vertical-align: top;
+}
+
+/* Floating Save Bar */
+.rcp-savebar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  transform: translateY(110%);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+.rcp-savebar.show {
+  transform: none;
+  pointer-events: auto;
+}
+.rcp-savebar-in {
+  max-width: 760px;
+  margin: 0 auto 16px;
+  background: #ffffff;
+  color: #17251e;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  padding: 10px 14px 10px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+.rcp-savebar-in b {
+  color: #0f172a;
+  font-weight: 700;
+}
+.rcp-savebar-in span {
+  color: #64748b;
+}
+
+/* Buttons */
+.rcp-btn {
+  appearance: none;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 7px 13px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  color: #1e293b;
+  transition: all 0.12s;
+}
+.rcp-btn:hover {
+  background: #f8fafc;
+}
+.rcp-btn.primary {
+  background: #166534;
+  border-color: #166534;
+  color: #ffffff;
+}
+.rcp-btn.primary:hover {
+  filter: brightness(1.08);
+}
+.rcp-btn.ghost {
+  border-color: #e2e8f0;
+  color: #475569;
+}
+.rcp-btn.ghost:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+.rcp-btn.sm {
+  padding: 5px 10px;
+  font-size: 12px;
+}

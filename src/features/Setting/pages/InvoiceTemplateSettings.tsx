@@ -16,6 +16,7 @@ import type { BillingItem } from "../../billing/types";
 import { shopApi } from "@/services/api/shop";
 import { inventoryApi } from "@/services/api/inventory";
 import { getShopId, SHOP_ID } from "@/services/endpoints";
+import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import "./InvoiceSettings.css";
 
 // ── Types ─────────────────────────────────────────────────────────────
@@ -824,19 +825,8 @@ export const InvoiceTemplateSettings: React.FC = () => {
 
   return (
     <div className="inv-settings-root w-full">
-      {/* Top Header & Tab Navigation */}
+      {/* Top Tab Navigation */}
       <div className="inv-top">
-        <div className="inv-crumb">
-          <b>inventQ</b>
-          <span>/</span>
-          <span>Settings</span>
-          <span>/</span>
-          <span>Invoice</span>
-        </div>
-        <div className="inv-title-row">
-          <h1 className="inv-title">Invoice settings</h1>
-          <span className="inv-hint">{hasChanges ? "Not saved yet" : "All changes saved"}</span>
-        </div>
         <div className="inv-tabs" role="tablist">
           <button
             className="inv-tab"
@@ -940,20 +930,15 @@ export const InvoiceTemplateSettings: React.FC = () => {
                                     />
                                   </label>
                                   {!(field.placement === "item" && field.itemSource === "product") && (
-                                    <label className="inv-fld">
+                                    <div className="inv-fld">
                                       <span>Type of value</span>
-                                      <select
-                                        className="inv-in"
+                                      <ReusableSelect
+                                        options={Object.entries(TYPES).map(([k, v]) => ({ label: v, value: k }))}
                                         value={field.type}
-                                        onChange={(e) => handleUpdateField(field.id, { type: e.target.value as FieldType, value: "" })}
-                                      >
-                                        {Object.entries(TYPES).map(([k, v]) => (
-                                          <option key={k} value={k}>
-                                            {v}
-                                          </option>
-                                        ))}
-                                      </select>
-                                    </label>
+                                        onValueChange={(val) => handleUpdateField(field.id, { type: val as FieldType, value: "" })}
+                                        size="sm"
+                                      />
+                                    </div>
                                   )}
                                 </div>
 
@@ -1044,13 +1029,13 @@ export const InvoiceTemplateSettings: React.FC = () => {
                                     </div>
 
                                     {field.itemSource === "product" ? (
-                                      <label className="inv-fld">
+                                      <div className="inv-fld">
                                         <span>Product detail to print</span>
-                                        <select
-                                          className="inv-in"
-                                          value={field.attr}
-                                          onChange={(e) => {
-                                            const newAttr = e.target.value as any;
+                                        <ReusableSelect
+                                          options={Object.entries(ATTRS).map(([k, v]) => ({ label: v, value: k }))}
+                                          value={field.attr || "batch"}
+                                          onValueChange={(val) => {
+                                            const newAttr = val as any;
                                             const oldLabel = ATTRS[field.attr || ""];
                                             const shouldUpdateLabel =
                                               !field.label.trim() || field.label === oldLabel || Object.values(ATTRS).includes(field.label);
@@ -1059,14 +1044,9 @@ export const InvoiceTemplateSettings: React.FC = () => {
                                               label: shouldUpdateLabel ? ATTRS[newAttr] : field.label,
                                             });
                                           }}
-                                        >
-                                          {Object.entries(ATTRS).map(([k, v]) => (
-                                            <option key={k} value={k}>
-                                              {v}
-                                            </option>
-                                          ))}
-                                        </select>
-                                      </label>
+                                          size="sm"
+                                        />
+                                      </div>
                                     ) : (
                                       <label className="inv-check">
                                         <input

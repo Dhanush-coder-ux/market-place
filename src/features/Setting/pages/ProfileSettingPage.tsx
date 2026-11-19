@@ -21,6 +21,7 @@ import {
   ChevronLeft,
   ChevronRight,
   SlidersHorizontal,
+  ReceiptText,
 } from "lucide-react";
 import { ActivityLogPage } from "@/features/Setting/pages/ActivityLogPage";
 import { CustomListSettings } from "@/features/Setting/pages/CustomListSettings";
@@ -30,6 +31,7 @@ import { BusinessCategorySettings } from "@/features/Setting/pages/BusinessCateg
 import PricingPlansPage from "@/features/subscription/pages/PricingPlansPage";
 import { useSearchParams } from "react-router-dom";
 import { InvoiceTemplateSettings } from "@/features/Setting/pages/InvoiceTemplateSettings";
+import { BillingReceiptTemplateSettings } from "@/features/Setting/pages/BillingReceiptTemplateSettings";
 import { ThemeSwitcher } from "@/features/Setting/components/ThemeSwitcher";
 import { PrinterSettingsTab } from "@/features/Setting/pages/PrinterSettingsTab";
 import { KeyboardShortcutsSettings } from "@/features/Setting/pages/KeyboardShortcutsSettings";
@@ -76,9 +78,16 @@ const MENU_ITEMS = [
   {
     id: "templates",
     label: "Invoice Templates",
-    icon: LayoutTemplate,
+    icon: FileText,
     description: "Choose invoice design",
     accent: "blue",
+  },
+  {
+    id: "billingtemplates",
+    label: "Billing Templates",
+    icon: ReceiptText,
+    description: "80mm & 58mm thermal receipts",
+    accent: "emerald",
   },
   {
     id: "printers",
@@ -293,6 +302,9 @@ export const ProfileSettingsPage = () => {
       case "templates":
         return wrapper(<InvoiceTemplateSettings />);
 
+      case "billingtemplates":
+        return wrapper(<BillingReceiptTemplateSettings />);
+
       case "shopprofile":
         return <ShopProfileForm />;
 
@@ -485,7 +497,7 @@ export const ProfileSettingsPage = () => {
   // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex flex-col md:flex-row h-full min-h-[calc(100vh-140px)] bg-white rounded-2xl border border-slate-200/90 overflow-hidden shadow-xs animate-in fade-in duration-300">
+    <div className="flex flex-col md:flex-row h-full w-full bg-white overflow-hidden animate-in fade-in duration-300">
       
       {/* ── Left Secondary Navigation Sidebar (Settings Nav) ── */}
       <aside className={`w-full ${isSidebarOpen ? "md:w-64 lg:w-72" : "md:w-[68px]"} border-b md:border-b-0 md:border-r border-slate-200/80 bg-slate-50/70 flex flex-col shrink-0 transition-all duration-200 ease-in-out`}>
@@ -571,18 +583,6 @@ export const ProfileSettingsPage = () => {
             );
           })}
         </div>
-
-        {/* Sidebar Footer */}
-        <div className="p-2.5 border-t border-slate-200/80 bg-white/70 hidden md:flex items-center justify-center text-[10.5px] text-slate-400">
-          {isSidebarOpen ? (
-            <div className="flex items-center justify-between w-full px-1">
-              <span>InventQ Cloud POS</span>
-              <span className="font-mono text-[10px] font-medium text-slate-500">v2.5.8</span>
-            </div>
-          ) : (
-            <span className="font-mono text-[10px] font-medium text-slate-400">v2.5</span>
-          )}
-        </div>
       </aside>
 
       {/* ── Right Content Area (Selected Setting Nav Contents) ── */}
@@ -611,8 +611,14 @@ export const ProfileSettingsPage = () => {
           </header>
         )}
 
-        {/* Scrollable Content Body */}
-        <div className={`flex-1 ${activeTab === "activity" ? "min-h-0 p-0" : "overflow-y-auto p-4 sm:p-6 custom-scrollbar"}`}>
+        {/* Content Body */}
+        <div
+          className={`flex-1 ${
+            activeTab === "activity" || activeTab === "templates" || activeTab === "billingtemplates"
+              ? "min-h-0 p-0 overflow-hidden flex flex-col"
+              : "overflow-y-auto p-4 sm:p-6 custom-scrollbar"
+          }`}
+        >
           {renderContent()}
         </div>
       </main>

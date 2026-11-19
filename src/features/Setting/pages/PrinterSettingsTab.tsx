@@ -1113,32 +1113,7 @@ export const PrinterSettingsTab: React.FC = () => {
                 </div>
               )}
 
-              {/* Custom Receipt Footer Note */}
-              <div className="p-4 rounded-xl border border-slate-200/80 bg-slate-50/50 space-y-2">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                    <FileText size={13} className="text-blue-600" />
-                    Custom Receipt Footer Note
-                  </p>
-                  <span className="text-[10px] text-slate-400 font-normal">
-                    Printed at bottom of bills
-                  </span>
-                </div>
-                <input
-                  type="text"
-                  placeholder="Thank you for shopping with us! Please visit again."
-                  value={editingPrinter.footerText || ""}
-                  onChange={(e) =>
-                    setEditingPrinter((prev) =>
-                      prev ? { ...prev, footerText: e.target.value } : null
-                    )
-                  }
-                  className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-500/10 transition-all shadow-2xs"
-                />
-                <p className="text-[11px] text-slate-400 leading-tight">
-                  Custom thank-you message, exchange/return policy, or store notice printed above the paper cut line.
-                </p>
-              </div>
+
             </div>
 
             {/* Modal Footer */}

@@ -708,27 +708,7 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
               </div>
             )}
 
-            {/* Receipt Footer Message */}
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
-                <span>Custom Receipt Footer Note</span>
-                <span className="text-[10px] text-slate-400 font-normal">
-                  Printed above tear-off
-                </span>
-              </label>
-              <input
-                type="text"
-                placeholder="Thank you for shopping with us! Please visit again."
-                value={config.footerText || ""}
-                onChange={(e) =>
-                  setConfig((prev) => ({ ...prev, footerText: e.target.value }))
-                }
-                className="w-full h-9 px-3 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 shadow-2xs"
-              />
-              <p className="text-[11px] text-slate-400 leading-tight">
-                Printed at the bottom of thermal receipts before paper cut.
-              </p>
-            </div>
+
 
           </div>
 

@@ -6,12 +6,27 @@ import type { BillingItem } from "../types";
 import { calculateBillTotals, formatINR, type BillTotals } from "@/utils/pricing";
 import { getPrinterConfig } from "../utils/printerService";
 import { QRCodeSVG } from "qrcode.react";
+import { numberToWords } from "../../Setting/pages/InvoiceTemplateSettings";
 
 const payMeta: Record<string, { label: string; icon: React.ReactNode }> = {
   cash:   { label: "Cash",       icon: <Banknote   size={12} strokeWidth={1.5} /> },
   upi:    { label: "UPI / Card", icon: <Smartphone size={12} strokeWidth={1.5} /> },
   credit: { label: "On Credit", icon: <Wallet      size={12} strokeWidth={1.5} /> },
 };
+
+export interface InvoiceRendererCustomField {
+  id: string;
+  label: string;
+  placement: "customer" | "item" | "below";
+  type?: string;
+  mode?: "fixed" | "ask";
+  value?: string;
+  displayValue?: React.ReactNode;
+  show: boolean;
+  itemShow?: "column" | "under";
+  itemSource?: "product" | "ask";
+  attr?: string;
+}
 
 export interface InvoiceRendererProps {
   templateId: string;
@@ -31,6 +46,31 @@ export interface InvoiceRendererProps {
   billTotals?: BillTotals;
   invoiceRef?: React.RefObject<HTMLDivElement | null>;
   scale?: number;
+  customFields?: InvoiceRendererCustomField[];
+  signature?: {
+    show: boolean;
+    mode: "upload" | "draw" | "type";
+    image: string;
+    drawn: string;
+    name: string;
+    desig: string;
+    label: string;
+  };
+  qrSettings?: {
+    store: boolean;
+    storeUrl: string;
+    storeCap: string;
+    upi: boolean;
+    upiId: string;
+    upiCap: string;
+  };
+  footerSettings?: {
+    thanks: string;
+    termsShow: boolean;
+    terms: string;
+    words: boolean;
+  };
+  getItemCustomValue?: (field: any, item: any, index: number) => React.ReactNode;
 }
 
 export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
@@ -50,12 +90,47 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
   billDiscount,
   billTotals: billTotalsProp,
   invoiceRef,
-  scale = 1
+  scale = 1,
+  customFields,
+  signature,
+  qrSettings,
+  footerSettings,
+  getItemCustomValue,
 }) => {
   const config = INVOICE_TEMPLATES[templateId] || INVOICE_TEMPLATES.minimal || INVOICE_TEMPLATES.modern;
   const primaryPayment = payments[0] || { mode: "cash", amount: finalAmount };
   const modeInfo = payMeta[primaryPayment.mode] || payMeta.cash;
   const filledItems = items.filter((i) => !!i.name && i.qty > 0);
+
+  // Fallback to saved invoice settings from localStorage if not explicitly supplied
+  const resolvedSettings = useMemo(() => {
+    if (customFields !== undefined || signature !== undefined || qrSettings !== undefined || footerSettings !== undefined) {
+      return {
+        customFields: customFields || [],
+        signature,
+        qrSettings,
+        footerSettings,
+      };
+    }
+    try {
+      const raw = localStorage.getItem("inventq.invoiceSettings.v2");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return {
+          customFields: (parsed.fields || []) as InvoiceRendererCustomField[],
+          signature: parsed.sig,
+          qrSettings: parsed.qr,
+          footerSettings: parsed.footer,
+        };
+      }
+    } catch (_) {}
+    return {
+      customFields: [] as InvoiceRendererCustomField[],
+      signature: undefined,
+      qrSettings: undefined,
+      footerSettings: undefined,
+    };
+  }, [customFields, signature, qrSettings, footerSettings]);
 
   const billTotals = useMemo(() => {
     if (billTotalsProp) return billTotalsProp;
@@ -133,12 +208,31 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
           </div>
         </div>
         
-        {/* Customer Info (Omitted for walk-in customers) */}
-        {Boolean(customerName) && !["walk-in", "walk-in customer", "walk in", "walk in customer", "walkin", "walkin customer"].includes(customerName.trim().toLowerCase()) && (
+        {/* Customer Info & Top Custom Fields */}
+        {((Boolean(customerName) && !["walk-in", "walk-in customer", "walk in", "walk in customer", "walkin", "walkin customer"].includes(customerName.trim().toLowerCase())) ||
+          (resolvedSettings.customFields && resolvedSettings.customFields.some((f) => f.show && f.placement === "customer" && f.label?.trim()))) && (
           <div className={config.customer.wrapper}>
-             <p className={config.customer.title}>Billed To</p>
-             <p className={config.customer.name}>{customerName}</p>
-             {phone && <p className={config.customer.phone}>{phone}</p>}
+            <div className="flex justify-between items-start gap-4">
+              <div>
+                <p className={config.customer.title}>Billed To</p>
+                <p className={config.customer.name}>{customerName || "Customer"}</p>
+                {phone && <p className={config.customer.phone}>{phone}</p>}
+              </div>
+              {resolvedSettings.customFields && resolvedSettings.customFields.filter((f) => f.show && f.placement === "customer" && f.label?.trim()).length > 0 && (
+                <div className="text-right space-y-1">
+                  {resolvedSettings.customFields
+                    .filter((f) => f.show && f.placement === "customer" && f.label?.trim())
+                    .map((f) => (
+                      <div key={f.id} className="text-[11px] leading-tight">
+                        <span className="text-slate-400 font-medium mr-1.5">{f.label}:</span>
+                        <span className="font-semibold text-slate-800">
+                          {f.displayValue ?? f.value ?? "Asked while billing"}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -184,6 +278,15 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
                        <p className={config.table.cellStrong}>{baseName}</p>
                        {variantName && <p className={config.table.cellMuted}>{cleanVariantLabel(variantName)}</p>}
                        {line.code && <p className={`text-[9px] font-mono ${config.table.cellMuted}`}>{line.code}</p>}
+                        {/* Custom Item Attributes */}
+                        {resolvedSettings.customFields && resolvedSettings.customFields.filter((f) => f.show && f.placement === "item" && f.label?.trim()).map((f) => {
+                          const val = getItemCustomValue ? getItemCustomValue(f, line, i) : (f.displayValue ?? f.value ?? (f.mode === "fixed" ? f.value : "Asked while billing"));
+                          return (
+                            <p key={f.id} className="text-[9.5px] text-slate-500 mt-0.5">
+                              <span className="font-medium text-slate-600">{f.label}:</span> {val}
+                            </p>
+                          );
+                        })}
                        {/* Subline discount breakdown per Section 8.1 */}
                        {line.productDiscountAmount > 0 && (
                          <p className="text-[9px] text-blue-600 font-medium mt-0.5">
@@ -262,6 +365,18 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
           </div>
         )}
 
+        {/* Custom fields below items */}
+        {resolvedSettings.customFields && resolvedSettings.customFields.filter((f) => f.show && f.placement === "below" && f.label?.trim()).length > 0 && (
+          <div className="px-6 py-2.5 bg-slate-50/70 border-t border-slate-200/60 divide-y divide-slate-100">
+            {resolvedSettings.customFields.filter((f) => f.show && f.placement === "below" && f.label?.trim()).map((f) => (
+              <div key={f.id} className="flex justify-between items-center text-[11px] py-1">
+                <span className="font-medium text-slate-600">{f.label}</span>
+                <span className="font-semibold text-slate-800">{f.displayValue ?? f.value ?? "Asked while billing"}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Summary (Section 8.1 & 8.3) */}
         <div className={config.summary.wrapper}>
           <div className="w-full sm:w-[280px] space-y-1.5">
@@ -310,6 +425,11 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
                <span className={config.summary.totalText}>Grand Total</span>
                <span className={config.summary.totalValue}>₹{formatINR(billTotals.payable)}</span>
              </div>
+              {resolvedSettings.footerSettings?.words && (
+                <div className="pt-2 text-[10px] text-slate-500 italic">
+                  {numberToWords(billTotals.payable)}
+                </div>
+              )}
 
              <div className="pt-3 mt-3 border-t border-slate-200/60 border-dashed">
                 <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Payment</p>
@@ -329,35 +449,96 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
           </div>
         </div>
 
-        {/* Digital Store Banner & QR if enabled */}
-        {Boolean(shopData?.visible_online && getPrinterConfig().includeDigitalStoreQr) && (
-          <div className="mx-6 mb-3 p-3 bg-gradient-to-r from-rose-50/60 to-slate-50 border border-rose-100 rounded-xl flex items-center justify-between">
-            <div>
-              <p className="text-[9px] text-slate-500 font-medium">
-                Scan to visit our online store
-              </p>
+        {/* Digital Store / Payment QR */}
+        {((resolvedSettings.qrSettings?.store && resolvedSettings.qrSettings?.storeUrl) ||
+          (resolvedSettings.qrSettings?.upi && resolvedSettings.qrSettings?.upiId) ||
+          Boolean(shopData?.visible_online && getPrinterConfig().includeDigitalStoreQr)) && (
+          <div className="mx-6 mb-3 p-3 bg-gradient-to-r from-slate-50 to-emerald-50/30 border border-slate-200/80 rounded-xl flex items-center justify-between gap-4">
+            <div className="space-y-1">
+              {resolvedSettings.qrSettings?.upi && resolvedSettings.qrSettings?.upiId ? (
+                <>
+                  <p className="text-[11px] font-bold text-slate-800">
+                    {resolvedSettings.qrSettings.upiCap || "Scan & Pay via UPI"}
+                  </p>
+                  <p className="text-[10px] text-slate-500">
+                    UPI: {resolvedSettings.qrSettings.upiId} · ₹{formatINR(billTotals.payable)}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-[11px] font-bold text-slate-800">
+                    {resolvedSettings.qrSettings?.storeCap || "Scan to visit our online store"}
+                  </p>
+                  <p className="text-[10px] text-slate-500">
+                    Browse menu, catalog & order online
+                  </p>
+                </>
+              )}
             </div>
-            <div className="p-1 bg-white border border-slate-200 rounded-lg shadow-2xs shrink-0">
-              <QRCodeSVG
-                value={
-                  shopData?.additional_infos?.website ||
-                  `${window.location.origin}/store/${shopData?.id || ""}`
-                }
-                size={70}
-                level="M"
-              />
+            <div className="p-1 bg-white border border-slate-200 rounded-lg shadow-2xs shrink-0 flex items-center justify-center">
+              {resolvedSettings.qrSettings?.upi && resolvedSettings.qrSettings?.upiId ? (
+                <QRCodeSVG
+                  value={`upi://pay?pa=${encodeURIComponent(resolvedSettings.qrSettings.upiId)}&pn=${encodeURIComponent(shopData?.name || "Merchant")}&am=${billTotals.payable}&cu=INR`}
+                  size={64}
+                  level="M"
+                />
+              ) : (
+                <QRCodeSVG
+                  value={
+                    resolvedSettings.qrSettings?.storeUrl ||
+                    shopData?.additional_infos?.website ||
+                    `${window.location.origin}/store/${shopData?.id || ""}`
+                  }
+                  size={64}
+                  level="M"
+                />
+              )}
             </div>
           </div>
         )}
 
         {/* Footer */}
         <div className={config.footer.wrapper}>
-           <div>
-              <p className={config.footer.title}>Thank you for your business.</p>
-              <p className={config.footer.text}>Goods once sold will not be taken back. All disputes subject to local jurisdiction.</p>
+           <div className="max-w-[60%]">
+              <p className={config.footer.title}>
+                {resolvedSettings.footerSettings?.thanks ?? "Thank you for your business."}
+              </p>
+              {resolvedSettings.footerSettings?.termsShow !== false && (
+                <p className={config.footer.text}>
+                  {resolvedSettings.footerSettings?.terms || "Goods once sold will not be taken back. All disputes subject to local jurisdiction."}
+                </p>
+              )}
            </div>
            <div>
-              <p className={config.footer.signature}>Authorized Signatory</p>
+              {resolvedSettings.signature?.show ? (
+                <div className="text-right flex flex-col items-end">
+                  {resolvedSettings.signature.mode === "type" ? (
+                    <div
+                      className="text-xl text-[#1b2a6b] leading-none mb-1"
+                      style={{ fontFamily: "'Dancing Script', cursive" }}
+                    >
+                      {resolvedSettings.signature.name || "Signatory"}
+                    </div>
+                  ) : (resolvedSettings.signature.mode === "draw" ? resolvedSettings.signature.drawn : resolvedSettings.signature.image) ? (
+                    <img
+                      src={resolvedSettings.signature.mode === "draw" ? resolvedSettings.signature.drawn : resolvedSettings.signature.image}
+                      alt="Signature"
+                      className="max-h-11 max-w-[140px] object-contain mb-1"
+                    />
+                  ) : (
+                    <div className="h-8 text-[11px] text-slate-300 italic flex items-center justify-end">Add a signature</div>
+                  )}
+                  {resolvedSettings.signature.name && (
+                    <div className="text-[11px] font-semibold text-slate-800 leading-tight">
+                      {resolvedSettings.signature.name}
+                      {resolvedSettings.signature.desig ? `, ${resolvedSettings.signature.desig}` : ""}
+                    </div>
+                  )}
+                  <p className={config.footer.signature}>{resolvedSettings.signature.label || "Authorized Signatory"}</p>
+                </div>
+              ) : (
+                <p className={config.footer.signature}>Authorized Signatory</p>
+              )}
            </div>
         </div>
         <div className="bg-transparent py-3 text-center print:bg-white border-t border-transparent">

@@ -7,7 +7,6 @@ import {
   Store,
   AlertTriangle,
   X,
-  LayoutTemplate,
   CreditCard,
   FileText,
   CheckCircle2,

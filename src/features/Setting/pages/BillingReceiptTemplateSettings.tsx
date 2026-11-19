@@ -1,23 +1,19 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Printer,
   FileText,
   QrCode,
   Store,
   Layers,
-  Save,
-  RotateCcw,
   Check,
   ChevronDown,
   ChevronUp,
   Sliders,
   DollarSign,
-  ShieldCheck,
   Plus,
   Trash2,
   ArrowUp,
   ArrowDown,
-  Info,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useToast } from "@/context/ToastContext";
@@ -262,7 +258,7 @@ export const BillingReceiptTemplateSettings: React.FC = () => {
         }
       }).catch(console.error);
 
-      inventoryApi.getInventoriesByShop(activeShopId, { page: 1, limit: 6 }).then((res) => {
+      inventoryApi.getInventoriesByShop(activeShopId, { limit: "6" }).then((res) => {
         if (!isMounted) return;
         const list = res?.data?.inventories || res?.inventories || [];
         if (Array.isArray(list) && list.length > 0) {

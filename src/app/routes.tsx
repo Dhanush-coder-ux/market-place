@@ -92,6 +92,7 @@ const Signup = lazyRetry(() => import("../features/auth/pages/Signup"));
 const TermsOfService = lazyRetry(() => import("../features/legal/pages/TermsOfService"));
 const PrivacyPolicy = lazyRetry(() => import("../features/legal/pages/PrivacyPolicy"));
 const Security = lazyRetry(() => import("../features/legal/pages/Security"));
+const DeletionPolicy = lazyRetry(() => import("../features/legal/pages/DeletionPolicy"));
 const AuthCallback = lazyRetry(() => import("../features/auth/pages/AuthCallback"));
 const ShopSelect = lazyRetry(() => import("../features/auth/pages/ShopSelect"));
 
@@ -291,6 +292,22 @@ export const router = createBrowserRouter([
     element: (
       <Suspense fallback={<Loader />}>
         <Security />
+      </Suspense>
+    )
+  },
+  {
+    path: '/deletion-policy',
+    element: (
+      <Suspense fallback={<Loader />}>
+        <DeletionPolicy />
+      </Suspense>
+    )
+  },
+  {
+    path: '/account-deletion',
+    element: (
+      <Suspense fallback={<Loader />}>
+        <DeletionPolicy />
       </Suspense>
     )
   },

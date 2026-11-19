@@ -86,7 +86,8 @@ export const Navbar = () => {
 
   useEffect(() => {
     fetchMyShops()
-      .then((list) => {
+      .then((rawList) => {
+        const list = (rawList || []).filter((s: any) => !s.is_deleted);
         setShops(list);
         const shopId = localStorage.getItem("shop_id");
         const shop = (shopId && shopId !== "string" ? list.find((s: any) => s.id === shopId) : null) ?? list[0];

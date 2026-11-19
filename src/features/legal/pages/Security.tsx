@@ -97,6 +97,7 @@ const Security = () => {
           <div className="flex items-center gap-4 font-semibold">
             <Link to="/terms" className="text-blue-600 hover:underline">Terms of Service</Link>
             <Link to="/privacy" className="text-blue-600 hover:underline">Privacy Policy</Link>
+            <Link to="/deletion-policy" className="text-rose-600 hover:underline">Deletion Policy</Link>
           </div>
         </div>
       </main>

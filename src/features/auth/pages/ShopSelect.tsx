@@ -63,10 +63,12 @@ const ShopSelect = () => {
     const fetchShops = async () => {
       try {
         const list = await fetchMyShops();
-        const normalized = (list || []).map((s: any) => ({
-          ...s,
-          id: s.id || s._id || String(s.shop_id || "")
-        }));
+        const normalized = (list || [])
+          .filter((s: any) => !s.is_deleted)
+          .map((s: any) => ({
+            ...s,
+            id: s.id || s._id || String(s.shop_id || "")
+          }));
         setShops(normalized);
       } catch (e) {
         console.error("Failed to fetch shops:", e);

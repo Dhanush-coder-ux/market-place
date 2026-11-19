@@ -15,14 +15,17 @@ import {
   Users,
   Search,
   X,
+  Trash2,
+  ShieldAlert,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useToast } from "@/context/ToastContext";
 import { SHOP_ID } from "@/services/endpoints";
 import { shopApi } from "@/services/api/shop";
 import Loader from "@/components/common/Loader";
 import { NavigationBlocker } from "@/components/common/NavigationBlocker";
 import { DigitalStoreActionBar } from "@/features/digitalstore/components/DigitalStoreActionBar";
+import { DeleteShopModal } from "@/features/Setting/components/DeleteShopModal";
 
 interface ShopProfileFormProps {
   editPath?: string;
@@ -37,6 +40,7 @@ export const ShopProfileForm: React.FC<ShopProfileFormProps> = ({ editPath }) =>
   const [followersCount, setFollowersCount] = useState<number>(0);
   const [showFollowersModal, setShowFollowersModal] = useState(false);
   const [followerSearch, setFollowerSearch] = useState("");
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
     fetchShop();
@@ -424,7 +428,54 @@ export const ShopProfileForm: React.FC<ShopProfileFormProps> = ({ editPath }) =>
 
         </div>
 
+        {/* ── Danger Zone Card ── */}
+        <div className="bg-white rounded-2xl border border-rose-200 shadow-xs overflow-hidden">
+          <div className="p-5 sm:p-6 bg-gradient-to-r from-rose-50/70 via-rose-50/40 to-white border-b border-rose-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center shrink-0">
+                <Trash2 size={20} />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 leading-tight">Danger Zone: Delete Shop</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Decommission this storefront, cancel subscriptions, and activate 180-day statutory log preservation.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowDeleteModal(true)}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-98 text-white text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer"
+            >
+              <Trash2 size={14} />
+              <span>Delete Shop</span>
+            </button>
+          </div>
+          <div className="p-5 sm:p-6 bg-white space-y-3">
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Deleting this shop permanently unpublishes your digital store and disconnects POS registers. In accordance with Rule 3(1)(h) of the Indian IT Rules 2021 and DPDP Act 2023, data is safeguarded in a 180-day statutory escrow before final cryptographic purge.
+            </p>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 pt-1 border-t border-slate-100">
+              <ShieldAlert size={14} className="text-rose-500 shrink-0" />
+              <span>Requires 2-Factor OTP verification sent to the registered shop owner email.</span>
+              <span className="text-slate-300 hidden sm:inline">•</span>
+              <Link to="/deletion-policy" target="_blank" className="text-rose-600 font-bold hover:underline inline-flex items-center gap-1">
+                <span>View Deletion Policy</span>
+                <ExternalLink size={11} />
+              </Link>
+            </div>
+          </div>
+        </div>
+
       </div>
+
+      {/* ── Interactive Delete Shop Modal ── */}
+      <DeleteShopModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        shopId={rawShop?.id || SHOP_ID}
+        shopName={name}
+      />
 
       {/* ── Interactive Store Followers Modal ── */}
       {showFollowersModal &&

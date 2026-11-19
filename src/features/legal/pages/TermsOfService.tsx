@@ -106,6 +106,7 @@ const TermsOfService = () => {
             <span>© 2026 Antaris Software Pvt Ltd. All rights reserved.</span>
             <div className="flex items-center gap-4 font-semibold">
               <Link to="/privacy" className="text-blue-600 hover:underline">Privacy Policy</Link>
+              <Link to="/deletion-policy" className="text-rose-600 hover:underline">Deletion Policy</Link>
               <Link to="/security" className="text-blue-600 hover:underline">Security</Link>
             </div>
           </div>

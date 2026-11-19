@@ -24,13 +24,15 @@ export const fetchMyShops = async (): Promise<any[]> => {
       const res = await apiClient.get(`${ENDPOINTS.SHOPS}/by/user/${userId}`);
       const raw = res?.datas ?? res?.data ?? res ?? [];
       const data = Array.isArray(raw) ? raw : (raw?.datas ?? raw?.data ?? [raw]);
-      return Array.isArray(data) ? data.filter(Boolean) : [data].filter(Boolean);
+      const list = Array.isArray(data) ? data.filter(Boolean) : [data].filter(Boolean);
+      return list.filter((s: any) => !s.is_deleted);
     } else if (sessionId) {
       // Session ID: use /my-shops (apiClient automatically sends X-Session-ID)
       const res = await apiClient.get(`${ENDPOINTS.SHOPS}/my-shops`);
       const raw = res?.datas ?? res?.data ?? res ?? [];
       const data = Array.isArray(raw) ? raw : (raw?.datas ?? raw?.data ?? [raw]);
-      return Array.isArray(data) ? data.filter(Boolean) : [data].filter(Boolean);
+      const list = Array.isArray(data) ? data.filter(Boolean) : [data].filter(Boolean);
+      return list.filter((s: any) => !s.is_deleted);
     }
     return [];
   } catch (e) {

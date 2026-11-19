@@ -15,10 +15,19 @@ import { usePurchaseSettings } from "@/context/PurchaseContext";
 import InvoicePreviewModal from "../components/InvoicePreviewModal";
 import { BillingSuccessModal } from "../components/BillingSuccessModal";
 import { BillingLoadingModal } from "../components/BillingLoadingModal";
+import { CustomFieldsPromptModal } from "../components/CustomFieldsPromptModal";
 import { NavigationBlocker } from "@/components/common/NavigationBlocker";
 import { calculateBillTotals, BillTotals, formatINR } from "@/utils/pricing";
 import { getPrinterConfig, attemptSilentBluetoothReconnect } from "../utils/printerService";
 import { useRegisterShortcut } from "@/hooks/useKeyboardShortcuts";
+import {
+  getActiveCustomFields,
+  getReceiptCustomFields,
+  getInvoiceCustomFields,
+  getInitialCustomFieldValues,
+  resolveCustomFields,
+  type CustomFieldDefinition,
+} from "../utils/customFieldsHelper";
 
 // ─── Helper to map serial names to object IDs ─────────────────────────────────
 const mapSerialsToInfos = (item: any) => {
@@ -106,6 +115,23 @@ const Billing = () => {
   });
   const [mobileTab, setMobileTab] = useState<"items" | "payment">("items");
 
+  // ── Custom Fields Prompt Modal State
+  const [promptState, setPromptState] = useState<{
+    isOpen: boolean;
+    type: "BILL" | "INVOICE";
+    fields: CustomFieldDefinition[];
+    pendingPayments: { mode: string; amount: number }[];
+    pendingIncludeGst: boolean;
+    pendingStatus: string;
+  }>({
+    isOpen: false,
+    type: "BILL",
+    fields: [],
+    pendingPayments: [],
+    pendingIncludeGst: false,
+    pendingStatus: "COMPLETED",
+  });
+
   // ── Checkout Success Details State
   const [successDetails, setSuccessDetails] = useState<{
     items: any[];
@@ -118,7 +144,30 @@ const Billing = () => {
     customerName: string;
     phone: string;
     orderId?: string;
+    customFields?: any[];
   } | null>(null);
+
+  // ── Custom Fields State (sync from Receipt & Invoice Templates)
+  const [activeCustomFields, setActiveCustomFields] = useState<CustomFieldDefinition[]>(() => getActiveCustomFields());
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>(() =>
+    getInitialCustomFieldValues(getActiveCustomFields())
+  );
+
+  // Reload custom fields whenever billing page becomes active/refreshed
+  useEffect(() => {
+    const fields = getActiveCustomFields();
+    setActiveCustomFields(fields);
+    setCustomFieldValues((prev) => {
+      const init = getInitialCustomFieldValues(fields);
+      return { ...init, ...prev };
+    });
+  }, []);
+
+  const customFieldValuesRef = useRef(customFieldValues);
+  customFieldValuesRef.current = customFieldValues;
+
+  const activeCustomFieldsRef = useRef(activeCustomFields);
+  activeCustomFieldsRef.current = activeCustomFields;
 
   // ── Billing Totals (Discount & GST Calculation Engine)
   const { settings } = usePurchaseSettings();
@@ -343,6 +392,7 @@ const Billing = () => {
     setCustomerData(null);
     setPayments([{ mode: "cash", amount: 0 }]);
     setSuccessDetails(null);
+    setCustomFieldValues(getInitialCustomFieldValues(activeCustomFields));
     setShowInvoicePreview(false);
     sessionDoneRef.current = false;
     itemsInCartRef.current = [];
@@ -361,7 +411,13 @@ const Billing = () => {
   }, []);
 
   // ── Confirm Order → Order Service Cart flow
-  const handleConfirmOrder = useCallback(async (paymentsArg: { mode: string, amount: number }[], _includeGst: boolean, _status: string, billingType: "BILL" | "INVOICE" = "BILL") => {
+  const handleConfirmOrder = useCallback(async (
+    paymentsArg: { mode: string, amount: number }[],
+    _includeGst: boolean,
+    _status: string,
+    billingType: "BILL" | "INVOICE" = "BILL",
+    customFieldValuesArg?: Record<string, string>
+  ) => {
     if (isSubmittingRef.current || isCheckoutLoading) return;
     const filledItems = items.filter(i => !!i.name);
     if (filledItems.length === 0) return;
@@ -375,6 +431,23 @@ const Billing = () => {
     }
     if (billTotal - totalPaid > 0.01) {
       showToast("Please pay the full balance amount first.", "warning");
+      return;
+    }
+
+    // Determine target fields based on billingType ("BILL" vs "INVOICE")
+    const targetFields = billingType === "INVOICE" ? getInvoiceCustomFields() : getReceiptCustomFields();
+    const askFields = targetFields.filter((f) => f.mode === "ask");
+
+    // If there are fields configured as "Ask while billing" and values weren't provided yet, prompt the modal!
+    if (!customFieldValuesArg && askFields.length > 0) {
+      setPromptState({
+        isOpen: true,
+        type: billingType,
+        fields: askFields,
+        pendingPayments: paymentsArg,
+        pendingIncludeGst: _includeGst,
+        pendingStatus: _status,
+      });
       return;
     }
 
@@ -476,6 +549,13 @@ const Billing = () => {
         }),
       };
 
+      const targetFieldsForResolution = billingType === "INVOICE" ? getInvoiceCustomFields() : getReceiptCustomFields();
+      const currentValuesMap = customFieldValuesArg || customFieldValuesRef.current;
+      const resolvedCustomFields = resolveCustomFields(
+        targetFieldsForResolution,
+        currentValuesMap
+      );
+
       // ── Step 4: POST /orders to confirm the order ───────────────────────────
       const orderPayload = {
         shop_id: SHOP_ID,
@@ -493,6 +573,7 @@ const Billing = () => {
           customer_phone: phone || "",
           billing_type: isInvoice ? "INVOICE" : "BILL",
           is_invoice: isInvoice,
+          custom_fields: resolvedCustomFields,
         },
       };
 
@@ -568,6 +649,7 @@ const Billing = () => {
           customerName: customerName || "Walk-in Customer",
           phone: phone || "",
           orderId: resolvedOrderId,
+          customFields: resolvedCustomFields,
         });
 
         if (isInvoice) {
@@ -590,7 +672,7 @@ const Billing = () => {
       setIsCheckoutLoading(false);
       setBillingLoadingState((prev) => ({ ...prev, isOpen: false }));
     }
-  }, [items, customerData, initCartSession, showToast, totalAmount, gstAmount, finalAmount, billTotals, billDiscount, customerName, phone, includeGst, isCheckoutLoading, showInvoicePreview, handleNextBill]);
+  }, [items, customerData, initCartSession, showToast, totalAmount, gstAmount, finalAmount, billTotals, billDiscount, customerName, phone, includeGst, isCheckoutLoading, showInvoicePreview, handleNextBill, activeCustomFields, customFieldValues]);
 
   // ── Register billing keyboard shortcuts
   useRegisterShortcut("bill_attach_customer", () => {
@@ -886,6 +968,7 @@ const Billing = () => {
             handleConfirmOrder(payments, includeGst, status, "INVOICE");
           }}
           orderId={successDetails?.orderId}
+          customFields={successDetails?.customFields || resolveCustomFields(activeCustomFields, customFieldValues)}
           onNewBill={() => {
             handleNextBill();
             setShowInvoicePreview(false);
@@ -897,6 +980,27 @@ const Billing = () => {
         <BillingLoadingModal
           isOpen={billingLoadingState.isOpen}
           type={billingLoadingState.type}
+        />
+
+        {/* Custom Fields Prompt Modal (Asked on Complete Bill / Complete Invoice) */}
+        <CustomFieldsPromptModal
+          isOpen={promptState.isOpen}
+          onClose={() => setPromptState((prev) => ({ ...prev, isOpen: false }))}
+          type={promptState.type}
+          fields={promptState.fields}
+          initialValues={customFieldValues}
+          onConfirm={(values) => {
+            setCustomFieldValues((prev) => ({ ...prev, ...values }));
+            customFieldValuesRef.current = { ...customFieldValuesRef.current, ...values };
+            setPromptState((prev) => ({ ...prev, isOpen: false }));
+            handleConfirmOrder(
+              promptState.pendingPayments,
+              promptState.pendingIncludeGst,
+              promptState.pendingStatus,
+              promptState.type,
+              values
+            );
+          }}
         />
 
 

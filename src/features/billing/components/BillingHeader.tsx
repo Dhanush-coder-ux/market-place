@@ -56,7 +56,7 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
   payments, onPaymentsChange,
   onAddCustomerClick,
   onDetachCustomer,
-  onBackToItems
+  onBackToItems,
 }) => {
   const { showToast } = useToast();
   const totalQty = useMemo(() => items.reduce((s, i) => s + (i.qty || 0), 0), [items]);
@@ -220,6 +220,7 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
           )}
         </div>
 
+
         {/* ── Billing Summary & Discount Breakdown ───────────────────── */}
         <div className="border border-slate-150 rounded-xl p-3.5 space-y-3 shadow-sm bg-slate-50/20">
           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-1.5">BILLING SUMMARY</p>
@@ -345,6 +346,7 @@ const BillingHeader: React.FC<BillingHeaderProps> = ({
             </div>
           )}
         </div>
+
 
         {/* ── Split Payments Section ─────────────────────────────────── */}
         <div className="border border-slate-150 rounded-xl p-3.5 space-y-3 shadow-sm flex flex-col shrink-0 bg-white">

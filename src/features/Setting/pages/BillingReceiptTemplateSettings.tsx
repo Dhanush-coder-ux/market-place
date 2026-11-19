@@ -87,7 +87,7 @@ export interface BillingReceiptConfig {
   fields: CustomField[];
 }
 
-const STORAGE_KEY = "inventq.billingReceiptSettings.v1";
+export const STORAGE_KEY = "inventq.billingReceiptSettings.v1";
 const uid = () => "rf" + Math.random().toString(36).slice(2, 8);
 
 const BASE_FIELD: Omit<CustomField, "id" | "label" | "show"> = {
@@ -101,7 +101,7 @@ const BASE_FIELD: Omit<CustomField, "id" | "label" | "show"> = {
   itemShow: "under",
 };
 
-const DEFAULT_CONFIG: BillingReceiptConfig = {
+export const DEFAULT_CONFIG: BillingReceiptConfig = {
   paperWidth: "80mm",
   templateId: "modern",
   header: {
@@ -379,6 +379,7 @@ export const BillingReceiptTemplateSettings: React.FC = () => {
         paperWidth: config.paperWidth,
         footerText: config.footer.thanks,
         includeDigitalStoreQr: config.qr.store,
+        templateId: config.templateId,
       });
       setSavedConfig(config);
       showToast("Thermal receipt template saved successfully", "success");
@@ -1373,28 +1374,38 @@ export const BillingReceiptTemplateSettings: React.FC = () => {
                 {((config.qr.upi && config.qr.upiId) || (config.qr.store && config.qr.storeUrl)) && (
                   <>
                     <div className="rcp-r-divider" />
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, margin: "6px 0" }}>
+                    <div className="rcp-qr-container" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, margin: "6px 0", width: "100%", textAlign: "center" }}>
                       {config.qr.upi && config.qr.upiId && (
-                        <div className="rcp-r-center">
-                          <QRCodeSVG
-                            value={`upi://pay?pa=${encodeURIComponent(config.qr.upiId)}&pn=${encodeURIComponent(shopName)}&am=${subTotal.toFixed(2)}&cu=INR`}
-                            size={is80mm ? 90 : 76}
-                            level="M"
-                          />
-                          <div className="rcp-r-bold rcp-r-small" style={{ marginTop: 4 }}>
+                        <div className="rcp-qr-block rcp-r-center" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", width: "100%", textAlign: "center" }}>
+                          <div className="rcp-qr-box" style={{ display: "flex", justifyContent: "center", alignItems: "center", width: "100%", margin: "0 auto" }}>
+                            <QRCodeSVG
+                              value={`upi://pay?pa=${encodeURIComponent(config.qr.upiId)}&pn=${encodeURIComponent(shopName)}&am=${subTotal.toFixed(2)}&cu=INR`}
+                              size={is80mm ? 90 : 76}
+                              level="M"
+                              style={{ display: "block", margin: "0 auto" }}
+                            />
+                          </div>
+                          <div className="rcp-r-bold rcp-r-small" style={{ marginTop: 4, textAlign: "center", width: "100%" }}>
                             {config.qr.upiCap || "Scan & Pay via UPI"}
                           </div>
-                          <div className="rcp-r-small">{config.qr.upiId}</div>
+                          <div className="rcp-r-small" style={{ textAlign: "center", wordBreak: "break-all", width: "100%" }}>{config.qr.upiId}</div>
                         </div>
                       )}
 
                       {config.qr.store && config.qr.storeUrl && (
-                        <div className="rcp-r-center">
-                          <QRCodeSVG value={config.qr.storeUrl} size={is80mm ? 80 : 70} level="M" />
-                          <div className="rcp-r-bold rcp-r-small" style={{ marginTop: 4 }}>
+                        <div className="rcp-qr-block rcp-r-center" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", width: "100%", textAlign: "center" }}>
+                          <div className="rcp-qr-box" style={{ display: "flex", justifyContent: "center", alignItems: "center", width: "100%", margin: "0 auto" }}>
+                            <QRCodeSVG
+                              value={config.qr.storeUrl}
+                              size={is80mm ? 80 : 70}
+                              level="M"
+                              style={{ display: "block", margin: "0 auto" }}
+                            />
+                          </div>
+                          <div className="rcp-r-bold rcp-r-small" style={{ marginTop: 4, textAlign: "center", width: "100%" }}>
                             {config.qr.storeCap || "Scan to Order Online"}
                           </div>
-                          <div className="rcp-r-small">{config.qr.storeUrl.replace(/^https?:\/\//, "")}</div>
+                          <div className="rcp-r-small" style={{ textAlign: "center", wordBreak: "break-all", width: "100%" }}>{config.qr.storeUrl.replace(/^https?:\/\//, "")}</div>
                         </div>
                       )}
                     </div>

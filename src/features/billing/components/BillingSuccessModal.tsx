@@ -11,6 +11,7 @@ import {
   getPrintersList,
   SavedPrinter,
   getPrinterConfig,
+  getBillingReceiptConfig,
   getDigitalStoreUrl,
 } from "../utils/printerService";
 import { useToast } from "@/context/ToastContext";
@@ -31,6 +32,7 @@ interface BillingSuccessModalProps {
     customerName: string;
     phone: string;
     orderId?: string;
+    customFields?: any[];
   } | null;
   onClose: () => void;
   onNextBill: () => void;
@@ -74,6 +76,7 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
   const [phase, setPhase] = useState<AnimPhase | null>(null);
   const [closing, setClosing] = useState(false);
   const [shopData, setShopData] = useState<any>(null);
+  const [receiptConfig, setReceiptConfig] = useState(() => getBillingReceiptConfig());
   const [isPrinterConfigOpen, setIsPrinterConfigOpen] = useState(false);
   const [printersList, setPrintersList] = useState<SavedPrinter[]>(() => getPrintersList());
   const [selectedPrinterId, setSelectedPrinterId] = useState<string>(() => {
@@ -87,6 +90,7 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
   /* Load & sync configured printers list — Primary printer is chosen by default */
   useEffect(() => {
     if (isOpen) {
+      setReceiptConfig(getBillingReceiptConfig());
       const list = getPrintersList();
       setPrintersList(list);
       const def = list.find((p) => p.isDefault) || list[0];
@@ -197,19 +201,20 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
         invoiceTypeTag: "TAX INVOICE",
         payments: details.payments,
         shopId: shopData?.id,
-        digitalStoreUrl: shopData?.additional_infos?.website || getDigitalStoreUrl(shopData?.id),
-        includeDigitalStoreQr: Boolean(
-          (printersList.find((p) => p.id === selectedPrinterId) ||
-            printersList.find((p) => p.isDefault) ||
-            printersList[0] ||
-            getPrinterConfig()).includeDigitalStoreQr !== false
-        ),
-        digitalStoreQrMessage: (
+        digitalStoreUrl: receiptConfig.qr?.storeUrl || shopData?.additional_infos?.website || getDigitalStoreUrl(shopData?.id),
+        includeDigitalStoreQr: Boolean(receiptConfig.qr?.store !== false),
+        digitalStoreQrMessage: receiptConfig.qr?.storeCap || (
           printersList.find((p) => p.id === selectedPrinterId) ||
           printersList.find((p) => p.isDefault) ||
           printersList[0] ||
           getPrinterConfig()
         ).digitalStoreQrMessage,
+        customFields: details.customFields,
+        paperWidth: receiptConfig.paperWidth,
+        templateId: receiptConfig.templateId,
+        upiId: receiptConfig.qr?.upiId,
+        upiCap: receiptConfig.qr?.upiCap,
+        includeUpiQr: receiptConfig.qr?.upi,
       };
 
       const targetPrinter =
@@ -764,6 +769,12 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
                     )}
                   </>
                 )}
+                {(details.customFields || []).filter((f: any) => f.placement === "customer" && f.value).map((f: any) => (
+                  <div key={f.id} className="flex justify-between text-[10px]">
+                    <span className="text-[#8A857C] font-medium">{f.label}</span>
+                    <span className="font-semibold text-[#1A1714]">{f.value}</span>
+                  </div>
+                ))}
 
                 <hr className="receipt-separator" />
 
@@ -797,6 +808,21 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
                     </div>
                   );
                 })}
+
+                {/* Below items custom fields */}
+                {(details.customFields || []).filter((f: any) => f.placement === "below" && f.value).length > 0 && (
+                  <>
+                    <hr className="receipt-separator" />
+                    <div className="space-y-0.5 py-0.5">
+                      {(details.customFields || []).filter((f: any) => f.placement === "below" && f.value).map((f: any) => (
+                        <div key={f.id} className="flex justify-between text-[10px]">
+                          <span className="text-[#8A857C] font-medium">{f.label}:</span>
+                          <span className="font-semibold text-[#1A1714]">{f.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
 
                 <hr className="receipt-separator" />
 
@@ -882,34 +908,71 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
 
                 <hr className="receipt-separator" />
 
-                {/* ── Digital Store QR on Receipt (Visible when enabled) ── */}
-                {Boolean(selectedPrinter?.includeDigitalStoreQr !== false) && (
-                  <div className="text-center my-2.5 pt-2 border-t border-dashed border-[#DDD7CD]">
-                    <div className="flex justify-center my-2">
-                      <div className="p-2 bg-white rounded-lg border border-[#e2e8f0] shadow-xs inline-flex items-center justify-center">
+                {/* ── UPI QR Code on Receipt ── */}
+                {Boolean(receiptConfig.qr?.upi && receiptConfig.qr?.upiId) && (
+                  <div className="text-center my-2.5 pt-2 border-t border-dashed border-[#DDD7CD] flex flex-col items-center justify-center w-full">
+                    <div className="flex justify-center my-1.5 w-full">
+                      <div className="p-2 bg-white rounded-lg border border-[#e2e8f0] shadow-xs inline-flex items-center justify-center mx-auto">
                         <QRCodeSVG
-                          value={
-                            shopData?.additional_infos?.website ||
-                            getDigitalStoreUrl(shopData?.id)
-                          }
-                          size={110}
+                          value={`upi://pay?pa=${encodeURIComponent(receiptConfig.qr.upiId)}&pn=${encodeURIComponent(shopData?.name || "")}&am=${details.finalAmount.toFixed(2)}&cu=INR`}
+                          size={receiptConfig.paperWidth === "58mm" ? 75 : 95}
                           level="M"
+                          style={{ display: "block", margin: "0 auto" }}
                         />
                       </div>
                     </div>
-                    <div className="text-[9px] font-medium text-[#4a5568]">
-                      Scan to visit our online store
+                    <div className="text-[9.5px] font-bold text-[#1A1714] text-center">
+                      {receiptConfig.qr.upiCap || "Scan & Pay via UPI"}
+                    </div>
+                    <div className="text-[8.5px] text-[#8A857C] text-center">
+                      {receiptConfig.qr.upiId}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Digital Store QR on Receipt (Visible when enabled) ── */}
+                {Boolean(
+                  receiptConfig.qr?.store !== false &&
+                  selectedPrinter?.includeDigitalStoreQr !== false &&
+                  (receiptConfig.qr?.storeUrl || shopData?.additional_infos?.website || getDigitalStoreUrl(shopData?.id))
+                ) && (
+                  <div className="text-center my-2.5 pt-2 border-t border-dashed border-[#DDD7CD] flex flex-col items-center justify-center w-full">
+                    <div className="flex justify-center my-1.5 w-full">
+                      <div className="p-2 bg-white rounded-lg border border-[#e2e8f0] shadow-xs inline-flex items-center justify-center mx-auto">
+                        <QRCodeSVG
+                          value={
+                            receiptConfig.qr?.storeUrl ||
+                            shopData?.additional_infos?.website ||
+                            getDigitalStoreUrl(shopData?.id)
+                          }
+                          size={receiptConfig.paperWidth === "58mm" ? 75 : 95}
+                          level="M"
+                          style={{ display: "block", margin: "0 auto" }}
+                        />
+                      </div>
+                    </div>
+                    <div className="text-[9px] font-medium text-[#4a5568] text-center">
+                      {receiptConfig.qr?.storeCap || "Scan to visit our online store"}
+                    </div>
+                    <div className="text-[8px] text-[#8A857C] text-center break-all max-w-[85%] mx-auto">
+                      {(receiptConfig.qr?.storeUrl || shopData?.additional_infos?.website || getDigitalStoreUrl(shopData?.id)).replace(/^https?:\/\//, "")}
                     </div>
                   </div>
                 )}
 
                 {/* ── Footer ─────────────────────────────────── */}
-                <div className="text-center text-[9px] text-[#8A857C] mt-1 space-y-0.5">
-                  <div>Thank you for your purchase!</div>
-                  <div>Goods once sold will not be returned</div>
-                  <div className="text-[8px] mt-1 text-[#B0AAA2]">
-                    ★ ★ ★
+                <div className="text-center text-[9px] text-[#8A857C] mt-2 space-y-0.5">
+                  <div className="font-semibold text-slate-700">
+                    {receiptConfig.footer?.thanks || selectedPrinter?.footerText || "Thank you for your purchase!"}
                   </div>
+                  <div>
+                    {receiptConfig.footer?.terms || "Goods once sold will not be returned"}
+                  </div>
+                  {receiptConfig.footer?.showTearLine && (
+                    <div className="text-[8px] mt-1.5 text-[#B0AAA2] tracking-wider text-center">
+                      - - - - - - - - - - - - - - - - - - - -<br />Tear here
+                    </div>
+                  )}
                 </div>
 
                 <div className="h-3" />

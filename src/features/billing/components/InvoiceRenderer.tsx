@@ -104,31 +104,35 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
 
   // Fallback to saved invoice settings from localStorage if not explicitly supplied
   const resolvedSettings = useMemo(() => {
-    if (customFields !== undefined || signature !== undefined || qrSettings !== undefined || footerSettings !== undefined) {
-      return {
-        customFields: customFields || [],
-        signature,
-        qrSettings,
-        footerSettings,
-      };
-    }
+    let baseFields: InvoiceRendererCustomField[] = [];
+    let baseSig: any = undefined;
+    let baseQr: any = undefined;
+    let baseFooter: any = undefined;
+
     try {
       const raw = localStorage.getItem("inventq.invoiceSettings.v2");
       if (raw) {
         const parsed = JSON.parse(raw);
-        return {
-          customFields: (parsed.fields || []) as InvoiceRendererCustomField[],
-          signature: parsed.sig,
-          qrSettings: parsed.qr,
-          footerSettings: parsed.footer,
-        };
+        baseFields = (parsed.fields || []) as InvoiceRendererCustomField[];
+        baseSig = parsed.sig;
+        baseQr = parsed.qr;
+        baseFooter = parsed.footer;
       }
     } catch (_) {}
+
+    const sourceFields = customFields !== undefined && customFields.length > 0 ? customFields : baseFields;
+    const finalFields = sourceFields.map((f: any) => ({
+      ...f,
+      show: f.show !== false,
+      value: f.value ?? (f.mode === "fixed" ? f.value : ""),
+      displayValue: f.displayValue ?? f.value,
+    }));
+
     return {
-      customFields: [] as InvoiceRendererCustomField[],
-      signature: undefined,
-      qrSettings: undefined,
-      footerSettings: undefined,
+      customFields: finalFields,
+      signature: signature !== undefined ? signature : baseSig,
+      qrSettings: qrSettings !== undefined ? qrSettings : baseQr,
+      footerSettings: footerSettings !== undefined ? footerSettings : baseFooter,
     };
   }, [customFields, signature, qrSettings, footerSettings]);
 
@@ -210,7 +214,7 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
         
         {/* Customer Info & Top Custom Fields */}
         {((Boolean(customerName) && !["walk-in", "walk-in customer", "walk in", "walk in customer", "walkin", "walkin customer"].includes(customerName.trim().toLowerCase())) ||
-          (resolvedSettings.customFields && resolvedSettings.customFields.some((f) => f.show && f.placement === "customer" && f.label?.trim()))) && (
+          (resolvedSettings.customFields && resolvedSettings.customFields.some((f) => f.show !== false && f.placement === "customer" && f.label?.trim()))) && (
           <div className={config.customer.wrapper}>
             <div className="flex justify-between items-start gap-4">
               <div>
@@ -218,10 +222,10 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
                 <p className={config.customer.name}>{customerName || "Customer"}</p>
                 {phone && <p className={config.customer.phone}>{phone}</p>}
               </div>
-              {resolvedSettings.customFields && resolvedSettings.customFields.filter((f) => f.show && f.placement === "customer" && f.label?.trim()).length > 0 && (
+              {resolvedSettings.customFields && resolvedSettings.customFields.filter((f) => f.show !== false && f.placement === "customer" && f.label?.trim()).length > 0 && (
                 <div className="text-right space-y-1">
                   {resolvedSettings.customFields
-                    .filter((f) => f.show && f.placement === "customer" && f.label?.trim())
+                    .filter((f) => f.show !== false && f.placement === "customer" && f.label?.trim())
                     .map((f) => (
                       <div key={f.id} className="text-[11px] leading-tight">
                         <span className="text-slate-400 font-medium mr-1.5">{f.label}:</span>
@@ -279,7 +283,7 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
                        {variantName && <p className={config.table.cellMuted}>{cleanVariantLabel(variantName)}</p>}
                        {line.code && <p className={`text-[9px] font-mono ${config.table.cellMuted}`}>{line.code}</p>}
                         {/* Custom Item Attributes */}
-                        {resolvedSettings.customFields && resolvedSettings.customFields.filter((f) => f.show && f.placement === "item" && f.label?.trim()).map((f) => {
+                        {resolvedSettings.customFields && resolvedSettings.customFields.filter((f) => f.show !== false && f.placement === "item" && f.label?.trim()).map((f) => {
                           const val = getItemCustomValue ? getItemCustomValue(f, line, i) : (f.displayValue ?? f.value ?? (f.mode === "fixed" ? f.value : "Asked while billing"));
                           return (
                             <p key={f.id} className="text-[9.5px] text-slate-500 mt-0.5">
@@ -366,9 +370,9 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
         )}
 
         {/* Custom fields below items */}
-        {resolvedSettings.customFields && resolvedSettings.customFields.filter((f) => f.show && f.placement === "below" && f.label?.trim()).length > 0 && (
+        {resolvedSettings.customFields && resolvedSettings.customFields.filter((f) => f.show !== false && f.placement === "below" && f.label?.trim()).length > 0 && (
           <div className="px-6 py-2.5 bg-slate-50/70 border-t border-slate-200/60 divide-y divide-slate-100">
-            {resolvedSettings.customFields.filter((f) => f.show && f.placement === "below" && f.label?.trim()).map((f) => (
+            {resolvedSettings.customFields.filter((f) => f.show !== false && f.placement === "below" && f.label?.trim()).map((f) => (
               <div key={f.id} className="flex justify-between items-center text-[11px] py-1">
                 <span className="font-medium text-slate-600">{f.label}</span>
                 <span className="font-semibold text-slate-800">{f.displayValue ?? f.value ?? "Asked while billing"}</span>

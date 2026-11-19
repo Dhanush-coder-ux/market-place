@@ -454,6 +454,46 @@ input:checked + .rcp-slider:before {
 .rcp-r-center {
   text-align: center;
 }
+.rcp-r-center svg,
+.rcp-r-center img {
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
+}
+
+.rcp-qr-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 6px 0;
+  width: 100%;
+  text-align: center;
+}
+
+.rcp-qr-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  text-align: center;
+}
+
+.rcp-qr-box {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.rcp-qr-box svg {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
 .rcp-r-bold {
   font-weight: 800;
 }

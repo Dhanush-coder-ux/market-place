@@ -34,6 +34,7 @@ import {
   DEFAULT_DIGITAL_STORE_QR_MESSAGE,
   PrinterConnectionType,
   PaperWidth,
+  ThermalTemplateId,
 } from "../utils/printerService";
 import { useToast } from "@/context/ToastContext";
 import { shopApi } from "@/services/api/shop";
@@ -562,6 +563,39 @@ export const PrinterConfigModal: React.FC<PrinterConfigModalProps> = ({
               <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                 Receipt Paper & Hardware Controls
               </label>
+            </div>
+
+            {/* Thermal Receipt Template Selector */}
+            <div className="p-3.5 bg-white border border-slate-200 rounded-xl space-y-2">
+              <label className="text-xs font-bold text-slate-700 block">
+                Thermal Receipt Template & Design
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {[
+                  { id: "modern", name: "Modern", desc: "Structured & bold" },
+                  { id: "classic", name: "Classic", desc: "Monospace register" },
+                  { id: "compact", name: "Compact", desc: "Roll paper saver" },
+                  { id: "gst", name: "GST Tax Slip", desc: "Full tax breakdown" },
+                ].map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => setConfig((prev) => ({ ...prev, templateId: t.id as ThermalTemplateId }))}
+                    className={`p-2 rounded-lg font-bold text-xs flex flex-col items-center justify-center gap-0.5 text-center transition-all cursor-pointer border ${
+                      (config.templateId || "modern") === t.id
+                        ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                        : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                    }`}
+                  >
+                    <span>{t.name}</span>
+                    <span className={`text-[9.5px] font-normal ${
+                      (config.templateId || "modern") === t.id ? "text-blue-100" : "text-slate-400"
+                    }`}>
+                      {t.desc}
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">

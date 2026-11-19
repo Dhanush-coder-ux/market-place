@@ -26,6 +26,7 @@ import {
   PrinterRole,
   PrinterConnectionType,
   PaperWidth,
+  ThermalTemplateId,
   DEFAULT_PRINTER_CONFIG,
   DIGITAL_STORE_QR_MESSAGES,
   DEFAULT_DIGITAL_STORE_QR_MESSAGE,
@@ -877,6 +878,43 @@ export const PrinterSettingsTab: React.FC = () => {
                     </p>
                   </div>
                 )}
+              </div>
+
+              {/* Thermal Template Design */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-slate-700">Receipt Layout & Design</label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  {[
+                    { id: "modern", label: "Modern Thermal", sub: "Structured & bold" },
+                    { id: "classic", label: "Classic Monospace", sub: "Supermarket cash register" },
+                    { id: "compact", label: "Compact Roll Saver", sub: "Minimal paper usage" },
+                    { id: "gst", label: "Detailed GST", sub: "Full tax breakdown slip" },
+                  ].map((tmpl) => {
+                    const isSelected = (editingPrinter.templateId || "modern") === tmpl.id;
+                    return (
+                      <button
+                        key={tmpl.id}
+                        type="button"
+                        onClick={() =>
+                          setEditingPrinter((prev) =>
+                            prev ? { ...prev, templateId: tmpl.id as ThermalTemplateId } : null
+                          )
+                        }
+                        className={`p-2.5 rounded-xl border text-left flex flex-col justify-between transition-all cursor-pointer ${
+                          isSelected
+                            ? "bg-emerald-50/70 border-emerald-400 text-emerald-950 ring-2 ring-emerald-500/10 shadow-sm"
+                            : "bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50/60"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <span className="text-xs font-bold">{tmpl.label}</span>
+                          {isSelected && <Check size={13} className="text-emerald-700 stroke-[2.5]" />}
+                        </div>
+                        <span className="text-[10px] text-slate-400 font-normal mt-0.5 line-clamp-1">{tmpl.sub}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Paper Roll Dimensions */}

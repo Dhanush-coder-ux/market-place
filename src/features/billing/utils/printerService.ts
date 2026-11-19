@@ -6,11 +6,14 @@ import { QRCodeSVG } from "qrcode.react";
 export type PrinterConnectionType = "system" | "bluetooth" | "usb" | "network";
 export type PaperWidth = "58mm" | "80mm";
 
+export type ThermalTemplateId = "modern" | "classic" | "compact" | "gst";
+
 export interface PrinterConfig {
   connectionType: PrinterConnectionType;
   deviceName?: string;
   deviceId?: string;
   paperWidth: PaperWidth;
+  templateId?: ThermalTemplateId;
   autoCut: boolean;
   openCashDrawer: boolean;
   enableBuzzer?: boolean;
@@ -41,6 +44,7 @@ export const DEFAULT_PRINTER_CONFIG: PrinterConfig = {
   connectionType: "system",
   deviceName: "System Default Printer",
   paperWidth: "80mm",
+  templateId: "modern",
   autoCut: true,
   openCashDrawer: false,
   enableBuzzer: true,
@@ -77,6 +81,99 @@ export interface SavedPrinter extends PrinterConfig {
 
 const STORAGE_KEY = "inventq_printer_config";
 const PRINTERS_LIST_KEY = "inventq_printers_list";
+export const BILLING_RECEIPT_CONFIG_KEY = "inventq.billingReceiptSettings.v1";
+
+export const DEFAULT_BILLING_RECEIPT_CONFIG = {
+  paperWidth: "80mm" as PaperWidth,
+  templateId: "modern" as ThermalTemplateId,
+  header: {
+    showLogo: false,
+    showStoreName: true,
+    tagline: "Quality Products & Best Service",
+    showAddress: true,
+    showPhone: true,
+    showGst: true,
+    fssaiNo: "",
+  },
+  meta: {
+    cashierName: "Counter 1",
+    showCashier: true,
+    showTokenNo: true,
+    tokenPrefix: "T-",
+    showCustomer: true,
+    showDateTime: true,
+  },
+  items: {
+    showRate: true,
+    showCode: false,
+    showDiscount: true,
+    showUnit: true,
+  },
+  tax: {
+    showTaxBreakup: true,
+    showWords: true,
+  },
+  qr: {
+    upi: true,
+    upiId: "",
+    upiCap: "Scan & Pay via UPI",
+    store: true,
+    storeUrl: "",
+    storeCap: "Scan to Order Online",
+  },
+  footer: {
+    thanks: "Thank you for shopping with us! Please visit again.",
+    terms: "Goods once sold can be exchanged within 7 days with bill.",
+    showTearLine: true,
+  },
+  fields: [] as any[],
+};
+
+/**
+ * Get unified Billing Receipt configuration (thermal template, width, fields, QR)
+ */
+export function getBillingReceiptConfig() {
+  try {
+    const raw = localStorage.getItem(BILLING_RECEIPT_CONFIG_KEY);
+    const prConfig = getPrinterConfig();
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return {
+        ...DEFAULT_BILLING_RECEIPT_CONFIG,
+        ...parsed,
+        paperWidth: prConfig.paperWidth || parsed.paperWidth || "80mm",
+        templateId: prConfig.templateId || parsed.templateId || "modern",
+      };
+    }
+    return {
+      ...DEFAULT_BILLING_RECEIPT_CONFIG,
+      paperWidth: prConfig.paperWidth || "80mm",
+      templateId: prConfig.templateId || "modern",
+    };
+  } catch (err) {
+    console.error("Failed to load billing receipt config:", err);
+    return { ...DEFAULT_BILLING_RECEIPT_CONFIG };
+  }
+}
+
+/**
+ * Save unified Billing Receipt configuration and sync with printer config
+ */
+export function saveBillingReceiptConfig(config: any): void {
+  try {
+    localStorage.setItem(BILLING_RECEIPT_CONFIG_KEY, JSON.stringify(config));
+    const pr = getPrinterConfig();
+    savePrinterConfig({
+      ...pr,
+      paperWidth: config.paperWidth || pr.paperWidth,
+      footerText: config.footer?.thanks || pr.footerText,
+      includeDigitalStoreQr: config.qr?.store !== undefined ? config.qr.store : pr.includeDigitalStoreQr,
+      templateId: config.templateId || pr.templateId,
+    });
+  } catch (err) {
+    console.error("Failed to save billing receipt config:", err);
+  }
+}
 
 /**
  * Get saved printer configuration from localStorage
@@ -107,6 +204,34 @@ export function savePrinterConfig(config: PrinterConfig): void {
         localStorage.setItem(PRINTERS_LIST_KEY, JSON.stringify(updated));
       }
     }
+
+    // Bidirectional sync: keep billing receipt settings in sync
+    try {
+      const receiptRaw = localStorage.getItem(BILLING_RECEIPT_CONFIG_KEY);
+      if (receiptRaw) {
+        const receiptParsed = JSON.parse(receiptRaw);
+        let changed = false;
+        if (config.paperWidth && receiptParsed.paperWidth !== config.paperWidth) {
+          receiptParsed.paperWidth = config.paperWidth;
+          changed = true;
+        }
+        if (config.templateId && receiptParsed.templateId !== config.templateId) {
+          receiptParsed.templateId = config.templateId;
+          changed = true;
+        }
+        if (config.footerText && receiptParsed.footer && receiptParsed.footer.thanks !== config.footerText) {
+          receiptParsed.footer.thanks = config.footerText;
+          changed = true;
+        }
+        if (config.includeDigitalStoreQr !== undefined && receiptParsed.qr && receiptParsed.qr.store !== config.includeDigitalStoreQr) {
+          receiptParsed.qr.store = config.includeDigitalStoreQr;
+          changed = true;
+        }
+        if (changed) {
+          localStorage.setItem(BILLING_RECEIPT_CONFIG_KEY, JSON.stringify(receiptParsed));
+        }
+      }
+    } catch (_) {}
   } catch (err) {
     console.error("Failed to save printer config to localStorage", err);
   }
@@ -726,6 +851,18 @@ export interface ReceiptData {
   digitalStoreUrl?: string;
   includeDigitalStoreQr?: boolean;
   digitalStoreQrMessage?: string;
+  paperWidth?: PaperWidth;
+  templateId?: ThermalTemplateId;
+  upiId?: string;
+  upiCap?: string;
+  includeUpiQr?: boolean;
+  customFields?: Array<{
+    id: string;
+    label: string;
+    placement: "customer" | "item" | "below";
+    value: string;
+    mode?: "fixed" | "ask";
+  }>;
 }
 
 /**
@@ -844,6 +981,52 @@ export function generateEscPosRasterQr(url: string, is58mm = true): number[] {
     console.error("Failed to generate ESC/POS raster QR bytes:", err);
     return [];
   }
+}
+
+/**
+ * Generate standard ESC/POS 2D barcode commands (GS ( k) for QR code.
+ * Natively supported by ESC/POS receipt printers (Epson, Star, Xprinter, Rongta, Munbyn, Bixolon)
+ * and virtual printer emulators (including virtual-printer.online, Menukit, etc.).
+ */
+export function generateEscPosQrCommands(url: string, is58mm = false): number[] {
+  if (!url || !url.trim()) return [];
+  const text = url.trim();
+  const dataBytes: number[] = [];
+  for (let i = 0; i < text.length; i++) {
+    dataBytes.push(text.charCodeAt(i) & 0xff);
+  }
+
+  const k = dataBytes.length;
+  const storeLen = k + 3;
+  const pL = storeLen & 0xff;
+  const pH = (storeLen >> 8) & 0xff;
+  const moduleSize = is58mm ? 5 : 6;
+
+  const bytes: number[] = [];
+
+  // Align Center
+  bytes.push(0x1b, 0x61, 0x01);
+
+  // 1. Set Model 2: GS ( k 04 00 31 41 32 00
+  bytes.push(0x1d, 0x28, 0x6b, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00);
+
+  // 2. Set Module Size: GS ( k 03 00 31 43 <size>
+  bytes.push(0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x43, moduleSize);
+
+  // 3. Set Error Correction Level M: GS ( k 03 00 31 45 31
+  bytes.push(0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x45, 0x31);
+
+  // 4. Store Data: GS ( k <pL> <pH> 31 50 30 <data>
+  bytes.push(0x1d, 0x28, 0x6b, pL, pH, 0x31, 0x50, 0x30, ...dataBytes);
+
+  // 5. Print QR Code: GS ( k 03 00 31 51 30
+  bytes.push(0x1d, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x51, 0x30);
+
+  // Trailing line feed and reset alignment to left
+  bytes.push(0x0a);
+  bytes.push(0x1b, 0x61, 0x00);
+
+  return bytes;
 }
 
 /**
@@ -999,18 +1182,6 @@ export function buildEscPosBuffer(data: ReceiptData, config: PrinterConfig): Uin
   const colWidth = is58mm ? 32 : 42;
   const bytes: number[] = [];
 
-  const addUtf8Str = (str: string) => {
-    const encoded = new TextEncoder().encode(str);
-    for (let i = 0; i < encoded.length; i++) {
-      bytes.push(encoded[i]);
-    }
-  };
-
-  const addUtf8Line = (str = "") => {
-    addUtf8Str(str);
-    bytes.push(0x0a); // LF
-  };
-
   const addStr = (str: string) => {
     const clean = toAsciiReceiptText(str);
     for (let i = 0; i < clean.length; i++) {
@@ -1125,6 +1296,11 @@ export function buildEscPosBuffer(data: ReceiptData, config: PrinterConfig): Uin
       addRow("Phone:", data.phone);
     }
   }
+  if (data.customFields && Array.isArray(data.customFields)) {
+    data.customFields.filter((f) => f.placement === "customer" && f.value).forEach((f) => {
+      addRow(`${f.label}:`, f.value);
+    });
+  }
   addDivider();
 
   // 5. Items Table with Perfect Column Alignment
@@ -1183,6 +1359,16 @@ export function buildEscPosBuffer(data: ReceiptData, config: PrinterConfig): Uin
   }
 
   addDivider();
+
+  if (data.customFields && Array.isArray(data.customFields)) {
+    const belowFields = data.customFields.filter((f) => f.placement === "below" && f.value);
+    if (belowFields.length > 0) {
+      belowFields.forEach((f) => {
+        addRow(`${f.label}:`, f.value);
+      });
+      addDivider();
+    }
+  }
 
   // 6. Totals Breakdown matching preview exactly
   const unitsLabel = data.totalUnits ? ` (${data.totalUnits} units)` : "";
@@ -1257,6 +1443,20 @@ export function buildEscPosBuffer(data: ReceiptData, config: PrinterConfig): Uin
 
   addDivider();
 
+  // UPI QR Code Section (if enabled)
+  if (data.includeUpiQr && data.upiId) {
+    const upiLink = `upi://pay?pa=${encodeURIComponent(data.upiId)}&pn=${encodeURIComponent(data.shopName || "")}&am=${data.finalAmount.toFixed(2)}&cu=INR`;
+    addCenter(data.upiCap || "SCAN & PAY VIA UPI", true);
+    addCenter(`UPI ID: ${data.upiId}`);
+    addLine();
+    const upiQrBytes = generateEscPosQrCommands(upiLink, is58mm);
+    for (const b of upiQrBytes) {
+      bytes.push(b);
+    }
+    addLine();
+    addDivider();
+  }
+
   // Digital Store QR Code Section (Printed before footer)
   const shouldPrintDigitalQr = Boolean(
     (data.includeDigitalStoreQr !== undefined ? data.includeDigitalStoreQr : config.includeDigitalStoreQr) !== false
@@ -1271,13 +1471,10 @@ export function buildEscPosBuffer(data: ReceiptData, config: PrinterConfig): Uin
     }
     addLine();
 
-    // Universal Text-Block QR Code:
-    // Renders visual black-and-white scannable QR modules using monospace block characters.
-    // 100% compatible across local virtual thermal printers (Menukit), online virtual printers,
-    // cloud printers, and POS systems without unhandled command artifacts.
-    const qrLines = generateTextQrCodeLines(digitalStoreUrl, colWidth);
-    for (const qrLine of qrLines) {
-      addUtf8Line(qrLine);
+    // Standard ESC/POS QR Code: Natively supported by Epson, Star, Xprinter, and virtual-printer.online
+    const storeQrBytes = generateEscPosQrCommands(digitalStoreUrl, is58mm);
+    for (const b of storeQrBytes) {
+      bytes.push(b);
     }
     addLine();
 
@@ -1370,21 +1567,37 @@ export function printViaSystemDriver(
   config: PrinterConfig
 ): Promise<{ success: boolean; message: string }> {
   return new Promise((resolve) => {
-    const is58 = config.paperWidth === "58mm";
+    const receiptConfig = getBillingReceiptConfig();
+    const effectiveWidth = data.paperWidth || config.paperWidth || receiptConfig.paperWidth || "80mm";
+    const is58 = effectiveWidth === "58mm";
     const widthMm = is58 ? "58mm" : "80mm";
+    const templateId = data.templateId || config.templateId || receiptConfig.templateId || "modern";
 
-    const shouldPrintDigitalQr = Boolean(data.includeDigitalStoreQr ?? config.includeDigitalStoreQr);
-    const digitalStoreUrl = data.digitalStoreUrl || getDigitalStoreUrl(data.shopId);
-    const qrMessage = data.digitalStoreQrMessage || config.digitalStoreQrMessage || DEFAULT_DIGITAL_STORE_QR_MESSAGE;
-    const qrSvgSize = is58 ? 115 : 140;
+    const shouldPrintDigitalQr = Boolean(data.includeDigitalStoreQr ?? (receiptConfig.qr?.store !== false && config.includeDigitalStoreQr));
+    const digitalStoreUrl = data.digitalStoreUrl || receiptConfig.qr?.storeUrl || getDigitalStoreUrl(data.shopId);
+    const qrMessage = data.digitalStoreQrMessage || receiptConfig.qr?.storeCap || config.digitalStoreQrMessage || DEFAULT_DIGITAL_STORE_QR_MESSAGE;
+
+    const shouldPrintUpiQr = Boolean(data.includeUpiQr ?? (receiptConfig.qr?.upi && receiptConfig.qr?.upiId));
+    const upiId = data.upiId || receiptConfig.qr?.upiId || "";
+    const upiCap = data.upiCap || receiptConfig.qr?.upiCap || "Scan & Pay via UPI";
+
+    const qrSvgSize = is58 ? 105 : 130;
     const qrSvgHtml = (shouldPrintDigitalQr && digitalStoreUrl) ? generateQrSvgHtml(digitalStoreUrl, qrSvgSize) : "";
+    const upiLink = upiId ? `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(data.shopName || "")}&am=${data.finalAmount.toFixed(2)}&cu=INR` : "";
+    const upiSvgHtml = (shouldPrintUpiQr && upiLink) ? generateQrSvgHtml(upiLink, qrSvgSize) : "";
 
     const cleanedAddress = cleanShopAddress(data.shopAddress);
+    const isClassic = templateId === "classic";
+    const isCompact = templateId === "compact";
+    const isGst = templateId === "gst";
+
     const banner = data.invoiceTypeTag
       ? data.invoiceTypeTag
-      : data.isDuplicate
-        ? "TAX INVOICE • DUPLICATE COPY"
-        : "TAX INVOICE";
+      : isGst
+        ? "DETAILED GST TAX INVOICE"
+        : data.isDuplicate
+          ? "TAX INVOICE • DUPLICATE COPY"
+          : "TAX INVOICE";
 
     const isWalkIn =
       !data.customerName ||
@@ -1395,6 +1608,9 @@ export function printViaSystemDriver(
     const effectiveTaxableAmount = (data.taxableAmount && data.taxableAmount > 0 && (data.gstAmount === 0 || data.taxableAmount < data.finalAmount))
       ? data.taxableAmount
       : (data.gstAmount > 0 ? Math.max(0, data.finalAmount - data.gstAmount - (data.roundOff || 0)) : (data.totalAmount - (data.discountAmount || 0)));
+
+    const customerCustomFields = (data.customFields || []).filter((f) => f.placement === "customer" && f.value);
+    const belowCustomFields = (data.customFields || []).filter((f) => f.placement === "below" && f.value);
 
     const itemsHtml = data.items
       .map((item) => {
@@ -1426,23 +1642,26 @@ export function printViaSystemDriver(
             margin: 0;
           }
           body {
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 11px;
-            line-height: 1.4;
+            font-family: ${isClassic ? "'Courier New', Courier, monospace" : "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"};
+            font-size: ${isCompact ? "9.5px" : "11px"};
+            line-height: ${isCompact ? "1.25" : "1.35"};
             color: #000;
             background: #fff;
             margin: 0;
-            padding: 8px;
+            padding: ${isCompact ? "4px" : "8px"};
             width: ${widthMm};
             box-sizing: border-box;
           }
           .center { text-align: center; }
+          .center svg, .center img { margin: 0 auto; display: block; }
           .bold { font-weight: bold; }
-          .title { font-size: 14px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 2px; }
-          .divider { border-bottom: 1px dashed #64748b; margin: 6px 0; }
-          .divider-double { border-bottom: 2px solid #0f172a; margin: 6px 0; }
+          .title { font-size: ${isCompact ? "12px" : "14px"}; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 2px; }
+          .divider { border-bottom: ${isClassic ? "1px dashed #000" : "1px dashed #64748b"}; margin: ${isCompact ? "4px 0" : "6px 0"}; }
+          .divider-double { border-top: 1px dashed #000; border-bottom: 1px dashed #000; height: 3px; margin: 6px 0; }
           .flex-between { display: flex; justify-content: space-between; margin-bottom: 2px; }
-          .banner { display: inline-block; padding: 2px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+          .banner { display: inline-block; padding: 2px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+          .qr-box { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; margin: 8px 0; text-align: center; }
+          .qr-box svg { margin: 0 auto !important; display: block !important; }
           @media print {
             body { padding: 4px; width: 100%; }
           }
@@ -1451,9 +1670,11 @@ export function printViaSystemDriver(
       <body>
         <div class="center">
           <div class="title">${data.shopName || "INVENTQ STORE"}</div>
+          ${receiptConfig.header?.tagline ? `<div style="font-size: 9px; color: #475569;">${receiptConfig.header.tagline}</div>` : ""}
           ${cleanedAddress ? `<div style="font-size: 10px; color: #334155;">${cleanedAddress}</div>` : ""}
           ${config.showShopGst && data.shopGst ? `<div style="font-size: 10px; font-weight: 600;">GSTIN: ${data.shopGst}</div>` : ""}
           ${config.showShopPhone && data.shopPhone ? `<div style="font-size: 10px;">Ph: ${data.shopPhone}</div>` : ""}
+          ${receiptConfig.header?.fssaiNo ? `<div style="font-size: 9px;">FSSAI: ${receiptConfig.header.fssaiNo}</div>` : ""}
           <div class="banner">${banner}</div>
         </div>
 
@@ -1479,6 +1700,13 @@ export function printViaSystemDriver(
         </div>` : ""}
         ` : ""}
 
+        ${customerCustomFields.map((f) => `
+        <div class="flex-between" style="font-size: 10px;">
+          <span class="bold">${f.label}:</span>
+          <span>${f.value}</span>
+        </div>
+        `).join("")}
+
         <div class="divider"></div>
 
         <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 9.5px; text-transform: uppercase; color: #475569; padding-bottom: 3px; border-bottom: 1px solid #cbd5e1;">
@@ -1489,6 +1717,18 @@ export function printViaSystemDriver(
         </div>
 
         ${itemsHtml}
+
+        ${belowCustomFields.length > 0 ? `
+        <div class="divider"></div>
+        <div style="padding: 2px 0;">
+          ${belowCustomFields.map((f) => `
+          <div class="flex-between" style="font-size: 10px;">
+            <span>${f.label}:</span>
+            <span class="bold">${f.value}</span>
+          </div>
+          `).join("")}
+        </div>
+        ` : ""}
 
         <div class="divider"></div>
 
@@ -1530,14 +1770,14 @@ export function printViaSystemDriver(
           <span>${data.roundOff > 0 ? `+₹${data.roundOff.toFixed(2)}` : `-₹${Math.abs(data.roundOff).toFixed(2)}`}</span>
         </div>` : ""}
 
-        <div class="divider-double"></div>
+        <div class="${isClassic ? 'divider-double' : 'divider'}"></div>
 
         <div class="flex-between" style="font-size: 14px; font-weight: 900; color: #0f172a;">
           <span>GRAND TOTAL</span>
           <span>₹${data.finalAmount.toFixed(2)}</span>
         </div>
 
-        <div class="divider-double"></div>
+        <div class="${isClassic ? 'divider-double' : 'divider'}"></div>
 
         ${data.payments && data.payments.length > 0 ? `
           ${data.payments.map(p => `
@@ -1562,26 +1802,41 @@ export function printViaSystemDriver(
           </div>
         `}
 
+        ${shouldPrintUpiQr && upiSvgHtml ? `
         <div class="divider"></div>
-
-        ${shouldPrintDigitalQr && digitalStoreUrl ? `
-        <div class="divider"></div>
-        <div class="center" style="margin: 10px 0 6px 0;">
-          <div style="font-weight: 800; font-size: 11px; color: #e11d48; text-transform: uppercase; margin-bottom: 2px;">OUR SHOP IS ONLINE!</div>
-          <div style="font-size: 9.5px; color: #475569; font-weight: 600; margin-bottom: 4px;">${qrMessage}</div>
-          <div style="display: flex; justify-content: center; align-items: center; margin: 4px 0;">
-            <div style="padding: 6px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center;">
-              ${qrSvgHtml}
+        <div class="qr-box">
+          <div style="display: flex; justify-content: center; align-items: center; margin: 4px auto; width: 100%;">
+            <div style="padding: 6px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; margin: 0 auto;">
+              ${upiSvgHtml}
             </div>
           </div>
-          <div style="font-size: 9.5px; color: #475569; font-weight: 500;">Scan to visit our online store</div>
+          <div style="font-weight: 800; font-size: 10px; margin-top: 3px; text-align: center;">${upiCap}</div>
+          <div style="font-size: 9px; color: #475569; text-align: center;">${upiId}</div>
         </div>
         ` : ""}
 
-        <div class="center" style="font-size: 9px; color: #64748b; margin-top: 8px;">
-          <div style="font-weight: 700; color: #334155;">${(config.footerText && config.footerText.trim()) ? config.footerText.trim() : "Thank you for your business!"}</div>
-          <div>Goods once sold will not be returned without bill.</div>
+        ${shouldPrintDigitalQr && digitalStoreUrl ? `
+        <div class="divider"></div>
+        <div class="qr-box">
+          <div style="display: flex; justify-content: center; align-items: center; margin: 4px auto; width: 100%;">
+            <div style="padding: 6px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; margin: 0 auto;">
+              ${qrSvgHtml}
+            </div>
+          </div>
+          <div style="font-weight: 800; font-size: 10px; margin-top: 3px; text-align: center;">${qrMessage}</div>
+          <div style="font-size: 8.5px; color: #64748b; word-break: break-all; text-align: center;">${digitalStoreUrl.replace(/^https?:\/\//, '')}</div>
+        </div>
+        ` : ""}
+
+        <div class="divider"></div>
+
+        <div class="center" style="font-size: 9px; color: #64748b; margin-top: 6px;">
+          <div style="font-weight: 700; color: #334155;">${receiptConfig.footer?.thanks || config.footerText || "Thank you for shopping with us! Please visit again."}</div>
+          ${receiptConfig.footer?.terms ? `<div>${receiptConfig.footer.terms}</div>` : `<div>Goods once sold will not be returned without bill.</div>`}
           ${data.footerNote && data.footerNote.trim() && data.footerNote.trim() !== config.footerText?.trim() ? `<div style="margin-top: 2px; font-weight: 600; color: #475569;">${data.footerNote.trim()}</div>` : ""}
+          ${receiptConfig.footer?.showTearLine ? `
+          <div style="margin: 8px 0 2px; font-size: 9px; opacity: 0.6; text-align: center;">- - - - - - - - - - - - - - - - - - - -<br/>Tear here</div>
+          ` : ""}
           ${data.reprintTimestamp || data.isDuplicate ? `<div style="margin-top: 3px; font-size: 8px; color: #94a3b8;">Reprinted on ${data.reprintTimestamp || new Date().toLocaleString("en-IN")}</div>` : ""}
         </div>
       </body>

@@ -26,13 +26,15 @@ interface InvoicePreviewModalProps {
   onConfirm: (status: BillStatus) => void;
   orderId?: string;
   onNewBill?: () => void;
+  customFields?: any[];
 }
 
 const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
   isOpen, onClose, items, customerName, phone,
   payments, includeGst, totalAmount, gstAmount, finalAmount,
   billDiscount, billTotals,
-  isSubmitting, onConfirm, orderId, onNewBill
+  isSubmitting, onConfirm, orderId, onNewBill,
+  customFields
 }) => {
   const round2 = (n: number) => Math.round(n * 100) / 100;
   const totalPaid = round2(payments.reduce((s, p) => s + (p.amount || 0), 0));
@@ -52,7 +54,17 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
     const shopId = localStorage.getItem("shop_id");
     const savedTmpl = localStorage.getItem("invoice_template");
     if (savedTmpl) setTemplate(savedTmpl);
-    
+
+    try {
+      const raw = localStorage.getItem("inventq.invoiceSettings.v2");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed.template) {
+          setTemplate(parsed.template);
+        }
+      }
+    } catch (_) {}
+
     if (isOpen && shopId) {
       shopApi.getShopById(shopId).then(res => {
         const data = res?.data ?? res;
@@ -431,6 +443,7 @@ ${(err as Error)?.message ?? String(err)}`);
               billDiscount={billDiscount}
               billTotals={billTotals}
               invoiceRef={invoiceRef}
+              customFields={customFields}
             />
           </div>
         </div>

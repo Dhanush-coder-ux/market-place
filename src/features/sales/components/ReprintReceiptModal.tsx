@@ -16,6 +16,7 @@ import {
   getPrintersList,
   SavedPrinter,
   cleanShopAddress,
+  getBillingReceiptConfig,
   getDigitalStoreUrl,
 } from "@/features/billing/utils/printerService";
 import { PrinterConfigModal } from "@/features/billing/components/PrinterConfigModal";
@@ -640,26 +641,49 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
               ))}
             </div>
 
-            {/* Digital Store QR Section (Visible when enabled) */}
-            {Boolean(
-              (printersList.find((p) => p.id === targetPrinterId) || getPrinterConfig())
-                ?.includeDigitalStoreQr !== false && (shopData?.visible_online !== false)
-            ) && (
-              <div className="pt-3 pb-2 text-center border-t border-dashed border-slate-200">
-                <div className="flex justify-center my-2">
-                  <div className="p-1.5 bg-white rounded-lg border border-slate-200 shadow-2xs inline-flex items-center justify-center">
+            {/* UPI QR Code (if enabled) */}
+            {Boolean(getBillingReceiptConfig().qr?.upi && getBillingReceiptConfig().qr?.upiId) && (
+              <div className="pt-2.5 pb-2 text-center border-t border-dashed border-slate-200 flex flex-col items-center justify-center w-full">
+                <div className="flex justify-center my-1 w-full">
+                  <div className="p-1.5 bg-white rounded-lg border border-slate-200 shadow-2xs inline-flex items-center justify-center mx-auto">
                     <QRCodeSVG
-                      value={
-                        shopData?.additional_infos?.website ||
-                        getDigitalStoreUrl((sale as any)?.shop_id || shopData?.id)
-                      }
-                      size={105}
+                      value={`upi://pay?pa=${encodeURIComponent(getBillingReceiptConfig().qr.upiId)}&pn=${encodeURIComponent(shopData?.name || "")}&am=${Number((sale as any)?.final_amount || (sale as any)?.total_amount || 0).toFixed(2)}&cu=INR`}
+                      size={95}
                       level="M"
+                      style={{ display: "block", margin: "0 auto" }}
                     />
                   </div>
                 </div>
-                <p className="text-[8.5px] font-medium text-slate-500">
-                  Scan to visit our online store
+                <p className="text-[9px] font-bold text-slate-700 mt-0.5 text-center">
+                  {getBillingReceiptConfig().qr.upiCap || "Scan & Pay via UPI"}
+                </p>
+                <p className="text-[8px] text-slate-400 text-center">{getBillingReceiptConfig().qr.upiId}</p>
+              </div>
+            )}
+
+            {/* Digital Store QR Section (Visible when enabled) */}
+            {Boolean(
+              (printersList.find((p) => p.id === targetPrinterId) || getPrinterConfig())
+                ?.includeDigitalStoreQr !== false && (shopData?.visible_online !== false) &&
+              getBillingReceiptConfig().qr?.store !== false
+            ) && (
+              <div className="pt-2.5 pb-2 text-center border-t border-dashed border-slate-200 flex flex-col items-center justify-center w-full">
+                <div className="flex justify-center my-1 w-full">
+                  <div className="p-1.5 bg-white rounded-lg border border-slate-200 shadow-2xs inline-flex items-center justify-center mx-auto">
+                    <QRCodeSVG
+                      value={
+                        getBillingReceiptConfig().qr?.storeUrl ||
+                        shopData?.additional_infos?.website ||
+                        getDigitalStoreUrl((sale as any)?.shop_id || shopData?.id)
+                      }
+                      size={95}
+                      level="M"
+                      style={{ display: "block", margin: "0 auto" }}
+                    />
+                  </div>
+                </div>
+                <p className="text-[8.5px] font-medium text-slate-500 text-center">
+                  {getBillingReceiptConfig().qr?.storeCap || "Scan to visit our online store"}
                 </p>
               </div>
             )}
@@ -667,9 +691,9 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
             {/* Footer */}
             <div className="pt-3 text-center text-[9px] text-slate-400 space-y-0.5">
               <p className="font-semibold text-slate-600">
-                {(printersList.find((p) => p.id === targetPrinterId) || getPrinterConfig())?.footerText || "Thank you for shopping with us! Please visit again."}
+                {getBillingReceiptConfig().footer?.thanks || (printersList.find((p) => p.id === targetPrinterId) || getPrinterConfig())?.footerText || "Thank you for shopping with us! Please visit again."}
               </p>
-              <p>Goods once sold will not be returned without bill.</p>
+              <p>{getBillingReceiptConfig().footer?.terms || "Goods once sold will not be returned without bill."}</p>
               <p className="text-[8px] text-slate-400 mt-1">
                 Reprinted on {new Date().toLocaleString("en-IN")}
               </p>

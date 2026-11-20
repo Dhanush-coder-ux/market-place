@@ -155,12 +155,21 @@ const Billing = () => {
 
   // Reload custom fields whenever billing page becomes active/refreshed
   useEffect(() => {
-    const fields = getActiveCustomFields();
-    setActiveCustomFields(fields);
-    setCustomFieldValues((prev) => {
-      const init = getInitialCustomFieldValues(fields);
-      return { ...init, ...prev };
-    });
+    const syncFields = () => {
+      const fields = getActiveCustomFields();
+      setActiveCustomFields(fields);
+      setCustomFieldValues((prev) => {
+        const init = getInitialCustomFieldValues(fields);
+        return { ...init, ...prev };
+      });
+    };
+    syncFields();
+    window.addEventListener("focus", syncFields);
+    window.addEventListener("storage", syncFields);
+    return () => {
+      window.removeEventListener("focus", syncFields);
+      window.removeEventListener("storage", syncFields);
+    };
   }, []);
 
   const customFieldValuesRef = useRef(customFieldValues);
@@ -183,6 +192,7 @@ const Billing = () => {
   const billTotals: BillTotals = useMemo(() => {
     return calculateBillTotals(
       filledItems.map(i => ({
+        ...i,
         id: i.id,
         inventoryId: i.inventoryId,
         name: i.name,
@@ -436,7 +446,7 @@ const Billing = () => {
 
     // Determine target fields based on billingType ("BILL" vs "INVOICE")
     const targetFields = billingType === "INVOICE" ? getInvoiceCustomFields() : getReceiptCustomFields();
-    const askFields = targetFields.filter((f) => f.mode === "ask");
+    const askFields = targetFields.filter((f) => f.placement === "item" ? f.itemSource === "ask" : f.mode === "ask");
 
     // If there are fields configured as "Ask while billing" and values weren't provided yet, prompt the modal!
     if (!customFieldValuesArg && askFields.length > 0) {
@@ -968,7 +978,7 @@ const Billing = () => {
             handleConfirmOrder(payments, includeGst, status, "INVOICE");
           }}
           orderId={successDetails?.orderId}
-          customFields={successDetails?.customFields || resolveCustomFields(activeCustomFields, customFieldValues)}
+          customFields={successDetails?.customFields || resolveCustomFields(getInvoiceCustomFields(), customFieldValues)}
           onNewBill={() => {
             handleNextBill();
             setShowInvoicePreview(false);

@@ -6,6 +6,7 @@ import type { BillingItem } from "../types";
 import { formatINR, type BillTotals } from "@/utils/pricing";
 import { shopApi } from "../../../services/api/shop";
 import { InvoiceRenderer } from "./InvoiceRenderer";
+import { extractItemAttributeValue } from "../utils/customFieldsHelper";
 
 type BillStatus = "COMPLETED" | "PENDING" | "CANCELLED";
 
@@ -444,6 +445,7 @@ ${(err as Error)?.message ?? String(err)}`);
               billTotals={billTotals}
               invoiceRef={invoiceRef}
               customFields={customFields}
+              getItemCustomValue={(field, line, idx) => extractItemAttributeValue(field, line, idx, items?.[idx])}
             />
           </div>
         </div>

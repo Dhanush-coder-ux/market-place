@@ -77,6 +77,10 @@ export interface BillingItem {
   serialNumbers?: string[]; // Multiple serials support
   variantId?: string | null;
   batchId?: string;
+  batch_no?: string;
+  batchName?: string;
+  hsn?: string;
+  hsn_code?: string;
   serialnoId?: string;
   batchTracking?: boolean;
   manufacturingDate?: string;
@@ -90,6 +94,7 @@ export interface BillingItem {
   factor?: number;
   basePrice?: number;
   _product?: any;
+  customValues?: Record<string, string>;
 }
 
 // Alias for convenience if used in shopping cart contexts

@@ -7,6 +7,7 @@ import { calculateBillTotals, formatINR, type BillTotals } from "@/utils/pricing
 import { getPrinterConfig } from "../utils/printerService";
 import { QRCodeSVG } from "qrcode.react";
 import { numberToWords } from "../../Setting/pages/InvoiceTemplateSettings";
+import { extractItemAttributeValue } from "../utils/customFieldsHelper";
 
 const payMeta: Record<string, { label: string; icon: React.ReactNode }> = {
   cash:   { label: "Cash",       icon: <Banknote   size={12} strokeWidth={1.5} /> },
@@ -121,12 +122,18 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
     } catch (_) {}
 
     const sourceFields = customFields !== undefined && customFields.length > 0 ? customFields : baseFields;
-    const finalFields = sourceFields.map((f: any) => ({
-      ...f,
-      show: f.show !== false,
-      value: f.value ?? (f.mode === "fixed" ? f.value : ""),
-      displayValue: f.displayValue ?? f.value,
-    }));
+    const finalFields = sourceFields.map((f: any) => {
+      const match = baseFields.find((b: any) => b.id === f.id || b.label?.trim().toLowerCase() === f.label?.trim().toLowerCase());
+      return {
+        ...f,
+        show: f.show !== false,
+        itemShow: f.itemShow || match?.itemShow || (f.placement === "item" ? "column" : undefined),
+        itemSource: f.itemSource || match?.itemSource || (f.placement === "item" ? "product" : undefined),
+        attr: f.attr || match?.attr || (f.placement === "item" ? "batch" : undefined),
+        value: f.value ?? (f.mode === "fixed" ? f.value : ""),
+        displayValue: f.displayValue ?? f.value,
+      };
+    });
 
     return {
       customFields: finalFields,
@@ -135,6 +142,30 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
       footerSettings: footerSettings !== undefined ? footerSettings : baseFooter,
     };
   }, [customFields, signature, qrSettings, footerSettings]);
+
+  // Split custom fields for item placement into separate columns vs subline items under the name
+  const { itemCols, itemUnder } = useMemo(() => {
+    const activeItemFields = (resolvedSettings.customFields || []).filter(
+      (f) => f.show !== false && f.placement === "item" && f.label?.trim()
+    );
+
+    const cols: InvoiceRendererCustomField[] = [];
+    const under: InvoiceRendererCustomField[] = [];
+
+    activeItemFields.forEach((f) => {
+      if (f.itemShow === "column") {
+        if (cols.length < 3) {
+          cols.push(f);
+        } else {
+          under.push(f);
+        }
+      } else {
+        under.push(f);
+      }
+    });
+
+    return { itemCols: cols, itemUnder: under };
+  }, [resolvedSettings.customFields]);
 
   const billTotals = useMemo(() => {
     if (billTotalsProp) return billTotalsProp;
@@ -163,6 +194,14 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
 
   const totalDiscount = billTotals.totalDiscountGiven;
   const hasSavings = billTotals.totalSavings > 0;
+
+  const resolveItemFieldValue = (f: InvoiceRendererCustomField, line: any, i: number) => {
+    const rawVal = getItemCustomValue ? getItemCustomValue(f, line, i) : undefined;
+    if (rawVal !== undefined && rawVal !== null && rawVal !== "" && rawVal !== "—") {
+      return rawVal;
+    }
+    return extractItemAttributeValue(f, line, i, filledItems[i] || items[i]);
+  };
 
   return (
     <div 
@@ -262,6 +301,11 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
                <tr className={config.table.head}>
                  <th className="text-left py-2.5 pl-6 pr-2 w-8">S.No</th>
                  <th className="text-left py-2.5 px-2">Item Description</th>
+                 {itemCols.map((col) => (
+                   <th key={col.id} className="text-left py-2.5 px-2 font-bold whitespace-nowrap">
+                     {col.label}
+                   </th>
+                 ))}
                  <th className="text-right py-2.5 px-2 w-16">Rate</th>
                  <th className="text-center py-2.5 px-1 w-10">Qty</th>
                  <th className="text-right py-2.5 px-2 w-14">Disc</th>
@@ -282,15 +326,20 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
                        <p className={config.table.cellStrong}>{baseName}</p>
                        {variantName && <p className={config.table.cellMuted}>{cleanVariantLabel(variantName)}</p>}
                        {line.code && <p className={`text-[9px] font-mono ${config.table.cellMuted}`}>{line.code}</p>}
-                        {/* Custom Item Attributes */}
-                        {resolvedSettings.customFields && resolvedSettings.customFields.filter((f) => f.show !== false && f.placement === "item" && f.label?.trim()).map((f) => {
-                          const val = getItemCustomValue ? getItemCustomValue(f, line, i) : (f.displayValue ?? f.value ?? (f.mode === "fixed" ? f.value : "Asked while billing"));
-                          return (
-                            <p key={f.id} className="text-[9.5px] text-slate-500 mt-0.5">
-                              <span className="font-medium text-slate-600">{f.label}:</span> {val}
-                            </p>
-                          );
-                        })}
+                       {/* Custom Item Attributes (only under item name) */}
+                       {itemUnder.length > 0 && (
+                         <div className="mt-0.5 space-y-0.5">
+                           {itemUnder.map((f) => {
+                             const val = resolveItemFieldValue(f, line, i);
+                             if (!val || val === "—") return null;
+                             return (
+                               <p key={f.id} className="text-[9.5px] text-slate-500">
+                                 <span className="font-medium text-slate-600">{f.label}:</span> {val}
+                               </p>
+                             );
+                           })}
+                         </div>
+                       )}
                        {/* Subline discount breakdown per Section 8.1 */}
                        {line.productDiscountAmount > 0 && (
                          <p className="text-[9px] text-blue-600 font-medium mt-0.5">
@@ -308,6 +357,15 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
                          </p>
                        )}
                      </td>
+                     {/* Custom Item Columns */}
+                     {itemCols.map((col) => {
+                       const val = resolveItemFieldValue(col, line, i);
+                       return (
+                         <td key={col.id} className={`py-3 px-2 text-left text-[11px] tabular-nums ${config.table.cellMuted} whitespace-nowrap`}>
+                           {val || "—"}
+                         </td>
+                       );
+                     })}
                      <td className={`py-3 px-2 text-right text-[11px] tabular-nums ${config.table.cellMuted}`}>
                        {line.mrp && line.mrp > line.sellingPrice ? (
                          <div>

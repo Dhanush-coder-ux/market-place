@@ -12,6 +12,7 @@ import {
   Zap,
   Calculator,
   Info,
+  Receipt,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -253,9 +254,10 @@ interface CardInfoPopoverProps {
   title: string;
   badge?: ReactNode;
   children: ReactNode;
+  align?: "start" | "end" | "center";
 }
 
-const CardInfoPopover: FC<CardInfoPopoverProps> = ({ title, badge, children }) => {
+const CardInfoPopover: FC<CardInfoPopoverProps> = ({ title, badge, children, align = "start" }) => {
   const [open, setOpen] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -288,7 +290,7 @@ const CardInfoPopover: FC<CardInfoPopoverProps> = ({ title, badge, children }) =
         </button>
       </PopoverTrigger>
       <PopoverContent
-        align="start"
+        align={align}
         sideOffset={6}
         onMouseEnter={handleEnter}
         onMouseLeave={handleLeave}
@@ -321,7 +323,8 @@ const AnalyticsDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [globalViewMode, setGlobalViewMode] = useState<"gross" | "net">("gross");
+  const [globalViewMode, setGlobalViewMode] = useState<"gross" | "net">("net");
+  void setGlobalViewMode;
   const [isBreakdownOpen, setIsBreakdownOpen] = useState(false);
   const { showToast } = useToast();
 
@@ -618,6 +621,7 @@ const AnalyticsDashboard = () => {
     salesRevenueWithGst,
     salesTaxableRevenue,
     salesCostWithGst,
+    salesReturnedCost,
     salesGstAmount,
     salesTransportCharges,
     allocatedSalesTransport,
@@ -1078,6 +1082,11 @@ const AnalyticsDashboard = () => {
   // Net Profit = Gross Profit − Transport = Selling Price − Purchase Cost − Transport = 130 - 100 - 20 = 10.00!
   const netRealizedProfit = grossProfit - outputGstDeduction - transportCharges + itcAmount;
 
+  // Current sales-based Input GST (ITC on sold units)
+  const salesBasedPurchaseGst = isGstReg ? itcAmount : 0;
+  const netGstPayable = isGstReg ? Math.max(0, salesGstAmount - salesBasedPurchaseGst) : 0;
+  const itcSurplus = isGstReg ? Math.max(0, salesBasedPurchaseGst - salesGstAmount) : 0;
+
   // For non-GST registered sellers, Gross and Net are identical (Selling - Cost - Charges = ₹10.00).
   const totalProfit = !isGstReg
     ? netRealizedProfit
@@ -1090,6 +1099,11 @@ const AnalyticsDashboard = () => {
   const sellingPrice = salesRevenueWithGst > 0 ? salesRevenueWithGst : netRevenue;
   const purchaseCost = effectiveCost > 0 ? effectiveCost : totalCost;
 
+  // Initial gross figures (before deducting reversed returns)
+  const initialGrossProfit = grossProfit + salesReturnedProfit;
+  const initialSalesRevenue = salesGrossRevenue > 0 ? salesGrossRevenue : (sellingPrice + salesReturnsRefunds);
+  const initialPurchaseCost = purchaseCost + (salesReturnedCost || 0);
+
   // Values depending on globalViewMode ('gross' vs 'net')
   const displayedRevenue = !isGstReg
     ? netRevenue
@@ -1099,7 +1113,6 @@ const AnalyticsDashboard = () => {
     ? totalPurchaseAmount
     : (globalViewMode === "gross" ? totalPurchaseAmount : Math.max(0, totalPurchaseAmount - purchaseGstAmount));
 
-  const aov = totalOrders > 0 ? netRevenue / totalOrders : 0;
   const displayedAov = totalOrders > 0 ? displayedRevenue / totalOrders : 0;
 
   // Net Profit Margin: relative to taxable net revenue (exclusive of GST for registered shops)
@@ -1202,7 +1215,7 @@ const AnalyticsDashboard = () => {
     return Number(customerOverall?.total_cleared_amounts ?? Math.max(0, netRevenue - customerOutstanding));
   }, [ordersList, filteredOrders, salesOverall, customerOverall, customerOutstanding, netRevenue]);
 
-  const totalReturnsCount = 0;
+  const totalReturnsCount = fullyReturnedOrdersCount + partiallyReturnedOrdersCount;
 
   // Name lookup maps
   const supplierNameMap = useMemo(() => {
@@ -1548,10 +1561,10 @@ const AnalyticsDashboard = () => {
 
               {/* Top-Level GST Registered / Tax Status Badge */}
               <div
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all ${
+                className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium border ${
                   isGstReg
-                    ? "bg-emerald-50 text-emerald-700 border-emerald-200/80 shadow-[0_1px_2px_rgba(13,159,110,0.06)]"
-                    : "bg-amber-50 text-amber-700 border-amber-200/80 shadow-[0_1px_2px_rgba(214,154,53,0.06)]"
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                    : "bg-amber-50 text-amber-700 border-amber-200"
                 }`}
                 title={
                   isGstReg
@@ -1559,43 +1572,12 @@ const AnalyticsDashboard = () => {
                     : "Shop is not GST-registered. Output GST is not collected and purchase ITC cannot be claimed."
                 }
               >
-                <span className={`w-2 h-2 rounded-full ${isGstReg ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`} />
-                <span>{isGstReg ? "GST Registered (ITC Active)" : "Non-GST Shop"}</span>
+                <span>{isGstReg ? "GST Registered" : "Non-GST Registered"}</span>
               </div>
             </div>
 
             {/* Time filters & Actions */}
             <div className="flex items-center gap-2 flex-wrap">
-              {/* Global Gross / Net View Switcher (Only visible for GST-registered shops) */}
-              {isGstReg && (
-                <div className="bg-[#F1F4F7] p-1 rounded-lg border border-[#E5EAF0] flex items-center gap-0.5 shadow-inner">
-                  <button
-                    type="button"
-                    onClick={() => setGlobalViewMode("gross")}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-150 cursor-pointer ${
-                      globalViewMode === "gross"
-                        ? "bg-white text-[#103020] shadow-[0_1px_2px_rgba(0,0,0,0.08)]"
-                        : "text-[#74839A] hover:text-[#27364B]"
-                    }`}
-                    title="Show all metrics inclusive of GST (Selling price, landed cost, gross profit)"
-                  >
-                    Gross
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setGlobalViewMode("net")}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-150 cursor-pointer ${
-                      globalViewMode === "net"
-                        ? "bg-white text-emerald-700 shadow-[0_1px_2px_rgba(0,0,0,0.08)]"
-                        : "text-[#74839A] hover:text-[#27364B]"
-                    }`}
-                    title="Show all metrics net of tax and allocated freight charges"
-                  >
-                    Net
-                  </button>
-                </div>
-              )}
-
               {/* Segmented Range Control */}
               <div className="bg-[#F1F4F7] p-1 rounded-lg border border-[#E5EAF0] flex items-center gap-0.5 overflow-x-auto max-w-full">
                 {(["today", "month", "year", "all", "custom"] as RangeKey[]).map((r) => {
@@ -1703,10 +1685,133 @@ const AnalyticsDashboard = () => {
           </div>
         )}
 
-        {/* ── STAT CARDS (5 KPIs) ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+        {/* ── STAT CARDS ── */}
+        <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 ${isGstReg ? "xl:grid-cols-5" : "xl:grid-cols-4"} gap-4`}>
           
-          {/* 1. Revenue */}
+          {/* 1. Purchase */}
+          <div className="bg-white rounded-xl p-5 border border-[#E5EAF0] shadow-[0_1px_3px_rgba(0,0,0,0.03)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.05)] hover:border-[#D1D9E2] transition-all duration-200 group flex flex-col justify-between h-full">
+            <div>
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[#74839A]">
+                      {globalViewMode === "gross" ? "Total Purchase" : "Net Purchase"}
+                    </h3>
+                    <CardInfoPopover
+                      title="Procurement Breakdown"
+                      badge={
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                          isGstReg
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            : "bg-amber-50 text-amber-700 border-amber-200"
+                        }`}>
+                          {isGstReg ? "GST Registered" : "Non-GST Shop"}
+                        </span>
+                      }
+                    >
+                      {/* Step 1: Gross Procurement */}
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="font-semibold text-slate-800">Total Procurement (incl. GST)</div>
+                          <div className="text-[11px] text-[#74839A]">Gross purchases before returns</div>
+                        </div>
+                        <span className="font-semibold text-slate-800 tabular-nums">+{fmt(purchaseGrossSpend)}</span>
+                      </div>
+
+                      {/* Step 2: Less Purchase Returns */}
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="font-semibold text-slate-800">− Purchase Returns & Debit Notes</div>
+                          <div className="text-[11px] text-[#74839A]">
+                            {totalPurchaseReturnsCount > 0 ? `${totalPurchaseReturnsCount} return(s) recorded` : "Goods returned to suppliers"}
+                          </div>
+                        </div>
+                        <span className={`font-semibold tabular-nums ${totalPurchaseReturns > 0 ? "text-rose-600" : "text-slate-400"}`}>
+                          {totalPurchaseReturns > 0 ? `−${fmt(totalPurchaseReturns)}` : "₹0.00"}
+                        </span>
+                      </div>
+
+                      {/* Divider */}
+                      <div className="pt-2 border-t border-dashed border-[#E5EAF0]" />
+
+                      {/* Step 3: Net Realized Procurement */}
+                      <div className="flex items-start justify-between gap-3 bg-emerald-50/70 p-2.5 rounded-lg border border-emerald-100">
+                        <div>
+                          <div className="font-bold text-emerald-950 text-xs">= Net Realized Purchase</div>
+                          <div className="text-[10px] text-emerald-800 font-medium">Realized procurement spend</div>
+                        </div>
+                        <span className="text-sm font-bold text-emerald-700 tabular-nums">
+                          {fmt(totalPurchaseAmount)}
+                        </span>
+                      </div>
+
+                      {/* Step 4: Taxable Base vs GST */}
+                      <div className="space-y-1.5 pt-1 text-[11px]">
+                        <div className="flex items-center justify-between text-[#74839A]">
+                          <span>Taxable Spend (excl. GST):</span>
+                          <span className="font-semibold text-slate-800 tabular-nums">{fmt(purchaseTaxableSpend)}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-[#74839A]">
+                          <span>Purchase Input GST:</span>
+                          <span className="font-semibold text-amber-700 tabular-nums">{fmt(purchaseGstAmount)}</span>
+                        </div>
+                      </div>
+
+                      {/* Divider */}
+                      <div className="pt-2 border-t border-dashed border-[#E5EAF0]" />
+
+                      {/* Step 5: Payables Status */}
+                      <div className="space-y-1 text-[11px]">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[#0D9F6E] font-medium">Paid to Suppliers:</span>
+                          <span className="font-semibold text-[#0D9F6E] tabular-nums">{fmt(purchasePaidAmount)}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[#D69A35] font-medium">Outstanding Payables:</span>
+                          <span className="font-semibold text-[#D69A35] tabular-nums">{fmt(totalPurchaseOutstanding)}</span>
+                        </div>
+                      </div>
+                    </CardInfoPopover>
+                  </div>
+                  <p className="text-xs text-[#74839A] font-medium mt-0.5">
+                    {globalViewMode === "gross" ? "Procurement spend incl. GST" : "Procurement spend excl. GST"}
+                  </p>
+                </div>
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-[#F1F4F7] text-[#27364B] shrink-0 transition-transform duration-200 group-hover:scale-105">
+                  <ShoppingBag className="w-4.5 h-4.5" strokeWidth={2.2} />
+                </div>
+              </div>
+              <div className="flex items-end gap-2 mt-3">
+                <span className="text-[26px] font-semibold text-[#27364B] tracking-tight leading-none tabular-nums truncate" title={fmt(displayedPurchase)}>
+                  {loading ? "—" : fmt(displayedPurchase)}
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-5 pt-3.5 border-t border-[#E5EAF0] space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-[11px] font-medium text-[#74839A] uppercase tracking-wider">Purchases:</span>
+                <span className="font-medium text-[#27364B] tabular-nums">{loading ? "—" : `${totalPurchaseCount} (${totalPurchaseStocks} stocks)`}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-[11px] font-medium text-[#74839A] uppercase tracking-wider">Outstanding:</span>
+                <span className="font-semibold text-[#D69A35] tabular-nums">{loading ? "—" : fmt(totalPurchaseOutstanding)}</span>
+              </div>
+              {totalPurchaseReturns > 0 && (
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                    <span className="text-[11px] font-medium text-[#74839A] uppercase tracking-wider">Returns</span>
+                  </div>
+                  <span className="font-semibold text-rose-600 tabular-nums">
+                    -{loading ? "—" : fmt(totalPurchaseReturns)}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 2. Revenue */}
           <div className="bg-white rounded-xl p-5 border border-[#E5EAF0] shadow-[0_1px_3px_rgba(0,0,0,0.03)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.05)] hover:border-[#D1D9E2] transition-all duration-200 group flex flex-col justify-between h-full">
             <div>
               <div className="flex items-start justify-between mb-3">
@@ -1806,9 +1911,6 @@ const AnalyticsDashboard = () => {
                   {loading ? "—" : fmt(displayedRevenue)}
                 </span>
               </div>
-              <div className="text-[11px] font-medium text-[#74839A] mt-1">
-                GST Amt: <span className="font-semibold text-[#27364B]">{loading ? "—" : fmt(salesGstAmount)}</span>
-              </div>
             </div>
 
             <div className="mt-5 pt-3.5 border-t border-[#E5EAF0] space-y-1.5">
@@ -1838,7 +1940,7 @@ const AnalyticsDashboard = () => {
             </div>
           </div>
 
-          {/* 2. Total Profit */}
+          {/* 3. Total Profit */}
           <div className="bg-white rounded-xl p-5 border border-[#E5EAF0] shadow-[0_1px_3px_rgba(0,0,0,0.03)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.05)] hover:border-[#D1D9E2] transition-all duration-200 group flex flex-col justify-between h-full">
             <div>
               <div className="flex items-start justify-between mb-3">
@@ -1862,32 +1964,53 @@ const AnalyticsDashboard = () => {
                       {!isGstReg ? (
                         <>
                           {/* Non-GST Shop Profit Calculation Breakdown */}
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <div className="font-semibold text-slate-800">Selling Price</div>
-                              <div className="text-[11px] text-[#74839A]">Total customer selling revenue</div>
-                            </div>
-                            <span className="font-semibold text-slate-800 tabular-nums">+{fmt(sellingPrice)}</span>
-                          </div>
+                          {salesReturnedProfit > 0 ? (
+                            <>
+                              {/* Line 1: Gross Sales Margin */}
+                              <div className="flex items-start justify-between gap-3">
+                                <div>
+                                  <div className="font-semibold text-slate-800">Gross Sales Margin</div>
+                                  <div className="text-[11px] text-[#74839A]">
+                                    Total Sales {fmt(initialSalesRevenue)} − Buy Cost {fmt(initialPurchaseCost)}
+                                  </div>
+                                </div>
+                                <span className="font-semibold text-slate-800 tabular-nums">+{fmt(initialGrossProfit)}</span>
+                              </div>
 
-                          {salesReturnedProfit > 0 && (
+                              {/* Line 2: Reversed Return Profit */}
+                              <div className="flex items-start justify-between gap-3">
+                                <div>
+                                  <div className="font-semibold text-slate-800">− Reversed Return Profit</div>
+                                  <div className="text-[11px] text-[#74839A]">Reversed on returned orders</div>
+                                </div>
+                                <span className="font-semibold text-rose-600 tabular-nums">−{fmt(salesReturnedProfit)}</span>
+                              </div>
+
+                              {/* Line 3: Retained Profit before freight */}
+                              <div className="flex items-start justify-between gap-3 py-1 border-t border-slate-100">
+                                <div>
+                                  <div className="font-semibold text-slate-700 text-xs">= Retained Profit before freight</div>
+                                  <div className="text-[10px] text-[#74839A]">
+                                    Delivered Sell {fmt(sellingPrice)} − Buy Cost {fmt(purchaseCost)}
+                                  </div>
+                                </div>
+                                <span className="font-semibold text-slate-700 tabular-nums">+{fmt(grossProfit)}</span>
+                              </div>
+                            </>
+                          ) : (
+                            /* Line 1: Gross Margin (No returns) */
                             <div className="flex items-start justify-between gap-3">
                               <div>
-                                <div className="font-semibold text-slate-800">− Reversed Return Profit</div>
-                                <div className="text-[11px] text-[#74839A]">Reversed on returned orders</div>
+                                <div className="font-semibold text-slate-800">Gross Margin</div>
+                                <div className="text-[11px] text-[#74839A]">
+                                  Sell {fmt(sellingPrice)} − Buy Cost {fmt(purchaseCost)}
+                                </div>
                               </div>
-                              <span className="font-semibold text-rose-600 tabular-nums">−{fmt(salesReturnedProfit)}</span>
+                              <span className="font-semibold text-slate-800 tabular-nums">+{fmt(grossProfit)}</span>
                             </div>
                           )}
 
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <div className="font-semibold text-slate-800">− Purchase Cost (incl. GST paid)</div>
-                              <div className="text-[11px] text-[#74839A]">Total procurement cost (taxes included)</div>
-                            </div>
-                            <span className="font-semibold text-rose-600 tabular-nums">−{fmt(purchaseCost)}</span>
-                          </div>
-
+                          {/* Line 4: Transport & Other Charges */}
                           <div className="flex items-start justify-between gap-3">
                             <div>
                               <div className="font-semibold text-slate-800">− Transport & Other Charges</div>
@@ -1916,29 +2039,54 @@ const AnalyticsDashboard = () => {
                         </>
                       ) : (
                         <>
-                          {/* Step 1: Gross Profit */}
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <div className="font-semibold text-slate-800">Gross Profit: {fmt(grossProfit)}</div>
-                              <div className="text-[11px] text-[#74839A]">
-                                Delivered Sell {fmt(sellingPrice)} − Buy Cost {fmt(purchaseCost)}
+                          {/* Step 1 to 3: Gross Profit & Returns */}
+                          {salesReturnedProfit > 0 ? (
+                            <>
+                              {/* Line 1: Gross Sales Profit */}
+                              <div className="flex items-start justify-between gap-3">
+                                <div>
+                                  <div className="font-semibold text-slate-800">Gross Sales Profit: {fmt(initialGrossProfit)}</div>
+                                  <div className="text-[11px] text-[#74839A]">
+                                    Delivered Sell {fmt(initialSalesRevenue)} − Buy Cost {fmt(initialPurchaseCost)}
+                                  </div>
+                                </div>
+                                <span className="font-semibold text-slate-800 tabular-nums">+{fmt(initialGrossProfit)}</span>
                               </div>
-                            </div>
-                            <span className="font-semibold text-slate-800 tabular-nums">+{fmt(grossProfit)}</span>
-                          </div>
 
-                          {/* Step 2: Reversed Return Profit (if applicable) */}
-                          {salesReturnedProfit > 0 && (
+                              {/* Line 2: Returned Sales Profit */}
+                              <div className="flex items-start justify-between gap-3">
+                                <div>
+                                  <div className="font-semibold text-slate-800">− Returned Sales Profit</div>
+                                  <div className="text-[11px] text-[#74839A]">Reversed on returned orders</div>
+                                </div>
+                                <span className="font-semibold text-rose-600 tabular-nums">−{fmt(salesReturnedProfit)}</span>
+                              </div>
+
+                              {/* Line 3: Retained Gross Profit */}
+                              <div className="flex items-start justify-between gap-3 py-1 border-t border-slate-100">
+                                <div>
+                                  <div className="font-semibold text-slate-700 text-xs">= Retained Gross Profit</div>
+                                  <div className="text-[10px] text-[#74839A]">
+                                    Delivered Sell {fmt(sellingPrice)} − Buy Cost {fmt(purchaseCost)}
+                                  </div>
+                                </div>
+                                <span className="font-semibold text-slate-700 tabular-nums">+{fmt(grossProfit)}</span>
+                              </div>
+                            </>
+                          ) : (
+                            /* Line 1: Gross Profit (No returns) */
                             <div className="flex items-start justify-between gap-3">
                               <div>
-                                <div className="font-semibold text-slate-800">− Reversed Return Profit</div>
-                                <div className="text-[11px] text-[#74839A]">Reversed on returned orders</div>
+                                <div className="font-semibold text-slate-800">Gross Profit: {fmt(grossProfit)}</div>
+                                <div className="text-[11px] text-[#74839A]">
+                                  Delivered Sell {fmt(sellingPrice)} − Buy Cost {fmt(purchaseCost)}
+                                </div>
                               </div>
-                              <span className="font-semibold text-rose-600 tabular-nums">−{fmt(salesReturnedProfit)}</span>
+                              <span className="font-semibold text-slate-800 tabular-nums">+{fmt(grossProfit)}</span>
                             </div>
                           )}
 
-                          {/* Step 3: Output GST */}
+                          {/* Step 4: Output GST */}
                           <div className="flex items-start justify-between gap-3">
                             <div>
                               <div className="font-semibold text-slate-800">
@@ -1953,7 +2101,7 @@ const AnalyticsDashboard = () => {
                             </span>
                           </div>
 
-                          {/* Step 4: Input Tax Credit */}
+                          {/* Step 5: Input Tax Credit */}
                           <div className="flex items-start justify-between gap-3">
                             <div>
                               <div className="font-semibold text-slate-800">
@@ -1968,7 +2116,7 @@ const AnalyticsDashboard = () => {
                             </span>
                           </div>
 
-                          {/* Step 5: Transport & Other Charges */}
+                          {/* Step 6: Transport & Other Charges */}
                           <div className="flex items-start justify-between gap-3">
                             <div>
                               <div className="font-semibold text-slate-800">− Transport & Other Charges</div>
@@ -1980,7 +2128,7 @@ const AnalyticsDashboard = () => {
                           {/* Divider */}
                           <div className="pt-2 border-t border-dashed border-[#E5EAF0]" />
 
-                          {/* Step 6: Net Realized Profit */}
+                          {/* Step 7: Net Realized Profit */}
                           <div className="flex items-start justify-between gap-3 bg-emerald-50/70 p-2.5 rounded-lg border border-emerald-100">
                             <div>
                               <div className="font-bold text-emerald-950 text-xs">= Net Realized Profit</div>
@@ -1995,14 +2143,6 @@ const AnalyticsDashboard = () => {
                         </>
                       )}
                     </CardInfoPopover>
-                    <button
-                      type="button"
-                      onClick={() => setIsBreakdownOpen(true)}
-                      className="text-[#74839A] hover:text-[#27364B] transition-colors p-0.5 rounded cursor-pointer"
-                      title="Open detailed calculation ledger"
-                    >
-                      <Calculator className="w-3.5 h-3.5" />
-                    </button>
                   </div>
                   <p className="text-xs text-[#74839A] font-medium mt-0.5">
                     {!isGstReg
@@ -2037,15 +2177,6 @@ const AnalyticsDashboard = () => {
                   ) : (
                     <ArrowDownRight className="w-4 h-4 text-[#DC6464] shrink-0" />
                   )
-                )}
-              </div>
-              <div className="text-[11px] font-medium text-[#74839A] mt-1">
-                {isGstReg ? (
-                  <>
-                    GST Amt: <span className="font-semibold text-[#27364B]">{loading ? "—" : fmt(salesGstAmount)}</span>
-                  </>
-                ) : (
-                  <span className="text-slate-400">Non-GST Shop (No Tax)</span>
                 )}
               </div>
             </div>
@@ -2085,133 +2216,186 @@ const AnalyticsDashboard = () => {
             </div>
           </div>
 
-          {/* 3. Total Purchase */}
+          {/* 4. GST Payable (Only shown for GST Registered shops) */}
+          {isGstReg && (
           <div className="bg-white rounded-xl p-5 border border-[#E5EAF0] shadow-[0_1px_3px_rgba(0,0,0,0.03)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.05)] hover:border-[#D1D9E2] transition-all duration-200 group flex flex-col justify-between h-full">
             <div>
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <div className="flex items-center gap-1.5">
                     <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[#74839A]">
-                      {globalViewMode === "gross" ? "Total Purchase" : "Net Purchase"}
+                      GST Payable
                     </h3>
                     <CardInfoPopover
-                      title="Procurement Breakdown"
+                      title="GST Payable Breakdown"
                       badge={
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
                           isGstReg
                             ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                             : "bg-amber-50 text-amber-700 border-amber-200"
                         }`}>
-                          {isGstReg ? "GST Registered" : "Non-GST Shop"}
+                          {isGstReg ? "GST Registered (ITC Active)" : "Non-GST Shop"}
                         </span>
                       }
                     >
-                      {/* Step 1: Gross Procurement */}
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <div className="font-semibold text-slate-800">Total Procurement (incl. GST)</div>
-                          <div className="text-[11px] text-[#74839A]">Gross purchases before returns</div>
-                        </div>
-                        <span className="font-semibold text-slate-800 tabular-nums">+{fmt(purchaseGrossSpend)}</span>
-                      </div>
-
-                      {/* Step 2: Less Purchase Returns */}
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <div className="font-semibold text-slate-800">− Purchase Returns & Debit Notes</div>
-                          <div className="text-[11px] text-[#74839A]">
-                            {totalPurchaseReturnsCount > 0 ? `${totalPurchaseReturnsCount} return(s) recorded` : "Goods returned to suppliers"}
+                      {!isGstReg ? (
+                        <>
+                          <div className="space-y-1.5 text-xs">
+                            <div className="flex items-center justify-between text-[#74839A]">
+                              <span>Output Sales GST:</span>
+                              <span className="font-semibold text-slate-800 tabular-nums">₹0.00</span>
+                            </div>
+                            <div className="flex items-center justify-between text-[#74839A]">
+                              <span>Input Purchase GST:</span>
+                              <span className="font-semibold text-slate-800 tabular-nums">₹0.00</span>
+                            </div>
                           </div>
-                        </div>
-                        <span className={`font-semibold tabular-nums ${totalPurchaseReturns > 0 ? "text-rose-600" : "text-slate-400"}`}>
-                          {totalPurchaseReturns > 0 ? `−${fmt(totalPurchaseReturns)}` : "₹0.00"}
-                        </span>
-                      </div>
+                          <div className="pt-2 border-t border-dashed border-[#E5EAF0]" />
+                          <div className="flex items-start justify-between gap-3 bg-amber-50/70 p-2.5 rounded-lg border border-amber-100">
+                            <div>
+                              <div className="font-bold text-amber-950 text-xs">= Net GST Payable</div>
+                              <div className="text-[10px] text-amber-800 font-medium">Non-GST registered shop</div>
+                            </div>
+                            <span className="text-sm font-bold text-amber-700 tabular-nums">
+                              ₹0.00
+                            </span>
+                          </div>
+                          <div className="bg-amber-50/70 p-2.5 rounded-lg border border-amber-200/80 text-[11px] text-amber-900 leading-relaxed">
+                            Non-GST registered sellers do not collect GST on sales and cannot claim input tax credit. No GST is payable to the government.
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          {/* Output GST (Sales GST) */}
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <div className="font-semibold text-slate-800">+ Output GST (Sales GST)</div>
+                              <div className="text-[11px] text-[#74839A]">Collected on taxable sales</div>
+                            </div>
+                            <span className="font-semibold text-amber-700 tabular-nums">+{fmt(salesGstAmount)}</span>
+                          </div>
 
-                      {/* Divider */}
-                      <div className="pt-2 border-t border-dashed border-[#E5EAF0]" />
+                          {/* Input Tax Credit (Purchase GST on sales) */}
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <div className="font-semibold text-slate-800">− Input Tax Credit (Purchase GST on sales)</div>
+                              <div className="text-[11px] text-[#74839A]">ITC credit on sold stock</div>
+                            </div>
+                            <span className="font-semibold text-emerald-600 tabular-nums">−{fmt(salesBasedPurchaseGst)}</span>
+                          </div>
 
-                      {/* Step 3: Net Realized Procurement */}
-                      <div className="flex items-start justify-between gap-3 bg-emerald-50/70 p-2.5 rounded-lg border border-emerald-100">
-                        <div>
-                          <div className="font-bold text-emerald-950 text-xs">= Net Realized Purchase</div>
-                          <div className="text-[10px] text-emerald-800 font-medium">Realized procurement spend</div>
-                        </div>
-                        <span className="text-sm font-bold text-emerald-700 tabular-nums">
-                          {fmt(totalPurchaseAmount)}
-                        </span>
-                      </div>
+                          {/* Divider */}
+                          <div className="pt-2 border-t border-dashed border-[#E5EAF0]" />
 
-                      {/* Step 4: Taxable Base vs GST */}
-                      <div className="space-y-1.5 pt-1 text-[11px]">
-                        <div className="flex items-center justify-between text-[#74839A]">
-                          <span>Taxable Spend (excl. GST):</span>
-                          <span className="font-semibold text-slate-800 tabular-nums">{fmt(purchaseTaxableSpend)}</span>
-                        </div>
-                        <div className="flex items-center justify-between text-[#74839A]">
-                          <span>Purchase Input GST:</span>
-                          <span className="font-semibold text-amber-700 tabular-nums">{fmt(purchaseGstAmount)}</span>
-                        </div>
-                      </div>
+                          {/* Net GST Payable Result */}
+                          <div className={`flex items-start justify-between gap-3 p-2.5 rounded-lg border ${
+                            netGstPayable > 0
+                              ? "bg-amber-50/70 border-amber-200 text-amber-950"
+                              : "bg-emerald-50/70 border-emerald-200 text-emerald-950"
+                          }`}>
+                            <div>
+                              <div className="font-bold text-xs">
+                                {netGstPayable > 0 ? "= Net GST Payable" : "= Net GST Payable (Nil)"}
+                              </div>
+                              <div className={`text-[10px] font-medium ${netGstPayable > 0 ? "text-amber-800" : "text-emerald-800"}`}>
+                                {netGstPayable > 0 ? "Payable to government" : "Surplus ITC available"}
+                              </div>
+                            </div>
+                            <span className={`text-sm font-bold tabular-nums ${netGstPayable > 0 ? "text-amber-700" : "text-emerald-700"}`}>
+                              {fmt(netGstPayable)}
+                            </span>
+                          </div>
 
-                      {/* Divider */}
-                      <div className="pt-2 border-t border-dashed border-[#E5EAF0]" />
+                          {/* Explanation Banner */}
+                          <div className={`p-2.5 rounded-lg border text-[11px] leading-relaxed ${
+                            netGstPayable > 0
+                              ? "bg-amber-50/70 border-amber-200/80 text-amber-900"
+                              : "bg-emerald-50/70 border-emerald-200/80 text-emerald-900"
+                          }`}>
+                            {netGstPayable > 0 ? (
+                              "Sales GST exceeds purchase ITC on sold goods. Net balance is payable to the government on monthly return filing."
+                            ) : itcSurplus > 0 ? (
+                              `Purchase ITC exceeds sales tax. No tax is payable this period; surplus ITC of ${fmt(itcSurplus)} is carried forward to offset future sales tax.`
+                            ) : (
+                              "Sales GST and purchase ITC are balanced. No GST is payable to the government for this period."
+                            )}
+                          </div>
 
-                      {/* Step 5: Payables Status */}
-                      <div className="space-y-1 text-[11px]">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[#0D9F6E] font-medium">Paid to Suppliers:</span>
-                          <span className="font-semibold text-[#0D9F6E] tabular-nums">{fmt(purchasePaidAmount)}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-[#D69A35] font-medium">Outstanding Payables:</span>
-                          <span className="font-semibold text-[#D69A35] tabular-nums">{fmt(totalPurchaseOutstanding)}</span>
-                        </div>
-                      </div>
+                          {purchaseGstAmount > 0 && (
+                            <div className="flex items-center justify-between text-[11px] text-[#74839A] pt-1 px-0.5 border-t border-dashed border-[#E5EAF0]">
+                              <span>Total Procurement ITC:</span>
+                              <span className="font-semibold text-slate-700 tabular-nums">
+                                {fmt(purchaseGstAmount)} <span className="text-[10px] font-normal text-[#74839A]">(across total batch purchases)</span>
+                              </span>
+                            </div>
+                          )}
+                        </>
+                      )}
                     </CardInfoPopover>
                   </div>
                   <p className="text-xs text-[#74839A] font-medium mt-0.5">
-                    {globalViewMode === "gross" ? "Procurement spend incl. GST" : "Procurement spend excl. GST"}
+                    {isGstReg ? "Output GST − Input Tax Credit" : "Exempt / Non-GST Registered"}
                   </p>
                 </div>
-                <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-[#F1F4F7] text-[#27364B] shrink-0 transition-transform duration-200 group-hover:scale-105">
-                  <ShoppingBag className="w-4.5 h-4.5" strokeWidth={2.2} />
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-amber-50 text-amber-700 shrink-0 transition-transform duration-200 group-hover:scale-105">
+                  <Receipt className="w-4.5 h-4.5" strokeWidth={2.2} />
                 </div>
               </div>
+
+              {/* Main Amount */}
               <div className="flex items-end gap-2 mt-3">
-                <span className="text-[26px] font-semibold text-[#27364B] tracking-tight leading-none tabular-nums truncate" title={fmt(displayedPurchase)}>
-                  {loading ? "—" : fmt(displayedPurchase)}
+                <span
+                  className={`text-[26px] font-semibold tracking-tight leading-none tabular-nums truncate ${
+                    !isGstReg
+                      ? "text-slate-400"
+                      : netGstPayable > 0
+                      ? "text-amber-600"
+                      : "text-[#0D9F6E]"
+                  }`}
+                  title={!isGstReg ? "Exempt (₹0.00)" : fmt(netGstPayable)}
+                >
+                  {loading ? "—" : (!isGstReg ? "₹0.00" : fmt(netGstPayable))}
                 </span>
+                {!loading && isGstReg && itcSurplus > 0 && (
+                  <span className="text-[11px] font-semibold text-[#0D9F6E] mb-0.5 truncate" title={`ITC Surplus: ${fmt(itcSurplus)}`}>
+                    (Surplus)
+                  </span>
+                )}
+                {!loading && !isGstReg && (
+                  <span className="text-[11px] font-semibold text-slate-400 mb-0.5">
+                    (Exempt)
+                  </span>
+                )}
               </div>
               <div className="text-[11px] font-medium text-[#74839A] mt-1">
-                GST Amt: <span className="font-semibold text-[#27364B]">{loading ? "—" : fmt(purchaseGstAmount)}</span>
+                {!isGstReg ? (
+                  <span className="text-slate-400">Non-GST Shop (Tax Exempt)</span>
+                ) : netGstPayable > 0 ? (
+                  <>
+                    Liability: <span className="font-semibold text-amber-600">Net Tax Payable</span>
+                  </>
+                ) : itcSurplus > 0 ? (
+                  <>
+                    ITC Surplus: <span className="font-semibold text-[#0D9F6E]">{loading ? "—" : fmt(itcSurplus)}</span>
+                  </>
+                ) : (
+                  <>
+                    Balance: <span className="font-semibold text-[#27364B]">₹0.00</span>
+                  </>
+                )}
               </div>
             </div>
 
-            <div className="mt-5 pt-3.5 border-t border-[#E5EAF0] space-y-1.5">
+            <div className="mt-5 pt-3.5 border-t border-[#E5EAF0]">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-[11px] font-medium text-[#74839A] uppercase tracking-wider">Purchases:</span>
-                <span className="font-medium text-[#27364B] tabular-nums">{loading ? "—" : `${totalPurchaseCount} (${totalPurchaseStocks} stocks)`}</span>
+                <span className="text-[11px] font-medium text-[#74839A] uppercase tracking-wider">Period</span>
+                <span className="font-medium text-[#27364B]">{RANGE_LABELS[activeRange]}</span>
               </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-[11px] font-medium text-[#74839A] uppercase tracking-wider">Outstanding:</span>
-                <span className="font-semibold text-[#D69A35] tabular-nums">{loading ? "—" : fmt(totalPurchaseOutstanding)}</span>
-              </div>
-              {totalPurchaseReturns > 0 && (
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-rose-500"></span>
-                    <span className="text-[11px] font-medium text-[#74839A] uppercase tracking-wider">Returns</span>
-                  </div>
-                  <span className="font-semibold text-rose-600 tabular-nums">
-                    -{loading ? "—" : fmt(totalPurchaseReturns)}
-                  </span>
-                </div>
-              )}
             </div>
           </div>
+          )}
 
-          {/* 4. Total Orders */}
+          {/* 5. Total Orders */}
           <div className="bg-white rounded-xl p-5 border border-[#E5EAF0] shadow-[0_1px_3px_rgba(0,0,0,0.03)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.05)] hover:border-[#D1D9E2] transition-all duration-200 group flex flex-col justify-between h-full">
             <div>
               <div className="flex items-start justify-between mb-3">
@@ -2296,92 +2480,6 @@ const AnalyticsDashboard = () => {
               <div className="flex items-center justify-between text-xs">
                 <span className="text-[11px] font-medium text-[#74839A] uppercase tracking-wider">Period</span>
                 <span className="font-medium text-[#27364B]">{RANGE_LABELS[activeRange]}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* 5. Avg. Order Value */}
-          <div className="bg-white rounded-xl p-5 border border-[#E5EAF0] shadow-[0_1px_3px_rgba(0,0,0,0.03)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.05)] hover:border-[#D1D9E2] transition-all duration-200 group flex flex-col justify-between h-full">
-            <div>
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[#74839A]">Avg. Order Value</h3>
-                    <CardInfoPopover
-                      title="Avg. Order Value (AOV)"
-                      badge={
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-slate-50 text-slate-700 border-slate-200">
-                          Formula: Revenue ÷ Orders
-                        </span>
-                      }
-                    >
-                      <div className="space-y-1.5 text-xs">
-                        <div className="flex items-center justify-between text-[#74839A]">
-                          <span>Net Realized Revenue:</span>
-                          <span className="font-semibold text-slate-800 tabular-nums">{fmt(displayedRevenue)}</span>
-                        </div>
-                        <div className="flex items-center justify-between text-[#74839A]">
-                          <span>Net Delivered Orders:</span>
-                          <span className="font-semibold text-slate-800 tabular-nums">{totalOrders}</span>
-                        </div>
-                      </div>
-
-                      {/* Divider */}
-                      <div className="pt-2 border-t border-dashed border-[#E5EAF0]" />
-
-                      {/* AOV Result */}
-                      <div className="flex items-start justify-between gap-3 bg-emerald-50/70 p-2.5 rounded-lg border border-emerald-100">
-                        <div>
-                          <div className="font-bold text-emerald-950 text-xs">= Avg. Order Value (AOV)</div>
-                          <div className="text-[10px] text-emerald-800 font-medium">Revenue per active completed order</div>
-                        </div>
-                        <span className="text-sm font-bold text-emerald-700 tabular-nums">
-                          {fmt(displayedAov)}
-                        </span>
-                      </div>
-
-                      {/* Divider */}
-                      <div className="pt-2 border-t border-dashed border-[#E5EAF0]" />
-
-                      {/* Margins */}
-                      <div className="space-y-1 text-[11px]">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[#74839A]">Overall Gross Margin:</span>
-                          <span className="font-semibold text-[#0D9F6E] tabular-nums">{grossMargin.toFixed(1)}%</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-[#74839A]">Overall Net Margin:</span>
-                          <span className="font-semibold text-[#0D9F6E] tabular-nums">{netProfitMargin.toFixed(1)}%</span>
-                        </div>
-                      </div>
-                    </CardInfoPopover>
-                  </div>
-                  <p className="text-xs text-[#74839A] font-medium mt-0.5">
-                    {globalViewMode === "gross" ? "Revenue / Orders" : "Net Revenue / Orders"}
-                  </p>
-                </div>
-                <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-[#EAF2E8] text-[#103020] shrink-0 transition-transform duration-200 group-hover:scale-105">
-                  <Zap className="w-4.5 h-4.5" strokeWidth={2.2} />
-                </div>
-              </div>
-              <div className="flex items-end gap-2 mt-3">
-                <span className="text-[26px] font-semibold text-[#27364B] tracking-tight leading-none tabular-nums truncate" title={fmt(displayedAov)}>
-                  {loading ? "—" : fmt(displayedAov)}
-                </span>
-              </div>
-              <div className="text-[11px] font-medium text-[#74839A] mt-1">
-                GST / Order: <span className="font-semibold text-[#27364B]">{loading ? "—" : fmt(totalOrders > 0 ? (salesGstAmount / totalOrders) : 0)}</span>
-              </div>
-            </div>
-
-            <div className="mt-5 pt-3.5 border-t border-[#E5EAF0]">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-[11px] font-medium text-[#74839A] uppercase tracking-wider">
-                  {!isGstReg ? "Profit Margin" : (globalViewMode === "gross" ? "Gross Margin" : "Net Margin")}
-                </span>
-                <span className="font-semibold text-[#27364B] tabular-nums">
-                  {loading ? "—" : `${displayedMargin.toFixed(1)}%`}
-                </span>
               </div>
             </div>
           </div>
@@ -2516,25 +2614,166 @@ const AnalyticsDashboard = () => {
               <div className="bg-white rounded-xl p-5 border border-[#E5EAF0] shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
                 <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[#74839A] mb-3">Quick Stats</h3>
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-[#F7F9FA] border border-[#E5EAF0] rounded-xl p-3 text-center hover:bg-white hover:border-[#D1D9E2] transition-colors">
+                  {/* 1. Orders */}
+                  <div className="bg-[#F7F9FA] border border-[#E5EAF0] rounded-xl p-3 hover:bg-white hover:border-[#D1D9E2] transition-colors flex flex-col justify-between">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[11px] font-medium text-[#74839A]">Orders</span>
+                      <CardInfoPopover
+                        title="Orders Breakdown"
+                        align="end"
+                        badge={
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-slate-50 text-slate-700 border-slate-200">
+                            {RANGE_LABELS[activeRange]}
+                          </span>
+                        }
+                      >
+                        <div className="space-y-1.5 text-xs">
+                          <div className="flex items-center justify-between text-[#74839A]">
+                            <span>Completed Orders:</span>
+                            <span className="font-semibold text-slate-800 tabular-nums">{completedOrdersCount || totalOrders}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-[#74839A]">
+                            <span>Active Orders:</span>
+                            <span className="font-semibold text-emerald-700 tabular-nums">{totalOrders}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-[#74839A]">
+                            <span>Returned Orders:</span>
+                            <span className={`font-semibold tabular-nums ${totalReturnsCount > 0 ? "text-rose-600" : "text-slate-600"}`}>
+                              {totalReturnsCount}
+                            </span>
+                          </div>
+                        </div>
+                      </CardInfoPopover>
+                    </div>
                     <p className="text-lg font-semibold text-[#27364B] tabular-nums">{totalOrders}</p>
-                    <p className="text-[11px] font-medium text-[#74839A] mt-0.5">Orders</p>
                   </div>
-                  <div className="bg-[#F7F9FA] border border-[#E5EAF0] rounded-xl p-3 text-center hover:bg-white hover:border-[#D1D9E2] transition-colors">
+
+                  {/* 2. Profit */}
+                  <div className="bg-[#F7F9FA] border border-[#E5EAF0] rounded-xl p-3 hover:bg-white hover:border-[#D1D9E2] transition-colors flex flex-col justify-between">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[11px] font-medium text-[#74839A]">{totalProfit >= 0 ? "Profit" : "Loss"}</span>
+                      <CardInfoPopover
+                        title="Profit Summary"
+                        align="end"
+                        badge={
+                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                            totalProfit >= 0 ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-rose-50 text-rose-700 border-rose-200"
+                          }`}>
+                            {displayedMargin.toFixed(1)}% Margin
+                          </span>
+                        }
+                      >
+                        <div className="space-y-1.5 text-xs">
+                          <div className="flex items-center justify-between text-[#74839A]">
+                            <span>Gross Margin:</span>
+                            <span className="font-semibold text-slate-800 tabular-nums">{fmt(grossProfit)}</span>
+                          </div>
+                          {transportCharges > 0 && (
+                            <div className="flex items-center justify-between text-[#74839A]">
+                              <span>Transport Charges:</span>
+                              <span className="font-semibold text-rose-600 tabular-nums">-{fmt(transportCharges)}</span>
+                            </div>
+                          )}
+                          {isGstReg && (
+                            <>
+                              <div className="flex items-center justify-between text-[#74839A]">
+                                <span>Output GST:</span>
+                                <span className="font-semibold text-rose-600 tabular-nums">-{fmt(outputGstDeduction)}</span>
+                              </div>
+                              <div className="flex items-center justify-between text-[#74839A]">
+                                <span>Input GST (ITC):</span>
+                                <span className="font-semibold text-emerald-700 tabular-nums">+{fmt(itcAmount)}</span>
+                              </div>
+                            </>
+                          )}
+                          <div className="pt-2 border-t border-dashed border-[#E5EAF0] flex items-center justify-between font-bold text-slate-800">
+                            <span>Net Realized Profit:</span>
+                            <span className={`tabular-nums ${totalProfit >= 0 ? "text-emerald-700" : "text-rose-600"}`}>
+                              {fmt(totalProfit)}
+                            </span>
+                          </div>
+                        </div>
+                      </CardInfoPopover>
+                    </div>
                     <p className={`text-lg font-semibold tabular-nums truncate ${totalProfit >= 0 ? "text-[#0D9F6E]" : "text-[#DC6464]"}`} title={fmt(totalProfit)}>
                       {fmt(totalProfit)}
                     </p>
-                    <p className="text-[11px] font-medium text-[#74839A] mt-0.5">{totalProfit >= 0 ? "Profit" : "Loss"}</p>
                   </div>
-                  <div className="bg-[#F7F9FA] border border-[#E5EAF0] rounded-xl p-3 text-center hover:bg-white hover:border-[#D1D9E2] transition-colors">
-                    <p className="text-lg font-semibold text-[#27364B] tabular-nums truncate" title={fmt(aov)}>
-                      {fmtShort(aov)}
+
+                  {/* 3. AOV */}
+                  <div className="bg-[#F7F9FA] border border-[#E5EAF0] rounded-xl p-3 hover:bg-white hover:border-[#D1D9E2] transition-colors flex flex-col justify-between">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[11px] font-medium text-[#74839A]">AOV</span>
+                      <CardInfoPopover
+                        title="Avg. Order Value (AOV)"
+                        align="end"
+                        badge={
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-slate-50 text-slate-700 border-slate-200">
+                            Revenue ÷ Orders
+                          </span>
+                        }
+                      >
+                        <div className="space-y-1.5 text-xs">
+                          <div className="flex items-center justify-between text-[#74839A]">
+                            <span>Delivered Net Revenue:</span>
+                            <span className="font-semibold text-slate-800 tabular-nums">{fmt(displayedRevenue)}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-[#74839A]">
+                            <span>Active Orders:</span>
+                            <span className="font-semibold text-slate-800 tabular-nums">{totalOrders}</span>
+                          </div>
+                          <div className="pt-2 border-t border-dashed border-[#E5EAF0] flex items-center justify-between font-bold text-slate-800">
+                            <span>Avg. Order Value:</span>
+                            <span className="text-emerald-700 tabular-nums">{fmt(displayedAov)}</span>
+                          </div>
+                        </div>
+                      </CardInfoPopover>
+                    </div>
+                    <p className="text-lg font-semibold text-[#27364B] tabular-nums truncate" title={fmt(displayedAov)}>
+                      {fmt(displayedAov)}
                     </p>
-                    <p className="text-[11px] font-medium text-[#74839A] mt-0.5">AOV</p>
                   </div>
-                  <div className="bg-[#F7F9FA] border border-[#E5EAF0] rounded-xl p-3 text-center hover:bg-white hover:border-[#D1D9E2] transition-colors">
-                    <p className="text-lg font-semibold text-[#27364B] tabular-nums">{totalReturnsCount}</p>
-                    <p className="text-[11px] font-medium text-[#74839A] mt-0.5">Returns</p>
+
+                  {/* 4. Returns */}
+                  <div className="bg-[#F7F9FA] border border-[#E5EAF0] rounded-xl p-3 hover:bg-white hover:border-[#D1D9E2] transition-colors flex flex-col justify-between">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[11px] font-medium text-[#74839A]">Returns</span>
+                      <CardInfoPopover
+                        title="Returns Breakdown"
+                        align="end"
+                        badge={
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-rose-50 text-rose-700 border-rose-200">
+                            {totalReturnsCount} Returned
+                          </span>
+                        }
+                      >
+                        <div className="space-y-1.5 text-xs">
+                          <div className="flex items-center justify-between text-[#74839A]">
+                            <span>Fully Returned Orders:</span>
+                            <span className="font-semibold text-rose-600 tabular-nums">{fullyReturnedOrdersCount}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-[#74839A]">
+                            <span>Partially Returned:</span>
+                            <span className="font-semibold text-slate-800 tabular-nums">{partiallyReturnedOrdersCount}</span>
+                          </div>
+                          {salesReturnsRefunds > 0 && (
+                            <div className="flex items-center justify-between text-[#74839A]">
+                              <span>Refund Amount:</span>
+                              <span className="font-semibold text-rose-600 tabular-nums">-{fmt(salesReturnsRefunds)}</span>
+                            </div>
+                          )}
+                          {salesReturnedProfit > 0 && (
+                            <div className="flex items-center justify-between text-[#74839A]">
+                              <span>Reversed Profit:</span>
+                              <span className="font-semibold text-rose-600 tabular-nums">-{fmt(salesReturnedProfit)}</span>
+                            </div>
+                          )}
+                        </div>
+                      </CardInfoPopover>
+                    </div>
+                    <p className={`text-lg font-semibold tabular-nums ${totalReturnsCount > 0 ? "text-rose-600" : "text-[#27364B]"}`}>
+                      {totalReturnsCount}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -2644,8 +2883,10 @@ const AnalyticsDashboard = () => {
                     <div className="mb-1 flex justify-center">
                       <BarChart2 className="w-3.5 h-3.5 text-[#286038]" />
                     </div>
-                    <p className="text-xs font-semibold text-[#27364B] tabular-nums">{grossMargin.toFixed(1)}%</p>
-                    <p className="text-[10px] font-medium text-[#74839A] uppercase tracking-wider mt-0.5">Gross Margin</p>
+                    <p className="text-xs font-semibold text-[#27364B] tabular-nums">{displayedMargin.toFixed(1)}%</p>
+                    <p className="text-[10px] font-medium text-[#74839A] uppercase tracking-wider mt-0.5">
+                      {!isGstReg ? "Net Margin" : (globalViewMode === "gross" ? "Gross Margin" : "Net Margin")}
+                    </p>
                   </div>
                   <div className="text-center p-2.5 bg-[#F7F9FA] border border-[#E5EAF0] rounded-xl hover:bg-white transition-colors min-w-0">
                     <div className="mb-1 flex justify-center">
@@ -2658,7 +2899,7 @@ const AnalyticsDashboard = () => {
                     <div className="mb-1 flex justify-center">
                       <TrendingUp className="w-3.5 h-3.5 text-[#0D9F6E]" />
                     </div>
-                    <p className="text-xs font-semibold text-[#27364B] tabular-nums truncate" title={fmt(aov)}>{fmtShort(aov)}</p>
+                    <p className="text-xs font-semibold text-[#27364B] tabular-nums truncate" title={fmt(displayedAov)}>{fmtShort(displayedAov)}</p>
                     <p className="text-[10px] font-medium text-[#74839A] uppercase tracking-wider mt-0.5">AOV</p>
                   </div>
                 </div>
@@ -2770,6 +3011,10 @@ const AnalyticsDashboard = () => {
         netProfitMargin={netProfitMargin}
         grossMargin={grossMargin}
         fmt={fmt}
+        salesReturnedProfit={salesReturnedProfit}
+        initialGrossProfit={initialGrossProfit}
+        initialSellingPrice={initialSalesRevenue}
+        initialPurchaseCost={initialPurchaseCost}
       />
     </div>
   );

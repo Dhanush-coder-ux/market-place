@@ -1,8 +1,14 @@
-import { ArrowUp, ArrowDown, ShoppingCart, TrendingUp, RefreshCcw, FileText, ArrowRight, Banknote, Eye, ChevronRight, X, Layers, Hash, Zap, RotateCw } from "lucide-react";
+import { ArrowUp, ArrowDown, ShoppingCart, TrendingUp, RefreshCcw, FileText, ArrowRight, Banknote, Eye, ChevronRight, X, Layers, Hash, Zap, RotateCw, Printer, RotateCcw, Receipt } from "lucide-react";
 import { TypeBadge } from "@/components/common/SuperUI";
-import { useState, Fragment } from "react";
+import { useState, Fragment, useMemo, useCallback } from "react";
 import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
+import { BiLogoWhatsapp } from "react-icons/bi";
 import { AntBadge, PaymentStatusBadge } from "@/components/ui/AntBadge";
+import { getSaleQuantityDisplay, extractSaleCustomerInfo } from "@/features/sales/type";
+import { ReprintReceiptModal } from "@/features/sales/components/ReprintReceiptModal";
+import { SaleInvoiceModal } from "@/features/sales/components/SaleInvoiceModal";
+import { ReturnModal } from "@/features/sales/components/ReturnOrderFlow";
 
 const formatStockValue = (val: number | null | undefined) => {
   if (val === null || val === undefined || isNaN(Number(val))) return '—';
@@ -952,11 +958,6 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                         <div className="text-sm font-black text-slate-800 tabular-nums">
                           <AmountWithReturnHover total={fullTotal} returns={r.returns} refundAmount={r.refundAmount} />
                         </div>
-                        {Number(r.gstAmount || 0) > 0 && (
-                          <div className="text-[10px] text-slate-400 font-normal">
-                            (incl. ₹{Number(r.gstAmount).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} GST)
-                          </div>
-                        )}
                         <div className={`text-[10px] font-bold tabular-nums ${r.type === 'RETURN' ? 'text-rose-600' : 'text-emerald-600'}`}>
                           {r.type === 'RETURN' ? '-' : '+'}{totalStocksIn} units
                         </div>
@@ -1127,11 +1128,6 @@ export function SupplierPurchasesTable({ rows, loading, onNavigateToPurchase }: 
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap text-xs font-bold text-slate-700">
                           <AmountWithReturnHover total={fullTotal} returns={r.returns} refundAmount={r.refundAmount} />
-                          {Number(r.gstAmount || 0) > 0 && (
-                            <span className="block text-[10px] text-slate-400 font-normal">
-                              (incl. ₹{Number(r.gstAmount).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} GST)
-                            </span>
-                          )}
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap text-xs font-bold text-emerald-600">
                           ₹{Number(r.amountPaid || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -1182,26 +1178,199 @@ interface CustomerPurchasesTableProps {
   rows: any[];
   loading: boolean;
   onNavigateToSale?: (id: string) => void;
+  customer?: any;
+  onRefresh?: () => void;
 }
 
-function LocalStatusBadge({ status }: { status: string }) {
-  const colorMap: Record<string, string> = {
-    Paid: "bg-emerald-50 text-emerald-600 border-emerald-100",
-    Partial: "bg-blue-50 text-blue-600 border-blue-100",
-    Pending: "bg-amber-50 text-amber-600 border-amber-100",
-  };
-  return (
-    <span
-      className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${colorMap[status] ?? "bg-slate-50 text-slate-500 border-slate-100"
-        }`}
-    >
-      {status}
-    </span>
-  );
+type BadgeConfig = { cls: string; dot: string };
+
+const ORIGIN_CFG: Record<string, BadgeConfig> = {
+  "Offline": { cls: "bg-[var(--mv-sales-bg)] text-[var(--mv-sales-tx)] border border-[var(--mv-sales-bd)]", dot: "bg-[var(--mv-sales-dot)]" },
+  "Offline Return": { cls: "bg-[var(--mv-sreturn-bg)] text-[var(--mv-sreturn-tx)] border border-[var(--mv-sreturn-bd)]", dot: "bg-[var(--mv-sreturn-dot)]" },
+  "Online": { cls: "bg-[var(--mv-sales-bg)] text-[var(--mv-sales-tx)] border border-[var(--mv-sales-bd)]", dot: "bg-[var(--mv-sales-dot)]" },
+};
+
+const PAYMENT_CFG: Record<string, BadgeConfig> = {
+  Cash: { cls: "bg-[var(--pay-paid-bg)] text-[var(--pay-paid-tx)] border border-[var(--pay-paid-bd)]", dot: "bg-[var(--pay-paid-dot)]" },
+  Card: { cls: "bg-[var(--mv-sreturn-bg)] text-[var(--mv-sreturn-tx)] border border-[var(--mv-sreturn-bd)]", dot: "bg-[var(--mv-sreturn-dot)]" },
+  UPI: { cls: "bg-[var(--pay-paid-bg)] text-[var(--pay-paid-tx)] border border-[var(--pay-paid-bd)]", dot: "bg-[var(--pay-paid-dot)]" },
+  "G-Pay": { cls: "bg-[var(--mv-sales-bg)] text-[var(--mv-sales-tx)] border border-[var(--mv-sales-bd)]", dot: "bg-[var(--mv-sales-dot)]" },
+  PhonePe: { cls: "bg-[var(--mv-sreturn-bg)] text-[var(--mv-sreturn-tx)] border border-[var(--mv-sreturn-bd)]", dot: "bg-[var(--mv-sreturn-dot)]" },
+  Credit: { cls: "bg-[var(--ps-draft-bg)] text-[var(--ps-draft-tx)] border border-[var(--ps-draft-bd)]", dot: "bg-[var(--ps-draft-dot)]" },
+  "On Credit": { cls: "bg-[var(--ps-draft-bg)] text-[var(--ps-draft-tx)] border border-[var(--ps-draft-bd)]", dot: "bg-[var(--ps-draft-dot)]" },
+  Other: { cls: "bg-[var(--pay-pending-bg)] text-[var(--pay-pending-tx)] border border-[var(--pay-pending-bd)]", dot: "bg-[var(--pay-pending-dot)]" },
+};
+
+const STATUS_CFG: Record<string, BadgeConfig> = {
+  Completed: { cls: "bg-[var(--pay-paid-bg)] text-[var(--pay-paid-tx)] border border-[var(--pay-paid-bd)]", dot: "bg-[var(--ps-completed-dot)]" },
+  Delivered: { cls: "bg-[var(--pay-paid-bg)] text-[var(--pay-paid-tx)] border border-[var(--pay-paid-bd)]", dot: "bg-[var(--ps-completed-dot)]" },
+  Pending: { cls: "bg-[var(--ps-draft-bg)] text-[var(--ps-draft-tx)] border border-[var(--ps-draft-bd)]", dot: "bg-[var(--ps-draft-dot)]" },
+  Cancelled: { cls: "bg-[var(--ps-cancel-bg)] text-[var(--ps-cancel-tx)] border border-[var(--ps-cancel-bd)]", dot: "bg-[var(--ps-cancel-dot)]" },
+  Returned: { cls: "bg-[var(--ps-cancel-bg)] text-[var(--ps-cancel-tx)] border border-[var(--ps-cancel-bd)]", dot: "bg-[var(--ps-cancel-dot)]" },
+};
+
+const PillBadge: React.FC<{ cls: string; dot: string; label: string }> = ({ cls, dot, label }) => (
+  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap ${cls}`}>
+    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${dot}`} />
+    {label}
+  </span>
+);
+
+const fmtCurrency = (n?: number) => {
+  if (n === undefined || n === null || isNaN(Number(n))) return "₹0";
+  const num = Number(n);
+  const formatted = num.toLocaleString("en-IN", {
+    minimumFractionDigits: num % 1 !== 0 ? 2 : 0,
+    maximumFractionDigits: 2,
+  });
+  return `₹${formatted}`;
+};
+
+function parseSaleDateTime(dateVal?: any): Date {
+  if (!dateVal) return new Date();
+  if (dateVal instanceof Date) return dateVal;
+  let str = String(dateVal).trim().replace(" ", "T");
+  if (str.includes("T") && !str.endsWith("Z") && !str.includes("+") && !/[0-9]-[0-9]{2}:[0-9]{2}$/.test(str)) {
+    const utcDate = new Date(str + "Z");
+    if (!isNaN(utcDate.getTime())) return utcDate;
+  }
+  const parsed = new Date(str.includes("T") ? str : str + "T00:00:00");
+  return isNaN(parsed.getTime()) ? new Date() : parsed;
 }
 
-export function CustomerPurchasesTable({ rows, loading, onNavigateToSale }: CustomerPurchasesTableProps) {
+function fmtDate(dateVal?: any) {
+  if (!dateVal) return "—";
+  const d = parseSaleDateTime(dateVal);
+  return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function fmtTime(dateVal?: any) {
+  if (!dateVal) return "";
+  const d = parseSaleDateTime(dateVal);
+  return d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
+}
+
+function checkSaleDiscount(s: any): { hasDiscount: boolean; discountAmount: number } {
+  if (!s) return { hasDiscount: false, discountAmount: 0 };
+  const calc = s.calculation_infos || s.calculations || s.calc_infos;
+  
+  let discAmt = 0;
+  if (calc) {
+    discAmt = Number(calc.total_discount_given ?? calc.discount_total ?? calc.total_discount ?? 0);
+    if (discAmt <= 0) {
+      const pDisc = Number(calc.product_discount_total || 0);
+      const lDisc = Number(calc.line_discount_total || 0);
+      const bDisc = Number(calc.bill_discount_total || 0);
+      discAmt = pDisc + lDisc + bDisc;
+    }
+  }
+
+  if (discAmt <= 0) {
+    discAmt = Number(s.discount_amount ?? s.total_discount ?? s.discount ?? s.charges_infos?.discount ?? 0);
+  }
+
+  let hasDiscFromItems = false;
+  const items = Array.isArray(calc?.items) ? calc.items : (Array.isArray(s.items) ? s.items : []);
+  if (items.length > 0) {
+    for (const it of items) {
+      const itDiscAmt = Number(it.product_discount_amount || 0) +
+        Number(it.line_discount_amount || 0) +
+        Number(it.bill_discount_share || 0) +
+        Number(it.discount_amount || 0);
+      const itDiscPct = Number(it.discount_percent || 0) +
+        Number(it.line_discount_value || 0) +
+        Number(it.product_discount_percent || 0);
+      if (itDiscAmt > 0 || itDiscPct > 0) {
+        hasDiscFromItems = true;
+        if (discAmt <= 0 && itDiscAmt > 0) {
+          discAmt += itDiscAmt;
+        }
+      }
+    }
+  }
+
+  const hasDiscount = discAmt > 0 || hasDiscFromItems;
+  return { hasDiscount, discountAmount: discAmt };
+}
+
+const parsePaymentMethods = (order: any): string[] => {
+  let pm = order.payment_method;
+  if (!pm && Array.isArray(order.payment_infos) && order.payment_infos.length > 0) {
+    pm = order.payment_infos.map((p: any) => p.method || p.mode).filter(Boolean).join(", ");
+  }
+  if (!pm && order.additional_infos?.payment_method) {
+    pm = order.additional_infos.payment_method;
+  }
+  if (!pm) pm = "Cash";
+
+  const rawList = String(pm).split(",").map((s) => s.trim()).filter(Boolean);
+  if (rawList.length === 0) return ["Cash"];
+
+  return rawList.map((m) => {
+    const upper = m.toUpperCase();
+    if (upper === "CASH") return "Cash";
+    if (upper.includes("CREDIT") || upper.includes("ON_CREDIT")) return "On Credit";
+    if (upper === "CARD") return "Card";
+    if (upper === "UPI") return "UPI";
+    if (upper === "GPAY" || upper === "G-PAY") return "G-Pay";
+    if (upper === "PHONEPE") return "PhonePe";
+    return m;
+  });
+};
+
+export function CustomerPurchasesTable({ rows, loading, onNavigateToSale, customer, onRefresh }: CustomerPurchasesTableProps) {
+  const navigate = useNavigate();
   const [selectedRecord, setSelectedRecord] = useState<any | null>(null);
+  const [reprintSale, setReprintSale] = useState<any | null>(null);
+  const [invoiceModalSale, setInvoiceModalSale] = useState<any | null>(null);
+  const [returnSale, setReturnSale] = useState<any | null>(null);
+
+  const customerMap = useMemo(() => {
+    if (!customer) return {};
+    const cData = (customer as any).datas || customer;
+    const cId = (customer as any).id || cData.id;
+    const map: Record<string, any> = {};
+    if (cId) map[cId] = cData;
+    return map;
+  }, [customer]);
+
+  const handleSendWhatsApp = useCallback((sale: any) => {
+    const c = extractSaleCustomerInfo(sale, customerMap);
+    const fallbackPhone = (customer as any)?.mobile_number || (customer as any)?.datas?.mobile_number || (customer as any)?.phone;
+    const phoneToUse = c.phone || fallbackPhone || "";
+    let phoneNum = phoneToUse.replace(/[^0-9]/g, "");
+    if (!phoneNum) {
+      alert("No phone number found for this customer.");
+      return;
+    }
+    if (phoneNum.length === 10) {
+      phoneNum = "91" + phoneNum;
+    }
+
+    const orderId = sale.ui_id || sale.id;
+    const total = Number(sale.total_sellprice || 0).toLocaleString("en-IN");
+    const items = Array.isArray(sale.items) ? sale.items : [];
+    const itemsText = items.slice(0, 3).map((it: any) => `• ${it.name || "Item"} x ${it.quantity || 1}`).join("\n");
+    const moreCount = items.length > 3 ? `\n...and ${items.length - 3} more item(s)` : "";
+    const shopName = localStorage.getItem("shop_name") || "Our Store";
+
+    const isInvoice = Boolean(
+      (sale as any).billing_type === "INVOICE" ||
+      sale.additional_infos?.billing_type === "INVOICE" ||
+      sale.calculation_infos?.billing_type === "INVOICE" ||
+      sale.additional_infos?.is_invoice === true ||
+      sale.calculation_infos?.is_invoice === true ||
+      sale.is_invoice === true ||
+      sale.invoice_no
+    );
+
+    const title = isInvoice ? "Tax Invoice" : "Bill Receipt";
+    const customerName = c.name || (customer as any)?.name || (customer as any)?.datas?.name || "Customer";
+    const text = `*${shopName}* - ${title}\n--------------------------------\n*Order ID:* ${orderId}\n*Customer:* ${customerName}\n*Total Amount:* ₹${total}\n*Status:* ${sale.status || "Completed"}\n--------------------------------\n*Items:*\n${itemsText}${moreCount}\n--------------------------------\nThank you for shopping with us!`;
+
+    const url = `https://wa.me/${phoneNum}?text=${encodeURIComponent(text)}`;
+    window.open(url, "_blank");
+  }, [customerMap, customer]);
 
   return (
     <div className="flex flex-col h-full min-h-0 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden animate-in fade-in duration-300">
@@ -1213,76 +1382,212 @@ export function CustomerPurchasesTable({ rows, loading, onNavigateToSale }: Cust
           </div>
         ) : rows.length === 0 ? (
           <div className="py-24 text-center">
-            <ShoppingCart size={40} className="mx-auto text-slate-200 mb-3" />
+            <Receipt size={36} className="mx-auto text-slate-200 mb-2" />
             <h3 className="text-sm font-bold text-slate-700">No Orders Yet</h3>
             <p className="text-xs text-slate-400 mt-1 max-w-[280px] mx-auto">When this customer makes a purchase, it will appear here.</p>
           </div>
         ) : (
           <>
-            {/* Mobile Cards View (CustomerPurchasesTable) */}
+            {/* Mobile Cards View */}
             <div className="md:hidden divide-y divide-slate-100">
               {rows.map((order, i) => {
-                const date = order.created_at || order.date
-                  ? new Date(order.created_at || order.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-                  : '—';
+                const dateStr = fmtDate(order.created_at || order.date);
+                const timeStr = fmtTime(order.created_at || order.date);
                 let total = Number(order.calculation_infos?.total ?? order.total_sellprice ?? order.item_infos?.total_order_amount ?? order.grand_total ?? order.total_amount ?? order.total ?? 0);
+                if (Array.isArray(order.exchanges) && order.exchanges.length > 0) {
+                  let totalReplacements = 0;
+                  let totalExchangedReturns = 0;
+                  order.exchanges.forEach((exch: any) => {
+                    let repVal = Number(exch.total_replacement_amount || 0);
+                    const repItems = exch.replaced_items || exch.replacement_items || [];
+                    if (repVal === 0 && repItems.length > 0) {
+                      repItems.forEach((r: any) => {
+                        const rQty = Number(r.entered_qty ?? r.quantity ?? 1);
+                        repVal += Number(r.total_amount ?? ((r.sell_price || 0) * rQty));
+                      });
+                    }
+                    totalReplacements += repVal;
+
+                    let exchVal = Number(exch.total_exchanged_amount || 0);
+                    const retItems = exch.items || exch.exchange_items || exch.returned_items || [];
+                    if (exchVal === 0 && retItems.length > 0) {
+                      retItems.forEach((r: any) => {
+                        const rQty = Number(r.quantity || 1);
+                        exchVal += Number(r.exchange_amount ?? r.total_amount ?? ((r.sell_price || 0) * rQty));
+                      });
+                    }
+                    totalExchangedReturns += exchVal;
+                  });
+                  if (totalReplacements > 0 || totalExchangedReturns > 0) {
+                    total = Math.max(0, total - totalExchangedReturns + totalReplacements);
+                  }
+                }
                 if (Array.isArray(order.returns) && order.returns.length > 0) {
                   let totalRefunds = 0;
                   order.returns.forEach((ret: any) => { totalRefunds += Number(ret.total_return_cost ?? ret.total_cost ?? 0); });
                   total = Math.max(0, total - totalRefunds);
                 }
+
                 const products = order.items || order.products || order.datas?.items || order.datas?.products || [];
-                const productsQtySum = Array.isArray(products) && products.length > 0
-                  ? products.reduce((sum: number, it: any) => sum + (Number(it.quantity ?? it.qty ?? it.entered_qty ?? 1) || 0), 0)
-                  : 0;
-                const itemCount = productsQtySum || (order.item_infos?.total_order_qty ?? order.total_quantity ?? order.datas?.total_quantity ?? products.length);
-                const unit = products[0]?.product?.unit || products[0]?.unit || products[0]?.datas?.unit || (itemCount === 1 ? "Item" : "Units");
-                const invoiceId = order.ui_id ? `Order ${order.ui_id}` : `${order.id.slice(0, 8).toUpperCase()}`;
+                const orderId = order.ui_id || (order.id ? order.id.slice(0, 8).toUpperCase() : "—");
+                const qtyInfo = getSaleQuantityDisplay(order);
+
+                const itemExchangedCount = (order.items || []).filter((it: any) => it.status === "EXCHANGED").length;
+                const topLevelExchangeCount = Array.isArray((order as any).exchanges) ? (order as any).exchanges.length : 0;
+                const exchangedCount = itemExchangedCount + topLevelExchangeCount;
+
+                const isExchangeOrder =
+                  (typeof (order as any).origin === 'string' && (order as any).origin.toLowerCase().includes('exchange')) ||
+                  !!(order as any).is_exchange ||
+                  !!(order as any).exchange_type ||
+                  (order as any).order_type === 'EXCHANGE' ||
+                  (order as any).type === 'exchange';
+
+                const hasReturns =
+                  (order.returns && order.returns.length > 0) ||
+                  (order.items || []).some((it: any) => (it.returned_quantity && it.returned_quantity > 0) || it.status === "REFUNDED" || it.status === "EXCHANGED") ||
+                  order.status === "Returned" ||
+                  order.status === "RETURNED" ||
+                  order.origin === "Offline Return" ||
+                  order.origin === "Sales Return" ||
+                  (order as any).type === "RETURN" ||
+                  (order as any).order_type === "RETURN";
+                const hasDiscount = checkSaleDiscount(order).hasDiscount;
+                const refundedCount = (order.items || []).filter((it: any) => it.status === "REFUNDED").length;
+
+                const isInvoiceOrder = Boolean(
+                  (order as any).billing_type === "INVOICE" ||
+                  (order as any).additional_infos?.billing_type === "INVOICE" ||
+                  (order as any).calculation_infos?.billing_type === "INVOICE" ||
+                  (order as any).additional_infos?.is_invoice === true ||
+                  (order as any).calculation_infos?.is_invoice === true ||
+                  (order as any).is_invoice === true ||
+                  Boolean((order as any).invoice_no)
+                );
+
+                const rowCustomer = extractSaleCustomerInfo(order, customerMap);
+                const phoneAvailable = Boolean(rowCustomer.phone || (customer as any)?.mobile_number || (customer as any)?.datas?.mobile_number);
+                const canDownloadInvoice = isInvoiceOrder;
+                const canSendWhatsApp = isInvoiceOrder && phoneAvailable;
+
+                const origin = order.origin || "Offline";
+                const oCfg = ORIGIN_CFG[origin] || ORIGIN_CFG["Offline"];
+                const pMethods = parsePaymentMethods(order);
+                const sStatus = order.status || "Completed";
+                const statusCfg = STATUS_CFG[sStatus] || STATUS_CFG["Pending"];
 
                 return (
                   <div
                     key={`mc-${order.id}-${i}`}
-                    onClick={() => onNavigateToSale?.(order.id)}
-                    className={`p-3.5 space-y-2 border-l-[3px] border-l-indigo-400 ${onNavigateToSale ? 'active:bg-indigo-50/30 cursor-pointer' : ''}`}
+                    onClick={() => onNavigateToSale ? onNavigateToSale(order.id) : navigate(`/sales/${order.id}`)}
+                    className="p-3.5 space-y-2.5 border-l-[3px] border-l-indigo-400 hover:bg-slate-50/50 cursor-pointer"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <span className="text-xs font-black text-slate-800 font-mono">{invoiceId}</span>
-                        <p className="text-[11px] text-slate-400 mt-0.5">{date} • {order.type || "NORMAL"}</p>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-xs font-black text-slate-800 font-mono">{orderId}</span>
+                          {isInvoiceOrder && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-purple-50 text-purple-700 border border-purple-200 shadow-2xs">
+                              Invoice
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          {dateStr}{timeStr ? ` • ${timeStr}` : ''}
+                        </p>
+                        <div className="flex gap-1 mt-1 flex-wrap">
+                          {isExchangeOrder && <AntBadge variant="tx-sales" type="tag">Exchanged</AntBadge>}
+                          {hasReturns && !isExchangeOrder && <AntBadge variant="tx-sales-return" type="tag">Returned</AntBadge>}
+                          {refundedCount > 0 && <AntBadge variant="pay-partial" type="tag">{refundedCount} Refunded</AntBadge>}
+                          {exchangedCount > 0 && <AntBadge variant="tx-sales" type="tag">{exchangedCount} Exchanged</AntBadge>}
+                          {hasDiscount && <AntBadge variant="tx-purchase" type="tag">Discounted</AntBadge>}
+                        </div>
                       </div>
                       <div className="text-right">
-                        <span className="text-sm font-black text-slate-900 tabular-nums block">₹{total.toLocaleString('en-IN')}</span>
-                        <LocalStatusBadge status={order.status || "Pending"} />
+                        <span className="text-sm font-black text-slate-900 tabular-nums block font-mono">
+                          {fmtCurrency(total)}
+                        </span>
+                        <PillBadge cls={statusCfg.cls} dot={statusCfg.dot} label={sStatus} />
                       </div>
                     </div>
-                    <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-slate-100">
-                      <span className="px-2 py-0.5 rounded bg-slate-100 text-[10px] font-bold text-slate-600">{itemCount} {unit}</span>
-                      {products.length > 0 && (
-                        <button
+
+                    <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 flex-wrap">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <PillBadge cls={oCfg.cls} dot={oCfg.dot} label={origin} />
+                        {pMethods.map((m: string) => {
+                          const pCfg = PAYMENT_CFG[m] || PAYMENT_CFG["Other"];
+                          return <PillBadge key={m} cls={pCfg.cls} dot={pCfg.dot} label={m} />;
+                        })}
+                        <span
                           onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedRecord({
-                              uiId: order.ui_id || order.id.slice(0, 8).toUpperCase(),
-                              type: order.type === 'Return' ? 'RETURN' : order.type,
-                              productsList: products.map((p: any) => {
-                                const calcItem = order.calculation_infos?.items?.find((ci: any) => ci.product_id === p.product_id || ci.product_id === p.inventory_id);
-                                return {
-                                  name: p.product?.name || p.name || p.product_name || p.datas?.product_name || p.datas?.name || calcItem?.name || "Unknown Item",
-                                  receivedStocks: p.quantity || p.qty || calcItem?.qty || 0,
-                                  sellPrice: p.sellprice || p.sell_price || p.price || calcItem?.price || 0,
-                                  variant: p.variant || p.variant_details || p.variant_infos?.variant_name,
-                                  batch: p.batch || p.batch_details || p.batch_infos?.batch_name,
-                                  serials: p.serials || p.serial_info?.serial_numbers || (p.serialno_infos ? p.serialno_infos.map((x: any) => x.name) : undefined),
-                                };
-                              })
-                            });
+                            if (products.length > 0) {
+                              e.stopPropagation();
+                              setSelectedRecord({
+                                uiId: orderId,
+                                type: order.type === 'Return' ? 'RETURN' : order.type,
+                                productsList: products.map((p: any) => {
+                                  const calcItem = order.calculation_infos?.items?.find((ci: any) => ci.product_id === p.product_id || ci.product_id === p.inventory_id);
+                                  return {
+                                    name: p.product?.name || p.name || p.product_name || p.datas?.product_name || p.datas?.name || calcItem?.name || "Unknown Item",
+                                    receivedStocks: p.quantity || p.qty || calcItem?.qty || 0,
+                                    sellPrice: p.sellprice || p.sell_price || p.price || calcItem?.price || 0,
+                                    variant: p.variant || p.variant_details || p.variant_infos?.variant_name,
+                                    batch: p.batch || p.batch_details || p.batch_infos?.batch_name,
+                                    serials: p.serials || p.serial_info?.serial_numbers || (p.serialno_infos ? p.serialno_infos.map((x: any) => x.name) : undefined),
+                                  };
+                                })
+                              });
+                            }
                           }}
-                          className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-extrabold bg-indigo-50 text-indigo-600 border border-indigo-100"
+                          className={`px-2 py-0.5 rounded bg-slate-100 text-[10px] font-bold text-slate-600 ${products.length > 0 ? "cursor-pointer hover:bg-slate-200" : ""}`}
                         >
-                          <ChevronRight size={10} strokeWidth={3} />
-                          View Items ({products.length})
+                          {qtyInfo.primaryText}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => setReprintSale(order)}
+                          className="p-1.5 text-sky-500 hover:bg-sky-50 rounded-md transition-colors"
+                          title="Reprint Bill"
+                        >
+                          <Printer size={14} />
                         </button>
-                      )}
+                        {canDownloadInvoice && (
+                          <button
+                            onClick={() => setInvoiceModalSale(order)}
+                            className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
+                            title="Download Tax Invoice"
+                          >
+                            <FileText size={14} />
+                          </button>
+                        )}
+                        {canSendWhatsApp && (
+                          <button
+                            onClick={() => handleSendWhatsApp(order)}
+                            className="p-1.5 text-[#25D366] hover:bg-emerald-50 rounded-md transition-colors"
+                            title="Direct WhatsApp Invoice"
+                          >
+                            <BiLogoWhatsapp size={15} />
+                          </button>
+                        )}
+                        {order.status === "Completed" && order.origin !== "Offline Return" && order.origin !== "Sales Return" && (
+                          <button
+                            onClick={() => setReturnSale(order)}
+                            className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-md transition-colors"
+                            title="Process Return"
+                          >
+                            <RotateCcw size={14} />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => onNavigateToSale ? onNavigateToSale(order.id) : navigate(`/sales/${order.id}`)}
+                          className="p-1.5 text-emerald-500 hover:bg-emerald-50 rounded-md transition-colors"
+                          title="View Details"
+                        >
+                          <Eye size={14} />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -1290,27 +1595,23 @@ export function CustomerPurchasesTable({ rows, loading, onNavigateToSale }: Cust
             </div>
 
             {/* Desktop Table View */}
-            <div className="hidden md:inline-block min-w-full align-middle">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="sticky top-0 bg-slate-50/90 backdrop-blur-sm z-10 text-[9px] font-black text-slate-400 tracking-wider uppercase border-b border-slate-100 shadow-[0_1px_0_rgba(0,0,0,0.05)]">
-                  <th className="px-5 py-3.5">Invoice Identity</th>
-                  <th className="px-5 py-3.5">Order Date</th>
-                  <th className="px-5 py-3.5">Qty</th>
-                  <th className="px-5 py-3.5">Financials</th>
-                  <th className="px-5 py-3.5 text-right">Status</th>
-                  <th className="px-5 py-3.5 w-12"></th>
+            <table className="w-full border-collapse table-fixed relative min-w-[850px] hidden md:table">
+              <thead className="sticky top-0 z-10 bg-white shadow-[0_1px_0_0_#e2e8f0]">
+                <tr>
+                  <th className="w-[130px] px-4 py-3 text-[10px] font-semibold tracking-wider text-slate-500 uppercase text-left">Order ID</th>
+                  <th className="w-[90px] px-4 py-3 text-[10px] font-semibold tracking-wider text-slate-500 uppercase text-left">Origin</th>
+                  <th className="w-[100px] px-4 py-3 text-[10px] font-semibold tracking-wider text-slate-500 uppercase text-left">Payment</th>
+                  <th className="w-[110px] px-4 py-3 text-[10px] font-semibold tracking-wider text-slate-500 uppercase text-left">Date</th>
+                  <th className="w-[85px] px-3 py-3 text-[10px] font-semibold tracking-wider text-slate-500 uppercase text-center">Qty</th>
+                  <th className="w-[100px] px-4 py-3 text-[10px] font-semibold tracking-wider text-slate-500 uppercase text-right">Amount</th>
+                  <th className="w-[100px] px-4 py-3 text-[10px] font-semibold tracking-wider text-slate-500 uppercase text-left">Status</th>
+                  <th className="w-[140px] px-4 py-3 text-[10px] font-semibold tracking-wider text-slate-500 uppercase text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
-                {rows.map((order, i) => {
-                  const date = order.created_at || order.date
-                    ? new Date(order.created_at || order.date).toLocaleDateString('en-IN', {
-                      day: '2-digit',
-                      month: 'short',
-                      year: 'numeric'
-                    })
-                    : '—';
+              <tbody className="divide-y divide-slate-100 bg-white">
+                {rows.map((order, index) => {
+                  const dateStr = fmtDate(order.created_at || order.date);
+                  const timeStr = fmtTime(order.created_at || order.date);
                   let total = Number(order.calculation_infos?.total ?? order.total_sellprice ?? order.item_infos?.total_order_amount ?? order.grand_total ?? order.total_amount ?? order.total ?? 0);
                   if (Array.isArray(order.exchanges) && order.exchanges.length > 0) {
                     let totalReplacements = 0;
@@ -1347,104 +1648,247 @@ export function CustomerPurchasesTable({ rows, loading, onNavigateToSale }: Cust
                     });
                     total = Math.max(0, total - totalRefunds);
                   }
-                  const products = order.items || order.products || order.datas?.items || order.datas?.products || [];
-                  const productsQtySum = Array.isArray(products) && products.length > 0
-                    ? products.reduce((sum: number, it: any) => sum + (Number(it.quantity ?? it.qty ?? it.entered_qty ?? 1) || 0), 0)
-                    : 0;
-                  const itemCount = productsQtySum || (order.item_infos?.total_order_qty ?? order.total_quantity ?? order.datas?.total_quantity ?? products.length);
-                  const unit = products[0]?.product?.unit || products[0]?.unit || products[0]?.datas?.unit || (itemCount === 1 ? "Item" : "Units");
-                  const invoiceId = order.ui_id ? `Order ${order.ui_id}` : `${order.id.slice(0, 8).toUpperCase()}`;
 
-                  let firstProductName = "";
-                  if (products.length > 0) {
-                    const p = products[0];
-                    const calcItem = order.calculation_infos?.items?.find((ci: any) => ci.product_id === p.product_id || ci.product_id === p.inventory_id);
-                    firstProductName = p.product?.name || p.name || p.product_name || p.datas?.product_name || p.datas?.name || calcItem?.name || "Unknown Item";
-                  }
+                  const products = order.items || order.products || order.datas?.items || order.datas?.products || [];
+                  const orderId = order.ui_id || (order.id ? order.id.slice(0, 8).toUpperCase() : "—");
+                  const qtyInfo = getSaleQuantityDisplay(order);
+
+                  const itemExchangedCount = (order.items || []).filter((it: any) => it.status === "EXCHANGED").length;
+                  const topLevelExchangeCount = Array.isArray((order as any).exchanges) ? (order as any).exchanges.length : 0;
+                  const exchangedCount = itemExchangedCount + topLevelExchangeCount;
+
+                  const isExchangeOrder =
+                    (typeof (order as any).origin === 'string' && (order as any).origin.toLowerCase().includes('exchange')) ||
+                    !!(order as any).is_exchange ||
+                    !!(order as any).exchange_type ||
+                    (order as any).order_type === 'EXCHANGE' ||
+                    (order as any).type === 'exchange';
+
+                  const hasReturns =
+                    (order.returns && order.returns.length > 0) ||
+                    (order.items || []).some((it: any) => (it.returned_quantity && it.returned_quantity > 0) || it.status === "REFUNDED" || it.status === "EXCHANGED") ||
+                    order.status === "Returned" ||
+                    order.status === "RETURNED" ||
+                    order.origin === "Offline Return" ||
+                    order.origin === "Sales Return" ||
+                    (order as any).type === "RETURN" ||
+                    (order as any).order_type === "RETURN";
+                  const hasDiscount = checkSaleDiscount(order).hasDiscount;
+                  const refundedCount = (order.items || []).filter((it: any) => it.status === "REFUNDED").length;
+
+                  const isInvoiceOrder = Boolean(
+                    (order as any).billing_type === "INVOICE" ||
+                    (order as any).additional_infos?.billing_type === "INVOICE" ||
+                    (order as any).calculation_infos?.billing_type === "INVOICE" ||
+                    (order as any).additional_infos?.is_invoice === true ||
+                    (order as any).calculation_infos?.is_invoice === true ||
+                    (order as any).is_invoice === true ||
+                    Boolean((order as any).invoice_no)
+                  );
+
+                  const rowCustomer = extractSaleCustomerInfo(order, customerMap);
+                  const phoneAvailable = Boolean(rowCustomer.phone || (customer as any)?.mobile_number || (customer as any)?.datas?.mobile_number);
+                  const canDownloadInvoice = isInvoiceOrder;
+                  const canSendWhatsApp = isInvoiceOrder && phoneAvailable;
+
+                  const origin = order.origin || "Offline";
+                  const oCfg = ORIGIN_CFG[origin] || ORIGIN_CFG["Offline"];
+                  const pMethods = parsePaymentMethods(order);
+                  const sStatus = order.status || "Completed";
+                  const statusCfg = STATUS_CFG[sStatus] || STATUS_CFG["Pending"];
 
                   return (
-                    <tr key={`${order.id}-${i}`} className="hover:bg-indigo-50/20 transition-colors border-l-[3px] border-l-indigo-400">
-                      <td className="px-5 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
-                            <FileText size={14} />
+                    <tr
+                      key={order.id || index}
+                      className="hover:bg-slate-50/60 transition-colors cursor-pointer group"
+                      onClick={() => onNavigateToSale ? onNavigateToSale(order.id) : navigate(`/sales/${order.id}`)}
+                    >
+                      {/* ORDER ID */}
+                      <td className="px-4 py-4 border-b border-slate-50">
+                        <div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-mono text-[11px] font-semibold text-slate-800">{orderId}</span>
+                            {isInvoiceOrder && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-purple-50 text-purple-700 border border-purple-200 shadow-2xs">
+                                Invoice
+                              </span>
+                            )}
                           </div>
-                          <div className="flex flex-col">
-                            <span className="text-xs font-black text-slate-700 font-mono tracking-tight">{invoiceId}</span>
-                            <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">{order.type || "NORMAL"}</span>
+                          <div className="flex gap-1 mt-1 flex-wrap">
+                            {isExchangeOrder && <AntBadge variant="tx-sales" type="tag">Exchanged</AntBadge>}
+                            {hasReturns && !isExchangeOrder && <AntBadge variant="tx-sales-return" type="tag">Returned</AntBadge>}
+                            {refundedCount > 0 && <AntBadge variant="pay-partial" type="tag">{refundedCount} Refunded</AntBadge>}
+                            {exchangedCount > 0 && <AntBadge variant="tx-sales" type="tag">{exchangedCount} Exchanged</AntBadge>}
+                            {hasDiscount && <AntBadge variant="tx-purchase" type="tag">Discounted</AntBadge>}
                           </div>
                         </div>
                       </td>
-                      <td className="px-5 py-4 text-xs font-bold text-slate-500 whitespace-nowrap">
-                        {date}
+
+                      {/* ORIGIN */}
+                      <td className="px-4 py-4 border-b border-slate-50">
+                        <PillBadge cls={oCfg.cls} dot={oCfg.dot} label={origin} />
                       </td>
-                      <td className="px-5 py-4 whitespace-nowrap">
-                        <div className="flex flex-col items-start gap-1.5">
-                          {firstProductName && (
-                            <div className="text-xs font-bold text-slate-700 truncate max-w-[180px]" title={firstProductName}>
-                              {firstProductName}
-                              {products.length > 1 && <span className="text-slate-400 font-normal ml-1">+{products.length - 1} more</span>}
-                            </div>
-                          )}
-                          <span className="px-2 py-0.5 rounded bg-slate-100 text-[10px] font-black text-slate-500">
-                            {itemCount} {unit}
+
+                      {/* PAYMENT */}
+                      <td className="px-4 py-4 border-b border-slate-50">
+                        <div className="flex flex-wrap gap-1">
+                          {pMethods.map((m: string) => {
+                            const pCfg = PAYMENT_CFG[m] || PAYMENT_CFG["Other"];
+                            return <PillBadge key={m} cls={pCfg.cls} dot={pCfg.dot} label={m} />;
+                          })}
+                        </div>
+                      </td>
+
+                      {/* DATE */}
+                      <td className="px-4 py-4 border-b border-slate-50">
+                        <div>
+                          <span className="font-mono text-[11px] text-slate-700 block font-medium">{dateStr}</span>
+                          {timeStr && <span className="text-[10px] text-slate-400 block">{timeStr}</span>}
+                        </div>
+                      </td>
+
+                      {/* QTY */}
+                      <td className="px-3 py-4 border-b border-slate-50 text-center">
+                        <div
+                          className={`flex flex-col items-center justify-center ${products.length > 0 ? "cursor-pointer group/qty" : "cursor-default"}`}
+                          title={qtyInfo.tooltipText}
+                          onClick={(e) => {
+                            if (products.length > 0) {
+                              e.stopPropagation();
+                              setSelectedRecord({
+                                uiId: order.ui_id || (order.id ? order.id.slice(0, 8).toUpperCase() : ""),
+                                type: order.type === 'Return' ? 'RETURN' : order.type,
+                                productsList: products.map((p: any) => {
+                                  const calcItem = order.calculation_infos?.items?.find((ci: any) => ci.product_id === p.product_id || ci.product_id === p.inventory_id);
+                                  return {
+                                    name: p.product?.name || p.name || p.product_name || p.datas?.product_name || p.datas?.name || calcItem?.name || "Unknown Item",
+                                    receivedStocks: p.quantity || p.qty || calcItem?.qty || 0,
+                                    sellPrice: p.sellprice || p.sell_price || p.price || calcItem?.price || 0,
+                                    variant: p.variant || p.variant_details || p.variant_infos?.variant_name,
+                                    batch: p.batch || p.batch_details || p.batch_infos?.batch_name,
+                                    serials: p.serials || p.serial_info?.serial_numbers || (p.serialno_infos ? p.serialno_infos.map((x: any) => x.name) : undefined),
+                                  };
+                                })
+                              });
+                            }
+                          }}
+                        >
+                          <span className="text-[11px] font-bold text-slate-700 whitespace-nowrap group-hover/qty:text-indigo-600 transition-colors">
+                            {qtyInfo.primaryText}
                           </span>
-                          {products.length > 0 && (
+                          {qtyInfo.subText && (
+                            <span className="text-[9.5px] font-medium text-slate-500 truncate max-w-[110px] block leading-tight mt-0.5">
+                              {qtyInfo.subText}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* AMOUNT */}
+                      <td className="px-4 py-4 border-b border-slate-50 text-right">
+                        <span className="font-mono text-xs font-bold text-slate-900">{fmtCurrency(total)}</span>
+                        {Number((order as any).delivery_fee || 0) > 0 && (
+                          <span className="text-[10px] text-slate-400 block font-normal leading-tight mt-0.5">
+                            +₹{Number((order as any).delivery_fee).toFixed(0)} delivery
+                          </span>
+                        )}
+                      </td>
+
+                      {/* STATUS */}
+                      <td className="px-4 py-4 border-b border-slate-50">
+                        <PillBadge cls={statusCfg.cls} dot={statusCfg.dot} label={sStatus} />
+                      </td>
+
+                      {/* ACTIONS */}
+                      <td className="px-4 py-4 border-b border-slate-50 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            onClick={() => setReprintSale(order)}
+                            className="text-sky-500 hover:text-sky-600 hover:bg-sky-50 rounded-md p-1.5 transition-colors cursor-pointer"
+                            title="Reprint Bill"
+                          >
+                            <Printer size={15} />
+                          </button>
+                          {canDownloadInvoice && (
                             <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedRecord({
-                                  uiId: order.ui_id || order.id.slice(0, 8).toUpperCase(),
-                                  type: order.type === 'Return' ? 'RETURN' : order.type,
-                                  productsList: products.map((p: any) => {
-                                    const calcItem = order.calculation_infos?.items?.find((ci: any) => ci.product_id === p.product_id || ci.product_id === p.inventory_id);
-                                    return {
-                                      name: p.product?.name || p.name || p.product_name || p.datas?.product_name || p.datas?.name || calcItem?.name || "Unknown Item",
-                                      receivedStocks: p.quantity || p.qty || calcItem?.qty || 0,
-                                      sellPrice: p.sellprice || p.sell_price || p.price || calcItem?.price || 0,
-                                      variant: p.variant || p.variant_details || p.variant_infos?.variant_name,
-                                      batch: p.batch || p.batch_details || p.batch_infos?.batch_name,
-                                      serials: p.serials || p.serial_info?.serial_numbers || (p.serialno_infos ? p.serialno_infos.map((x: any) => x.name) : undefined),
-                                    };
-                                  })
-                                });
-                              }}
-                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-extrabold bg-indigo-50 text-indigo-600 border border-indigo-100 hover:bg-indigo-100 transition-colors shadow-sm"
-                              title="View Items"
+                              onClick={() => setInvoiceModalSale(order)}
+                              className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-md p-1.5 transition-colors cursor-pointer"
+                              title="Download Tax Invoice"
                             >
-                              <ChevronRight size={10} strokeWidth={3} />
-                              <span>View Items</span>
+                              <FileText size={15} />
                             </button>
                           )}
-                        </div>
-                      </td>
-                      <td className="px-5 py-4 whitespace-nowrap font-black text-sm text-slate-800 tabular-nums">
-                        ₹{total.toLocaleString('en-IN')}
-                      </td>
-                      <td className="px-5 py-4 whitespace-nowrap text-right">
-                        <LocalStatusBadge status={order.status || "Pending"} />
-                      </td>
-                      <td className="px-5 py-4">
-                        {onNavigateToSale && (
+                          {canSendWhatsApp && (
+                            <button
+                              onClick={() => handleSendWhatsApp(order)}
+                              className="text-[#25D366] hover:text-[#1ebd5a] hover:bg-emerald-50 rounded-md p-1.5 transition-colors cursor-pointer"
+                              title="Direct WhatsApp Invoice"
+                            >
+                              <BiLogoWhatsapp size={16} />
+                            </button>
+                          )}
+                          {order.status === "Completed" && order.origin !== "Offline Return" && order.origin !== "Sales Return" && (
+                            <button
+                              onClick={() => setReturnSale(order)}
+                              className="text-rose-500 hover:text-rose-600 hover:bg-rose-50 rounded-md p-1.5 transition-colors cursor-pointer"
+                              title="Process Return"
+                            >
+                              <RotateCcw size={15} />
+                            </button>
+                          )}
                           <button
-                            onClick={(e) => { e.stopPropagation(); onNavigateToSale(order.id); }}
-                            title="View Sale Detail"
-                            className="w-7 h-7 flex items-center justify-center rounded-lg bg-blue-50 text-blue-500 hover:bg-blue-100 hover:text-blue-700 border border-blue-100 transition-all active:scale-95 shadow-sm"
+                            onClick={() => onNavigateToSale ? onNavigateToSale(order.id) : navigate(`/sales/${order.id}`)}
+                            className="text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-md p-1.5 transition-colors cursor-pointer"
+                            title="View Details"
                           >
-                            <Eye size={13} strokeWidth={2.5} />
+                            <Eye size={15} />
                           </button>
-                        )}
+                        </div>
                       </td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
-          </div>
           </>
         )}
       </div>
+
+      {/* Grouped Items Drawer */}
       <GroupedItemsDrawer record={selectedRecord} onClose={() => setSelectedRecord(null)} type="purchase" />
+
+      {/* Reprint Receipt Modal */}
+      {reprintSale && (
+        <ReprintReceiptModal
+          isOpen={Boolean(reprintSale)}
+          onClose={() => setReprintSale(null)}
+          sale={reprintSale}
+          customerMap={customerMap}
+        />
+      )}
+
+      {/* Tax Invoice Modal */}
+      {invoiceModalSale && (
+        <SaleInvoiceModal
+          isOpen={Boolean(invoiceModalSale)}
+          onClose={() => setInvoiceModalSale(null)}
+          sale={invoiceModalSale}
+          customerMap={customerMap}
+        />
+      )}
+
+      {/* Return Modal */}
+      {returnSale && (
+        <ReturnModal
+          sale={returnSale}
+          onClose={() => setReturnSale(null)}
+          onRefresh={() => {
+            setReturnSale(null);
+            onRefresh?.();
+          }}
+          productMap={{}}
+        />
+      )}
     </div>
   );
 }

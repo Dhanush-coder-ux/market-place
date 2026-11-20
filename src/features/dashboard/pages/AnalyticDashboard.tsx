@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, FC, ReactNode } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef, FC, ReactNode } from "react";
 import {
   IndianRupee,
   ShoppingBag,
@@ -10,6 +10,8 @@ import {
   ArrowDownRight,
   BarChart2,
   Zap,
+  Calculator,
+  Info,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -29,6 +31,9 @@ import { useNotifications } from "@/context/NotificationContext";
 import { apiClient } from "@/services/api/apiClient";
 import { ENDPOINTS, SHOP_ID, getShopId } from "@/services/endpoints";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
+import { isShopGstRegistered } from "@/utils/pricing";
+import { ProfitBreakdownModal } from "../components/ProfitBreakdownModal";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 
 // ── TYPES ────────────────────────────────────────────────────────────────────
 
@@ -242,6 +247,68 @@ const PaymentTooltip = ({ active, payload }: any) => {
   return null;
 };
 
+// ── REUSABLE CARD INFO POPOVER ───────────────────────────────────────────────
+
+interface CardInfoPopoverProps {
+  title: string;
+  badge?: ReactNode;
+  children: ReactNode;
+}
+
+const CardInfoPopover: FC<CardInfoPopoverProps> = ({ title, badge, children }) => {
+  const [open, setOpen] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleEnter = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    setOpen(true);
+  };
+
+  const handleLeave = () => {
+    timeoutRef.current = setTimeout(() => {
+      setOpen(false);
+    }, 200);
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          onMouseEnter={handleEnter}
+          onMouseLeave={handleLeave}
+          className="w-4 h-4 rounded-full flex items-center justify-center text-[#74839A] hover:text-[#286038] hover:bg-slate-100 transition-colors cursor-pointer"
+          title={`Click or hover for ${title} details`}
+          aria-label={`${title} Details`}
+        >
+          <Info className="w-3.5 h-3.5" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        sideOffset={6}
+        onMouseEnter={handleEnter}
+        onMouseLeave={handleLeave}
+        className="bg-white border border-[#E5EAF0] text-[#27364B] rounded-xl p-4 shadow-[0_10px_30px_rgba(0,0,0,0.12)] w-80 sm:w-92 z-50 text-xs"
+      >
+        <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-[#E5EAF0]">
+          <div className="flex items-center gap-1.5 font-semibold text-slate-800">
+            <Calculator className="w-4 h-4 text-emerald-600" />
+            <span>{title}</span>
+          </div>
+          {badge}
+        </div>
+        <div className="space-y-2.5">
+          {children}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+};
+
 // ── MAIN COMPONENT ───────────────────────────────────────────────────────────
 
 const AnalyticsDashboard = () => {
@@ -254,6 +321,8 @@ const AnalyticsDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [globalViewMode, setGlobalViewMode] = useState<"gross" | "net">("gross");
+  const [isBreakdownOpen, setIsBreakdownOpen] = useState(false);
   const { showToast } = useToast();
 
   const { latestNotification } = useNotifications();
@@ -281,6 +350,7 @@ const AnalyticsDashboard = () => {
   const [productsList, setProductsList] = useState<any[]>([]);
 
   const [ordersList, setOrdersList] = useState<any[]>([]);
+  const [purchasesList, setPurchasesList] = useState<any[]>([]);
 
   const fetchOrders = useCallback(async () => {
     const shopId = getActiveShopId();
@@ -294,9 +364,23 @@ const AnalyticsDashboard = () => {
     } catch (e) { }
   }, [getActiveShopId]);
 
+  const fetchPurchases = useCallback(async () => {
+    const shopId = getActiveShopId();
+    if (!shopId) return;
+    try {
+      const res = await apiClient.get(`${ENDPOINTS.PURCHASES}/by/shop/${shopId}?limit=100`, { exclude_cancel: "true", exclude_draft: "true" });
+      if (res) {
+        const raw = res.data ?? res.datas ?? res.purchases ?? res;
+        const arr = Array.isArray(raw) ? raw : (raw?.datas || raw?.purchases || raw?.items || []);
+        setPurchasesList(arr);
+      }
+    } catch (e) { }
+  }, [getActiveShopId]);
+
   useEffect(() => {
     fetchOrders();
-  }, [fetchOrders]);
+    fetchPurchases();
+  }, [fetchOrders, fetchPurchases]);
 
   // Fetch product list for names mapping
   useEffect(() => {
@@ -358,6 +442,7 @@ const AnalyticsDashboard = () => {
       if (selectedSupplier) queryParams.supplier_id = selectedSupplier;
 
       fetchOrders();
+      fetchPurchases();
       const res = await analytics.getUnifiedDashboard(queryParams);
       if (res) {
         setStats(res.data || res.datas || res);
@@ -367,7 +452,7 @@ const AnalyticsDashboard = () => {
     } finally {
       setLoading(false);
     }
-  }, [analytics, dateRange, selectedSupplier, getActiveShopId, fetchOrders]);
+  }, [analytics, dateRange, selectedSupplier, getActiveShopId, fetchOrders, fetchPurchases]);
 
   useEffect(() => {
     if (activeRange !== "custom" || (customStart && customEnd)) {
@@ -403,46 +488,641 @@ const AnalyticsDashboard = () => {
   const topSuppliersTotalPurchase = topSuppliersRaw.reduce((sum: number, s: any) => sum + Number(s.total_purchase_amounts || s.total_cleared_amounts || 0), 0) || Number(supplierOverall.total_cleared_amounts || 0);
   const topSuppliersTotalPurchasesCount = topSuppliersRaw.reduce((sum: number, s: any) => sum + Number(s.total_purchases || 0), 0) || (topSuppliersTotalPurchase > 0 ? 1 : 0);
 
+  // ── Profit & Tax Breakdown Calculations (GST, Transport, ITC)
+  const isGstReg = isShopGstRegistered();
+
+  // ── Compute allocated procurement charges (transport & other charges per unit) & unit purchase costs ──
+  const { productAllocatedChargesMap, fallbackAllocatedChargePerUnit, productPurchaseUnitCostMap } = useMemo(() => {
+    let totalPurchasesCharges = 0;
+    let totalPurchasedUnits = 0;
+    const prodChargesMap: Record<string, { totalCharges: number; totalQty: number }> = {};
+    const prodCostMap: Record<string, { totalSpend: number; totalQty: number }> = {};
+
+    purchasesList.forEach((p: any) => {
+      const st = String(p?.status || "").toUpperCase();
+      if (st === "CANCELLED" || st === "CANCELED" || st === "DRAFT") return;
+
+      const pCharges = Number(
+        p.charges_infos?.transport_charge ??
+        p.charges?.transport ??
+        p.transport_charge ??
+        p.charges_infos?.delivery_charge ??
+        p.delivery_charge ??
+        0
+      ) + Number(
+        p.charges_infos?.other_charge ??
+        p.charges?.other ??
+        p.other_charge ??
+        0
+      ) + Number(
+        p.charges_infos?.shipping_charge ??
+        p.charges?.shipping ??
+        p.shipping_charge ??
+        0
+      ) + (
+        !p.charges_infos && !p.charges && p.calculation_infos?.total_charges
+          ? Number(p.calculation_infos.total_charges)
+          : 0
+      );
+
+      const items: any[] = Array.isArray(p.items) ? p.items : (Array.isArray(p.products) ? p.products : []);
+      let pStocks = 0;
+      items.forEach((it: any) => {
+        pStocks += Number(it.stocks_infos?.stocks ?? it.stocks ?? it.quantity ?? it.entered_qty ?? 0);
+      });
+      if (pStocks <= 0) {
+        pStocks = Number(p.item_infos?.total_stocks ?? p.total_stocks ?? 0);
+      }
+
+      if (pCharges > 0) {
+        totalPurchasesCharges += pCharges;
+        totalPurchasedUnits += (pStocks > 0 ? pStocks : 1);
+
+        if (pStocks > 0) {
+          const perUnitInPurchase = pCharges / pStocks;
+          items.forEach((it: any) => {
+            const pid = it.product_id || it.inventory_id || it.id;
+            if (!pid) return;
+            const q = Number(it.stocks_infos?.stocks ?? it.stocks ?? it.quantity ?? it.entered_qty ?? 1);
+            if (!prodChargesMap[pid]) {
+              prodChargesMap[pid] = { totalCharges: 0, totalQty: 0 };
+            }
+            prodChargesMap[pid].totalCharges += perUnitInPurchase * q;
+            prodChargesMap[pid].totalQty += q;
+          });
+        }
+      }
+
+      // Compute actual unit purchase price paid to supplier (inclusive of GST paid)
+      items.forEach((it: any) => {
+        const pid = it.product_id || it.inventory_id || it.id;
+        if (!pid) return;
+        const q = Number(it.stocks_infos?.stocks ?? it.stocks ?? it.quantity ?? it.entered_qty ?? 0);
+        if (q <= 0) return;
+        const itTotal = Number(it.total_amount ?? it.total ?? 0);
+        const itGst = Number(String(it.gst ?? it.gst_rate ?? "0").replace(/[^0-9.]/g, "")) || 0;
+        let unitCostInclGst = 0;
+        if (itTotal > 0 && q > 0) {
+          unitCostInclGst = itTotal / q;
+        } else {
+          const bp = Number(it.buy_price ?? it.cost_price ?? it.pricing_infos?.buy_price ?? 0);
+          unitCostInclGst = bp > 0 ? (itGst > 0 ? bp * (1 + itGst / 100) : bp) : 0;
+        }
+        if (unitCostInclGst > 0) {
+          if (!prodCostMap[pid]) {
+            prodCostMap[pid] = { totalSpend: 0, totalQty: 0 };
+          }
+          prodCostMap[pid].totalSpend += unitCostInclGst * q;
+          prodCostMap[pid].totalQty += q;
+        }
+      });
+    });
+
+    const unitMap: Record<string, number> = {};
+    Object.entries(prodChargesMap).forEach(([pid, val]) => {
+      if (val.totalQty > 0) {
+        unitMap[pid] = val.totalCharges / val.totalQty;
+      }
+    });
+
+    const unitCostMap: Record<string, number> = {};
+    Object.entries(prodCostMap).forEach(([pid, val]) => {
+      if (val.totalQty > 0) {
+        unitCostMap[pid] = Math.round((val.totalSpend / val.totalQty) * 100) / 100;
+      }
+    });
+
+    const fallbackRate = totalPurchasedUnits > 0 ? (totalPurchasesCharges / totalPurchasedUnits) : 0;
+    return {
+      productAllocatedChargesMap: unitMap,
+      fallbackAllocatedChargePerUnit: fallbackRate,
+      productPurchaseUnitCostMap: unitCostMap,
+    };
+  }, [purchasesList]);
+
+  // ── Filtered Orders & Purchases (with GST & Returns breakdown) ──
+  const filteredOrders = useMemo(() => {
+    if (!ordersList.length) return [];
+    return ordersList.filter((o: any) => {
+      const st = String(o?.status || "").toUpperCase();
+      if (st === "CANCELLED" || st === "CANCELED") return false;
+      if (!dateRange?.start || !dateRange?.end) return true;
+      const oDate = new Date(o.created_at || o.date || 0);
+      return oDate >= dateRange.start && oDate <= dateRange.end;
+    });
+  }, [ordersList, dateRange]);
+
+  const {
+    salesGrossRevenue,
+    salesReturnsRefunds,
+    salesRevenueWithGst,
+    salesTaxableRevenue,
+    salesCostWithGst,
+    salesGstAmount,
+    salesTransportCharges,
+    allocatedSalesTransport,
+    soldItemsInputGst,
+    ordersCountFromList,
+    totalOrdersPlacedCount,
+    completedOrdersCount,
+    fullyReturnedOrdersCount,
+    partiallyReturnedOrdersCount,
+    exchangedOrdersCount,
+    salesReturnedProfit,
+  } = useMemo(() => {
+    let list = filteredOrders;
+    if (list.length === 0 && ordersList.length > 0 && activeRange === "all") {
+      list = ordersList.filter((o: any) => {
+        const st = String(o?.status || "").toUpperCase();
+        return st !== "CANCELLED" && st !== "CANCELED";
+      });
+    }
+
+    let grossRev = 0;
+    let totalRefunds = 0;
+    let activeCost = 0;
+    let returnedCost = 0;
+    let activeTax = 0;
+    let returnedTax = 0;
+    let activeTransport = 0;
+    let activeAllocatedTransport = 0;
+    let activeInputGst = 0;
+    let returnedProfit = 0;
+
+    let totalPlaced = 0;
+    let totalCompleted = 0;
+    let fullyReturned = 0;
+    let partiallyReturned = 0;
+    let exchanged = 0;
+
+    list.forEach((o: any) => {
+      totalPlaced += 1;
+      const orderStatus = String(o?.status || "").toUpperCase();
+      totalCompleted += 1;
+
+      const calcInfo = o.calculation_infos || {};
+      const orderTotal = Number(
+        calcInfo.grand_total ??
+        calcInfo.total ??
+        o.total_amount ??
+        o.item_infos?.total_order_amount ??
+        o.total_sellprice ??
+        o.total ??
+        0
+      );
+      grossRev += orderTotal;
+
+      const transport = Number(
+        o.charges_infos?.transport_charge ??
+        o.charges_infos?.shipping_charge ??
+        o.charges_infos?.delivery_charge ??
+        o.charges?.transport ??
+        o.charges?.shipping ??
+        o.delivery_fee ??
+        o.shipping_charge ??
+        calcInfo.delivery_fee ??
+        calcInfo.shipping_charge ??
+        0
+      );
+
+      // ── Returns & Exchanges Extraction ──
+      const rawReturns: any[] = Array.isArray(o.returns) ? o.returns : [];
+      const rawReturnRequests: any[] = Array.isArray(o.return_requests) ? o.return_requests : [];
+      const rawExchanges: any[] = Array.isArray(o.exchanges) ? o.exchanges : [];
+
+      if (o.origin === "EXCHANGE" || o.billing_type === "EXCHANGE" || rawExchanges.length > 0) {
+        exchanged += 1;
+      }
+
+      const returnedQtyMap: Record<string, number> = {};
+      let orderRefundSum = 0;
+
+      rawReturns.forEach((ret: any) => {
+        orderRefundSum += Number(ret.total_refund_amount ?? ret.refund_amount ?? ret.amount ?? 0);
+        const rItems = Array.isArray(ret.items) ? ret.items : (Array.isArray(ret.returned_items) ? ret.returned_items : []);
+        rItems.forEach((ri: any) => {
+          const q = Number(ri.quantity ?? ri.qty ?? ri.entered_qty ?? 0);
+          if (ri.order_item_id) returnedQtyMap[String(ri.order_item_id)] = (returnedQtyMap[String(ri.order_item_id)] || 0) + q;
+          if (ri.product_id) returnedQtyMap[String(ri.product_id)] = (returnedQtyMap[String(ri.product_id)] || 0) + q;
+          if (ri.id) returnedQtyMap[String(ri.id)] = (returnedQtyMap[String(ri.id)] || 0) + q;
+        });
+      });
+
+      const acceptedStatuses = ["ACCEPTED", "APPROVED", "COMPLETED", "RETURNED"];
+      rawReturnRequests.forEach((rr: any) => {
+        if (!acceptedStatuses.includes(String(rr.status || "").toUpperCase())) return;
+        const rrItems = Array.isArray(rr.items) ? rr.items : [];
+        rrItems.forEach((ri: any) => {
+          const q = Number(ri.quantity ?? ri.qty ?? 0);
+          if (ri.order_item_id) returnedQtyMap[String(ri.order_item_id)] = (returnedQtyMap[String(ri.order_item_id)] || 0) + q;
+          if (ri.product_id) returnedQtyMap[String(ri.product_id)] = (returnedQtyMap[String(ri.product_id)] || 0) + q;
+        });
+      });
+
+      const directRefund = Number(o.refund_amount ?? o.total_refund ?? 0);
+      if (directRefund > orderRefundSum) orderRefundSum = directRefund;
+
+      const calcItems = calcInfo.items || [];
+      const orderItems = o.items || [];
+      const itemsToIterate = calcItems.length > 0 ? calcItems : orderItems;
+
+      let orderItemReturnedAmount = 0;
+      let orderActiveItemsCost = 0;
+      let orderReturnedItemsCost = 0;
+      let orderActiveItemsGst = 0;
+      let orderReturnedItemsGst = 0;
+      let orderActiveItemsItc = 0;
+      let orderReturnedItemsItc = 0;
+      let orderActiveTransportAlloc = 0;
+      let orderTotalItemQty = 0;
+      let orderTotalReturnedQty = 0;
+
+      itemsToIterate.forEach((ci: any) => {
+        const pid = ci.product_id || ci.inventory_id || ci.id;
+        const itId = String(ci.order_item_id || ci.id || pid || "");
+        const it = orderItems.find((oi: any) => (oi.id && oi.id === itId) || (oi.product_id && oi.product_id === pid));
+
+        const origQty = Number(ci.qty ?? ci.entered_qty ?? ci.quantity ?? it?.quantity ?? 1);
+        orderTotalItemQty += origQty;
+
+        let retQty = Number(ci.returned_quantity ?? it?.returned_quantity ?? 0);
+        const mappedRet = (itId && returnedQtyMap[itId]) || (pid && returnedQtyMap[String(pid)]) || 0;
+        if (mappedRet > retQty) retQty = mappedRet;
+        const itStatus = String(ci.status || it?.status || "").toUpperCase();
+        if (itStatus === "RETURNED" || itStatus === "REFUNDED" || orderStatus === "RETURNED" || orderStatus === "REFUNDED") {
+          retQty = origQty;
+        }
+        retQty = Math.min(origQty, Math.max(0, retQty));
+        orderTotalReturnedQty += retQty;
+        const actQty = Math.max(0, origQty - retQty);
+
+        // Unit selling price
+        let unitSp = 0;
+        if (ci.final_inclusive !== undefined && origQty > 0) {
+          unitSp = Number(ci.final_inclusive) / origQty;
+        } else if (ci.total_amount !== undefined && origQty > 0) {
+          unitSp = Number(ci.total_amount) / origQty;
+        } else {
+          unitSp = Number(ci.price ?? ci.selling_price ?? ci.sell_price ?? it?.sell_price ?? 0);
+        }
+
+        // Supplier / Product Purchase GST rate
+        const prodGstRate = Number(String(it?.gst ?? it?.gst_rate ?? ci.prod_gst ?? "0").replace(/[^0-9.]/g, "")) || 0;
+        // Sales GST rate (0 for non-GST registered shops)
+        const salesItemGstRate = isGstReg
+          ? (Number(String(ci.gst_rate ?? ci.gst ?? it?.gst ?? it?.gst_rate ?? "0").replace(/[^0-9.]/g, "")) || 0)
+          : 0;
+
+        // True Unit cost with GST (what was paid to the supplier)
+        const costAtSale = Number(ci.cost_at_sale ?? ci.cost_price ?? it?.cost_at_sale ?? 0);
+        const rawBp = Number(it?.raw_buy_price ?? it?.buy_price ?? ci.buy_price ?? 0);
+        let unitCostWithGst = 0;
+
+        if (pid && productPurchaseUnitCostMap[pid] && productPurchaseUnitCostMap[pid] > 0) {
+          unitCostWithGst = productPurchaseUnitCostMap[pid];
+        } else if (costAtSale > 0) {
+          // If costAtSale is approximately rawBp (base price excluding GST) and item has GST, add GST
+          if (prodGstRate > 0 && rawBp > 0 && Math.abs(costAtSale - rawBp) < 1) {
+            unitCostWithGst = Math.round(costAtSale * (1 + prodGstRate / 100) * 100) / 100;
+          } else {
+            unitCostWithGst = costAtSale;
+          }
+        } else if (rawBp > 0) {
+          unitCostWithGst = prodGstRate > 0 ? Math.round(rawBp * (1 + prodGstRate / 100) * 100) / 100 : rawBp;
+        }
+
+        // Unit GST (only collected and remitted for GST registered shops)
+        let unitGst = 0;
+        if (isGstReg) {
+          const lineTax = Number(ci.gst_amount ?? ci.tax_amount ?? it?.gst_amount ?? 0);
+          if (lineTax > 0 && origQty > 0) {
+            unitGst = lineTax / origQty;
+          } else if (salesItemGstRate > 0 && unitSp > 0) {
+            unitGst = unitSp - (unitSp / (1 + salesItemGstRate / 100));
+          }
+        }
+
+        // Unit ITC (only claimable by GST registered shops)
+        let unitItc = 0;
+        if (isGstReg && unitCostWithGst > 0 && prodGstRate > 0) {
+          unitItc = unitCostWithGst - (unitCostWithGst / (1 + prodGstRate / 100));
+        }
+
+        // Unit allocated charges
+        const unitCharge = (pid && productAllocatedChargesMap[pid] !== undefined && productAllocatedChargesMap[pid] > 0)
+          ? productAllocatedChargesMap[pid]
+          : fallbackAllocatedChargePerUnit;
+
+        orderItemReturnedAmount += retQty * unitSp;
+        orderActiveItemsCost += actQty * unitCostWithGst;
+        orderReturnedItemsCost += retQty * unitCostWithGst;
+        orderActiveItemsGst += actQty * unitGst;
+        orderReturnedItemsGst += retQty * unitGst;
+        orderActiveItemsItc += actQty * unitItc;
+        orderReturnedItemsItc += retQty * unitItc;
+        orderActiveTransportAlloc += actQty * unitCharge;
+      });
+
+      let finalOrderRefund = Math.max(orderRefundSum, orderItemReturnedAmount);
+      if ((orderStatus === "RETURNED" || orderStatus === "REFUNDED") && finalOrderRefund <= 0) {
+        finalOrderRefund = orderTotal;
+      }
+      finalOrderRefund = Math.min(orderTotal, Math.max(0, finalOrderRefund));
+      totalRefunds += finalOrderRefund;
+
+      const isFullyReturned = (orderTotal > 0 && finalOrderRefund >= orderTotal - 0.01) ||
+        (orderTotalItemQty > 0 && orderTotalReturnedQty >= orderTotalItemQty) ||
+        orderStatus === "RETURNED" ||
+        orderStatus === "REFUNDED";
+
+      const isPartiallyReturned = !isFullyReturned && (finalOrderRefund > 0 || orderTotalReturnedQty > 0);
+
+      if (isFullyReturned) {
+        fullyReturned += 1;
+        returnedCost += (orderActiveItemsCost + orderReturnedItemsCost);
+        returnedTax += (orderActiveItemsGst + orderReturnedItemsGst);
+        returnedProfit += Math.max(0, finalOrderRefund - (orderActiveItemsCost + orderReturnedItemsCost));
+      } else {
+        if (isPartiallyReturned) partiallyReturned += 1;
+        activeCost += orderActiveItemsCost;
+        returnedCost += orderReturnedItemsCost;
+        activeTax += orderActiveItemsGst;
+        returnedTax += orderReturnedItemsGst;
+        activeInputGst += orderActiveItemsItc;
+        activeAllocatedTransport += orderActiveTransportAlloc;
+        activeTransport += transport;
+        returnedProfit += Math.max(0, finalOrderRefund - orderReturnedItemsCost);
+      }
+    });
+
+    const netRealizedRev = Math.max(0, grossRev - totalRefunds);
+    const netTaxableRev = Math.max(0, netRealizedRev - activeTax);
+    const netActiveOrders = Math.max(0, totalCompleted - fullyReturned);
+
+    return {
+      salesGrossRevenue: grossRev,
+      salesReturnsRefunds: totalRefunds,
+      salesRevenueWithGst: netRealizedRev,
+      salesTaxableRevenue: netTaxableRev,
+      salesCostWithGst: activeCost,
+      salesReturnedCost: returnedCost,
+      salesGstAmount: activeTax,
+      salesReturnedGst: returnedTax,
+      salesTransportCharges: activeTransport,
+      allocatedSalesTransport: activeAllocatedTransport,
+      soldItemsInputGst: activeInputGst,
+      ordersCountFromList: netActiveOrders,
+      totalOrdersPlacedCount: totalPlaced,
+      completedOrdersCount: totalCompleted,
+      fullyReturnedOrdersCount: fullyReturned,
+      partiallyReturnedOrdersCount: partiallyReturned,
+      exchangedOrdersCount: exchanged,
+      salesReturnedProfit: returnedProfit,
+    };
+  }, [filteredOrders, ordersList, activeRange, productAllocatedChargesMap, fallbackAllocatedChargePerUnit, productPurchaseUnitCostMap, isGstReg]);
+
+  const filteredPurchases = useMemo(() => {
+    if (!purchasesList.length) return [];
+    return purchasesList.filter((p: any) => {
+      const st = String(p?.status || "").toUpperCase();
+      if (st === "CANCELLED" || st === "CANCELED" || st === "DRAFT") return false;
+      if (selectedSupplier && p.supplier_id !== selectedSupplier && p.supplier !== selectedSupplier) return false;
+      if (!dateRange?.start || !dateRange?.end) return true;
+      const pDate = new Date(p.purchase_date || p.created_at || p.date || 0);
+      return pDate >= dateRange.start && pDate <= dateRange.end;
+    });
+  }, [purchasesList, dateRange, selectedSupplier]);
+
+  const {
+    purchaseGrossSpend,
+    totalPurchaseReturns,
+    purchaseWithGst,
+    purchaseTaxableSpend,
+    purchaseGstAmount,
+    purchasesCountFromList,
+    purchasesStocksFromList,
+    totalPurchaseReturnsCount,
+  } = useMemo(() => {
+    let list = filteredPurchases;
+    if (list.length === 0 && purchasesList.length > 0) {
+      list = selectedSupplier
+        ? purchasesList.filter((p: any) => (p.supplier_id === selectedSupplier || p.supplier === selectedSupplier) && String(p?.status || "").toUpperCase() !== "CANCELLED" && String(p?.status || "").toUpperCase() !== "DRAFT")
+        : purchasesList.filter((p: any) => String(p?.status || "").toUpperCase() !== "CANCELLED" && String(p?.status || "").toUpperCase() !== "DRAFT");
+    }
+
+    let grossSpend = 0;
+    let totalReturns = 0;
+    let totalGst = 0;
+    let returnGst = 0;
+    let totalStocks = 0;
+    let returnStocks = 0;
+    let returnsCount = 0;
+
+    list.forEach((p: any) => {
+      const gst = Number(
+        p.item_infos?.total_gst_amount ??
+        p.gst_amount ??
+        p.tax_amount ??
+        p.charges_infos?.gst_amount ??
+        p.calculation_infos?.total_tax ??
+        0
+      );
+      const itemsTotal = Array.isArray(p.items) ? p.items.reduce((s: number, it: any) => s + Number(it.total_amount || 0), 0) : 0;
+      const calcTotal = Number(p.calculation_infos?.grand_total ?? p.calculation_infos?.total ?? 0);
+      const withGst = Number(
+        p.total_amount ??
+        p.grand_total ??
+        (calcTotal > 0 ? calcTotal : undefined) ??
+        (itemsTotal > 0 ? itemsTotal : undefined) ??
+        (Number(p.item_infos?.total_pur_cost || 0) + Number(p.item_infos?.total_gst_amount || 0))
+      );
+      const stocks = Number(
+        p.item_infos?.total_stocks ??
+        (Array.isArray(p.items) ? p.items.reduce((s: number, it: any) => s + Number(it.quantity ?? it.stocks ?? 1), 0) : 0)
+      );
+
+      grossSpend += withGst;
+      totalGst += gst;
+      totalStocks += stocks;
+
+      // ── Purchase Returns & Debit Notes ──
+      let pReturnAmt = 0;
+      let pReturnGst = 0;
+      let pReturnQty = 0;
+
+      const pReturns = Array.isArray(p.returns) ? p.returns : [];
+      if (pReturns.length > 0) {
+        returnsCount += pReturns.length;
+        pReturns.forEach((ret: any) => {
+          const rVal = Number(ret.return_value ?? ret.total_return_amount ?? ret.refund_amount ?? ret.amount ?? 0);
+          pReturnAmt += rVal;
+          const rGst = Number(ret.gst_amount ?? ret.total_gst_amount ?? 0);
+          pReturnGst += rGst;
+          const rItems = Array.isArray(ret.items) ? ret.items : [];
+          rItems.forEach((ri: any) => {
+            pReturnQty += Number(ri.quantity ?? ri.returnQty ?? 0);
+          });
+        });
+      }
+
+      const debitNotes = Array.isArray(p.debit_notes) ? p.debit_notes : [];
+      if (debitNotes.length > 0) {
+        returnsCount += debitNotes.length;
+        debitNotes.forEach((dn: any) => {
+          pReturnAmt += Number(dn.amount ?? dn.total_amount ?? dn.value ?? 0);
+        });
+      }
+
+      if (pReturnAmt === 0 && Array.isArray(p.items)) {
+        p.items.forEach((it: any) => {
+          const rq = Number(it.returned_quantity ?? 0);
+          if (rq > 0) {
+            returnsCount += 1;
+            pReturnQty += rq;
+            const bp = Number(it.buy_price ?? (it.pricing_infos?.buy_price) ?? 0);
+            const igst = Number(String(it.gst ?? "0").replace(/[^0-9.]/g, "")) || 0;
+            const retLine = rq * bp * (igst > 0 ? (1 + igst / 100) : 1);
+            pReturnAmt += retLine;
+            if (igst > 0) pReturnGst += retLine - (retLine / (1 + igst / 100));
+          }
+        });
+      }
+
+      totalReturns += pReturnAmt;
+      returnGst += pReturnGst;
+      returnStocks += pReturnQty;
+    });
+
+    const netSpend = Math.max(0, grossSpend - totalReturns);
+    const netGst = Math.max(0, totalGst - returnGst);
+    const netStocks = Math.max(0, totalStocks - returnStocks);
+    const taxableSpend = Math.max(0, netSpend - netGst);
+
+    return {
+      purchaseGrossSpend: grossSpend,
+      totalPurchaseReturns: totalReturns,
+      purchaseWithGst: netSpend,
+      purchaseTaxableSpend: taxableSpend,
+      purchaseGstAmount: netGst,
+      purchasesCountFromList: list.length,
+      purchasesStocksFromList: netStocks,
+      totalPurchaseReturnsCount: returnsCount,
+    };
+  }, [filteredPurchases, purchasesList, selectedSupplier]);
+
   const isFiltered = activeRange !== "all";
 
-  const totalOrders = isFiltered
-    ? Number(salesOverall.total_sales ?? 0)
-    : ((salesOverall.total_sales && salesOverall.total_sales > 0) ? salesOverall.total_sales : topProductsTotalOrders);
+  const totalOrders = ordersCountFromList > 0
+    ? ordersCountFromList
+    : (isFiltered
+        ? (Number(salesOverall.total_sales ?? 0) || ordersCountFromList)
+        : ((salesOverall.total_sales && salesOverall.total_sales > 0) ? salesOverall.total_sales : (ordersCountFromList || topProductsTotalOrders)));
 
-  const netRevenue = isFiltered
+  const fallbackRevenue = isFiltered
     ? Number(salesOverall.total_sales_amounts ?? 0)
     : ((salesOverall.total_sales_amounts && salesOverall.total_sales_amounts > 0) ? salesOverall.total_sales_amounts : topProductsTotalSales);
 
+  const netRevenue = salesRevenueWithGst > 0 ? salesRevenueWithGst : fallbackRevenue;
+
   const totalCost = Number(salesOverall.total_cost ?? 0);
 
-  const totalPurchaseAmount = isFiltered
+  const fallbackPurchaseAmount = isFiltered
     ? Number(purchaseOverall.total_purchase_amounts ?? 0)
     : ((purchaseOverall.total_purchase_amounts && purchaseOverall.total_purchase_amounts > 0) ? purchaseOverall.total_purchase_amounts : topSuppliersTotalPurchase);
 
-  const totalPurchaseCount = isFiltered
-    ? Number(purchaseOverall.total_purchase ?? 0)
-    : ((purchaseOverall.total_purchase && purchaseOverall.total_purchase > 0) ? purchaseOverall.total_purchase : topSuppliersTotalPurchasesCount);
-  const totalPurchaseStocks = purchaseOverall.total_purchase_stocks ?? 0;
-  const totalPurchaseOutstanding = purchaseOverall.total_outstanding_amounts || supplierOverall.total_outstandings || 0;
+  const totalPurchaseAmount = (purchaseWithGst > 0)
+    ? purchaseWithGst
+    : fallbackPurchaseAmount;
 
-  const totalProfit = salesOverall.total_profit !== undefined ? Number(salesOverall.total_profit) : (netRevenue - totalCost);
+  const totalPurchaseCount = isFiltered
+    ? (Number(purchaseOverall.total_purchase ?? 0) || purchasesCountFromList)
+    : ((purchaseOverall.total_purchase && purchaseOverall.total_purchase > 0) ? purchaseOverall.total_purchase : (purchasesCountFromList || topSuppliersTotalPurchasesCount));
+  const totalPurchaseStocks = purchaseOverall.total_purchase_stocks ?? purchasesStocksFromList ?? 0;
+  const totalPurchaseOutstanding = purchaseOverall.total_outstanding_amounts || supplierOverall.total_outstandings || 0;
+  const purchasePaidAmount = Math.max(0, totalPurchaseAmount - totalPurchaseOutstanding);
+
+  // ── Profit & Tax Breakdown Calculations (GST, Transport, ITC)
+  // Profit with GST included (Revenue with GST - Cost of goods sold with GST)
+  const effectiveCost = (salesCostWithGst > 0)
+    ? salesCostWithGst
+    : (totalCost > 0 ? totalCost : Math.max(0, netRevenue - (salesOverall.total_profit !== undefined ? Number(salesOverall.total_profit) : 0)));
+
+  // Gross Profit = Selling Price (with GST) − Purchase Cost (with GST) of delivered items
+  const grossProfit = (salesRevenueWithGst > 0 && effectiveCost > 0)
+    ? (salesRevenueWithGst - effectiveCost)
+    : (salesOverall.total_profit !== undefined ? Number(salesOverall.total_profit) : (netRevenue - totalCost));
+
+  // Transport charges: allocated per sale / per sold unit
+  const transportCharges = allocatedSalesTransport > 0
+    ? (allocatedSalesTransport + salesTransportCharges)
+    : (salesTransportCharges > 0
+        ? salesTransportCharges
+        : (fallbackAllocatedChargePerUnit > 0
+            ? fallbackAllocatedChargePerUnit * Math.max(1, totalOrders)
+            : 0));
+
+  // Input GST Claimed (ITC):
+  // Claimed back on purchases of sold items; if 0, fallback to period purchase GST
+  const purchaseGstClaimed = soldItemsInputGst > 0
+    ? soldItemsInputGst
+    : (totalPurchaseStocks > 0 && purchaseGstAmount > 0
+        ? (purchaseGstAmount / totalPurchaseStocks) * Math.max(1, totalOrders)
+        : (purchaseGstAmount > 0 ? purchaseGstAmount : 0));
+
+  const canClaimItc = isGstReg;
+  const itcAmount = canClaimItc ? purchaseGstClaimed : 0;
+  const outputGstDeduction = isGstReg ? salesGstAmount : 0;
+
+  // Net Realized Profit = Gross Profit − Output GST (if reg) − Transport + Input GST ITC (if reg)
+  // For Non-GST shops: Output GST is 0, ITC is 0, so:
+  // Net Profit = Gross Profit − Transport = Selling Price − Purchase Cost − Transport = 130 - 100 - 20 = 10.00!
+  const netRealizedProfit = grossProfit - outputGstDeduction - transportCharges + itcAmount;
+
+  // For non-GST registered sellers, Gross and Net are identical (Selling - Cost - Charges = ₹10.00).
+  const totalProfit = !isGstReg
+    ? netRealizedProfit
+    : (globalViewMode === "gross" ? grossProfit : netRealizedProfit);
+
+  const displayedProfit = !isGstReg
+    ? netRealizedProfit
+    : (globalViewMode === "gross" ? grossProfit : netRealizedProfit);
+
+  const sellingPrice = salesRevenueWithGst > 0 ? salesRevenueWithGst : netRevenue;
+  const purchaseCost = effectiveCost > 0 ? effectiveCost : totalCost;
+
+  // Values depending on globalViewMode ('gross' vs 'net')
+  const displayedRevenue = !isGstReg
+    ? netRevenue
+    : (globalViewMode === "gross" ? netRevenue : Math.max(0, netRevenue - salesGstAmount));
+
+  const displayedPurchase = !isGstReg
+    ? totalPurchaseAmount
+    : (globalViewMode === "gross" ? totalPurchaseAmount : Math.max(0, totalPurchaseAmount - purchaseGstAmount));
+
   const aov = totalOrders > 0 ? netRevenue / totalOrders : 0;
-  const grossMargin = netRevenue > 0 ? (totalProfit / netRevenue) * 100 : 0;
+  const displayedAov = totalOrders > 0 ? displayedRevenue / totalOrders : 0;
+
+  // Net Profit Margin: relative to taxable net revenue (exclusive of GST for registered shops)
+  const effectiveTaxableRevenue = salesRevenueWithGst > 0
+    ? (isGstReg ? Math.max(1, salesRevenueWithGst - salesGstAmount) : salesRevenueWithGst)
+    : (netRevenue > 0 ? netRevenue : 1);
+  const netProfitMargin = (netRealizedProfit / effectiveTaxableRevenue) * 100;
+
+  // For non-GST registered seller, Gross margin and Net margin are identical = netProfitMargin (~ 7.7%)
+  const grossMargin = !isGstReg
+    ? netProfitMargin
+    : (netRevenue > 0 ? (grossProfit / netRevenue) * 100 : 0);
+
+  const displayedMargin = !isGstReg
+    ? netProfitMargin
+    : (globalViewMode === "gross" ? grossMargin : netProfitMargin);
   
   const customerOutstanding = Number(customerOverall?.total_outstandings ?? 0);
   const receivedAmount = useMemo(() => {
     if (ordersList.length > 0) {
-      const filtered = ordersList.filter((o: any) => {
-        const st = String(o?.status || "").toUpperCase();
-        if (st === "CANCELLED" || st === "CANCELED") return false;
-        if (!dateRange?.start || !dateRange?.end) return true;
-        const oDate = new Date(o.created_at || o.date || 0);
-        return oDate >= dateRange.start && oDate <= dateRange.end;
-      });
-
       let sumReceived = 0;
       let hasCompletedOrders = false;
-      filtered.forEach((o: any) => {
+      filteredOrders.forEach((o: any) => {
         const calcInfo = o.calculation_infos || {};
         const total = Number(
           calcInfo.grand_total ??
@@ -453,6 +1133,18 @@ const AnalyticsDashboard = () => {
           o.total ??
           0
         );
+
+        // Deduct refund from received amount
+        const rawReturns: any[] = Array.isArray(o.returns) ? o.returns : [];
+        let orderRefund = 0;
+        rawReturns.forEach((ret: any) => {
+          orderRefund += Number(ret.total_refund_amount ?? ret.refund_amount ?? ret.amount ?? 0);
+        });
+        const directRefund = Number(o.refund_amount ?? o.total_refund ?? 0);
+        if (directRefund > orderRefund) orderRefund = directRefund;
+        if (["RETURNED", "REFUNDED"].includes(String(o.status || "").toUpperCase()) && orderRefund <= 0) {
+          orderRefund = total;
+        }
 
         const pInfos = o.payment_infos || o.payments || {};
         let orderReceived = 0;
@@ -490,11 +1182,14 @@ const AnalyticsDashboard = () => {
         if (orderReceived <= 0 && !isCredit && total > 0) {
           orderReceived = total;
         }
-        sumReceived += orderReceived;
+
+        // Net received for this order
+        const netOrderReceived = Math.max(0, orderReceived - orderRefund);
+        sumReceived += netOrderReceived;
         hasCompletedOrders = true;
       });
 
-      if (hasCompletedOrders && sumReceived > 0) return sumReceived;
+      if (hasCompletedOrders) return sumReceived;
     }
 
     if (salesOverall.total_received_amount && salesOverall.total_received_amount > 0) {
@@ -505,7 +1200,7 @@ const AnalyticsDashboard = () => {
     }
 
     return Number(customerOverall?.total_cleared_amounts ?? Math.max(0, netRevenue - customerOutstanding));
-  }, [ordersList, dateRange, salesOverall, customerOverall, customerOutstanding, netRevenue]);
+  }, [ordersList, filteredOrders, salesOverall, customerOverall, customerOutstanding, netRevenue]);
 
   const totalReturnsCount = 0;
 
@@ -541,7 +1236,13 @@ const AnalyticsDashboard = () => {
     // Fallback if sales/purchase trends are empty but data exists
     if (salesTrend.length === 0 && netRevenue > 0) {
       const todayStr = new Date().toISOString().split("T")[0];
-      salesTrend = [{ _id: todayStr, date: todayStr, total_sales_amounts: netRevenue, total_sales: totalOrders, total_profit: totalProfit }];
+      salesTrend = [{
+        _id: todayStr,
+        date: todayStr,
+        total_sales_amounts: globalViewMode === "net" ? Math.max(0, netRevenue - salesGstAmount) : netRevenue,
+        total_sales: totalOrders,
+        total_profit: globalViewMode === "net" ? netRealizedProfit : totalProfit,
+      }];
     }
 
     if (purchaseTrend.length === 0) {
@@ -554,7 +1255,11 @@ const AnalyticsDashboard = () => {
         }));
       } else if (totalPurchaseAmount > 0) {
         const todayStr = new Date().toISOString().split("T")[0];
-        purchaseTrend = [{ _id: todayStr, date: todayStr, total_purchase_amounts: totalPurchaseAmount }];
+        purchaseTrend = [{
+          _id: todayStr,
+          date: todayStr,
+          total_purchase_amounts: globalViewMode === "net" ? Math.max(0, totalPurchaseAmount - purchaseGstAmount) : totalPurchaseAmount,
+        }];
       }
     }
 
@@ -563,11 +1268,20 @@ const AnalyticsDashboard = () => {
     salesTrend.forEach((s: any) => {
       const date = s._id || s.date || "";
       if (!date) return;
+      const rawRev = s.total_sales_amounts || 0;
+      const rawProfit = s.total_profit || ((s.total_sales_amounts || 0) - (s.total_cost || 0));
+      const effectiveRev = isGstReg && globalViewMode === "net" && netRevenue > 0
+        ? Math.max(0, rawRev - (rawRev / netRevenue) * salesGstAmount)
+        : rawRev;
+      const effectiveProf = (!isGstReg || globalViewMode === "net") && grossProfit > 0
+        ? (rawProfit / grossProfit) * netRealizedProfit
+        : (!isGstReg ? netRealizedProfit : rawProfit);
+
       map[date] = {
         date,
-        revenue: s.total_sales_amounts || 0,
+        revenue: effectiveRev,
         orders: s.total_sales || 0,
-        profit: s.total_profit || ((s.total_sales_amounts || 0) - (s.total_cost || 0)),
+        profit: effectiveProf,
         purchases: 0,
       };
     });
@@ -575,21 +1289,26 @@ const AnalyticsDashboard = () => {
     purchaseTrend.forEach((p: any) => {
       const date = p._id || p.date || "";
       if (!date) return;
+      const rawPur = p.total_purchase_amounts || 0;
+      const effectivePur = globalViewMode === "net" && totalPurchaseAmount > 0
+        ? Math.max(0, rawPur - (rawPur / totalPurchaseAmount) * purchaseGstAmount)
+        : rawPur;
+
       if (!map[date]) {
         map[date] = {
           date,
           revenue: 0,
           orders: 0,
           profit: 0,
-          purchases: p.total_purchase_amounts || 0,
+          purchases: effectivePur,
         };
       } else {
-        map[date].purchases = p.total_purchase_amounts || 0;
+        map[date].purchases = effectivePur;
       }
     });
 
     return Object.values(map).sort((a: any, b: any) => a.date.localeCompare(b.date));
-  }, [stats, netRevenue, totalOrders, totalProfit, totalPurchaseAmount]);
+  }, [stats, netRevenue, salesGstAmount, totalOrders, totalProfit, netRealizedProfit, grossProfit, totalPurchaseAmount, purchaseGstAmount, globalViewMode]);
 
   // Payment Breakdown with Brand Palette
   const paymentBreakdown = useMemo(() => {
@@ -604,15 +1323,18 @@ const AnalyticsDashboard = () => {
     };
 
     if (ordersList.length > 0) {
-      const filtered = ordersList.filter((o: any) => {
-        const st = String(o?.status || "").toUpperCase();
-        if (st === "CANCELLED" || st === "CANCELED") return false;
-        if (!dateRange?.start || !dateRange?.end) return true;
-        const oDate = new Date(o.created_at || o.date || 0);
-        return oDate >= dateRange.start && oDate <= dateRange.end;
-      });
+      filteredOrders.forEach((o: any) => {
+        const orderStatus = String(o?.status || "").toUpperCase();
+        if (orderStatus === "RETURNED" || orderStatus === "REFUNDED") return;
 
-      filtered.forEach((o: any) => {
+        const rawReturns: any[] = Array.isArray(o.returns) ? o.returns : [];
+        let orderRefund = 0;
+        rawReturns.forEach((ret: any) => {
+          orderRefund += Number(ret.total_refund_amount ?? ret.refund_amount ?? ret.amount ?? 0);
+        });
+        const directRefund = Number(o.refund_amount ?? o.total_refund ?? 0);
+        if (directRefund > orderRefund) orderRefund = directRefund;
+
         const calcInfo = o.calculation_infos || {};
         const total = Number(
           calcInfo.grand_total ??
@@ -624,13 +1346,17 @@ const AnalyticsDashboard = () => {
           0
         );
 
+        if (total > 0 && orderRefund >= total - 0.01) return;
+
+        const netOrderAmt = Math.max(0, total - orderRefund);
         const pInfos = o.payment_infos || o.payments || {};
         if (typeof pInfos === "object" && !Array.isArray(pInfos) && Object.keys(pInfos).length > 0) {
           Object.entries(pInfos).forEach(([k, v]) => {
             const amt = Number(typeof v === "object" ? (v as any)?.amount : v) || 0;
             const norm = normalizePaymentMethod(k);
             if (counts[norm]) {
-              counts[norm].value += amt;
+              const effectiveAmt = orderRefund > 0 ? Math.max(0, amt - orderRefund) : amt;
+              counts[norm].value += effectiveAmt;
               counts[norm].count += 1;
             }
           });
@@ -640,18 +1366,19 @@ const AnalyticsDashboard = () => {
             const amt = Number(p.amount) || total;
             const norm = normalizePaymentMethod(m);
             if (counts[norm]) {
-              counts[norm].value += amt;
+              const effectiveAmt = orderRefund > 0 ? Math.max(0, amt - orderRefund) : amt;
+              counts[norm].value += effectiveAmt;
               counts[norm].count += 1;
             }
           });
         } else if (o.payment_method || o.payment_mode) {
           const norm = normalizePaymentMethod(o.payment_method || o.payment_mode);
           if (counts[norm]) {
-            counts[norm].value += total;
+            counts[norm].value += netOrderAmt;
             counts[norm].count += 1;
           }
         } else {
-          counts["Cash"].value += total;
+          counts["Cash"].value += netOrderAmt;
           counts["Cash"].count += 1;
         }
       });
@@ -670,39 +1397,72 @@ const AnalyticsDashboard = () => {
       return [{ name: "Cash", value: 0, count: 0, color: "#286038" }];
     }
     return active;
-  }, [ordersList, dateRange, salesOverall, stats]);
+  }, [ordersList, filteredOrders, salesOverall, stats]);
 
   // Top Products
   const topProducts = useMemo(() => {
     if (ordersList.length > 0) {
-      const filtered = ordersList.filter((o: any) => {
-        const st = String(o?.status || "").toUpperCase();
-        if (st === "CANCELLED" || st === "CANCELED") return false;
-        if (!dateRange?.start || !dateRange?.end) return true;
-        const oDate = new Date(o.created_at || o.date || 0);
-        return oDate >= dateRange.start && oDate <= dateRange.end;
-      });
-
       const prodMap: Record<string, { product_id: string; name: string; total_qty: number; total_revenue: number; total_profit: number }> = {};
-      filtered.forEach((o: any) => {
+      filteredOrders.forEach((o: any) => {
+        const orderStatus = String(o?.status || "").toUpperCase();
+        if (orderStatus === "RETURNED" || orderStatus === "REFUNDED") return;
+
+        const rawReturns: any[] = Array.isArray(o.returns) ? o.returns : [];
+        const returnedQtyMap: Record<string, number> = {};
+        rawReturns.forEach((ret: any) => {
+          const rItems = Array.isArray(ret.items) ? ret.items : [];
+          rItems.forEach((ri: any) => {
+            const q = Number(ri.quantity ?? ri.qty ?? 0);
+            if (ri.order_item_id) returnedQtyMap[String(ri.order_item_id)] = (returnedQtyMap[String(ri.order_item_id)] || 0) + q;
+            if (ri.product_id) returnedQtyMap[String(ri.product_id)] = (returnedQtyMap[String(ri.product_id)] || 0) + q;
+            if (ri.id) returnedQtyMap[String(ri.id)] = (returnedQtyMap[String(ri.id)] || 0) + q;
+          });
+        });
+
         const items = o.items || [];
         items.forEach((item: any) => {
           const pid = item.product_id || item.inventory_id || item.id;
           if (!pid) return;
           const name = productNameMap[pid] || item.name || "Product";
           const qty = Number(item.quantity ?? item.stocks ?? 1);
-          const rev = Number(item.total_amount ?? (Number(item.sell_price || 0) * qty));
-          const rawBuyPrice = Number(item.raw_buy_price ?? item.buy_price ?? item.costPrice ?? item.cost_at_sale ?? 0);
-          const rawGst = Number(String(item.gst ?? item.gst_rate ?? "0").replace(/[^0-9.]/g, "")) || 0;
-          const revTaxable = rawGst > 0 ? (rev / (1 + rawGst / 100)) : rev;
-          const cost = item.cost_amounts !== undefined ? Number(item.cost_amounts) : (rawBuyPrice * qty);
-          const profit = item.profit_amounts !== undefined ? Number(item.profit_amounts) : (revTaxable - cost);
+          const itId = String(item.id || pid);
+          let retQty = Number(item.returned_quantity ?? 0);
+          if ((returnedQtyMap[itId] || 0) > retQty) retQty = returnedQtyMap[itId];
+          if ((returnedQtyMap[String(pid)] || 0) > retQty) retQty = returnedQtyMap[String(pid)];
+          retQty = Math.min(qty, Math.max(0, retQty));
+          const netQty = Math.max(0, qty - retQty);
+          if (netQty <= 0) return;
+
+          const unitSp = Number(item.sell_price ?? (qty > 0 ? (Number(item.total_amount || 0) / qty) : 0));
+          const rev = unitSp * netQty;
+          const itemGst = Number(String(item.gst ?? item.gst_rate ?? "0").replace(/[^0-9.]/g, "")) || 0;
+          const rawBuyPrice = Number(item.raw_buy_price ?? item.buy_price ?? 0);
+          const costAtSale = Number(item.cost_at_sale ?? 0);
+          let unitCostWithGst = 0;
+          if (pid && productPurchaseUnitCostMap[pid] && productPurchaseUnitCostMap[pid] > 0) {
+            unitCostWithGst = productPurchaseUnitCostMap[pid];
+          } else if (costAtSale > 0) {
+            if (itemGst > 0 && rawBuyPrice > 0 && Math.abs(costAtSale - rawBuyPrice) < 1) {
+              unitCostWithGst = Math.round(costAtSale * (1 + itemGst / 100) * 100) / 100;
+            } else {
+              unitCostWithGst = costAtSale;
+            }
+          } else if (rawBuyPrice > 0) {
+            unitCostWithGst = itemGst > 0 ? Math.round(rawBuyPrice * (1 + itemGst / 100) * 100) / 100 : rawBuyPrice;
+          }
+
+          const unitTransport = (!isGstReg && pid && productAllocatedChargesMap[pid] !== undefined && productAllocatedChargesMap[pid] > 0)
+            ? productAllocatedChargesMap[pid]
+            : (!isGstReg ? fallbackAllocatedChargePerUnit : 0);
+
+          const cost = (unitCostWithGst + unitTransport) * netQty;
+          const profit = rev - cost;
 
           if (!prodMap[pid]) {
             prodMap[pid] = { product_id: pid, name, total_qty: 0, total_revenue: 0, total_profit: 0 };
           }
-          prodMap[pid].total_qty += qty;
-          prodMap[pid].total_revenue += revTaxable;
+          prodMap[pid].total_qty += netQty;
+          prodMap[pid].total_revenue += rev;
           prodMap[pid].total_profit += profit;
         });
       });
@@ -742,7 +1502,7 @@ const AnalyticsDashboard = () => {
         }
         return b.total_revenue - a.total_revenue;
       });
-  }, [ordersList, dateRange, stats, productNameMap]);
+  }, [ordersList, filteredOrders, stats, productNameMap, productPurchaseUnitCostMap, productAllocatedChargesMap, fallbackAllocatedChargePerUnit, isGstReg]);
 
   // Sales by Category
   const salesByCategory = useMemo(() => {
@@ -761,7 +1521,7 @@ const AnalyticsDashboard = () => {
 
   // Top Suppliers
   const topSuppliers = useMemo(() => {
-    const raw = stats?.top?.top_suppliers || stats?.dashboard?.supplier?.top_suppliers || [];
+    const raw = stats?.top?.top_suppliers || stats?.dashboard?.supplier?.top_suppliers || (stats as any)?.supplier?.top_suppliers || [];
     return raw
       .map((s: any) => {
         const sName = supplierNameMap[s.supplier_id] || s.supplier_name || s.name || s.supplier_id || "Supplier";
@@ -783,10 +1543,59 @@ const AnalyticsDashboard = () => {
         {/* ── HEADER / FILTER CONTROL BAR ── */}
         <div className="bg-white rounded-xl border border-[#E5EAF0] shadow-[0_1px_3px_rgba(0,0,0,0.03)] overflow-hidden">
           <div className="p-5 md:px-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <h1 className="text-lg sm:text-xl font-bold text-[#27364B] tracking-tight">Dashboard</h1>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-lg sm:text-xl font-bold text-[#27364B] tracking-tight">Dashboard</h1>
+
+              {/* Top-Level GST Registered / Tax Status Badge */}
+              <div
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all ${
+                  isGstReg
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-200/80 shadow-[0_1px_2px_rgba(13,159,110,0.06)]"
+                    : "bg-amber-50 text-amber-700 border-amber-200/80 shadow-[0_1px_2px_rgba(214,154,53,0.06)]"
+                }`}
+                title={
+                  isGstReg
+                    ? "Shop is registered for GST. Input Tax Credit (ITC) is active and claimable against sales tax."
+                    : "Shop is not GST-registered. Output GST is not collected and purchase ITC cannot be claimed."
+                }
+              >
+                <span className={`w-2 h-2 rounded-full ${isGstReg ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`} />
+                <span>{isGstReg ? "GST Registered (ITC Active)" : "Non-GST Shop"}</span>
+              </div>
+            </div>
 
             {/* Time filters & Actions */}
             <div className="flex items-center gap-2 flex-wrap">
+              {/* Global Gross / Net View Switcher (Only visible for GST-registered shops) */}
+              {isGstReg && (
+                <div className="bg-[#F1F4F7] p-1 rounded-lg border border-[#E5EAF0] flex items-center gap-0.5 shadow-inner">
+                  <button
+                    type="button"
+                    onClick={() => setGlobalViewMode("gross")}
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-150 cursor-pointer ${
+                      globalViewMode === "gross"
+                        ? "bg-white text-[#103020] shadow-[0_1px_2px_rgba(0,0,0,0.08)]"
+                        : "text-[#74839A] hover:text-[#27364B]"
+                    }`}
+                    title="Show all metrics inclusive of GST (Selling price, landed cost, gross profit)"
+                  >
+                    Gross
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGlobalViewMode("net")}
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-150 cursor-pointer ${
+                      globalViewMode === "net"
+                        ? "bg-white text-emerald-700 shadow-[0_1px_2px_rgba(0,0,0,0.08)]"
+                        : "text-[#74839A] hover:text-[#27364B]"
+                    }`}
+                    title="Show all metrics net of tax and allocated freight charges"
+                  >
+                    Net
+                  </button>
+                </div>
+              )}
+
               {/* Segmented Range Control */}
               <div className="bg-[#F1F4F7] p-1 rounded-lg border border-[#E5EAF0] flex items-center gap-0.5 overflow-x-auto max-w-full">
                 {(["today", "month", "year", "all", "custom"] as RangeKey[]).map((r) => {
@@ -897,26 +1706,112 @@ const AnalyticsDashboard = () => {
         {/* ── STAT CARDS (5 KPIs) ── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
           
-          {/* 1. Net Revenue */}
+          {/* 1. Revenue */}
           <div className="bg-white rounded-xl p-5 border border-[#E5EAF0] shadow-[0_1px_3px_rgba(0,0,0,0.03)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.05)] hover:border-[#D1D9E2] transition-all duration-200 group flex flex-col justify-between h-full">
             <div>
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[#74839A]">Net Revenue</h3>
-                  <p className="text-xs text-[#74839A] font-medium mt-0.5">Total excl. GST</p>
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[#74839A]">
+                      {globalViewMode === "gross" ? "Gross Revenue" : "Net Revenue"}
+                    </h3>
+                    <CardInfoPopover
+                      title="Revenue Breakdown"
+                      badge={
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                          globalViewMode === "gross"
+                            ? "bg-slate-50 text-slate-700 border-slate-200"
+                            : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                        }`}>
+                          {globalViewMode === "gross" ? "Gross (incl. GST)" : "Net (excl. GST)"}
+                        </span>
+                      }
+                    >
+                      {/* Step 1: Gross Sales */}
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="font-semibold text-slate-800">Gross Sales (incl. GST)</div>
+                          <div className="text-[11px] text-[#74839A]">Total orders before returns</div>
+                        </div>
+                        <span className="font-semibold text-slate-800 tabular-nums">+{fmt(salesGrossRevenue)}</span>
+                      </div>
+
+                      {/* Step 2: Less Returns */}
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="font-semibold text-slate-800">− Sales Returns & Refunds</div>
+                          <div className="text-[11px] text-[#74839A]">
+                            {fullyReturnedOrdersCount > 0 || partiallyReturnedOrdersCount > 0
+                              ? `${fullyReturnedOrdersCount + partiallyReturnedOrdersCount} return(s) reversed`
+                              : "No returns in this period"}
+                          </div>
+                        </div>
+                        <span className={`font-semibold tabular-nums ${salesReturnsRefunds > 0 ? "text-rose-600" : "text-slate-400"}`}>
+                          {salesReturnsRefunds > 0 ? `−${fmt(salesReturnsRefunds)}` : "₹0.00"}
+                        </span>
+                      </div>
+
+                      {/* Divider */}
+                      <div className="pt-2 border-t border-dashed border-[#E5EAF0]" />
+
+                      {/* Step 3: Net Realized Revenue */}
+                      <div className="flex items-start justify-between gap-3 bg-emerald-50/70 p-2.5 rounded-lg border border-emerald-100">
+                        <div>
+                          <div className="font-bold text-emerald-950 text-xs">= Net Realized Revenue</div>
+                          <div className="text-[10px] text-emerald-800 font-medium">Realized sales cash inflow</div>
+                        </div>
+                        <span className="text-sm font-bold text-emerald-700 tabular-nums">
+                          {fmt(salesRevenueWithGst)}
+                        </span>
+                      </div>
+
+                      {/* Step 4: Taxable Base vs GST */}
+                      <div className="space-y-1.5 pt-1 text-[11px]">
+                        <div className="flex items-center justify-between text-[#74839A]">
+                          <span>Taxable Revenue (excl. GST):</span>
+                          <span className="font-semibold text-slate-800 tabular-nums">{fmt(salesTaxableRevenue)}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-[#74839A]">
+                          <span>Output GST on Sales:</span>
+                          <span className="font-semibold text-amber-700 tabular-nums">{fmt(salesGstAmount)}</span>
+                        </div>
+                      </div>
+
+                      {/* Divider */}
+                      <div className="pt-2 border-t border-dashed border-[#E5EAF0]" />
+
+                      {/* Step 5: Collections */}
+                      <div className="space-y-1 text-[11px]">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[#0D9F6E] font-medium">Net Received:</span>
+                          <span className="font-semibold text-[#0D9F6E] tabular-nums">{fmt(receivedAmount)}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[#D69A35] font-medium">Outstanding:</span>
+                          <span className="font-semibold text-[#D69A35] tabular-nums">{fmt(customerOutstanding)}</span>
+                        </div>
+                      </div>
+                    </CardInfoPopover>
+                  </div>
+                  <p className="text-xs text-[#74839A] font-medium mt-0.5">
+                    {globalViewMode === "gross" ? "Total incl. GST" : "Taxable excl. GST"}
+                  </p>
                 </div>
                 <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-[#EAF2E8] text-[#286038] shrink-0 transition-transform duration-200 group-hover:scale-105">
                   <IndianRupee className="w-4.5 h-4.5" strokeWidth={2.2} />
                 </div>
               </div>
               <div className="flex items-end gap-2 mt-3">
-                <span className="text-[26px] font-semibold text-[#27364B] tracking-tight leading-none tabular-nums truncate" title={fmt(netRevenue)}>
-                  {loading ? "—" : fmt(netRevenue)}
+                <span className="text-[26px] font-semibold text-[#27364B] tracking-tight leading-none tabular-nums truncate" title={fmt(displayedRevenue)}>
+                  {loading ? "—" : fmt(displayedRevenue)}
                 </span>
+              </div>
+              <div className="text-[11px] font-medium text-[#74839A] mt-1">
+                GST Amt: <span className="font-semibold text-[#27364B]">{loading ? "—" : fmt(salesGstAmount)}</span>
               </div>
             </div>
 
-            <div className="mt-5 pt-3.5 border-t border-[#E5EAF0] space-y-2">
+            <div className="mt-5 pt-3.5 border-t border-[#E5EAF0] space-y-1.5">
               <div className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-[#0D9F6E]"></span>
@@ -931,6 +1826,15 @@ const AnalyticsDashboard = () => {
                 </div>
                 <span className="font-semibold text-[#D69A35] tabular-nums">{loading ? "—" : fmt(customerOutstanding)}</span>
               </div>
+              {salesReturnsRefunds > 0 && (
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                    <span className="font-medium text-[#74839A]">Returns</span>
+                  </div>
+                  <span className="font-semibold text-rose-600 tabular-nums">-{loading ? "—" : fmt(salesReturnsRefunds)}</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -939,34 +1843,245 @@ const AnalyticsDashboard = () => {
             <div>
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[#74839A]">Total Profit</h3>
-                  <p className="text-xs text-[#74839A] font-medium mt-0.5">Net earnings</p>
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[#74839A]">
+                      {!isGstReg ? "Total Profit" : (globalViewMode === "gross" ? "Total Profit" : "Net Profit")}
+                    </h3>
+                    <CardInfoPopover
+                      title={!isGstReg ? "Net Profit Breakdown" : "Profit Calculation Breakdown"}
+                      badge={
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                          isGstReg
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            : "bg-amber-50 text-amber-700 border-amber-200"
+                        }`}>
+                          {isGstReg ? "GST Registered" : "Non-GST Shop"}
+                        </span>
+                      }
+                    >
+                      {!isGstReg ? (
+                        <>
+                          {/* Non-GST Shop Profit Calculation Breakdown */}
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <div className="font-semibold text-slate-800">Selling Price</div>
+                              <div className="text-[11px] text-[#74839A]">Total customer selling revenue</div>
+                            </div>
+                            <span className="font-semibold text-slate-800 tabular-nums">+{fmt(sellingPrice)}</span>
+                          </div>
+
+                          {salesReturnedProfit > 0 && (
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <div className="font-semibold text-slate-800">− Reversed Return Profit</div>
+                                <div className="text-[11px] text-[#74839A]">Reversed on returned orders</div>
+                              </div>
+                              <span className="font-semibold text-rose-600 tabular-nums">−{fmt(salesReturnedProfit)}</span>
+                            </div>
+                          )}
+
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <div className="font-semibold text-slate-800">− Purchase Cost (incl. GST paid)</div>
+                              <div className="text-[11px] text-[#74839A]">Total procurement cost (taxes included)</div>
+                            </div>
+                            <span className="font-semibold text-rose-600 tabular-nums">−{fmt(purchaseCost)}</span>
+                          </div>
+
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <div className="font-semibold text-slate-800">− Transport & Other Charges</div>
+                              <div className="text-[11px] text-[#74839A]">Allocated freight & procurement charges</div>
+                            </div>
+                            <span className="font-semibold text-purple-700 tabular-nums">−{fmt(transportCharges)}</span>
+                          </div>
+
+                          <div className="pt-2 border-t border-dashed border-[#E5EAF0]" />
+
+                          <div className="flex items-start justify-between gap-3 bg-emerald-50/70 p-2.5 rounded-lg border border-emerald-100">
+                            <div>
+                              <div className="font-bold text-emerald-950 text-xs">= Net Profit</div>
+                              <div className="text-[10px] text-emerald-800 font-medium">
+                                True cash profit in hand ({netProfitMargin.toFixed(1)}% margin)
+                              </div>
+                            </div>
+                            <span className="text-sm font-bold text-emerald-700 tabular-nums">
+                              {fmt(netRealizedProfit)}
+                            </span>
+                          </div>
+
+                          <div className="bg-amber-50/70 p-2.5 rounded-lg border border-amber-200/80 text-[11px] text-amber-900 leading-relaxed">
+                            Non-GST seller does not charge GST and cannot claim Input Tax Credit (ITC). Total procurement cost includes taxes.
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          {/* Step 1: Gross Profit */}
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <div className="font-semibold text-slate-800">Gross Profit: {fmt(grossProfit)}</div>
+                              <div className="text-[11px] text-[#74839A]">
+                                Delivered Sell {fmt(sellingPrice)} − Buy Cost {fmt(purchaseCost)}
+                              </div>
+                            </div>
+                            <span className="font-semibold text-slate-800 tabular-nums">+{fmt(grossProfit)}</span>
+                          </div>
+
+                          {/* Step 2: Reversed Return Profit (if applicable) */}
+                          {salesReturnedProfit > 0 && (
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <div className="font-semibold text-slate-800">− Reversed Return Profit</div>
+                                <div className="text-[11px] text-[#74839A]">Reversed on returned orders</div>
+                              </div>
+                              <span className="font-semibold text-rose-600 tabular-nums">−{fmt(salesReturnedProfit)}</span>
+                            </div>
+                          )}
+
+                          {/* Step 3: Output GST */}
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <div className="font-semibold text-slate-800">
+                                − Output GST <span className="font-normal text-[#74839A]">(Active Sales GST)</span>
+                              </div>
+                              <div className="text-[11px] text-[#74839A]">
+                                Collected for government on sales
+                              </div>
+                            </div>
+                            <span className="font-semibold tabular-nums text-amber-700">
+                              −{fmt(salesGstAmount)}
+                            </span>
+                          </div>
+
+                          {/* Step 4: Input Tax Credit */}
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <div className="font-semibold text-slate-800">
+                                + Input Tax Credit <span className="font-normal text-[#74839A]">(ITC)</span>
+                              </div>
+                              <div className="text-[11px] text-[#74839A]">
+                                ITC claimed back on purchased stock
+                              </div>
+                            </div>
+                            <span className="font-semibold tabular-nums text-emerald-600">
+                              +{fmt(itcAmount)}
+                            </span>
+                          </div>
+
+                          {/* Step 5: Transport & Other Charges */}
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <div className="font-semibold text-slate-800">− Transport & Other Charges</div>
+                              <div className="text-[11px] text-[#74839A]">Allocated freight per sale</div>
+                            </div>
+                            <span className="font-semibold text-purple-700 tabular-nums">−{fmt(transportCharges)}</span>
+                          </div>
+
+                          {/* Divider */}
+                          <div className="pt-2 border-t border-dashed border-[#E5EAF0]" />
+
+                          {/* Step 6: Net Realized Profit */}
+                          <div className="flex items-start justify-between gap-3 bg-emerald-50/70 p-2.5 rounded-lg border border-emerald-100">
+                            <div>
+                              <div className="font-bold text-emerald-950 text-xs">= Net Realized Profit</div>
+                              <div className="text-[10px] text-emerald-800 font-medium">
+                                True cash profit in hand ({netProfitMargin.toFixed(1)}% margin)
+                              </div>
+                            </div>
+                            <span className="text-sm font-bold text-emerald-700 tabular-nums">
+                              {fmt(netRealizedProfit)}
+                            </span>
+                          </div>
+                        </>
+                      )}
+                    </CardInfoPopover>
+                    <button
+                      type="button"
+                      onClick={() => setIsBreakdownOpen(true)}
+                      className="text-[#74839A] hover:text-[#27364B] transition-colors p-0.5 rounded cursor-pointer"
+                      title="Open detailed calculation ledger"
+                    >
+                      <Calculator className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <p className="text-xs text-[#74839A] font-medium mt-0.5">
+                    {!isGstReg
+                      ? "Earnings (Sell − Cost − Charges)"
+                      : (globalViewMode === "gross" ? "Gross Profit (Sell − Cost)" : "Net Realized Profit")}
+                  </p>
                 </div>
-                <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-105 ${totalProfit >= 0 ? "bg-[#EBF8F2] text-[#0D9F6E]" : "bg-[#FDF2F2] text-[#DC6464]"}`}>
+                <div
+                  className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-105 ${
+                    displayedProfit >= 0
+                      ? "bg-[#EBF8F2] text-[#0D9F6E]"
+                      : "bg-[#FDF2F2] text-[#DC6464]"
+                  }`}
+                >
                   <TrendingUp className="w-4.5 h-4.5" strokeWidth={2.2} />
                 </div>
               </div>
-              <div className="flex items-baseline gap-2 mt-3">
-                <span className={`text-[26px] font-semibold tracking-tight leading-none tabular-nums truncate ${totalProfit >= 0 ? "text-[#0D9F6E]" : "text-[#DC6464]"}`} title={fmt(totalProfit)}>
-                  {loading ? "—" : fmt(totalProfit)}
+
+              {/* Profit Value Display */}
+              <div className="flex items-end gap-2 mt-3">
+                <span
+                  className={`text-[26px] font-semibold tracking-tight leading-none tabular-nums truncate ${
+                    displayedProfit >= 0 ? "text-[#0D9F6E]" : "text-[#DC6464]"
+                  }`}
+                  title={fmt(displayedProfit)}
+                >
+                  {loading ? "—" : fmt(displayedProfit)}
                 </span>
                 {!loading && (
-                  totalProfit >= 0 ? (
+                  displayedProfit >= 0 ? (
                     <ArrowUpRight className="w-4 h-4 text-[#0D9F6E] shrink-0" />
                   ) : (
                     <ArrowDownRight className="w-4 h-4 text-[#DC6464] shrink-0" />
                   )
                 )}
               </div>
+              <div className="text-[11px] font-medium text-[#74839A] mt-1">
+                {isGstReg ? (
+                  <>
+                    GST Amt: <span className="font-semibold text-[#27364B]">{loading ? "—" : fmt(salesGstAmount)}</span>
+                  </>
+                ) : (
+                  <span className="text-slate-400">Non-GST Shop (No Tax)</span>
+                )}
+              </div>
             </div>
 
-            <div className="mt-5 pt-3.5 border-t border-[#E5EAF0]">
+            {/* Bottom Card Summary */}
+            <div className="mt-5 pt-3.5 border-t border-[#E5EAF0] space-y-1.5">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-[11px] font-medium text-[#74839A] uppercase tracking-wider">Status</span>
-                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${totalProfit >= 0 ? "bg-[#EBF8F2] text-[#0D9F6E]" : "bg-[#FDF2F2] text-[#DC6464]"}`}>
-                  {totalProfit >= 0 ? "Profitable" : "Loss"}
+                <span className="text-[11px] font-medium text-[#74839A] uppercase tracking-wider">Status:</span>
+                <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                  displayedProfit >= 0
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                    : "bg-rose-50 text-rose-700 border-rose-200"
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${displayedProfit >= 0 ? "bg-emerald-500" : "bg-rose-500"}`} />
+                  {displayedProfit >= 0 ? "Profitable" : "Loss"}
                 </span>
               </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-[11px] font-medium text-[#74839A] uppercase tracking-wider">
+                  {!isGstReg ? "Profit Margin:" : (globalViewMode === "gross" ? "Gross Margin:" : "Net Margin:")}
+                </span>
+                <span className={`font-semibold tabular-nums ${displayedProfit >= 0 ? "text-[#0D9F6E]" : "text-rose-600"}`}>
+                  {loading ? "—" : `${displayedMargin.toFixed(1)}%`}
+                </span>
+              </div>
+              {salesReturnedProfit > 0 && (
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                    <span className="text-[11px] font-medium text-[#74839A] uppercase tracking-wider">Returns</span>
+                  </div>
+                  <span className="font-semibold text-rose-600 tabular-nums">
+                    -{loading ? "—" : fmt(salesReturnedProfit)}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -975,17 +2090,101 @@ const AnalyticsDashboard = () => {
             <div>
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[#74839A]">Total Purchase</h3>
-                  <p className="text-xs text-[#74839A] font-medium mt-0.5">Procurement spend</p>
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[#74839A]">
+                      {globalViewMode === "gross" ? "Total Purchase" : "Net Purchase"}
+                    </h3>
+                    <CardInfoPopover
+                      title="Procurement Breakdown"
+                      badge={
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                          isGstReg
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            : "bg-amber-50 text-amber-700 border-amber-200"
+                        }`}>
+                          {isGstReg ? "GST Registered" : "Non-GST Shop"}
+                        </span>
+                      }
+                    >
+                      {/* Step 1: Gross Procurement */}
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="font-semibold text-slate-800">Total Procurement (incl. GST)</div>
+                          <div className="text-[11px] text-[#74839A]">Gross purchases before returns</div>
+                        </div>
+                        <span className="font-semibold text-slate-800 tabular-nums">+{fmt(purchaseGrossSpend)}</span>
+                      </div>
+
+                      {/* Step 2: Less Purchase Returns */}
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="font-semibold text-slate-800">− Purchase Returns & Debit Notes</div>
+                          <div className="text-[11px] text-[#74839A]">
+                            {totalPurchaseReturnsCount > 0 ? `${totalPurchaseReturnsCount} return(s) recorded` : "Goods returned to suppliers"}
+                          </div>
+                        </div>
+                        <span className={`font-semibold tabular-nums ${totalPurchaseReturns > 0 ? "text-rose-600" : "text-slate-400"}`}>
+                          {totalPurchaseReturns > 0 ? `−${fmt(totalPurchaseReturns)}` : "₹0.00"}
+                        </span>
+                      </div>
+
+                      {/* Divider */}
+                      <div className="pt-2 border-t border-dashed border-[#E5EAF0]" />
+
+                      {/* Step 3: Net Realized Procurement */}
+                      <div className="flex items-start justify-between gap-3 bg-emerald-50/70 p-2.5 rounded-lg border border-emerald-100">
+                        <div>
+                          <div className="font-bold text-emerald-950 text-xs">= Net Realized Purchase</div>
+                          <div className="text-[10px] text-emerald-800 font-medium">Realized procurement spend</div>
+                        </div>
+                        <span className="text-sm font-bold text-emerald-700 tabular-nums">
+                          {fmt(totalPurchaseAmount)}
+                        </span>
+                      </div>
+
+                      {/* Step 4: Taxable Base vs GST */}
+                      <div className="space-y-1.5 pt-1 text-[11px]">
+                        <div className="flex items-center justify-between text-[#74839A]">
+                          <span>Taxable Spend (excl. GST):</span>
+                          <span className="font-semibold text-slate-800 tabular-nums">{fmt(purchaseTaxableSpend)}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-[#74839A]">
+                          <span>Purchase Input GST:</span>
+                          <span className="font-semibold text-amber-700 tabular-nums">{fmt(purchaseGstAmount)}</span>
+                        </div>
+                      </div>
+
+                      {/* Divider */}
+                      <div className="pt-2 border-t border-dashed border-[#E5EAF0]" />
+
+                      {/* Step 5: Payables Status */}
+                      <div className="space-y-1 text-[11px]">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[#0D9F6E] font-medium">Paid to Suppliers:</span>
+                          <span className="font-semibold text-[#0D9F6E] tabular-nums">{fmt(purchasePaidAmount)}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[#D69A35] font-medium">Outstanding Payables:</span>
+                          <span className="font-semibold text-[#D69A35] tabular-nums">{fmt(totalPurchaseOutstanding)}</span>
+                        </div>
+                      </div>
+                    </CardInfoPopover>
+                  </div>
+                  <p className="text-xs text-[#74839A] font-medium mt-0.5">
+                    {globalViewMode === "gross" ? "Procurement spend incl. GST" : "Procurement spend excl. GST"}
+                  </p>
                 </div>
                 <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-[#F1F4F7] text-[#27364B] shrink-0 transition-transform duration-200 group-hover:scale-105">
                   <ShoppingBag className="w-4.5 h-4.5" strokeWidth={2.2} />
                 </div>
               </div>
               <div className="flex items-end gap-2 mt-3">
-                <span className="text-[26px] font-semibold text-[#27364B] tracking-tight leading-none tabular-nums truncate" title={fmt(totalPurchaseAmount)}>
-                  {loading ? "—" : fmt(totalPurchaseAmount)}
+                <span className="text-[26px] font-semibold text-[#27364B] tracking-tight leading-none tabular-nums truncate" title={fmt(displayedPurchase)}>
+                  {loading ? "—" : fmt(displayedPurchase)}
                 </span>
+              </div>
+              <div className="text-[11px] font-medium text-[#74839A] mt-1">
+                GST Amt: <span className="font-semibold text-[#27364B]">{loading ? "—" : fmt(purchaseGstAmount)}</span>
               </div>
             </div>
 
@@ -998,6 +2197,17 @@ const AnalyticsDashboard = () => {
                 <span className="text-[11px] font-medium text-[#74839A] uppercase tracking-wider">Outstanding:</span>
                 <span className="font-semibold text-[#D69A35] tabular-nums">{loading ? "—" : fmt(totalPurchaseOutstanding)}</span>
               </div>
+              {totalPurchaseReturns > 0 && (
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                    <span className="text-[11px] font-medium text-[#74839A] uppercase tracking-wider">Returns</span>
+                  </div>
+                  <span className="font-semibold text-rose-600 tabular-nums">
+                    -{loading ? "—" : fmt(totalPurchaseReturns)}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1006,8 +2216,65 @@ const AnalyticsDashboard = () => {
             <div>
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[#74839A]">Total Orders</h3>
-                  <p className="text-xs text-[#74839A] font-medium mt-0.5">{RANGE_LABELS[activeRange]}</p>
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[#74839A]">Total Orders</h3>
+                    <CardInfoPopover
+                      title="Orders Breakdown"
+                      badge={
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-slate-50 text-slate-700 border-slate-200">
+                          {RANGE_LABELS[activeRange]}
+                        </span>
+                      }
+                    >
+                      <div className="space-y-1.5 text-xs">
+                        <div className="flex items-center justify-between text-[#74839A]">
+                          <span>Total Orders Placed:</span>
+                          <span className="font-semibold text-slate-800 tabular-nums">{totalOrdersPlacedCount}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-[#74839A]">
+                          <span>Completed Orders:</span>
+                          <span className="font-semibold text-emerald-700 tabular-nums">{completedOrdersCount}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-[#74839A]">
+                          <span>Fully Returned Orders:</span>
+                          <span className={`font-semibold tabular-nums ${fullyReturnedOrdersCount > 0 ? "text-rose-600" : "text-slate-600"}`}>
+                            {fullyReturnedOrdersCount}
+                          </span>
+                        </div>
+                        {partiallyReturnedOrdersCount > 0 && (
+                          <div className="flex items-center justify-between text-[#74839A]">
+                            <span>Partially Returned Orders:</span>
+                            <span className="font-semibold text-amber-700 tabular-nums">{partiallyReturnedOrdersCount}</span>
+                          </div>
+                        )}
+                        {exchangedOrdersCount > 0 && (
+                          <div className="flex items-center justify-between text-[#74839A]">
+                            <span>Exchange Orders:</span>
+                            <span className="font-semibold text-blue-700 tabular-nums">{exchangedOrdersCount}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Divider */}
+                      <div className="pt-2 border-t border-dashed border-[#E5EAF0]" />
+
+                      {/* Net Active Orders */}
+                      <div className="flex items-start justify-between gap-3 bg-emerald-50/70 p-2.5 rounded-lg border border-emerald-100">
+                        <div>
+                          <div className="font-bold text-emerald-950 text-xs">= Net Active Delivered Orders</div>
+                          <div className="text-[10px] text-emerald-800 font-medium">Completed minus fully returned</div>
+                        </div>
+                        <span className="text-sm font-bold text-emerald-700 tabular-nums">
+                          {totalOrders}
+                        </span>
+                      </div>
+                    </CardInfoPopover>
+                  </div>
+                  <p className="text-xs text-[#74839A] font-medium mt-0.5">
+                    {fullyReturnedOrdersCount > 0
+                      ? `${totalOrders} active (${fullyReturnedOrdersCount} returned)`
+                      : RANGE_LABELS[activeRange]}
+                  </p>
                 </div>
                 <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-[#FEF8EC] text-[#D69A35] shrink-0 transition-transform duration-200 group-hover:scale-105">
                   <ShoppingCart className="w-4.5 h-4.5" strokeWidth={2.2} />
@@ -1017,6 +2284,11 @@ const AnalyticsDashboard = () => {
                 <span className="text-[26px] font-semibold text-[#27364B] tracking-tight leading-none tabular-nums">
                   {loading ? "—" : totalOrders.toLocaleString()}
                 </span>
+                {fullyReturnedOrdersCount > 0 && (
+                  <span className="text-xs font-semibold text-rose-600 mb-1">
+                    ({fullyReturnedOrdersCount} returned)
+                  </span>
+                )}
               </div>
             </div>
 
@@ -1033,24 +2305,83 @@ const AnalyticsDashboard = () => {
             <div>
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[#74839A]">Avg. Order Value</h3>
-                  <p className="text-xs text-[#74839A] font-medium mt-0.5">Revenue / Orders</p>
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="text-[11px] font-semibold uppercase tracking-wider text-[#74839A]">Avg. Order Value</h3>
+                    <CardInfoPopover
+                      title="Avg. Order Value (AOV)"
+                      badge={
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-slate-50 text-slate-700 border-slate-200">
+                          Formula: Revenue ÷ Orders
+                        </span>
+                      }
+                    >
+                      <div className="space-y-1.5 text-xs">
+                        <div className="flex items-center justify-between text-[#74839A]">
+                          <span>Net Realized Revenue:</span>
+                          <span className="font-semibold text-slate-800 tabular-nums">{fmt(displayedRevenue)}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-[#74839A]">
+                          <span>Net Delivered Orders:</span>
+                          <span className="font-semibold text-slate-800 tabular-nums">{totalOrders}</span>
+                        </div>
+                      </div>
+
+                      {/* Divider */}
+                      <div className="pt-2 border-t border-dashed border-[#E5EAF0]" />
+
+                      {/* AOV Result */}
+                      <div className="flex items-start justify-between gap-3 bg-emerald-50/70 p-2.5 rounded-lg border border-emerald-100">
+                        <div>
+                          <div className="font-bold text-emerald-950 text-xs">= Avg. Order Value (AOV)</div>
+                          <div className="text-[10px] text-emerald-800 font-medium">Revenue per active completed order</div>
+                        </div>
+                        <span className="text-sm font-bold text-emerald-700 tabular-nums">
+                          {fmt(displayedAov)}
+                        </span>
+                      </div>
+
+                      {/* Divider */}
+                      <div className="pt-2 border-t border-dashed border-[#E5EAF0]" />
+
+                      {/* Margins */}
+                      <div className="space-y-1 text-[11px]">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[#74839A]">Overall Gross Margin:</span>
+                          <span className="font-semibold text-[#0D9F6E] tabular-nums">{grossMargin.toFixed(1)}%</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[#74839A]">Overall Net Margin:</span>
+                          <span className="font-semibold text-[#0D9F6E] tabular-nums">{netProfitMargin.toFixed(1)}%</span>
+                        </div>
+                      </div>
+                    </CardInfoPopover>
+                  </div>
+                  <p className="text-xs text-[#74839A] font-medium mt-0.5">
+                    {globalViewMode === "gross" ? "Revenue / Orders" : "Net Revenue / Orders"}
+                  </p>
                 </div>
                 <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-[#EAF2E8] text-[#103020] shrink-0 transition-transform duration-200 group-hover:scale-105">
                   <Zap className="w-4.5 h-4.5" strokeWidth={2.2} />
                 </div>
               </div>
               <div className="flex items-end gap-2 mt-3">
-                <span className="text-[26px] font-semibold text-[#27364B] tracking-tight leading-none tabular-nums truncate" title={fmt(aov)}>
-                  {loading ? "—" : fmt(aov)}
+                <span className="text-[26px] font-semibold text-[#27364B] tracking-tight leading-none tabular-nums truncate" title={fmt(displayedAov)}>
+                  {loading ? "—" : fmt(displayedAov)}
                 </span>
+              </div>
+              <div className="text-[11px] font-medium text-[#74839A] mt-1">
+                GST / Order: <span className="font-semibold text-[#27364B]">{loading ? "—" : fmt(totalOrders > 0 ? (salesGstAmount / totalOrders) : 0)}</span>
               </div>
             </div>
 
             <div className="mt-5 pt-3.5 border-t border-[#E5EAF0]">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-[11px] font-medium text-[#74839A] uppercase tracking-wider">Gross Margin</span>
-                <span className="font-semibold text-[#27364B] tabular-nums">{loading ? "—" : `${grossMargin.toFixed(1)}%`}</span>
+                <span className="text-[11px] font-medium text-[#74839A] uppercase tracking-wider">
+                  {!isGstReg ? "Profit Margin" : (globalViewMode === "gross" ? "Gross Margin" : "Net Margin")}
+                </span>
+                <span className="font-semibold text-[#27364B] tabular-nums">
+                  {loading ? "—" : `${displayedMargin.toFixed(1)}%`}
+                </span>
               </div>
             </div>
           </div>
@@ -1155,26 +2486,28 @@ const AnalyticsDashboard = () => {
                     <TrendingUp className="w-4 h-4" />
                   </div>
                 </div>
-                <p className="text-xs text-[#74839A] font-medium">Gross Margin</p>
+                <p className="text-xs text-[#74839A] font-medium">
+                  {!isGstReg ? "Profit Margin" : (globalViewMode === "gross" ? "Gross Margin" : "Net Margin")}
+                </p>
                 <div className="flex items-baseline gap-2.5 mt-1 mb-3">
-                  <span className={`text-2xl font-semibold tabular-nums ${grossMargin >= 0 ? "text-[#27364B]" : "text-[#DC6464]"}`}>
-                    {grossMargin.toFixed(2)}%
+                  <span className={`text-2xl font-semibold tabular-nums ${displayedMargin >= 0 ? "text-[#27364B]" : "text-[#DC6464]"}`}>
+                    {displayedMargin.toFixed(2)}%
                   </span>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold ${grossMargin >= 0 ? "bg-[#EBF8F2] text-[#0D9F6E]" : "bg-[#FDF2F2] text-[#DC6464]"}`}>
-                    {grossMargin >= 0 ? "Profitable" : "Loss"}
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold ${displayedMargin >= 0 ? "bg-[#EBF8F2] text-[#0D9F6E]" : "bg-[#FDF2F2] text-[#DC6464]"}`}>
+                    {displayedMargin >= 0 ? "Profitable" : "Loss"}
                   </span>
                 </div>
 
                 {/* Progress bar */}
                 <div className="w-full bg-[#EAF2E8] rounded-full h-2 overflow-hidden mb-2">
                   <div
-                    className={`${grossMargin >= 0 ? "bg-[#0D9F6E]" : "bg-[#DC6464]"} h-full rounded-full transition-all duration-500`}
-                    style={{ width: `${Math.min(100, Math.max(0, Math.abs(grossMargin)))}%` }}
+                    className={`${displayedMargin >= 0 ? "bg-[#0D9F6E]" : "bg-[#DC6464]"} h-full rounded-full transition-all duration-500`}
+                    style={{ width: `${Math.min(100, Math.max(0, Math.abs(displayedMargin)))}%` }}
                   />
                 </div>
                 <div className="flex justify-between text-[11px] font-medium text-[#74839A]">
                   <span>0%</span>
-                  <span>Margin: {grossMargin.toFixed(2)}%</span>
+                  <span>Margin: {displayedMargin.toFixed(2)}%</span>
                   <span>100%</span>
                 </div>
               </div>
@@ -1399,7 +2732,7 @@ const AnalyticsDashboard = () => {
                           <p className="text-xs font-semibold text-[#27364B] tabular-nums">{fmt(s.total_revenue)}</p>
                           <div className="flex items-center gap-1.5 justify-end text-[11px] mt-0.5">
                             <Package className="w-3 h-3 text-[#74839A]" />
-                            <span className="text-[#74839A]">{s.total_qty} items</span>
+                            <span className="text-[#74839A]">{s.total_qty} {s.total_qty === 1 ? "item" : "items"}</span>
                             <span className="text-[#E5EAF0]">·</span>
                             <span className="font-medium text-[#D69A35] tabular-nums">
                               +{fmt(s.total_profit)}
@@ -1421,6 +2754,23 @@ const AnalyticsDashboard = () => {
         </div>
 
       </div>
+
+      {/* Profit & Tax Calculation Breakdown Modal */}
+      <ProfitBreakdownModal
+        isOpen={isBreakdownOpen}
+        onClose={() => setIsBreakdownOpen(false)}
+        isGstReg={isGstReg}
+        sellingPrice={salesRevenueWithGst > 0 ? salesRevenueWithGst : netRevenue}
+        purchaseCost={effectiveCost}
+        grossProfit={grossProfit}
+        salesGstAmount={salesGstAmount}
+        transportCharges={transportCharges}
+        purchaseGstClaimed={purchaseGstClaimed}
+        netRealizedProfit={netRealizedProfit}
+        netProfitMargin={netProfitMargin}
+        grossMargin={grossMargin}
+        fmt={fmt}
+      />
     </div>
   );
 };

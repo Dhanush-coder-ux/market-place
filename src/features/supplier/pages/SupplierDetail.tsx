@@ -672,14 +672,38 @@ export default function SupplierDetail() {
 
               if (productsList.length > 0) {
                 const firstItem = productsList[0];
+                const itemsList = p.items ?? p.products ?? [];
+                const itemsTotal = itemsList.length > 0
+                  ? itemsList.reduce((s: number, it: any) => s + Number(it.total_amount || 0), 0)
+                  : 0;
+
                 const baseCost = Number(p.total_cost ?? p.item_infos?.total_pur_cost ?? pd.totalAmount ?? 0);
                 const gstAmt = Number(p.item_infos?.total_gst_amount ?? pd.gstAmount ?? pd.taxAmount ?? p.tax_amount ?? charges.gst_amount ?? p.charges_infos?.gst_amount ?? 0);
                 const delCharge = Number(p.transport_charge ?? p.charges_infos?.transport_charge ?? charges.delivery_charge ?? 0);
                 const othCharge = Number(p.other_charges ?? p.charges_infos?.other_charge ?? charges.other_charge ?? 0);
                 const computedSum = baseCost + gstAmt + delCharge + othCharge;
-                const rawTotal = Number(p.total_amount ?? p.grand_total ?? p.calculation_infos?.total ?? 0);
-                const fullGrandTotal = (rawTotal >= computedSum && rawTotal > 0) ? rawTotal : (computedSum > 0 ? computedSum : rawTotal);
+
                 const paidAmt = Number(p.paid_amount ?? p.payment_infos?.[0]?.amount ?? payment.amountPaid ?? 0);
+                const hasExplicitOutstanding = (p.outstanding_amount !== undefined && p.outstanding_amount !== null) || (p.outstanding !== undefined && p.outstanding !== null);
+                const hasExplicitPaid = (p.paid_amount !== undefined && p.paid_amount !== null) || (Array.isArray(p.payment_infos) && p.payment_infos.length > 0) || (payment.amountPaid !== undefined && payment.amountPaid !== null);
+                const paidPlusOutstanding = (hasExplicitOutstanding && hasExplicitPaid)
+                  ? (Number(p.outstanding_amount ?? p.outstanding ?? 0) + paidAmt)
+                  : 0;
+
+                const rawTotal = Number(
+                  p.total_amount ??
+                  p.grand_total ??
+                  p.calculation_infos?.total ??
+                  p.item_infos?.total_amounts ??
+                  (itemsTotal > 0 ? itemsTotal : 0)
+                );
+
+                const fullGrandTotal = rawTotal > 0
+                  ? rawTotal
+                  : (paidPlusOutstanding > 0
+                      ? paidPlusOutstanding
+                      : (computedSum > 0 ? computedSum : rawTotal));
+
                 const outstandingAmt = p.outstanding_amount ?? p.outstanding ?? Math.max(0, fullGrandTotal - paidAmt);
 
                 rows.push({

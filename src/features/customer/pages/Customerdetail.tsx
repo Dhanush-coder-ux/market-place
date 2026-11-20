@@ -695,6 +695,8 @@ export default function CustomerDetail() {
                 rows={customerOrders}
                 loading={ordersLoading}
                 onNavigateToSale={(orderId) => navigate(`/sales/${orderId}`)}
+                customer={customer}
+                onRefresh={fetchCustomerDetail}
               />
             )}
 

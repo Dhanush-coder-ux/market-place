@@ -413,9 +413,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
     let costPriceVal: number | undefined = undefined;
     if (rawCost > 0) {
       const prodGst = parseInt(String((variant as any).gst || (variant as any).datas?.gst || targetProduct.gst || "0").replace(/[^0-9.]/g, "")) || 0;
-      const isGstReg = isShopGstRegistered();
-      const effectiveGstRate = isGstReg ? prodGst : 0;
-      const costGstAmt = effectiveGstRate > 0 ? Math.round((rawCost * (effectiveGstRate / 100)) * 100) / 100 : 0;
+      const costGstAmt = prodGst > 0 ? Math.round((rawCost * (prodGst / 100)) * 100) / 100 : 0;
       costPriceVal = Math.round((rawCost + costGstAmt) * 100) / 100;
     }
 
@@ -668,9 +666,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
         let costPriceVal: number | undefined = undefined;
         if (rawCost > 0) {
           const prodGst = parseInt(String(fullProduct.gst || fullProduct.datas?.gst || "0").replace(/[^0-9.]/g, "")) || 0;
-          const isGstReg = isShopGstRegistered();
-          const effectiveGstRate = isGstReg ? prodGst : 0;
-          const costGstAmt = effectiveGstRate > 0 ? Math.round((rawCost * (effectiveGstRate / 100)) * 100) / 100 : 0;
+          const costGstAmt = prodGst > 0 ? Math.round((rawCost * (prodGst / 100)) * 100) / 100 : 0;
           costPriceVal = Math.round((rawCost + costGstAmt) * 100) / 100;
         }
 

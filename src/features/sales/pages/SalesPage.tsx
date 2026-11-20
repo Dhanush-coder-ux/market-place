@@ -316,7 +316,9 @@ const SalesListPage: React.FC = () => {
 
   useEffect(() => {
     if (selectedSale) {
-      const returnable = (selectedSale.status === "Completed" || selectedSale.status === "Delivered") && selectedSale.origin !== "Sales Return" && selectedSale.origin !== "Offline Return";
+      const isFullyReturned = (selectedSale.origin === "Sales Return") ||
+        (Array.isArray(selectedSale.items) && selectedSale.items.length > 0 && selectedSale.items.every((it: any) => Number(it.returned_quantity || 0) >= Number(it.quantity || 1)));
+      const returnable = (selectedSale.status === "Completed" || selectedSale.status === "Delivered") && !isFullyReturned;
       const selCust = extractSaleCustomerInfo(selectedSale, customerMap);
       const isSelectedInvoice = Boolean(
         (selectedSale as any).billing_type === "INVOICE" ||
@@ -384,7 +386,7 @@ const SalesListPage: React.FC = () => {
               onClick={() => returnable && openReturn(selectedSale)}
               disabled={!returnable}
               className={`h-8 px-3 rounded-md border border-slate-200 font-semibold text-[11px] transition-colors flex items-center gap-1.5 ${returnable ? "bg-white hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 text-slate-700" : "bg-slate-50 text-slate-300 cursor-not-allowed"}`}
-              title={!returnable ? (selectedSale.origin === "Sales Return" ? "Already returned" : `Status: ${selectedSale.status}`) : "Process return"}
+              title={!returnable ? (isFullyReturned ? "Already returned" : `Status: ${selectedSale.status}`) : "Process return"}
             >
               <RotateCcw size={13} />
               Process Return
@@ -420,9 +422,15 @@ const SalesListPage: React.FC = () => {
     if (filters.activeKpi === "Online Sales") params.exclude_offline = true;
     if (filters.activeKpi === "Offline Sales") params.exclude_online = true;
 
-    if (filters.origin === "Offline") params.origin = "OFFLINE";
-    else if (filters.origin === "Offline Return") params.origin = "OFFLINE_SALES_RETURN";
-    else if (filters.origin === "Online") params.origin = "ONLINE";
+    if (filters.origin === "Offline") {
+      params.origin = "OFFLINE";
+      params.exclude_return = true;
+    } else if (filters.origin === "Offline Return") {
+      params.origin = "OFFLINE_SALES_RETURN";
+      params.returns_only = true;
+    } else if (filters.origin === "Online") {
+      params.origin = "ONLINE";
+    }
     if (filters.payment) params.payment_method = filters.payment;
     if (filters.status) params.status = filters.status;
     if (filters.fromDate) params.from_date = filters.fromDate;
@@ -573,6 +581,10 @@ const SalesListPage: React.FC = () => {
         (isOnline && s.calculation_infos?.subtotal && total > Number(s.calculation_infos.subtotal) ? total - Number(s.calculation_infos.subtotal) : 0)
       );
 
+      const hasReturns = (Array.isArray(s.returns) && s.returns.length > 0) ||
+        (Array.isArray(s.items) && s.items.some((it: any) => Number(it.returned_quantity) > 0)) ||
+        String(s.origin || "").toUpperCase().includes("RETURN");
+
       return {
         ...s,
         total_sellprice: total,
@@ -580,7 +592,7 @@ const SalesListPage: React.FC = () => {
         delivery_fee: deliveryFee,
         status: rawStatus,
         payment_method: pm,
-        origin: isOnline ? "Online" : (s.origin === "OFFLINE_SALES_RETURN" || s.origin === "Sales Return" ? "Offline Return" : "Offline"),
+        origin: isOnline ? "Online" : (hasReturns || s.origin === "OFFLINE_SALES_RETURN" || s.origin === "Sales Return" ? "Offline Return" : "Offline"),
       };
     });
 
@@ -1028,12 +1040,38 @@ const SalesListPage: React.FC = () => {
                   (sale as any).additional_infos?.billing_type === "INVOICE" ||
                   (sale as any).calculation_infos?.billing_type === "INVOICE" ||
                   (sale as any).additional_infos?.is_invoice === true ||
-                  (sale as any).calculation_infos?.is_invoice === true
+                  (sale as any).calculation_infos?.is_invoice === true ||
+                  (sale as any).is_invoice === true ||
+                  Boolean((sale as any).invoice_no)
                 );
                 const canDownloadInvoice = isInvoiceOrder && !rowCustomer.isWalkIn;
                 const canSendWhatsApp = isInvoiceOrder && !rowCustomer.isWalkIn && Boolean(rowCustomer.phone);
                 const isSelected = selectedSale?.id === sale.id;
                 const returnable = (sale.status === "Completed" || sale.status === "Delivered") && sale.origin !== "Offline Return" && sale.origin !== "Sales Return";
+
+                const refundedCount = (sale.items || []).filter((i: any) => i.status === "REFUNDED").length;
+                const itemExchangedCount = (sale.items || []).filter((i: any) => i.status === "EXCHANGED").length;
+                const topLevelExchangeCount = Array.isArray((sale as any).exchanges) ? (sale as any).exchanges.length : 0;
+                const exchangedCount = itemExchangedCount + topLevelExchangeCount;
+
+                const isExchangeOrder =
+                  (typeof (sale as any).origin === 'string' && (sale as any).origin.toLowerCase().includes('exchange')) ||
+                  !!(sale as any).is_exchange ||
+                  !!(sale as any).exchange_type ||
+                  (sale as any).order_type === 'EXCHANGE' ||
+                  (sale as any).type === 'exchange';
+
+                const hasReturns =
+                  (sale.returns && sale.returns.length > 0) ||
+                  (sale.items || []).some((i: any) => (i.returned_quantity && i.returned_quantity > 0) || i.status === "REFUNDED" || i.status === "EXCHANGED") ||
+                  sale.status === "Returned" ||
+                  sale.status === "RETURNED" ||
+                  sale.origin === "Offline Return" ||
+                  sale.origin === "Sales Return" ||
+                  (sale as any).type === "RETURN" ||
+                  (sale as any).order_type === "RETURN";
+
+                const hasDiscount = checkSaleDiscount(sale).hasDiscount;
 
                 return (
                   <div
@@ -1047,7 +1085,7 @@ const SalesListPage: React.FC = () => {
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="font-mono text-xs font-bold text-slate-800">{sale.ui_id}</span>
                           {isInvoiceOrder && (
-                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-purple-50 text-purple-700 border border-purple-200 shadow-2xs">
                               Invoice
                             </span>
                           )}
@@ -1056,6 +1094,13 @@ const SalesListPage: React.FC = () => {
                           }`}>
                             {sale.origin}
                           </span>
+                        </div>
+                        <div className="flex gap-1 mt-1 flex-wrap">
+                          {isExchangeOrder && <AntBadge variant="tx-sales" type="tag">Exchanged</AntBadge>}
+                          {hasReturns && !isExchangeOrder && <AntBadge variant="tx-sales-return" type="tag">Returned</AntBadge>}
+                          {refundedCount > 0 && <AntBadge variant="pay-partial" type="tag">{refundedCount} Refunded</AntBadge>}
+                          {exchangedCount > 0 && <AntBadge variant="tx-sales" type="tag">{exchangedCount} Exchanged</AntBadge>}
+                          {hasDiscount && <AntBadge variant="tx-purchase" type="tag">Discounted</AntBadge>}
                         </div>
                         <p className={`text-xs mt-1 truncate ${rowCustomer.isWalkIn ? "text-slate-400 italic" : "text-slate-800 font-semibold"}`}>
                           {rowCustomer.name}
@@ -1193,7 +1238,15 @@ const SalesListPage: React.FC = () => {
                   (sale as any).order_type === 'EXCHANGE' ||
                   (sale as any).type === 'exchange';
 
-                const hasReturns = (sale.returns && sale.returns.length > 0) || (sale.items || []).some((i: any) => (i.returned_quantity && i.returned_quantity > 0) || i.status === "REFUNDED" || i.status === "EXCHANGED") || sale.status === "Returned" || sale.status === "RETURNED";
+                const hasReturns =
+                  (sale.returns && sale.returns.length > 0) ||
+                  (sale.items || []).some((i: any) => (i.returned_quantity && i.returned_quantity > 0) || i.status === "REFUNDED" || i.status === "EXCHANGED") ||
+                  sale.status === "Returned" ||
+                  sale.status === "RETURNED" ||
+                  sale.origin === "Offline Return" ||
+                  sale.origin === "Sales Return" ||
+                  (sale as any).type === "RETURN" ||
+                  (sale as any).order_type === "RETURN";
                 const hasDiscount = checkSaleDiscount(sale).hasDiscount;
 
                 const rowCustomer = extractSaleCustomerInfo(sale, customerMap);
@@ -1202,7 +1255,9 @@ const SalesListPage: React.FC = () => {
                   (sale as any).additional_infos?.billing_type === "INVOICE" ||
                   (sale as any).calculation_infos?.billing_type === "INVOICE" ||
                   (sale as any).additional_infos?.is_invoice === true ||
-                  (sale as any).calculation_infos?.is_invoice === true
+                  (sale as any).calculation_infos?.is_invoice === true ||
+                  (sale as any).is_invoice === true ||
+                  Boolean((sale as any).invoice_no)
                 );
                 const canDownloadInvoice = isInvoiceOrder && !rowCustomer.isWalkIn;
                 const canSendWhatsApp = isInvoiceOrder && !rowCustomer.isWalkIn && Boolean(rowCustomer.phone);
@@ -1227,7 +1282,6 @@ const SalesListPage: React.FC = () => {
                           )}
                         </div>
                         <div className="flex gap-1 mt-1 flex-wrap">
-                          {sale.origin === "Offline Return" && <AntBadge variant="tx-sales-return" type="tag">Return</AntBadge>}
                           {/* Exchange-replacement sale — this order itself is an exchange */}
                           {isExchangeOrder && <AntBadge variant="tx-sales" type="tag">Exchanged</AntBadge>}
                           {hasReturns && !isExchangeOrder && <AntBadge variant="tx-sales-return" type="tag">Returned</AntBadge>}
@@ -1349,15 +1403,19 @@ const SalesListPage: React.FC = () => {
                             <BiLogoWhatsapp size={16} />
                           </button>
                         )}
-                        {sale.status === "Completed" && sale.origin !== "Offline Return" && sale.origin !== "Sales Return" && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); openReturn(sale); }}
-                            className="text-rose-500 hover:text-rose-600 hover:bg-rose-50 rounded-md p-1.5 transition-colors cursor-pointer"
-                            title="Process Return"
-                          >
-                            <RotateCcw size={15} />
-                          </button>
-                        )}
+                        {(() => {
+                          const isFullyRet = (sale.origin === "Sales Return") ||
+                            (Array.isArray(sale.items) && sale.items.length > 0 && sale.items.every((it: any) => Number(it.returned_quantity || 0) >= Number(it.quantity || 1)));
+                          return sale.status === "Completed" && !isFullyRet && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); openReturn(sale); }}
+                              className="text-rose-500 hover:text-rose-600 hover:bg-rose-50 rounded-md p-1.5 transition-colors cursor-pointer"
+                              title="Process Return"
+                            >
+                              <RotateCcw size={15} />
+                            </button>
+                          );
+                        })()}
                         <button
                           onClick={(e) => { e.stopPropagation(); openDetail(sale); }}
                           className="text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-md p-1.5 transition-colors cursor-pointer"

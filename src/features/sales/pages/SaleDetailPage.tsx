@@ -1073,7 +1073,26 @@ const SaleDetailPage: React.FC = () => {
   const returnsCount = Array.isArray((sale as any)?.returns) ? (sale as any).returns.length : 0;
   const exchangesCount = Array.isArray((sale as any)?.exchanges) ? (sale as any).exchanges.length : 0;
   const reCount = returnsCount + exchangesCount;
-  const hasReturns = returnsCount > 0 || exchangesCount > 0 || (sale.items || []).some((i: any) => (i.returned_quantity && i.returned_quantity > 0) || i.status === "REFUNDED" || i.status === "EXCHANGED") || sale.status === "Returned" || sale.status === "RETURNED";
+  const hasReturns =
+    returnsCount > 0 ||
+    exchangesCount > 0 ||
+    (sale.items || []).some((i: any) => (i.returned_quantity && i.returned_quantity > 0) || i.status === "REFUNDED" || i.status === "EXCHANGED") ||
+    sale.status === "Returned" ||
+    sale.status === "RETURNED" ||
+    sale.origin === "Offline Return" ||
+    sale.origin === "Sales Return" ||
+    (sale as any).type === "RETURN" ||
+    (sale as any).order_type === "RETURN";
+
+  const isInvoiceOrder = Boolean(
+    (sale as any)?.billing_type === "INVOICE" ||
+    (sale as any)?.additional_infos?.billing_type === "INVOICE" ||
+    (sale as any)?.calculation_infos?.billing_type === "INVOICE" ||
+    (sale as any)?.additional_infos?.is_invoice === true ||
+    (sale as any)?.calculation_infos?.is_invoice === true ||
+    (sale as any)?.is_invoice === true ||
+    Boolean((sale as any)?.invoice_no)
+  );
 
   return (
     <div className="flex-1 flex flex-col min-h-0 h-full bg-slate-50/50 font-sans text-slate-900 overflow-hidden relative">
@@ -1084,6 +1103,11 @@ const SaleDetailPage: React.FC = () => {
           name={
             <div className="flex items-center gap-2">
               <span>Order {sale.ui_id || sale.id?.slice(0, 8).toUpperCase()}</span>
+              {isInvoiceOrder && (
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-purple-50 text-purple-700 border border-purple-200 shadow-2xs">
+                  Invoice
+                </span>
+              )}
               {hasReturns && <AntBadge variant="tx-sales-return" type="tag">Returned</AntBadge>}
             </div>
           }

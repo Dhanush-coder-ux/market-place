@@ -37,7 +37,7 @@ export const SaleInvoiceModal: React.FC<SaleInvoiceModalProps> = ({
   useEffect(() => {
     if (!isOpen) return;
     const shopId = getShopId() || SHOP_ID;
-    const savedTmpl = localStorage.getItem("invoice_template");
+    const savedTmpl = localStorage.getItem(`invoice_template_${shopId}`) || localStorage.getItem("invoice_template");
     if (savedTmpl) setTemplate(savedTmpl);
 
     if (shopId && shopId !== "string") {
@@ -634,7 +634,7 @@ Thank you for your business!`;
       <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm no-print" onClick={onClose} />
 
       {/* Modal Container */}
-      <div className="relative bg-slate-100 rounded-2xl shadow-[0_24px_80px_rgba(0,0,0,0.35)] w-full max-w-[640px] max-h-[90vh] h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 print:max-h-none print:h-auto print:bg-white print:rounded-none print:shadow-none print:w-full print:max-w-none">
+      <div className="relative bg-slate-100 rounded-2xl shadow-[0_24px_80px_rgba(0,0,0,0.35)] w-full max-w-[820px] max-h-[90vh] h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 print:max-h-none print:h-auto print:bg-white print:rounded-none print:shadow-none print:w-full print:max-w-none">
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3.5 bg-white border-b border-slate-200/80 shrink-0 no-print">

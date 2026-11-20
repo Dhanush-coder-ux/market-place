@@ -1,4 +1,5 @@
 import { getGatewayBaseUrl } from "@/services/api/tokenManager";
+import { getShopId, SHOP_ID } from "@/services/endpoints";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { QRCodeSVG } from "qrcode.react";
@@ -83,6 +84,41 @@ export interface SavedPrinter extends PrinterConfig {
 const STORAGE_KEY = "inventq_printer_config";
 const PRINTERS_LIST_KEY = "inventq_printers_list";
 export const BILLING_RECEIPT_CONFIG_KEY = "inventq.billingReceiptSettings.v1";
+export const INVOICE_SETTINGS_CONFIG_KEY = "inventq.invoiceSettings.v2";
+
+export const getBillingReceiptStorageKey = (shopId?: string): string => {
+  const sid = shopId || getShopId() || (typeof window !== "undefined" ? localStorage.getItem("shop_id") : "") || "default";
+  return `inventq.billingReceiptSettings.v1_${sid}`;
+};
+
+export const getInvoiceSettingsStorageKey = (shopId?: string): string => {
+  const sid = shopId || getShopId() || (typeof window !== "undefined" ? localStorage.getItem("shop_id") : "") || "default";
+  return `inventq.invoiceSettings.v2_${sid}`;
+};
+
+export function readScopedJson<T>(scopedKey: string, legacyKey: string, currentShopId?: string): T | null {
+  try {
+    if (typeof window === "undefined") return null;
+    const scopedVal = localStorage.getItem(scopedKey);
+    if (scopedVal) {
+      return JSON.parse(scopedVal);
+    }
+    const sid = currentShopId || getShopId() || localStorage.getItem("shop_id") || "";
+    const legacyVal = localStorage.getItem(legacyKey);
+    if (legacyVal && sid) {
+      const claimKey = `${legacyKey}_claimed_shop`;
+      const claimedBy = localStorage.getItem(claimKey);
+      if (!claimedBy || claimedBy === sid) {
+        localStorage.setItem(claimKey, sid);
+        localStorage.setItem(scopedKey, legacyVal);
+        return JSON.parse(legacyVal);
+      }
+    }
+  } catch (e) {
+    console.debug("Failed to read scoped JSON:", e);
+  }
+  return null;
+}
 
 export const DEFAULT_BILLING_RECEIPT_CONFIG = {
   paperWidth: "80mm" as PaperWidth,
@@ -132,14 +168,15 @@ export const DEFAULT_BILLING_RECEIPT_CONFIG = {
 };
 
 /**
- * Get unified Billing Receipt configuration (thermal template, width, fields, QR)
+ * Get unified Billing Receipt configuration scoped by shopId (thermal template, width, fields, QR)
  */
-export function getBillingReceiptConfig() {
+export function getBillingReceiptConfig(shopId?: string) {
   try {
-    const raw = localStorage.getItem(BILLING_RECEIPT_CONFIG_KEY);
+    const sid = shopId || getShopId() || (typeof window !== "undefined" ? localStorage.getItem("shop_id") : "") || "default";
+    const key = getBillingReceiptStorageKey(sid);
+    const parsed = readScopedJson<any>(key, BILLING_RECEIPT_CONFIG_KEY, sid);
     const prConfig = getPrinterConfig();
-    if (raw) {
-      const parsed = JSON.parse(raw);
+    if (parsed) {
       return {
         ...DEFAULT_BILLING_RECEIPT_CONFIG,
         ...parsed,
@@ -159,11 +196,14 @@ export function getBillingReceiptConfig() {
 }
 
 /**
- * Save unified Billing Receipt configuration and sync with printer config
+ * Save unified Billing Receipt configuration scoped by shopId and sync with printer config
  */
-export function saveBillingReceiptConfig(config: any): void {
+export function saveBillingReceiptConfig(config: any, shopId?: string): void {
   try {
-    localStorage.setItem(BILLING_RECEIPT_CONFIG_KEY, JSON.stringify(config));
+    const sid = shopId || getShopId() || (typeof window !== "undefined" ? localStorage.getItem("shop_id") : "") || "default";
+    const key = getBillingReceiptStorageKey(sid);
+    localStorage.setItem(key, JSON.stringify(config));
+    localStorage.setItem(`${BILLING_RECEIPT_CONFIG_KEY}_claimed_shop`, sid);
     const pr = getPrinterConfig();
     savePrinterConfig({
       ...pr,
@@ -174,6 +214,38 @@ export function saveBillingReceiptConfig(config: any): void {
     });
   } catch (err) {
     console.error("Failed to save billing receipt config:", err);
+  }
+}
+
+/**
+ * Get Invoice configuration scoped by shopId
+ */
+export function getInvoiceSettings(shopId?: string) {
+  try {
+    const sid = shopId || getShopId() || (typeof window !== "undefined" ? localStorage.getItem("shop_id") : "") || "default";
+    const key = getInvoiceSettingsStorageKey(sid);
+    return readScopedJson<any>(key, INVOICE_SETTINGS_CONFIG_KEY, sid);
+  } catch (err) {
+    console.error("Failed to read invoice settings:", err);
+    return null;
+  }
+}
+
+/**
+ * Save Invoice configuration scoped by shopId
+ */
+export function saveInvoiceSettings(settings: any, shopId?: string): void {
+  try {
+    const sid = shopId || getShopId() || (typeof window !== "undefined" ? localStorage.getItem("shop_id") : "") || "default";
+    const key = getInvoiceSettingsStorageKey(sid);
+    localStorage.setItem(key, JSON.stringify(settings));
+    localStorage.setItem(`${INVOICE_SETTINGS_CONFIG_KEY}_claimed_shop`, sid);
+    if (settings?.template) {
+      localStorage.setItem(`invoice_template_${sid}`, settings.template);
+      localStorage.setItem("invoice_template", settings.template);
+    }
+  } catch (err) {
+    console.error("Failed to save invoice settings:", err);
   }
 }
 

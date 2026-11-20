@@ -4,7 +4,7 @@ import { INVOICE_TEMPLATES } from "./invoice-templates";
 import { Banknote, Smartphone, Wallet, Check, BadgePercent } from "lucide-react";
 import type { BillingItem } from "../types";
 import { calculateBillTotals, formatINR, type BillTotals } from "@/utils/pricing";
-import { getPrinterConfig } from "../utils/printerService";
+import { getPrinterConfig, getInvoiceSettings } from "../utils/printerService";
 import { QRCodeSVG } from "qrcode.react";
 import { numberToWords } from "../../Setting/pages/InvoiceTemplateSettings";
 import { extractItemAttributeValue } from "../utils/customFieldsHelper";
@@ -112,9 +112,8 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
     let baseFooter: any = undefined;
 
     try {
-      const raw = localStorage.getItem("inventq.invoiceSettings.v2");
-      if (raw) {
-        const parsed = JSON.parse(raw);
+      const parsed = getInvoiceSettings(props.shopData?.id);
+      if (parsed) {
         baseFields = (parsed.fields || []) as InvoiceRendererCustomField[];
         baseSig = parsed.sig;
         baseQr = parsed.qr;
@@ -296,23 +295,23 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
         )}
 
         {/* Table (Section 8.1) */}
-        <div className={config.table.wrapper}>
-          <table className="w-full">
+        <div className={`${config.table.wrapper} overflow-x-auto custom-scrollbar`}>
+          <table className="w-full min-w-full">
              <thead>
                <tr className={config.table.head}>
-                 <th className="text-left py-2.5 pl-6 pr-2 w-8">S.No</th>
-                 <th className="text-left py-2.5 px-2">Item Description</th>
+                 <th className="text-left py-2.5 pl-4 sm:pl-6 pr-2 w-8 text-[9px] uppercase tracking-wider shrink-0">S.No</th>
+                 <th className="text-left py-2.5 px-2 text-[9px] uppercase tracking-wider min-w-[120px]">Item Description</th>
                  {itemCols.map((col) => (
-                   <th key={col.id} className="text-left py-2.5 px-2 font-bold whitespace-nowrap">
+                   <th key={col.id} className="text-left py-2.5 px-2 font-bold text-[9px] uppercase tracking-wider whitespace-nowrap min-w-[70px]">
                      {col.label}
                    </th>
                  ))}
-                 <th className="text-right py-2.5 px-2 w-16">Rate</th>
-                 <th className="text-center py-2.5 px-1 w-10">Qty</th>
-                 <th className="text-right py-2.5 px-2 w-14">Disc</th>
-                 <th className="text-right py-2.5 px-2 w-16">Taxable</th>
-                 {includeGst && <th className="text-right py-2.5 px-2 w-12">GST</th>}
-                 <th className="text-right py-2.5 pl-2 pr-6 w-20">Amount</th>
+                 <th className="text-right py-2.5 px-2 text-[9px] uppercase tracking-wider whitespace-nowrap min-w-[60px]">Rate</th>
+                 <th className="text-center py-2.5 px-1 text-[9px] uppercase tracking-wider whitespace-nowrap min-w-[36px]">Qty</th>
+                 <th className="text-right py-2.5 px-2 text-[9px] uppercase tracking-wider whitespace-nowrap min-w-[50px]">Disc</th>
+                 <th className="text-right py-2.5 px-2 text-[9px] uppercase tracking-wider whitespace-nowrap min-w-[60px]">Taxable</th>
+                 {includeGst && <th className="text-right py-2.5 px-2 text-[9px] uppercase tracking-wider whitespace-nowrap min-w-[45px]">GST</th>}
+                 <th className="text-right py-2.5 pl-2 pr-4 sm:pr-6 text-[9px] uppercase tracking-wider whitespace-nowrap min-w-[70px]">Amount</th>
                </tr>
              </thead>
              <tbody>
@@ -322,8 +321,8 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
                  const hasLineDisc = lineDiscTotal > 0;
                  return (
                    <tr key={i} className={config.table.row}>
-                     <td className="py-3 pl-6 pr-2 text-[10px] text-slate-400 tabular-nums">{i + 1}</td>
-                     <td className="py-3 px-2">
+                     <td className="py-2.5 pl-4 sm:pl-6 pr-2 text-[10px] text-slate-400 tabular-nums">{i + 1}</td>
+                     <td className="py-2.5 px-2">
                        <p className={config.table.cellStrong}>{baseName}</p>
                        {variantName && <p className={config.table.cellMuted}>{cleanVariantLabel(variantName)}</p>}
                        {/* Custom Item Attributes (only under item name) */}
@@ -361,12 +360,12 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
                      {itemCols.map((col) => {
                        const val = resolveItemFieldValue(col, line, i);
                        return (
-                         <td key={col.id} className={`py-3 px-2 text-left text-[11px] tabular-nums ${config.table.cellMuted} whitespace-nowrap`}>
+                         <td key={col.id} className={`py-2.5 px-2 text-left text-[11px] tabular-nums ${config.table.cellMuted} whitespace-nowrap`}>
                            {val || "—"}
                          </td>
                        );
                      })}
-                     <td className={`py-3 px-2 text-right text-[11px] tabular-nums ${config.table.cellMuted}`}>
+                     <td className={`py-2.5 px-2 text-right text-[11px] tabular-nums ${config.table.cellMuted} whitespace-nowrap`}>
                        {line.mrp && line.mrp > line.sellingPrice ? (
                          <div>
                            <span className="line-through text-[9px] text-slate-400 block">₹{formatINR(line.mrp)}</span>
@@ -376,19 +375,19 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
                          <span>₹{formatINR(line.sellingPrice)}</span>
                        )}
                      </td>
-                     <td className={`py-3 px-1 text-center text-[11px] tabular-nums ${config.table.cellStrong}`}>{line.qty}</td>
-                     <td className="py-3 px-2 text-right text-[11px] tabular-nums text-emerald-600 font-medium">
+                     <td className={`py-2.5 px-1 text-center text-[11px] tabular-nums ${config.table.cellStrong} whitespace-nowrap`}>{line.qty}</td>
+                     <td className="py-2.5 px-2 text-right text-[11px] tabular-nums text-emerald-600 font-medium whitespace-nowrap">
                        {hasLineDisc ? `-₹${formatINR(lineDiscTotal)}` : '—'}
                      </td>
-                     <td className={`py-3 px-2 text-right text-[11px] tabular-nums ${config.table.cellMuted}`}>
+                     <td className={`py-2.5 px-2 text-right text-[11px] tabular-nums ${config.table.cellMuted} whitespace-nowrap`}>
                        ₹{formatINR(line.taxableValue)}
                      </td>
                      {includeGst && (
-                       <td className={`py-3 px-2 text-right text-[10px] tabular-nums ${config.table.cellMuted}`}>
+                       <td className={`py-2.5 px-2 text-right text-[10px] tabular-nums ${config.table.cellMuted} whitespace-nowrap`}>
                          {line.gstRate}%
                        </td>
                      )}
-                     <td className={`py-3 pl-2 pr-6 text-right tabular-nums ${config.table.cellStrong}`}>
+                     <td className={`py-2.5 pl-2 pr-4 sm:pr-6 text-right tabular-nums ${config.table.cellStrong} whitespace-nowrap`}>
                        ₹{formatINR(line.finalInclusive)}
                      </td>
                    </tr>

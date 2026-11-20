@@ -573,12 +573,15 @@ textarea.inv-in {
   font-size: 11.5px;
   font-weight: 600;
   border: 1px solid;
+  position: static !important;
 }
 
-.inv-tag.fixed {
+.inv-tag.fixed,
+.inv-tag.inv-tag-fixed {
   background: var(--inv-brand-soft);
   color: var(--inv-brand);
   border-color: var(--inv-brand-line);
+  position: static !important;
 }
 
 .inv-tag.ask {

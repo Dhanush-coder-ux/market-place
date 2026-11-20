@@ -16,6 +16,7 @@ import type { BillingItem } from "../../billing/types";
 import { shopApi } from "@/services/api/shop";
 import { inventoryApi } from "@/services/api/inventory";
 import { getShopId, SHOP_ID } from "@/services/endpoints";
+import { getInvoiceSettings, saveInvoiceSettings, getInvoiceSettingsStorageKey } from "@/features/billing/utils/printerService";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import "./InvoiceSettings.css";
 
@@ -215,12 +216,11 @@ export const InvoiceTemplateSettings: React.FC = () => {
   const [shopData, setShopData] = useState<any>(null);
   const [realItems, setRealItems] = useState<any[]>([]);
 
-  // State for settings
-  const [savedState, setSavedState] = useState<InvoiceSettingsData>(() => {
+  const getInitialInvoiceState = (shopId: string): InvoiceSettingsData => {
     try {
-      const s = localStorage.getItem(STORAGE_KEY);
-      if (s) return JSON.parse(s);
-      const legacyTmpl = localStorage.getItem("invoice_template");
+      const s = getInvoiceSettings(shopId);
+      if (s) return s;
+      const legacyTmpl = localStorage.getItem(`invoice_template_${shopId}`) || localStorage.getItem("invoice_template");
       return {
         fields: [],
         sig: {
@@ -234,7 +234,7 @@ export const InvoiceTemplateSettings: React.FC = () => {
         },
         qr: {
           store: true,
-          storeUrl: `${window.location.origin}/store/${activeShopId || ""}`,
+          storeUrl: `${window.location.origin}/store/${shopId || ""}`,
           storeCap: "Scan to order online",
           upi: false,
           upiId: "",
@@ -263,7 +263,7 @@ export const InvoiceTemplateSettings: React.FC = () => {
       },
       qr: {
         store: true,
-        storeUrl: `${window.location.origin}/store/${activeShopId || ""}`,
+        storeUrl: `${window.location.origin}/store/${shopId || ""}`,
         storeCap: "Scan to order online",
         upi: false,
         upiId: "",
@@ -278,9 +278,18 @@ export const InvoiceTemplateSettings: React.FC = () => {
       },
       template: "minimal",
     };
-  });
+  };
 
+  // State for settings
+  const [savedState, setSavedState] = useState<InvoiceSettingsData>(() => getInitialInvoiceState(activeShopId));
   const [state, setState] = useState<InvoiceSettingsData>(savedState);
+
+  // Sync state when active shop changes
+  useEffect(() => {
+    const loaded = getInitialInvoiceState(activeShopId);
+    setSavedState(loaded);
+    setState(loaded);
+  }, [activeShopId]);
   const [activeTab, setActiveTab] = useState<"details" | "templates">("details");
   const [openFieldId, setOpenFieldId] = useState<string | null>(null);
   const [testBill, setTestBill] = useState<{ bill: Record<string, string>; items: Record<string, string>[] } | null>(null);
@@ -563,8 +572,7 @@ export const InvoiceTemplateSettings: React.FC = () => {
     }
 
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      localStorage.setItem("invoice_template", state.template);
+      saveInvoiceSettings(state, activeShopId);
       setSavedState(state);
       showToast("Invoice settings saved successfully", "success");
     } catch (e) {
@@ -800,7 +808,7 @@ export const InvoiceTemplateSettings: React.FC = () => {
     const modeSpan =
       f.mode === "fixed" ? (
         <>
-          <span className="inv-tag fixed">Same on every invoice</span>
+          <span className="inv-tag inv-tag-fixed">Same on every invoice</span>
           <span className="truncate max-w-[150px]">{f.value ? f.value : <i>No value yet</i>}</span>
         </>
       ) : (

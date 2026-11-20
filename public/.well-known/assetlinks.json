@@ -1,0 +1,31 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "in.inventq.shopiq",
+      "sha256_cert_fingerprints": [
+        "2C:91:B9:27:05:EC:21:1F:2B:8D:B0:F5:D7:38:6E:6D:71:B0:B4:C5:F2:F8:6F:FE:92:20:A6:9B:B5:EE:8F:55",
+        "12:9F:4C:54:76:8C:04:BF:F8:D7:08:E0:CF:7D:FB:E8:17:B8:8F:0E:3A:F1:EB:D3:C9:3B:56:10:FF:67:64:F7",
+        "C3:48:CA:08:C2:99:61:08:5D:7D:4D:AD:71:18:AA:F1:41:60:8D:04:78:82:3F:32:61:32:E0:4C:42:40:05:55",
+        "64:45:24:AB:4A:41:F4:FD:88:91:12:33:50:E6:A3:77:92:5F:E9:B5:79:DD:C6:FA:4E:ED:7C:E2:4F:FE:BB:B5"
+      ]
+    }
+  },
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "in.inventq",
+      "sha256_cert_fingerprints": [
+        "25:E1:2C:17:0A:F0:94:00:2F:F5:54:3D:CB:6A:A8:E7:E2:32:48:11:A2:34:33:E7:D7:7E:23:B1:49:0F:9B:61"
+      ]
+    }
+  }
+]

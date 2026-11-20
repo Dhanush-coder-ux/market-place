@@ -272,15 +272,26 @@ export function extractItemAttributeValue(
   // Search batches in product or variant
   let matchedBatch: any = null;
   const allBatches = [
+    ...(line?.selectedBatch ? [line.selectedBatch] : []),
+    ...(item?.selectedBatch ? [item.selectedBatch] : []),
+    ...(typeof line?.batch === "object" && line.batch !== null ? [line.batch] : []),
+    ...(typeof item?.batch === "object" && item.batch !== null ? [item.batch] : []),
+    ...(Array.isArray(line?.batches) ? line.batches : []),
+    ...(Array.isArray(item?.batches) ? item.batches : []),
     ...(Array.isArray(prod?.batch_infos) ? prod.batch_infos : []),
     ...(Array.isArray(prod?.batches) ? prod.batches : []),
     ...(typeof prod?.batches === "object" && prod?.batches !== null ? Object.values(prod.batches) : []),
     ...(typeof prod?.batch_infos === "object" && prod?.batch_infos !== null ? Object.values(prod.batch_infos) : []),
+    ...(Array.isArray(prod?.datas?.batch_infos) ? prod.datas.batch_infos : []),
+    ...(typeof prod?.datas?.batch_infos === "object" && prod?.datas?.batch_infos !== null ? Object.values(prod.datas.batch_infos) : []),
   ];
   if (batchId) {
     matchedBatch = allBatches.find(
       (b: any) => b && (b.id === batchId || b._id === batchId || b.batchId === batchId || b.batch_id === batchId)
     );
+  }
+  if (!matchedBatch && allBatches.length === 1) {
+    matchedBatch = allBatches[0];
   }
 
   const allVariants = [
@@ -302,27 +313,65 @@ export function extractItemAttributeValue(
           (b: any) => b && (b.id === batchId || b._id === batchId || b.batchId === batchId || b.batch_id === batchId)
         );
       }
+      if (!matchedBatch && vBatches.length === 1) {
+        matchedBatch = vBatches[0];
+      }
     }
   }
 
-  // 1. Batch no
+  // 1. Batch no / Batch Name
   if (attr === "batch") {
-    const rawBatch =
-      line?.batch_no ||
-      line?.batchName ||
-      line?.batch ||
-      item?.batch_no ||
-      item?.batchName ||
-      item?.batch ||
-      matchedBatch?.batch_no ||
-      matchedBatch?.batch_name ||
-      matchedBatch?.name ||
-      matchedBatch?.batch ||
-      prod?.batch_no ||
-      prod?.batch_name ||
-      prod?.batch ||
-      (batchId && !batchId.startsWith("batch-") && batchId.length < 20 ? batchId : "");
-    if (rawBatch) return String(rawBatch);
+    const isRealBatchName = (val: any): boolean => {
+      if (!val) return false;
+      const s = String(val).trim();
+      const l = s.toLowerCase();
+      if (!s) return false;
+      if (l === "standard" || l === "standard variant" || l === "default") return false;
+      return true;
+    };
+
+    const candidateBatches = [
+      line?.batch_name,
+      line?.batchName,
+      line?.batch_no,
+      typeof line?.batch === "string" ? line.batch : null,
+      line?.batch?.batch_name,
+      line?.batch?.name,
+      line?.batch?.batch_no,
+      line?.selectedBatch?.batch_name,
+      line?.selectedBatch?.name,
+      line?.selectedBatch?.batch_no,
+      item?.batch_name,
+      item?.batchName,
+      item?.batch_no,
+      typeof item?.batch === "string" ? item.batch : null,
+      item?.batch?.batch_name,
+      item?.batch?.name,
+      item?.batch?.batch_no,
+      item?.selectedBatch?.batch_name,
+      item?.selectedBatch?.name,
+      item?.selectedBatch?.batch_no,
+      matchedBatch?.batch_name,
+      matchedBatch?.name,
+      matchedBatch?.batch_no,
+      matchedBatch?.batch,
+      prod?.batch_infos?.batch_name,
+      prod?.batch_infos?.name,
+      prod?.batch_infos?.batch_no,
+      prod?.batch_name,
+      prod?.batch_no,
+      prod?.batch,
+    ];
+
+    for (const cand of candidateBatches) {
+      if (isRealBatchName(cand)) {
+        return String(cand).trim();
+      }
+    }
+
+    if (batchId && !batchId.startsWith("batch-") && batchId.length < 20 && isRealBatchName(batchId)) {
+      return String(batchId).trim();
+    }
     if (batchId) {
       const clean = String(batchId).replace(/^batch-/, "");
       return clean.length > 16 ? clean.slice(0, 8) : clean;

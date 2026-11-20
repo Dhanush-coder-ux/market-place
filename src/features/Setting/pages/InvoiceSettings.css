@@ -519,7 +519,8 @@ textarea.inv-in {
   box-shadow: 0 0 0 3px rgba(29, 92, 62, 0.08);
 }
 
-.inv-frow.hidden-on-bill .inv-fsum-name {
+.inv-frow.hidden-on-bill .inv-fsum-name,
+.inv-frow.hidden-on-invoice .inv-fsum-name {
   color: var(--inv-faint);
   text-decoration: line-through;
 }

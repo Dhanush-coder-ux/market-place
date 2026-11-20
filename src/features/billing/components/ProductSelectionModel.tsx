@@ -101,7 +101,20 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
     const activeB = b !== undefined ? b : selectedBatch;
 
     if (product?.batchTracking && activeB) {
-      finalVariant.batchId = activeB.id || activeB.batchId;
+      finalVariant.batchId = activeB.id || activeB.batchId || activeB._id;
+      const realBatchName =
+        activeB.batch_name ||
+        activeB.batchName ||
+        activeB.name ||
+        activeB.batch_no ||
+        activeB.batchNo ||
+        activeB.batch ||
+        "";
+      (finalVariant as any).batchName = realBatchName;
+      (finalVariant as any).batch_name = realBatchName;
+      (finalVariant as any).batch_no = activeB.batch_no || activeB.batchNo || realBatchName;
+      (finalVariant as any).selectedBatch = activeB;
+      (finalVariant as any).batch = activeB;
       finalVariant.expiryDate = activeB.expiry_date || activeB.expiryDate;
       finalVariant.manufacturingDate = activeB.manufacturing_date || activeB.manufacturingDate;
       if (activeB.sell_price || activeB.price) {
@@ -872,9 +885,6 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                         <p className="text-[10px] font-bold text-indigo-400 mb-0.5 tracking-wider uppercase">Active Batch Selected</p>
                         <p className="text-xs font-black text-indigo-900 truncate">
                           {selectedBatch.batch_name || selectedBatch.name || selectedBatch.batch || (selectedBatch.batch_no ? `Batch: ${selectedBatch.batch_no}` : `Batch: ${selectedBatch.id.slice(0, 8)}`)}
-                        </p>
-                        <p className="text-[10px] font-mono font-medium text-indigo-500/80 mt-1 select-all">
-                          ID: {selectedBatch.id || selectedBatch.batchId}
                         </p>
 
                         <div className="flex items-center gap-3 mt-2 flex-wrap">

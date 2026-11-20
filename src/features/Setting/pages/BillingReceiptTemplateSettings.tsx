@@ -22,6 +22,7 @@ import { inventoryApi } from "@/services/api/inventory";
 import { getShopId, SHOP_ID } from "@/services/endpoints";
 import { getPrinterConfig, savePrinterConfig, type PaperWidth } from "@/features/billing/utils/printerService";
 import { numberToWords, type FieldType, type FieldPlacement, type FieldMode, type ItemSource, type ItemShow, TYPES, ATTRS } from "./InvoiceTemplateSettings";
+import { extractItemAttributeValue } from "@/features/billing/utils/customFieldsHelper";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
 import "./BillingReceiptSettings.css";
 
@@ -83,6 +84,7 @@ export interface BillingReceiptConfig {
     thanks: string;
     terms: string;
     showTearLine: boolean;
+    showComputerGenerated?: boolean;
   };
   fields: CustomField[];
 }
@@ -143,6 +145,7 @@ export const DEFAULT_CONFIG: BillingReceiptConfig = {
     thanks: "Thank you for shopping with us! Please visit again.",
     terms: "Goods once sold can be exchanged within 7 days with bill.",
     showTearLine: true,
+    showComputerGenerated: true,
   },
   fields: [
     {
@@ -171,26 +174,30 @@ export const DEFAULT_CONFIG: BillingReceiptConfig = {
   ],
 };
 
-const TEMPLATES: { id: ThermalTemplateId; name: string; desc: string }[] = [
+const TEMPLATES: { id: ThermalTemplateId; name: string; desc: string; badge?: string }[] = [
+  {
+    id: "classic",
+    name: "Classic B&W",
+    desc: "Black and white with ruled lines. Saves ink on any printer.",
+    badge: "New",
+  },
   {
     id: "modern",
     name: "Modern Thermal",
     desc: "Clean structured layout with bold totals, dotted dividers & fast scan QR.",
-  },
-  {
-    id: "classic",
-    name: "Classic Monospace",
-    desc: "Traditional supermarket cash register look with tabular columns.",
+    badge: "Popular",
   },
   {
     id: "compact",
     name: "Compact Roll Saver",
     desc: "High density item layout designed to minimize thermal paper usage.",
+    badge: "Eco",
   },
   {
     id: "gst",
     name: "Detailed GST Tax Slip",
     desc: "Full tax breakdown with CGST, SGST, HSN codes and B2C QR.",
+    badge: "Tax",
   },
 ];
 
@@ -285,24 +292,29 @@ export const BillingReceiptTemplateSettings: React.FC = () => {
         mrp: Number(it.mrp || (it.selling_price ? Number(it.selling_price) * 1.15 : 140)),
         gstRate: it.gst_rate || 18,
         batch: it.batch_number || it.batch || "B-101",
-        expiry: it.expiry_date || "12/28",
+        batch_no: it.batch_number || it.batch || "B-101",
+        expiryDate: it.expiry_date || "12/28",
+        expiry_date: it.expiry_date || "12/28",
         hsn: it.hsn_code || "8471",
+        hsn_code: it.hsn_code || "8471",
+        selectedUnit: it.unit || "pc",
+        unit: it.unit || "pc",
       }));
     }
     return [
-      { name: "Premium Basmati Rice 1kg", code: "RIC-01", qty: 2, rate: 140, mrp: 160, gstRate: 5, batch: "B-204", expiry: "10/27", hsn: "1006" },
-      { name: "Cold Pressed Coconut Oil 500ml", code: "OIL-02", qty: 1, rate: 210, mrp: 240, gstRate: 12, batch: "B-509", expiry: "06/28", hsn: "1513" },
-      { name: "Roasted Almonds 200g", code: "ALM-03", qty: 1, rate: 180, mrp: 200, gstRate: 18, batch: "B-311", expiry: "09/27", hsn: "2008" },
+      { name: "Premium Basmati Rice 1kg", code: "RIC-01", qty: 2, rate: 140, mrp: 160, gstRate: 5, batch: "B-204", batch_no: "B-204", expiryDate: "10/27", expiry_date: "10/27", hsn: "1006", hsn_code: "1006", unit: "1 kg", selectedUnit: "1 kg", manufacturer: "India Gate" },
+      { name: "Cold Pressed Coconut Oil 500ml", code: "OIL-02", qty: 1, rate: 210, mrp: 240, gstRate: 12, batch: "B-509", batch_no: "B-509", expiryDate: "06/28", expiry_date: "06/28", hsn: "1513", hsn_code: "1513", unit: "500 ml", selectedUnit: "500 ml", manufacturer: "KLF" },
+      { name: "Roasted Almonds 200g", code: "ALM-03", qty: 1, rate: 180, mrp: 200, gstRate: 18, batch: "B-311", batch_no: "B-311", expiryDate: "09/27", expiry_date: "09/27", hsn: "2008", hsn_code: "2008", unit: "200 g", selectedUnit: "200 g", manufacturer: "Nutraj" },
     ];
   }, [realItems]);
 
-  const subTotal = useMemo(() => displayItems.reduce((acc, it) => acc + it.rate * it.qty, 0), [displayItems]);
-  const totalMrp = useMemo(() => displayItems.reduce((acc, it) => acc + it.mrp * it.qty, 0), [displayItems]);
+  const subTotal = useMemo(() => displayItems.reduce((acc: number, it: any) => acc + (Number(it.rate) || 0) * (Number(it.qty) || 1), 0), [displayItems]);
+  const totalMrp = useMemo(() => displayItems.reduce((acc: number, it: any) => acc + (Number(it.mrp) || 0) * (Number(it.qty) || 1), 0), [displayItems]);
   const savings = Math.max(0, totalMrp - subTotal);
   const taxAmount = useMemo(() => {
-    return displayItems.reduce((acc, it) => {
-      const lineTotal = it.rate * it.qty;
-      const base = lineTotal / (1 + it.gstRate / 100);
+    return displayItems.reduce((acc: number, it: any) => {
+      const lineTotal = (Number(it.rate) || 0) * (Number(it.qty) || 1);
+      const base = lineTotal / (1 + (Number(it.gstRate) || 0) / 100);
       return acc + (lineTotal - base);
     }, 0);
   }, [displayItems]);
@@ -316,6 +328,7 @@ export const BillingReceiptTemplateSettings: React.FC = () => {
       label: "",
       placement: "customer",
       show: true,
+      itemShow: "column",
     };
     setConfig((prev) => ({ ...prev, fields: [...prev.fields, newField] }));
     setOpenFieldId(newField.id);
@@ -330,7 +343,13 @@ export const BillingReceiptTemplateSettings: React.FC = () => {
         if (updates.placement === "item") {
           updated.itemSource = updated.itemSource || "product";
           updated.attr = updated.attr || "batch";
-          updated.itemShow = "under";
+          updated.itemShow = updated.itemShow || "column";
+        }
+        if (updates.mode === "fixed") {
+          updated.required = false;
+        }
+        if (updates.itemSource === "product") {
+          updated.required = false;
         }
         return updated;
       }),
@@ -352,18 +371,7 @@ export const BillingReceiptTemplateSettings: React.FC = () => {
     setConfig((prev) => ({ ...prev, fields: updated }));
   };
 
-  // Helper for item value in preview
-  const getItemFieldValue = (f: CustomField, item: any) => {
-    if (f.itemSource === "product") {
-      const attr = f.attr || "batch";
-      if (attr === "batch") return item.batch || "B-101";
-      if (attr === "expiry") return item.expiry || "12/28";
-      if (attr === "hsn") return item.hsn || "8471";
-      if (attr === "mrp") return `₹${item.mrp || item.rate}`;
-      return item[attr] || "Standard";
-    }
-    return f.value || "Filled on POS";
-  };
+
 
   // Has changes
   const hasChanges = useMemo(() => {
@@ -418,20 +426,20 @@ export const BillingReceiptTemplateSettings: React.FC = () => {
       <div className="rcp-grid">
         {/* Left Column Controls */}
         <div className="rcp-form-col">
-          {/* Card 1: Paper Roll Width & Template Design */}
+          {/* Card 1: Thermal Paper Width */}
           <div className="rcp-card">
             <div className="rcp-card-h">
               <div>
                 <h2>
                   <Layers size={16} className="text-emerald-700" />
-                  Thermal Paper Width & Design
+                  Thermal Paper Width
                 </h2>
-                <p>Choose your physical thermal printer roll size and receipt layout.</p>
+                <p>Choose your physical thermal printer roll size: 80 mm counter roll vs 58 mm compact roll.</p>
               </div>
             </div>
 
             {/* Width Selector */}
-            <div className="rcp-width-grid">
+            <div className="rcp-width-grid" style={{ marginBottom: 0 }}>
               <button
                 type="button"
                 className={`rcp-width-card ${config.paperWidth === "80mm" ? "active" : ""}`}
@@ -456,23 +464,62 @@ export const BillingReceiptTemplateSettings: React.FC = () => {
                 <span className="rcp-width-sub">Compact 32 col mobile Bluetooth / handheld printer</span>
               </button>
             </div>
+          </div>
 
-            {/* Template Selector */}
-            <div className="rcp-tmpl-grid">
-              {TEMPLATES.map((tmpl) => (
-                <button
-                  key={tmpl.id}
-                  type="button"
-                  className={`rcp-tmpl-btn ${config.templateId === tmpl.id ? "active" : ""}`}
-                  onClick={() => setConfig((prev) => ({ ...prev, templateId: tmpl.id }))}
-                >
-                  <div className="rcp-tmpl-name">
-                    <span>{tmpl.name}</span>
-                    {config.templateId === tmpl.id && <Check size={14} />}
-                  </div>
-                  <span className="rcp-tmpl-desc">{tmpl.desc}</span>
-                </button>
-              ))}
+          {/* Card 1b: Receipt Layout & Style */}
+          <div className="rcp-card">
+            <div className="rcp-card-h">
+              <div>
+                <h2>
+                  <FileText size={16} className="text-emerald-700" />
+                  Receipt Layout & Style
+                </h2>
+                <p>Choose your receipt visual layout and formatting style.</p>
+              </div>
+            </div>
+
+            {/* Template Selector Grid (With visual thumbnails matching user design) */}
+            <div className="inv-tpl-grid" role="radiogroup" aria-label="Receipt template">
+              {TEMPLATES.map((tmpl) => {
+                const isSelected = config.templateId === tmpl.id;
+                return (
+                  <button
+                    key={tmpl.id}
+                    type="button"
+                    className={`inv-tpl ${isSelected ? "active" : ""}`}
+                    onClick={() => setConfig((prev) => ({ ...prev, templateId: tmpl.id }))}
+                  >
+                    <div className="thumb">
+                      <div className={`mini ${config.paperWidth === "58mm" ? "th" : ""}`}>
+                        {tmpl.id === "modern" ? (
+                          <i className="h" />
+                        ) : tmpl.id === "classic" ? (
+                          <i className="k" />
+                        ) : null}
+                        <i style={{ width: "60%" }} />
+                        <i />
+                        <i />
+                        <i style={{ width: "80%" }} />
+                        <i />
+                        {tmpl.id === "classic" ? <i className="k" /> : null}
+                        <i style={{ width: "40%", alignSelf: "flex-end" }} />
+                      </div>
+                    </div>
+                    <div className="mt-1">
+                      <div className="flex items-center justify-between">
+                        <b>{tmpl.name}</b>
+                        {tmpl.badge && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200/60">
+                            {tmpl.badge}
+                          </span>
+                        )}
+                      </div>
+                      <small>{tmpl.desc}</small>
+                    </div>
+                    <span className="sel">{isSelected ? "✓ In use" : "\u00A0"}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -523,6 +570,11 @@ export const BillingReceiptTemplateSettings: React.FC = () => {
                               From Inventory ({ATTRS[field.attr || "batch"]})
                             </span>
                           )}
+                          {field.placement === "item" && field.itemShow === "column" && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-medium">
+                              Column
+                            </span>
+                          )}
                         </button>
 
                         <div className="flex items-center gap-1.5">
@@ -570,23 +622,21 @@ export const BillingReceiptTemplateSettings: React.FC = () => {
 
                       {/* Accordion Body */}
                       {isOpen && (
-                        <div className="p-4 border-t border-slate-200 space-y-3.5 bg-white rounded-b-xl">
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div>
-                              <label className="text-xs font-bold text-slate-700 block mb-1">Field Name / Label *</label>
+                        <div className="inv-fedit">
+                          <div className={field.placement === "item" && field.itemSource === "product" ? "" : "inv-grid2"}>
+                            <label className="inv-fld">
+                              <span>Field name</span>
                               <input
-                                type="text"
-                                className="rcp-input"
-                                placeholder="e.g. Doctor name, Table No, Serial"
+                                className="inv-in"
                                 value={field.label}
+                                maxLength={30}
+                                placeholder="e.g. Doctor name, Table No, Serial"
                                 onChange={(e) => handleUpdateField(field.id, { label: e.target.value })}
                               />
-                            </div>
-
-                            {/* Reusable Select for Field Type */}
+                            </label>
                             {!(field.placement === "item" && field.itemSource === "product") && (
-                              <div>
-                                <label className="text-xs font-bold text-slate-700 block mb-1">Type of Value</label>
+                              <div className="inv-fld">
+                                <span>Type of value</span>
                                 <ReusableSelect
                                   options={Object.entries(TYPES).map(([k, v]) => ({ label: v, value: k }))}
                                   value={field.type}
@@ -597,70 +647,103 @@ export const BillingReceiptTemplateSettings: React.FC = () => {
                             )}
                           </div>
 
-                          {/* Placement Selection */}
-                          <div>
-                            <label className="text-xs font-bold text-slate-700 block mb-1">Where on the receipt</label>
-                            <div className="grid grid-cols-3 gap-2">
-                              {[
-                                { id: "customer", label: "Top (Customer/Meta)" },
-                                { id: "item", label: "Each Item Row" },
-                                { id: "below", label: "Below Items" },
-                              ].map((p) => (
-                                <button
-                                  key={p.id}
-                                  type="button"
-                                  className={`py-2 px-2.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
-                                    field.placement === p.id
-                                      ? "border-emerald-600 bg-emerald-50 text-emerald-800"
-                                      : "border-slate-200 text-slate-600 hover:bg-slate-50"
-                                  }`}
-                                  onClick={() => handleUpdateField(field.id, { placement: p.id as FieldPlacement })}
-                                >
-                                  {p.label}
-                                </button>
-                              ))}
+                          {/* Where on the receipt */}
+                          <div className="inv-fld">
+                            <span>Where on the receipt</span>
+                            <div className="inv-place">
+                              <label
+                                className={field.placement === "customer" ? "active" : ""}
+                                onClick={() => handleUpdateField(field.id, { placement: "customer" })}
+                              >
+                                <span className="pic">
+                                  <span className="r">
+                                    <i />
+                                    <i className="on" />
+                                  </span>
+                                  <i />
+                                  <i />
+                                </span>
+                                Top, with customer
+                              </label>
+                              <label
+                                className={field.placement === "item" ? "active" : ""}
+                                onClick={() => handleUpdateField(field.id, { placement: "item" })}
+                              >
+                                <span className="pic">
+                                  <span className="r">
+                                    <i />
+                                    <i />
+                                  </span>
+                                  <span className="r">
+                                    <i />
+                                    <i className="on" style={{ flex: 0.5 }} />
+                                    <i />
+                                  </span>
+                                  <span className="r">
+                                    <i />
+                                    <i className="on" style={{ flex: 0.5 }} />
+                                    <i />
+                                  </span>
+                                </span>
+                                With each item
+                              </label>
+                              <label
+                                className={field.placement === "below" ? "active" : ""}
+                                onClick={() => handleUpdateField(field.id, { placement: "below" })}
+                              >
+                                <span className="pic">
+                                  <span className="r">
+                                    <i />
+                                    <i />
+                                  </span>
+                                  <i />
+                                  <i className="on" style={{ width: "55%" }} />
+                                </span>
+                                Below the items
+                              </label>
                             </div>
                           </div>
 
-                          {/* Item specific configuration */}
-                          {field.placement === "item" && (
-                            <div className="p-3 rounded-lg border border-slate-200 bg-slate-50/60 space-y-2.5">
-                              <label className="text-xs font-bold text-slate-700 block">Item Value Source</label>
-                              <div className="flex gap-2">
-                                <button
-                                  type="button"
-                                  className={`flex-1 py-1.5 px-2 rounded-lg border text-xs font-semibold cursor-pointer ${
-                                    field.itemSource === "product"
-                                      ? "border-emerald-600 bg-emerald-50 text-emerald-800"
-                                      : "border-slate-200 text-slate-600 bg-white"
-                                  }`}
-                                  onClick={() => handleUpdateField(field.id, { itemSource: "product" })}
-                                >
-                                  Auto from inventory
-                                </button>
-                                <button
-                                  type="button"
-                                  className={`flex-1 py-1.5 px-2 rounded-lg border text-xs font-semibold cursor-pointer ${
-                                    field.itemSource === "ask"
-                                      ? "border-emerald-600 bg-emerald-50 text-emerald-800"
-                                      : "border-slate-200 text-slate-600 bg-white"
-                                  }`}
-                                  onClick={() => handleUpdateField(field.id, { itemSource: "ask" })}
-                                >
-                                  Ask on billing POS
-                                </button>
+                          {/* Placement specific options */}
+                          {field.placement === "item" ? (
+                            <>
+                              <div className="inv-fld">
+                                <span>Where does the value come from?</span>
+                                <div className="inv-seg">
+                                  <label
+                                    className={field.itemSource === "product" ? "active" : ""}
+                                    onClick={() => handleUpdateField(field.id, { itemSource: "product", attr: field.attr || "batch", required: false })}
+                                  >
+                                    <input type="radio" checked={field.itemSource === "product"} readOnly />
+                                    <span>
+                                      <b>From product details</b>
+                                      <small>Filled automatically from the product or batch you sell.</small>
+                                    </span>
+                                  </label>
+                                  <label
+                                    className={`askopt ${field.itemSource === "ask" ? "active" : ""}`}
+                                    onClick={() => handleUpdateField(field.id, { itemSource: "ask" })}
+                                  >
+                                    <input type="radio" checked={field.itemSource === "ask"} readOnly />
+                                    <span>
+                                      <b>Ask for each item</b>
+                                      <small>Staff type it per item, like a serial number.</small>
+                                    </span>
+                                  </label>
+                                </div>
                               </div>
 
-                              {field.itemSource === "product" && (
-                                <div className="pt-1">
-                                  <label className="text-xs font-bold text-slate-700 block mb-1">Product detail to print</label>
+                              {field.itemSource === "product" ? (
+                                <div className="inv-fld">
+                                  <span>Product detail to print</span>
                                   <ReusableSelect
                                     options={Object.entries(ATTRS).map(([k, v]) => ({ label: v, value: k }))}
                                     value={field.attr || "batch"}
                                     onValueChange={(val) => {
                                       const newAttr = val as any;
                                       const oldLabel = ATTRS[field.attr || ""];
-                                      const shouldUpdateLabel = !field.label.trim() || field.label === oldLabel;
+                                      const shouldUpdateLabel =
+                                        !field.label.trim() || field.label === oldLabel || Object.values(ATTRS).includes(field.label);
                                       handleUpdateField(field.id, {
                                         attr: newAttr,
                                         label: shouldUpdateLabel ? ATTRS[newAttr] : field.label,
@@ -669,64 +752,131 @@ export const BillingReceiptTemplateSettings: React.FC = () => {
                                     size="sm"
                                   />
                                 </div>
+                              ) : (
+                                <label className="inv-check">
+                                  <input
+                                    type="checkbox"
+                                    checked={field.required}
+                                    onChange={(e) => handleUpdateField(field.id, { required: e.target.checked })}
+                                  />
+                                  Must be filled for every item before saving the bill
+                                </label>
                               )}
-                            </div>
-                          )}
 
-                          {/* How it's filled */}
-                          {!(field.placement === "item" && field.itemSource === "product") && (
-                            <div>
-                              <label className="text-xs font-bold text-slate-700 block mb-1">How it's filled</label>
-                              <div className="flex gap-2 mb-2">
-                                <button
-                                  type="button"
-                                  className={`flex-1 py-1.5 px-2 rounded-lg border text-xs font-semibold cursor-pointer ${
-                                    field.mode === "ask"
-                                      ? "border-emerald-600 bg-emerald-50 text-emerald-800"
-                                      : "border-slate-200 text-slate-600 bg-white"
-                                  }`}
-                                  onClick={() => handleUpdateField(field.id, { mode: "ask" })}
-                                >
-                                  Filled in while billing
-                                </button>
-                                <button
-                                  type="button"
-                                  className={`flex-1 py-1.5 px-2 rounded-lg border text-xs font-semibold cursor-pointer ${
-                                    field.mode === "fixed"
-                                      ? "border-emerald-600 bg-emerald-50 text-emerald-800"
-                                      : "border-slate-200 text-slate-600 bg-white"
-                                  }`}
-                                  onClick={() => handleUpdateField(field.id, { mode: "fixed" })}
-                                >
-                                  Same on every bill (fixed)
-                                </button>
+                              <div className="inv-fld">
+                                <span>Show it as</span>
+                                <div className="inv-seg">
+                                  <label
+                                    className={field.itemShow === "column" ? "active" : ""}
+                                    onClick={() => handleUpdateField(field.id, { itemShow: "column" })}
+                                  >
+                                    <input type="radio" checked={field.itemShow === "column"} readOnly />
+                                    <span>
+                                      <b>Its own column</b>
+                                      <small>Easy to scan. Best for short values like batch and expiry.</small>
+                                    </span>
+                                  </label>
+                                  <label
+                                    className={field.itemShow === "under" ? "active" : ""}
+                                    onClick={() => handleUpdateField(field.id, { itemShow: "under" })}
+                                  >
+                                    <input type="radio" checked={field.itemShow === "under"} readOnly />
+                                    <span>
+                                      <b>Under the item name</b>
+                                      <small>Saves space. Good for longer values.</small>
+                                    </span>
+                                  </label>
+                                </div>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="inv-fld">
+                                <span>How is the value filled?</span>
+                                <div className="inv-seg">
+                                  <label
+                                    className={field.mode === "fixed" ? "active" : ""}
+                                    onClick={() => handleUpdateField(field.id, { mode: "fixed", required: false })}
+                                  >
+                                    <input type="radio" checked={field.mode === "fixed"} readOnly />
+                                    <span>
+                                      <b>Same on every bill (fixed)</b>
+                                      <small>Set it once here. Every bill prints it.</small>
+                                    </span>
+                                  </label>
+                                  <label
+                                    className={`askopt ${field.mode === "ask" ? "active" : ""}`}
+                                    onClick={() => handleUpdateField(field.id, { mode: "ask" })}
+                                  >
+                                    <input type="radio" checked={field.mode === "ask"} readOnly />
+                                    <span>
+                                      <b>Ask on bill</b>
+                                      <small>Staff type it when creating each bill.</small>
+                                    </span>
+                                  </label>
+                                </div>
                               </div>
 
                               {field.mode === "fixed" ? (
-                                <div>
-                                  <label className="text-[11px] font-bold text-slate-600 block mb-1">Fixed Value to Print</label>
-                                  <input
-                                    type="text"
-                                    className="rcp-input"
-                                    placeholder="e.g. Table 4 or Counter Express"
-                                    value={field.value}
-                                    onChange={(e) => handleUpdateField(field.id, { value: e.target.value })}
-                                  />
-                                </div>
+                                <>
+                                  <label className="inv-fld">
+                                    <span>Value printed on every bill</span>
+                                    <input
+                                      className="inv-in"
+                                      value={field.value}
+                                      maxLength={60}
+                                      placeholder="Type the value"
+                                      onChange={(e) => handleUpdateField(field.id, { value: e.target.value })}
+                                    />
+                                  </label>
+                                  {!field.value && (
+                                    <div className="inv-err-msg">This field is hidden on bills until you add a value.</div>
+                                  )}
+                                </>
                               ) : (
-                                <div>
-                                  <label className="text-[11px] font-bold text-slate-600 block mb-1">Default / Placeholder Value (Optional)</label>
-                                  <input
-                                    type="text"
-                                    className="rcp-input"
-                                    placeholder="Optional default value"
-                                    value={field.value}
-                                    onChange={(e) => handleUpdateField(field.id, { value: e.target.value })}
-                                  />
+                                <div className="inv-grid2">
+                                  <label className="inv-fld">
+                                    <span>Default value (optional)</span>
+                                    <input
+                                      className="inv-in"
+                                      value={field.value}
+                                      maxLength={60}
+                                      placeholder="Leave blank to ask fresh"
+                                      onChange={(e) => handleUpdateField(field.id, { value: e.target.value })}
+                                    />
+                                  </label>
+                                  <div className="inv-fld">
+                                    <span>When billing</span>
+                                    <label className="inv-check" style={{ minHeight: 36 }}>
+                                      <input
+                                        type="checkbox"
+                                        checked={field.required}
+                                        onChange={(e) => handleUpdateField(field.id, { required: e.target.checked })}
+                                      />
+                                      Must be filled before saving
+                                    </label>
+                                  </div>
                                 </div>
                               )}
-                            </div>
+                            </>
                           )}
+
+                          <div className="inv-fedit-foot">
+                            <button
+                              type="button"
+                              className="inv-btn ghost sm danger"
+                              onClick={() => handleDeleteField(field.id, field.label)}
+                            >
+                              <Trash2 size={14} /> Delete field
+                            </button>
+                            <button
+                              type="button"
+                              className="inv-btn sm"
+                              onClick={() => setOpenFieldId(null)}
+                            >
+                              Done
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -897,26 +1047,6 @@ export const BillingReceiptTemplateSettings: React.FC = () => {
                       setConfig((prev) => ({
                         ...prev,
                         items: { ...prev.items, showRate: e.target.checked },
-                      }))
-                    }
-                  />
-                  <span className="rcp-slider" />
-                </label>
-              </div>
-
-              <div className="rcp-switch-row">
-                <div className="rcp-switch-label">
-                  <span>Show SKU / Barcode / HSN</span>
-                  <small>Print product code beneath item title</small>
-                </div>
-                <label className="rcp-switch">
-                  <input
-                    type="checkbox"
-                    checked={config.items.showCode}
-                    onChange={(e) =>
-                      setConfig((prev) => ({
-                        ...prev,
-                        items: { ...prev.items, showCode: e.target.checked },
                       }))
                     }
                   />
@@ -1181,6 +1311,26 @@ export const BillingReceiptTemplateSettings: React.FC = () => {
                   <span className="rcp-slider" />
                 </label>
               </div>
+
+              <div className="rcp-switch-row">
+                <div className="rcp-switch-label">
+                  <span>Show Computer-Generated Notice</span>
+                  <small>Print "THIS IS A COMPUTER-GENERATED RECEIPT AND DOES NOT REQUIRE A PHYSICAL SIGNATURE." at the bottom</small>
+                </div>
+                <label className="rcp-switch">
+                  <input
+                    type="checkbox"
+                    checked={config.footer.showComputerGenerated !== false}
+                    onChange={(e) =>
+                      setConfig((prev) => ({
+                        ...prev,
+                        footer: { ...prev.footer, showComputerGenerated: e.target.checked },
+                      }))
+                    }
+                  />
+                  <span className="rcp-slider" />
+                </label>
+              </div>
             </div>
           </div>
         </div>
@@ -1267,45 +1417,63 @@ export const BillingReceiptTemplateSettings: React.FC = () => {
                 <div className="rcp-r-divider" />
 
                 {/* Items Table */}
-                <table className="rcp-r-table">
-                  <thead>
-                    <tr>
-                      <th style={{ textAlign: "left" }}>Item</th>
-                      <th style={{ textAlign: "center", width: is80mm ? "36px" : "28px" }}>Qty</th>
-                      {config.items.showRate && is80mm && (
-                        <th style={{ textAlign: "right", width: "50px" }}>Rate</th>
-                      )}
-                      <th style={{ textAlign: "right", width: is80mm ? "64px" : "50px" }}>Amt</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {displayItems.map((it, idx) => (
-                      <React.Fragment key={idx}>
+                {(() => {
+                  const itemColFields = config.fields.filter(
+                    (f) => f.show && f.placement === "item" && f.itemShow === "column" && f.label.trim()
+                  );
+                  const itemUnderFields = config.fields.filter(
+                    (f) => f.show && f.placement === "item" && f.itemShow !== "column" && f.label.trim()
+                  );
+
+                  return (
+                    <table className="rcp-r-table">
+                      <thead>
                         <tr>
-                          <td>
-                            <div className="rcp-r-bold">{it.name}</div>
-                            {config.items.showCode && (
-                              <div className="rcp-r-small">{it.code}</div>
-                            )}
-                            {/* Item Custom Fields */}
-                            {config.fields.filter((f) => f.show && f.placement === "item" && f.label.trim()).map((f) => (
-                              <div key={f.id} className="rcp-r-small" style={{ opacity: 0.85 }}>
-                                • {f.label}: {getItemFieldValue(f, it)}
-                              </div>
-                            ))}
-                          </td>
-                          <td style={{ textAlign: "center" }}>{it.qty}</td>
+                          <th style={{ textAlign: "left" }}>Item</th>
+                          {itemColFields.map((f) => (
+                            <th key={f.id} style={{ textAlign: "center", fontSize: "10px" }}>
+                              {f.label}
+                            </th>
+                          ))}
+                          <th style={{ textAlign: "center", width: is80mm ? "36px" : "28px" }}>Qty</th>
                           {config.items.showRate && is80mm && (
-                            <td style={{ textAlign: "right" }}>{it.rate.toFixed(2)}</td>
+                            <th style={{ textAlign: "right", width: "50px" }}>Rate</th>
                           )}
-                          <td style={{ textAlign: "right" }} className="rcp-r-bold">
-                            {(it.rate * it.qty).toFixed(2)}
-                          </td>
+                          <th style={{ textAlign: "right", width: is80mm ? "64px" : "50px" }}>Amt</th>
                         </tr>
-                      </React.Fragment>
-                    ))}
-                  </tbody>
-                </table>
+                      </thead>
+                      <tbody>
+                        {displayItems.map((it, idx) => (
+                          <React.Fragment key={idx}>
+                            <tr>
+                              <td>
+                                <div className="rcp-r-bold">{it.name}</div>
+                                {/* Item Custom Fields Under Name */}
+                                {itemUnderFields.map((f) => (
+                                  <div key={f.id} className="rcp-r-small" style={{ opacity: 0.85 }}>
+                                    • {f.label}: {extractItemAttributeValue(f, it, idx)}
+                                  </div>
+                                ))}
+                              </td>
+                              {itemColFields.map((f) => (
+                                <td key={f.id} style={{ textAlign: "center", fontSize: "10px" }}>
+                                  {extractItemAttributeValue(f, it, idx)}
+                                </td>
+                              ))}
+                              <td style={{ textAlign: "center" }}>{it.qty}</td>
+                              {config.items.showRate && is80mm && (
+                                <td style={{ textAlign: "right" }}>{it.rate.toFixed(2)}</td>
+                              )}
+                              <td style={{ textAlign: "right" }} className="rcp-r-bold">
+                                {(it.rate * it.qty).toFixed(2)}
+                              </td>
+                            </tr>
+                          </React.Fragment>
+                        ))}
+                      </tbody>
+                    </table>
+                  );
+                })()}
 
                 {/* Below items custom fields */}
                 {config.fields.filter((f) => f.show && f.placement === "below" && f.label.trim()).length > 0 && (
@@ -1425,6 +1593,12 @@ export const BillingReceiptTemplateSettings: React.FC = () => {
                       )}
                     </div>
                   </>
+                )}
+
+                {config.footer.showComputerGenerated !== false && (
+                  <div style={{ textAlign: "center", textTransform: "uppercase", fontSize: 8, opacity: 0.6, letterSpacing: "0.05em", marginTop: 8 }}>
+                    This is a computer-generated receipt and does not require a physical signature.
+                  </div>
                 )}
 
                 {/* Tear-off cut line */}

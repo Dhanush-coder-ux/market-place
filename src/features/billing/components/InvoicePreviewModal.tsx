@@ -6,6 +6,7 @@ import type { BillingItem } from "../types";
 import { formatINR, type BillTotals } from "@/utils/pricing";
 import { shopApi } from "../../../services/api/shop";
 import { InvoiceRenderer } from "./InvoiceRenderer";
+import { getInvoiceSettings } from "../utils/printerService";
 import { extractItemAttributeValue } from "../utils/customFieldsHelper";
 
 type BillStatus = "COMPLETED" | "PENDING" | "CANCELLED";
@@ -53,16 +54,13 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
 
   useEffect(() => {
     const shopId = localStorage.getItem("shop_id");
-    const savedTmpl = localStorage.getItem("invoice_template");
+    const savedTmpl = localStorage.getItem(`invoice_template_${shopId}`) || localStorage.getItem("invoice_template");
     if (savedTmpl) setTemplate(savedTmpl);
 
     try {
-      const raw = localStorage.getItem("inventq.invoiceSettings.v2");
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed.template) {
-          setTemplate(parsed.template);
-        }
+      const parsed = getInvoiceSettings(shopId || undefined);
+      if (parsed?.template) {
+        setTemplate(parsed.template);
       }
     } catch (_) {}
 
@@ -409,7 +407,7 @@ ${(err as Error)?.message ?? String(err)}`);
       <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm no-print" onClick={onClose} />
 
       {/* Modal Container */}
-      <div className="relative bg-slate-100 rounded-2xl shadow-[0_24px_80px_rgba(0,0,0,0.35)] w-full max-w-[620px] max-h-[92dvh] h-[92dvh] sm:h-[88vh] sm:max-h-[88vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 print:max-h-none print:h-auto print:bg-white print:rounded-none print:shadow-none print:w-full print:max-w-none print:animate-none print:transform-none">
+      <div className="relative bg-slate-100 rounded-2xl shadow-[0_24px_80px_rgba(0,0,0,0.35)] w-full max-w-[820px] max-h-[92dvh] h-[92dvh] sm:h-[88vh] sm:max-h-[88vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 print:max-h-none print:h-auto print:bg-white print:rounded-none print:shadow-none print:w-full print:max-w-none print:animate-none print:transform-none">
 
         {/* Modal Header */}
         <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-3.5 bg-white border-b border-slate-200/80 shrink-0 no-print">

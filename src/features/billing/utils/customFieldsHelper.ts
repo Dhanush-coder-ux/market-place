@@ -1,3 +1,12 @@
+import { getShopId } from "@/services/endpoints";
+import {
+  getBillingReceiptStorageKey,
+  getInvoiceSettingsStorageKey,
+  readScopedJson,
+  BILLING_RECEIPT_CONFIG_KEY,
+  INVOICE_SETTINGS_CONFIG_KEY,
+} from "./printerService";
+
 // market-place/src/features/billing/utils/customFieldsHelper.ts
 export type FieldPlacement = "customer" | "item" | "below";
 export type FieldType = "text" | "number" | "date" | "phone";
@@ -38,31 +47,30 @@ export const BILLING_RECEIPT_STORAGE_KEY = "inventq.billingReceiptSettings.v1";
 export const INVOICE_SETTINGS_STORAGE_KEY = "inventq.invoiceSettings.v2";
 
 /**
- * Loads custom fields specifically defined in Billing Receipt Template Settings
+ * Loads custom fields specifically defined in Billing Receipt Template Settings (scoped by shop)
  */
-export function getReceiptCustomFields(): CustomFieldDefinition[] {
+export function getReceiptCustomFields(shopId?: string): CustomFieldDefinition[] {
   try {
-    const raw = localStorage.getItem(BILLING_RECEIPT_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed.fields)) {
-        return parsed.fields
-          .filter((f: any) => f && f.show !== false && f.label && f.label.trim())
-          .map((f: any) => ({
-            id: f.id || `f_${f.label.trim().toLowerCase()}`,
-            label: f.label.trim(),
-            placement: f.placement || "customer",
-            type: f.type || "text",
-            mode: f.placement === "item" && f.itemSource !== "ask" ? "fixed" : (f.mode || "ask"),
-            value: f.value || "",
-            required: Boolean(f.required),
-            show: true,
-            itemSource: f.itemSource || (f.placement === "item" ? "product" : undefined),
-            attr: f.attr || (f.placement === "item" ? "batch" : undefined),
-            itemShow: f.itemShow || (f.placement === "item" ? "column" : undefined),
-            source: "receipt",
-          }));
-      }
+    const sid = shopId || getShopId() || (typeof window !== "undefined" ? localStorage.getItem("shop_id") : "") || "default";
+    const key = getBillingReceiptStorageKey(sid);
+    const parsed = readScopedJson<any>(key, BILLING_RECEIPT_CONFIG_KEY, sid);
+    if (parsed && Array.isArray(parsed.fields)) {
+      return parsed.fields
+        .filter((f: any) => f && f.show !== false && f.label && f.label.trim())
+        .map((f: any) => ({
+          id: f.id || `f_${f.label.trim().toLowerCase()}`,
+          label: f.label.trim(),
+          placement: f.placement || "customer",
+          type: f.type || "text",
+          mode: f.placement === "item" && f.itemSource !== "ask" ? "fixed" : (f.mode || "ask"),
+          value: f.value || "",
+          required: Boolean(f.required),
+          show: true,
+          itemSource: f.itemSource || (f.placement === "item" ? "product" : undefined),
+          attr: f.attr || (f.placement === "item" ? "batch" : undefined),
+          itemShow: f.itemShow || (f.placement === "item" ? "column" : undefined),
+          source: "receipt",
+        }));
     }
   } catch (e) {
     console.debug("Failed to read receipt custom fields:", e);
@@ -71,31 +79,30 @@ export function getReceiptCustomFields(): CustomFieldDefinition[] {
 }
 
 /**
- * Loads custom fields specifically defined in Invoice Template Settings
+ * Loads custom fields specifically defined in Invoice Template Settings (scoped by shop)
  */
-export function getInvoiceCustomFields(): CustomFieldDefinition[] {
+export function getInvoiceCustomFields(shopId?: string): CustomFieldDefinition[] {
   try {
-    const raw = localStorage.getItem(INVOICE_SETTINGS_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed.fields)) {
-        return parsed.fields
-          .filter((f: any) => f && f.show !== false && f.label && f.label.trim())
-          .map((f: any) => ({
-            id: f.id || `f_${f.label.trim().toLowerCase()}`,
-            label: f.label.trim(),
-            placement: f.placement || "customer",
-            type: f.type || "text",
-            mode: f.placement === "item" && f.itemSource !== "ask" ? "fixed" : (f.mode || "ask"),
-            value: f.value || "",
-            required: Boolean(f.required),
-            show: true,
-            itemSource: f.itemSource || (f.placement === "item" ? "product" : undefined),
-            attr: f.attr || (f.placement === "item" ? "batch" : undefined),
-            itemShow: f.itemShow || (f.placement === "item" ? "column" : undefined),
-            source: "invoice",
-          }));
-      }
+    const sid = shopId || getShopId() || (typeof window !== "undefined" ? localStorage.getItem("shop_id") : "") || "default";
+    const key = getInvoiceSettingsStorageKey(sid);
+    const parsed = readScopedJson<any>(key, INVOICE_SETTINGS_CONFIG_KEY, sid);
+    if (parsed && Array.isArray(parsed.fields)) {
+      return parsed.fields
+        .filter((f: any) => f && f.show !== false && f.label && f.label.trim())
+        .map((f: any) => ({
+          id: f.id || `f_${f.label.trim().toLowerCase()}`,
+          label: f.label.trim(),
+          placement: f.placement || "customer",
+          type: f.type || "text",
+          mode: f.placement === "item" && f.itemSource !== "ask" ? "fixed" : (f.mode || "ask"),
+          value: f.value || "",
+          required: Boolean(f.required),
+          show: true,
+          itemSource: f.itemSource || (f.placement === "item" ? "product" : undefined),
+          attr: f.attr || (f.placement === "item" ? "batch" : undefined),
+          itemShow: f.itemShow || (f.placement === "item" ? "column" : undefined),
+          source: "invoice",
+        }));
     }
   } catch (e) {
     console.debug("Failed to read invoice custom fields:", e);
@@ -105,22 +112,62 @@ export function getInvoiceCustomFields(): CustomFieldDefinition[] {
 
 /**
  * Loads and consolidates all active custom fields from both Billing Receipt Template Settings
- * and Invoice Template Settings. If a field exists in both, it deduplicates by label while
+ * and Invoice Template Settings scoped by shop. If a field exists in both, it deduplicates by label while
  * ensuring that if either asks while billing ('ask'), mode 'ask' takes priority.
  */
-export function getActiveCustomFields(): CustomFieldDefinition[] {
+export function getActiveCustomFields(shopId?: string): CustomFieldDefinition[] {
   const fieldsMap = new Map<string, CustomFieldDefinition>();
+  const sid = shopId || getShopId() || (typeof window !== "undefined" ? localStorage.getItem("shop_id") : "") || "default";
 
   // 1. Read Receipt Template Settings
   try {
-    const rawReceipt = localStorage.getItem(BILLING_RECEIPT_STORAGE_KEY);
-    if (rawReceipt) {
-      const parsed = JSON.parse(rawReceipt);
-      if (Array.isArray(parsed.fields)) {
-        parsed.fields.forEach((f: any) => {
-          if (f && f.show !== false && f.label && f.label.trim()) {
-            const key = f.label.trim().toLowerCase();
-            const isItemProduct = f.placement === "item" && f.itemSource !== "ask";
+    const keyReceipt = getBillingReceiptStorageKey(sid);
+    const parsed = readScopedJson<any>(keyReceipt, BILLING_RECEIPT_CONFIG_KEY, sid);
+    if (parsed && Array.isArray(parsed.fields)) {
+      parsed.fields.forEach((f: any) => {
+        if (f && f.show !== false && f.label && f.label.trim()) {
+          const key = f.label.trim().toLowerCase();
+          const isItemProduct = f.placement === "item" && f.itemSource !== "ask";
+          fieldsMap.set(key, {
+            id: f.id || `f_${key}`,
+            label: f.label.trim(),
+            placement: f.placement || "customer",
+            type: f.type || "text",
+            mode: isItemProduct ? "fixed" : (f.mode || "ask"),
+            value: f.value || "",
+            required: Boolean(f.required),
+            show: true,
+            itemSource: f.itemSource || (f.placement === "item" ? "product" : undefined),
+            attr: f.attr || (f.placement === "item" ? "batch" : undefined),
+            itemShow: f.itemShow || (f.placement === "item" ? "column" : undefined),
+            source: "receipt",
+          });
+        }
+      });
+    }
+  } catch (e) {
+    console.debug("Failed to read receipt custom fields:", e);
+  }
+
+  // 2. Read Invoice Template Settings
+  try {
+    const keyInvoice = getInvoiceSettingsStorageKey(sid);
+    const parsed = readScopedJson<any>(keyInvoice, INVOICE_SETTINGS_CONFIG_KEY, sid);
+    if (parsed && Array.isArray(parsed.fields)) {
+      parsed.fields.forEach((f: any) => {
+        if (f && f.show !== false && f.label && f.label.trim()) {
+          const key = f.label.trim().toLowerCase();
+          const existing = fieldsMap.get(key);
+          const isItemProduct = f.placement === "item" && f.itemSource !== "ask";
+          if (existing) {
+            if (!isItemProduct && f.mode === "ask") existing.mode = "ask";
+            if (f.required) existing.required = true;
+            if (f.value && !existing.value) existing.value = f.value;
+            if (f.attr && !existing.attr) existing.attr = f.attr;
+            if (f.itemShow) existing.itemShow = f.itemShow;
+            if (f.itemSource) existing.itemSource = f.itemSource;
+            existing.source = "both";
+          } else {
             fieldsMap.set(key, {
               id: f.id || `f_${key}`,
               label: f.label.trim(),
@@ -133,54 +180,11 @@ export function getActiveCustomFields(): CustomFieldDefinition[] {
               itemSource: f.itemSource || (f.placement === "item" ? "product" : undefined),
               attr: f.attr || (f.placement === "item" ? "batch" : undefined),
               itemShow: f.itemShow || (f.placement === "item" ? "column" : undefined),
-              source: "receipt",
+              source: "invoice",
             });
           }
-        });
-      }
-    }
-  } catch (e) {
-    console.debug("Failed to read receipt custom fields:", e);
-  }
-
-  // 2. Read Invoice Template Settings
-  try {
-    const rawInvoice = localStorage.getItem(INVOICE_SETTINGS_STORAGE_KEY);
-    if (rawInvoice) {
-      const parsed = JSON.parse(rawInvoice);
-      if (Array.isArray(parsed.fields)) {
-        parsed.fields.forEach((f: any) => {
-          if (f && f.show !== false && f.label && f.label.trim()) {
-            const key = f.label.trim().toLowerCase();
-            const existing = fieldsMap.get(key);
-            const isItemProduct = f.placement === "item" && f.itemSource !== "ask";
-            if (existing) {
-              if (!isItemProduct && f.mode === "ask") existing.mode = "ask";
-              if (f.required) existing.required = true;
-              if (f.value && !existing.value) existing.value = f.value;
-              if (f.attr && !existing.attr) existing.attr = f.attr;
-              if (f.itemShow) existing.itemShow = f.itemShow;
-              if (f.itemSource) existing.itemSource = f.itemSource;
-              existing.source = "both";
-            } else {
-              fieldsMap.set(key, {
-                id: f.id || `f_${key}`,
-                label: f.label.trim(),
-                placement: f.placement || "customer",
-                type: f.type || "text",
-                mode: isItemProduct ? "fixed" : (f.mode || "ask"),
-                value: f.value || "",
-                required: Boolean(f.required),
-                show: true,
-                itemSource: f.itemSource || (f.placement === "item" ? "product" : undefined),
-                attr: f.attr || (f.placement === "item" ? "batch" : undefined),
-                itemShow: f.itemShow || (f.placement === "item" ? "column" : undefined),
-                source: "invoice",
-              });
-            }
-          }
-        });
-      }
+        }
+      });
     }
   } catch (e) {
     console.debug("Failed to read invoice custom fields:", e);

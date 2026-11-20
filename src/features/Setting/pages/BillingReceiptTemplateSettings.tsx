@@ -20,7 +20,7 @@ import { useToast } from "@/context/ToastContext";
 import { shopApi } from "@/services/api/shop";
 import { inventoryApi } from "@/services/api/inventory";
 import { getShopId, SHOP_ID } from "@/services/endpoints";
-import { getPrinterConfig, savePrinterConfig, type PaperWidth } from "@/features/billing/utils/printerService";
+import { getBillingReceiptConfig, saveBillingReceiptConfig, type PaperWidth } from "@/features/billing/utils/printerService";
 import { numberToWords, type FieldType, type FieldPlacement, type FieldMode, type ItemSource, type ItemShow, TYPES, ATTRS } from "./InvoiceTemplateSettings";
 import { extractItemAttributeValue } from "@/features/billing/utils/customFieldsHelper";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
@@ -211,38 +211,15 @@ export const BillingReceiptTemplateSettings: React.FC = () => {
   const [openFieldId, setOpenFieldId] = useState<string | null>(null);
 
   // Config state
-  const [config, setConfig] = useState<BillingReceiptConfig>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      const prConfig = getPrinterConfig();
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return {
-          ...DEFAULT_CONFIG,
-          ...parsed,
-          paperWidth: prConfig.paperWidth || parsed.paperWidth || "80mm",
-          footer: {
-            ...DEFAULT_CONFIG.footer,
-            ...parsed.footer,
-            thanks: prConfig.footerText || parsed.footer?.thanks || DEFAULT_CONFIG.footer.thanks,
-          },
-          fields: Array.isArray(parsed.fields) ? parsed.fields : DEFAULT_CONFIG.fields,
-        };
-      }
-      return {
-        ...DEFAULT_CONFIG,
-        paperWidth: prConfig.paperWidth || "80mm",
-        footer: {
-          ...DEFAULT_CONFIG.footer,
-          thanks: prConfig.footerText || DEFAULT_CONFIG.footer.thanks,
-        },
-      };
-    } catch (_) {
-      return DEFAULT_CONFIG;
-    }
-  });
-
+  const [config, setConfig] = useState<BillingReceiptConfig>(() => getBillingReceiptConfig(activeShopId));
   const [savedConfig, setSavedConfig] = useState<BillingReceiptConfig>(config);
+
+  // Sync config when active shop changes
+  useEffect(() => {
+    const loaded = getBillingReceiptConfig(activeShopId);
+    setConfig(loaded);
+    setSavedConfig(loaded);
+  }, [activeShopId]);
 
   // Load shop & inventory
   useEffect(() => {
@@ -380,15 +357,7 @@ export const BillingReceiptTemplateSettings: React.FC = () => {
 
   const handleSave = () => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
-      // Sync with printerService
-      savePrinterConfig({
-        ...getPrinterConfig(),
-        paperWidth: config.paperWidth,
-        footerText: config.footer.thanks,
-        includeDigitalStoreQr: config.qr.store,
-        templateId: config.templateId,
-      });
+      saveBillingReceiptConfig(config, activeShopId);
       setSavedConfig(config);
       showToast("Thermal receipt template saved successfully", "success");
     } catch (err) {

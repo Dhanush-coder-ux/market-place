@@ -873,9 +873,6 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                         <p className="text-xs font-black text-indigo-900 truncate">
                           {selectedBatch.batch_name || selectedBatch.name || selectedBatch.batch || (selectedBatch.batch_no ? `Batch: ${selectedBatch.batch_no}` : `Batch: ${selectedBatch.id.slice(0, 8)}`)}
                         </p>
-                        <p className="text-[10px] font-mono font-medium text-indigo-500/80 mt-1 select-all">
-                          ID: {selectedBatch.id || selectedBatch.batchId}
-                        </p>
 
                         <div className="flex items-center gap-3 mt-2 flex-wrap">
                           {(selectedBatch.manufacturing_date || selectedBatch.manufacturingDate) && (

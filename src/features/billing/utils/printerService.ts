@@ -2,6 +2,7 @@ import { getGatewayBaseUrl } from "@/services/api/tokenManager";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { QRCodeSVG } from "qrcode.react";
+import { extractItemAttributeValue } from "./customFieldsHelper";
 
 export type PrinterConnectionType = "system" | "bluetooth" | "usb" | "network";
 export type PaperWidth = "58mm" | "80mm";
@@ -125,6 +126,7 @@ export const DEFAULT_BILLING_RECEIPT_CONFIG = {
     thanks: "Thank you for shopping with us! Please visit again.",
     terms: "Goods once sold can be exchanged within 7 days with bill.",
     showTearLine: true,
+    showComputerGenerated: true,
   },
   fields: [] as any[],
 };
@@ -862,6 +864,10 @@ export interface ReceiptData {
     placement: "customer" | "item" | "below";
     value: string;
     mode?: "fixed" | "ask";
+    itemSource?: "product" | "ask";
+    attr?: string;
+    itemShow?: "column" | "under";
+    displayValue?: any;
   }>;
 }
 
@@ -1177,6 +1183,7 @@ export function toAsciiReceiptText(text: string): string {
  * Build binary ESC/POS buffer for direct thermal printing
  */
 export function buildEscPosBuffer(data: ReceiptData, config: PrinterConfig): Uint8Array {
+  const receiptConfig = getBillingReceiptConfig();
   const is58mm = config.paperWidth === "58mm";
   // Safe character columns: 58mm = 32 chars (standard 48mm printable area at 12 dots/char), 80mm = 42 chars
   const colWidth = is58mm ? 32 : 42;
@@ -1297,11 +1304,13 @@ export function buildEscPosBuffer(data: ReceiptData, config: PrinterConfig): Uin
     }
   }
   if (data.customFields && Array.isArray(data.customFields)) {
-    data.customFields.filter((f) => f.placement === "customer" && f.value).forEach((f) => {
-      addRow(`${f.label}:`, f.value);
+    data.customFields.filter((f) => f.placement === "customer" && (f.value || f.displayValue)).forEach((f) => {
+      addRow(`${f.label}:`, f.displayValue || f.value);
     });
   }
   addDivider();
+
+  const itemCustomFields = (data.customFields || []).filter((f) => f.placement === "item" && f.label);
 
   // 5. Items Table with Perfect Column Alignment
   if (is58mm) {
@@ -1314,8 +1323,15 @@ export function buildEscPosBuffer(data: ReceiptData, config: PrinterConfig): Uin
     addLine(header);
     addDivider();
 
-    for (const item of data.items) {
+    for (let idx = 0; idx < data.items.length; idx++) {
+      const item = data.items[idx];
       addLine(item.name);
+      for (const f of itemCustomFields) {
+        const val = extractItemAttributeValue(f, item, idx);
+        if (val && val !== "—") {
+          addLine(`  ${f.label}: ${val}`);
+        }
+      }
       const unitStr = item.selectedUnit || "pc";
       const totalStr = `Rs.${(item.tprice ?? item.qty * item.price).toFixed(2)}`;
       const line2 =
@@ -1341,8 +1357,15 @@ export function buildEscPosBuffer(data: ReceiptData, config: PrinterConfig): Uin
     addLine(header);
     addDivider();
 
-    for (const item of data.items) {
+    for (let idx = 0; idx < data.items.length; idx++) {
+      const item = data.items[idx];
       addLine(item.name);
+      for (const f of itemCustomFields) {
+        const val = extractItemAttributeValue(f, item, idx);
+        if (val && val !== "—") {
+          addLine(`  ${f.label}: ${val}`);
+        }
+      }
       const unitStr = item.selectedUnit || "pc";
       const priceStr = item.price.toFixed(2);
       const totalStr = (item.tprice ?? item.qty * item.price).toFixed(2);
@@ -1361,10 +1384,10 @@ export function buildEscPosBuffer(data: ReceiptData, config: PrinterConfig): Uin
   addDivider();
 
   if (data.customFields && Array.isArray(data.customFields)) {
-    const belowFields = data.customFields.filter((f) => f.placement === "below" && f.value);
+    const belowFields = data.customFields.filter((f) => f.placement === "below" && (f.value || f.displayValue));
     if (belowFields.length > 0) {
       belowFields.forEach((f) => {
-        addRow(`${f.label}:`, f.value);
+        addRow(`${f.label}:`, f.displayValue || f.value);
       });
       addDivider();
     }
@@ -1492,6 +1515,10 @@ export function buildEscPosBuffer(data: ReceiptData, config: PrinterConfig): Uin
   if (data.footerNote && data.footerNote.trim() && data.footerNote.trim() !== config.footerText?.trim()) {
     addCenter(data.footerNote.trim());
   }
+  if (receiptConfig.footer?.showComputerGenerated !== false) {
+    addCenter("THIS IS A COMPUTER-GENERATED RECEIPT");
+    addCenter("AND DOES NOT REQUIRE A PHYSICAL SIGNATURE.");
+  }
   if (data.reprintTimestamp || data.isDuplicate) {
     addCenter(`Reprinted on ${data.reprintTimestamp || new Date().toLocaleString("en-IN")}`);
   }
@@ -1609,15 +1636,25 @@ export function printViaSystemDriver(
       ? data.taxableAmount
       : (data.gstAmount > 0 ? Math.max(0, data.finalAmount - data.gstAmount - (data.roundOff || 0)) : (data.totalAmount - (data.discountAmount || 0)));
 
-    const customerCustomFields = (data.customFields || []).filter((f) => f.placement === "customer" && f.value);
-    const belowCustomFields = (data.customFields || []).filter((f) => f.placement === "below" && f.value);
+    const customerCustomFields = (data.customFields || []).filter((f) => f.placement === "customer" && (f.value || f.displayValue));
+    const belowCustomFields = (data.customFields || []).filter((f) => f.placement === "below" && (f.value || f.displayValue));
+    const itemCustomFields = (data.customFields || []).filter((f) => f.placement === "item" && f.label);
 
     const itemsHtml = data.items
-      .map((item) => {
+      .map((item, idx) => {
         const itemTotal = (item.tprice ?? item.qty * item.price).toFixed(2);
+        const itemMeta = itemCustomFields
+          .map((f) => {
+            const val = extractItemAttributeValue(f, item, idx);
+            return val && val !== "—" ? `<div style="font-size: 8.5px; color: #475569;">• ${f.label}: ${val}</div>` : "";
+          })
+          .filter(Boolean)
+          .join("");
+
         return `
         <div style="padding: 4px 0; border-bottom: 1px dashed #e2e8f0;">
           <div style="font-weight: 700; color: #0f172a;">${item.name}</div>
+          ${itemMeta}
           <div style="display: flex; justify-content: space-between; font-size: 10px; color: #475569; margin-top: 1px;">
             <span style="color: #64748b;">${item.selectedUnit || "pc"}</span>
             <span style="font-weight: 700;">${item.qty}</span>
@@ -1700,10 +1737,10 @@ export function printViaSystemDriver(
         </div>` : ""}
         ` : ""}
 
-        ${customerCustomFields.map((f) => `
+        ${customerCustomFields.map((f: any) => `
         <div class="flex-between" style="font-size: 10px;">
           <span class="bold">${f.label}:</span>
-          <span>${f.value}</span>
+          <span>${f.displayValue || f.value}</span>
         </div>
         `).join("")}
 
@@ -1721,10 +1758,10 @@ export function printViaSystemDriver(
         ${belowCustomFields.length > 0 ? `
         <div class="divider"></div>
         <div style="padding: 2px 0;">
-          ${belowCustomFields.map((f) => `
+          ${belowCustomFields.map((f: any) => `
           <div class="flex-between" style="font-size: 10px;">
             <span>${f.label}:</span>
-            <span class="bold">${f.value}</span>
+            <span class="bold">${f.displayValue || f.value}</span>
           </div>
           `).join("")}
         </div>
@@ -1834,6 +1871,11 @@ export function printViaSystemDriver(
           <div style="font-weight: 700; color: #334155;">${receiptConfig.footer?.thanks || config.footerText || "Thank you for shopping with us! Please visit again."}</div>
           ${receiptConfig.footer?.terms ? `<div>${receiptConfig.footer.terms}</div>` : `<div>Goods once sold will not be returned without bill.</div>`}
           ${data.footerNote && data.footerNote.trim() && data.footerNote.trim() !== config.footerText?.trim() ? `<div style="margin-top: 2px; font-weight: 600; color: #475569;">${data.footerNote.trim()}</div>` : ""}
+          ${receiptConfig.footer?.showComputerGenerated !== false ? `
+          <div style="margin-top: 6px; font-size: 8px; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.6; text-align: center;">
+            This is a computer-generated receipt and does not require a physical signature.
+          </div>
+          ` : ""}
           ${receiptConfig.footer?.showTearLine ? `
           <div style="margin: 8px 0 2px; font-size: 9px; opacity: 0.6; text-align: center;">- - - - - - - - - - - - - - - - - - - -<br/>Tear here</div>
           ` : ""}

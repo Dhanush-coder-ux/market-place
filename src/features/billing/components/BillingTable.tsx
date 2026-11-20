@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { Package, Trash2, Barcode, Plus, Minus, RotateCcw, Layers, Hash, Zap, Tag } from "lucide-react";
+import { Package, Trash2, Barcode, Plus, Minus, RotateCcw, Layers, Hash, Zap, Tag, ArrowLeft } from "lucide-react";
 import { AntBadge } from "@/components/ui/AntBadge";
 import { ReusableSelect, SearchBar } from "@/components/ui";
 import { v4 as uuidv4 } from "uuid";
@@ -11,10 +11,12 @@ import { inventoryApi } from "@/services/api/inventory";
 import { SHOP_ID, getShopId } from "@/services/endpoints";
 import { isShopGstRegistered, calculateTaxSplit } from "@/utils/pricing";
 import { calculateDaysToExpiry, formatDate } from "@/features/inventory/components/StockTree";
+import { getActiveCustomFields, extractItemAttributeValue } from "../utils/customFieldsHelper";
 
 interface BillingTableProps {
   items: BillingItem[];
   onItemsChange: (items: BillingItem[]) => void;
+  onBack?: () => void;
 }
 
 const getInitials = (name: string) => {
@@ -137,10 +139,15 @@ const QtyAdjuster = ({
 };
 
 // ─── Main BillingTable Component ──────────────────────────────────────────────
-const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => {
+const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange, onBack }) => {
   const { showToast } = useToast();
   const [modalOpen, setModalOpen] = useState(false);
   const [pendingProduct, setPendingProduct] = useState<any | null>(null);
+
+  // Active custom fields for line items (Batch, Expiry, HSN, MRP, etc.)
+  const itemCustomFields = useMemo(() => {
+    return getActiveCustomFields().filter((f) => f.placement === "item" && f.show !== false && f.label && f.label.trim());
+  }, []);
 
   // Global search bar state
   const [searchQuery, setSearchQuery] = useState("");
@@ -1028,7 +1035,18 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
 
       {/* Global Product Search Section */}
       <div ref={dropdownRef} className="relative w-full shrink-0 z-30">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              title="Back to Dashboard / Products"
+              className="h-[44px] px-3.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 font-bold text-xs flex items-center gap-1.5 shadow-xs transition-all active:scale-95 shrink-0 cursor-pointer"
+            >
+              <ArrowLeft size={16} className="text-slate-500" />
+              <span>Back</span>
+            </button>
+          )}
           <SearchBar
             ref={searchInputRef}
             size="md"
@@ -1276,7 +1294,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                           <AntBadge variant="lb-batch" type="tag" icon={<Hash size={10} className="mr-1 inline" />}>
                             {(() => {
                               const prod = item._product || {};
-                              let batchName = item.batchId;
+                              let batchName = (item as any).batch_no || (item as any).batchName || (item as any).batch || item.batchId;
                               const allBatches = [...(prod.batch_infos || []), ...(prod.batches || [])];
                               const foundRoot = allBatches.find(b => b.id === item.batchId);
                               if (foundRoot) {
@@ -1307,6 +1325,23 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange }) => 
                             })()}
                           </div>
                         )}
+                        {/* Custom Fields & Attributes for Item (from Receipt/Invoice Template Settings) */}
+                        {itemCustomFields.map((f) => {
+                          const val = extractItemAttributeValue(f, item);
+                          if (!val || val === "—") return null;
+                          if (f.attr === "batch" && item.batchId) return null;
+                          if (f.attr === "expiry" && item.batchTracking && item.expiryDate) return null;
+                          return (
+                            <span
+                              key={f.id}
+                              className="inline-flex items-center gap-1 text-[9.5px] font-semibold text-slate-600 bg-slate-100/90 border border-slate-200/90 px-2 py-0.5 rounded-md"
+                              title={`${f.label}: ${val}`}
+                            >
+                              <span className="text-slate-400 font-medium">{f.label}:</span>
+                              <span className="text-slate-800 font-mono">{val}</span>
+                            </span>
+                          );
+                        })}
                       </div>
 
                       {/* Serial list display */}

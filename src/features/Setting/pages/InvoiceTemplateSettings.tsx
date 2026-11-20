@@ -65,6 +65,7 @@ export interface FooterSettings {
   termsShow: boolean;
   terms: string;
   words: boolean;
+  showComputerGenerated?: boolean;
 }
 
 export interface InvoiceSettingsData {
@@ -138,7 +139,7 @@ export const TEMPLATES = [
   {
     id: "inventq",
     name: "Modern InventQ",
-    desc: "Clean, colourful editorial A4 bill with custom fields & live QR.",
+    desc: "Clean, colourful editorial A4 invoice with custom fields & live QR.",
     size: "A4 (210 × 297 mm). Best for laser and inkjet printers.",
     badge: "New",
     isRenderer: false,
@@ -148,14 +149,6 @@ export const TEMPLATES = [
     name: "Classic B&W",
     desc: "Black and white with ruled lines. Saves ink on any printer.",
     size: "A4 (210 × 297 mm). Saves ink on inkjet printers.",
-    badge: "New",
-    isRenderer: false,
-  },
-  {
-    id: "thermal",
-    name: "Thermal 80 mm",
-    desc: "Narrow receipt for counter thermal receipt roll printers.",
-    size: "80 mm roll. For thermal receipt printers at the counter.",
     badge: "New",
     isRenderer: false,
   },
@@ -252,6 +245,7 @@ export const InvoiceTemplateSettings: React.FC = () => {
           termsShow: true,
           terms: "Goods once sold can be exchanged within 7 days with original invoice.",
           words: true,
+          showComputerGenerated: true,
         },
         template: legacyTmpl || "minimal",
       };
@@ -280,6 +274,7 @@ export const InvoiceTemplateSettings: React.FC = () => {
         termsShow: true,
         terms: "Goods once sold can be exchanged within 7 days with original invoice.",
         words: true,
+        showComputerGenerated: true,
       },
       template: "minimal",
     };
@@ -741,7 +736,7 @@ export const InvoiceTemplateSettings: React.FC = () => {
       tempCtx.drawImage(canvas, x0 - margin, y0 - margin, tempCanvas.width, tempCanvas.height, 0, 0, tempCanvas.width, tempCanvas.height);
       const dataUrl = tempCanvas.toDataURL("image/png");
       setState((prev) => ({ ...prev, sig: { ...prev.sig, drawn: dataUrl } }));
-      showToast("Signature added to the bill", "success");
+      showToast("Signature added to the invoice", "success");
     }
   };
 
@@ -781,7 +776,7 @@ export const InvoiceTemplateSettings: React.FC = () => {
     if (testBill && testBill.bill[f.id] !== undefined) {
       return testBill.bill[f.id] ? testBill.bill[f.id] : null;
     }
-    return <span className="inv-ph">{f.value ? `Default: ${f.value}` : "Asked while billing"}</span>;
+    return <span className="inv-ph">{f.value ? `Default: ${f.value}` : "Asked on invoice"}</span>;
   };
 
   const renderFieldSummary = (f: CustomField) => {
@@ -805,12 +800,12 @@ export const InvoiceTemplateSettings: React.FC = () => {
     const modeSpan =
       f.mode === "fixed" ? (
         <>
-          <span className="inv-tag fixed">Same on every bill</span>
+          <span className="inv-tag fixed">Same on every invoice</span>
           <span className="truncate max-w-[150px]">{f.value ? f.value : <i>No value yet</i>}</span>
         </>
       ) : (
         <>
-          <span className="inv-tag ask">Asked while billing</span>
+          <span className="inv-tag ask">Asked on invoice</span>
           {f.required && <span className="inv-tag req">Required</span>}
           {f.value && <span className="truncate max-w-[150px]">Default: {f.value}</span>}
         </>
@@ -834,7 +829,7 @@ export const InvoiceTemplateSettings: React.FC = () => {
             aria-selected={activeTab === "details"}
             onClick={() => setActiveTab("details")}
           >
-            Bill details <span className="inv-n">{state.fields.length}</span>
+            Invoice details <span className="inv-n">{state.fields.length}</span>
           </button>
           <button
             className="inv-tab"
@@ -859,7 +854,7 @@ export const InvoiceTemplateSettings: React.FC = () => {
                   <div>
                     <h2>Custom fields</h2>
                     <p>
-                      Add your own details to bills: at the top (e.g. Doctor / Salesperson), with each item (Batch no, Expiry, Serial no) or below items. Product details populate automatically from inventory.
+                      Add your own details to invoices: at the top (e.g. PO Number / Doctor / Salesperson), with each item (Batch no, Expiry, Serial no) or below items. Product details populate automatically from inventory.
                     </p>
                   </div>
                 </div>
@@ -904,7 +899,7 @@ export const InvoiceTemplateSettings: React.FC = () => {
                                 >
                                   <ArrowDown size={15} />
                                 </button>
-                                <label className="inv-sw" title="Show on bill">
+                                <label className="inv-sw" title="Show on invoice">
                                   <input
                                     type="checkbox"
                                     checked={field.show}
@@ -942,9 +937,9 @@ export const InvoiceTemplateSettings: React.FC = () => {
                                   )}
                                 </div>
 
-                                {/* Where on the bill */}
+                                {/* Where on the invoice */}
                                 <div className="inv-fld">
-                                  <span>Where on the bill</span>
+                                  <span>Where on the invoice</span>
                                   <div className="inv-place">
                                     <label
                                       className={field.placement === "customer" ? "active" : ""}
@@ -1054,7 +1049,7 @@ export const InvoiceTemplateSettings: React.FC = () => {
                                           checked={field.required}
                                           onChange={(e) => handleUpdateField(field.id, { required: e.target.checked })}
                                         />
-                                        Must be filled for every item before saving the bill
+                                        Must be filled for every item before saving the invoice
                                       </label>
                                     )}
 
@@ -1088,7 +1083,7 @@ export const InvoiceTemplateSettings: React.FC = () => {
                                       <div className="inv-note">
                                         <Info size={16} />
                                         <span>
-                                          Only {MAX_ITEM_COLS} extra columns fit on a bill, and they're already used. This one prints under the item name until you free a column.
+                                          Only {MAX_ITEM_COLS} extra columns fit on an invoice, and they're already used. This one prints under the item name until you free a column.
                                         </span>
                                       </div>
                                     )}
@@ -1104,8 +1099,8 @@ export const InvoiceTemplateSettings: React.FC = () => {
                                         >
                                           <input type="radio" checked={field.mode === "fixed"} readOnly />
                                           <span>
-                                            <b>Same on every bill</b>
-                                            <small>Set it once here. Every bill prints it.</small>
+                                            <b>Same on every invoice</b>
+                                            <small>Set it once here. Every invoice prints it.</small>
                                           </span>
                                         </label>
                                         <label
@@ -1114,8 +1109,8 @@ export const InvoiceTemplateSettings: React.FC = () => {
                                         >
                                           <input type="radio" checked={field.mode === "ask"} readOnly />
                                           <span>
-                                            <b>Ask while billing</b>
-                                            <small>Staff type it for each bill.</small>
+                                            <b>Ask on invoice</b>
+                                            <small>Staff type it when creating each invoice.</small>
                                           </span>
                                         </label>
                                       </div>
@@ -1124,7 +1119,7 @@ export const InvoiceTemplateSettings: React.FC = () => {
                                     {field.mode === "fixed" ? (
                                       <>
                                         <label className="inv-fld">
-                                          <span>Value printed on every bill</span>
+                                          <span>Value printed on every invoice</span>
                                           <input
                                             className="inv-in"
                                             value={field.value}
@@ -1134,7 +1129,7 @@ export const InvoiceTemplateSettings: React.FC = () => {
                                           />
                                         </label>
                                         {!field.value && (
-                                          <div className="inv-err-msg">This field is hidden on bills until you add a value.</div>
+                                          <div className="inv-err-msg">This field is hidden on invoices until you add a value.</div>
                                         )}
                                       </>
                                     ) : (
@@ -1150,7 +1145,7 @@ export const InvoiceTemplateSettings: React.FC = () => {
                                           />
                                         </label>
                                         <div className="inv-fld">
-                                          <span>While billing</span>
+                                          <span>When invoicing</span>
                                           <label className="inv-check" style={{ minHeight: 36 }}>
                                             <input
                                               type="checkbox"
@@ -1210,7 +1205,7 @@ export const InvoiceTemplateSettings: React.FC = () => {
                 <div className="inv-card-h">
                   <div>
                     <h2>Signature</h2>
-                    <p>Shown at the bottom of the bill, above “Authorised Signatory”.</p>
+                    <p>Shown at the bottom of the invoice, above “Authorised Signatory”.</p>
                   </div>
                   <label className="inv-sw">
                     <input
@@ -1384,11 +1379,11 @@ export const InvoiceTemplateSettings: React.FC = () => {
                 </div>
               </div>
 
-              {/* Card 3: QR codes on the bill */}
+              {/* Card 3: QR codes on the invoice */}
               <div className="inv-card">
                 <div className="inv-card-h">
                   <div>
-                    <h2>QR codes on the bill</h2>
+                    <h2>QR codes on the invoice</h2>
                     <p>Help customers order again and pay faster.</p>
                   </div>
                 </div>
@@ -1488,7 +1483,7 @@ export const InvoiceTemplateSettings: React.FC = () => {
                 <div className="inv-card-h">
                   <div>
                     <h2>Footer</h2>
-                    <p>Printed at the end of every bill.</p>
+                    <p>Printed at the end of every invoice.</p>
                   </div>
                 </div>
                 <div className="inv-card-b">
@@ -1535,6 +1530,15 @@ export const InvoiceTemplateSettings: React.FC = () => {
                       onChange={(e) => setState((prev) => ({ ...prev, footer: { ...prev.footer, words: e.target.checked } }))}
                     />
                     Show grand total in words
+                  </label>
+
+                  <label className="inv-check">
+                    <input
+                      type="checkbox"
+                      checked={state.footer.showComputerGenerated !== false}
+                      onChange={(e) => setState((prev) => ({ ...prev, footer: { ...prev.footer, showComputerGenerated: e.target.checked } }))}
+                    />
+                    Show computer-generated notice ("This is a computer-generated invoice and does not require a physical signature.")
                   </label>
 
                   <div className="inv-note">
@@ -1626,7 +1630,7 @@ export const InvoiceTemplateSettings: React.FC = () => {
         <aside className="inv-pv" aria-label="Bill preview">
           <div className="inv-pv-bar">
             <div className="inv-pv-title">
-              Bill preview <span className="inv-live">Live</span>
+              Invoice preview <span className="inv-live">Live</span>
             </div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               {testBill && (
@@ -1639,7 +1643,7 @@ export const InvoiceTemplateSettings: React.FC = () => {
                 className="inv-btn sm primary"
                 onClick={() => setIsTestModalOpen(true)}
               >
-                <FileText size={14} /> Try a test bill
+                <FileText size={14} /> Try a test invoice
               </button>
             </div>
           </div>
@@ -1647,10 +1651,10 @@ export const InvoiceTemplateSettings: React.FC = () => {
           <div className="inv-pv-bar">
             <div className="inv-pv-mode" style={{ flex: 1, minWidth: 220 }}>
               {testBill ? (
-                <>Showing <b>test bill</b> values you entered.</>
+                <>Showing <b>test invoice</b> values you entered.</>
               ) : activeAsks.total > 0 ? (
                 <>
-                  <b>{activeAsks.total}</b> field{activeAsks.total > 1 ? "s are" : " is"} filled in while billing. Use <b>Try a test bill</b> to see it as staff would.
+                  <b>{activeAsks.total}</b> field{activeAsks.total > 1 ? "s are" : " is"} filled in when invoicing. Use <b>Try a test invoice</b> to see it as staff would.
                 </>
               ) : (
                 <>Real store details and active inventory are reflected live on your invoices.</>
@@ -1871,17 +1875,17 @@ export const InvoiceTemplateSettings: React.FC = () => {
                         <span>{todayDateStr}</span>
                       </div>
 
-                      {/* Metadata: Billed To & Custom Top Fields */}
+                      {/* Metadata: Invoiced To & Custom Top Fields */}
                       <div className="inv-p-meta">
                         <div>
-                          <div className="k">BILLED TO</div>
-                          <div className="nm">Walk-in Customer</div>
+                          <div className="k">INVOICED TO</div>
+                          <div className="nm">Valued Customer</div>
                           <div>+91 98765 43210</div>
                         </div>
                         <div>
                           {state.fields.filter((f) => f.show && f.placement === "customer" && f.label.trim()).length > 0 && (
                             <>
-                              <div className="k">BILL DETAILS</div>
+                              <div className="k">INVOICE DETAILS</div>
                               <dl className="inv-cf-list">
                                 {state.fields
                                   .filter((f) => f.show && f.placement === "customer" && f.label.trim())
@@ -1925,7 +1929,6 @@ export const InvoiceTemplateSettings: React.FC = () => {
                               <td>
                                 <div className="inv-it-name">{it.n}</div>
                                 {it.v && <div style={{ color: "var(--inv-paper-muted)" }}>{it.v}</div>}
-                                <div className="inv-it-sku">{it.sku}</div>
                                 {itemUnder.length > 0 && (
                                   <div className="inv-it-extra">
                                     {itemUnder.map((u) => (
@@ -2064,7 +2067,12 @@ export const InvoiceTemplateSettings: React.FC = () => {
                         )}
                       </div>
 
-                      <div className="inv-pwr">Billed with InventQ</div>
+                      <div className="inv-pwr">Invoiced with InventQ</div>
+                      {state.footer.showComputerGenerated !== false && (
+                        <div style={{ textAlign: "center", textTransform: "uppercase", fontSize: 8, color: "var(--inv-paper-muted)", letterSpacing: "0.05em", marginTop: 4 }}>
+                          This is a computer-generated invoice and does not require a physical signature.
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
@@ -2074,7 +2082,7 @@ export const InvoiceTemplateSettings: React.FC = () => {
 
           <div className="inv-legend">
             <span>
-              <i className="inv-sw-ask" /> Filled in while billing
+              <i className="inv-sw-ask" /> Filled when invoicing
             </span>
             <span>Live shop inventory preview</span>
           </div>
@@ -2101,7 +2109,7 @@ export const InvoiceTemplateSettings: React.FC = () => {
         </div>
       </div>
 
-      {/* Test Bill Modal */}
+      {/* Test Invoice Modal */}
       {isTestModalOpen && (
         <TestBillModal
           shopName={shopName}
@@ -2115,7 +2123,7 @@ export const InvoiceTemplateSettings: React.FC = () => {
             setTestBill({ bill: vals, items: itemVals });
             setFlashIds(new Set([...activeAsks.billAsks, ...activeAsks.itemAsks].map((f) => f.id)));
             setIsTestModalOpen(false);
-            showToast("Test bill created. The preview shows what prints.", "success");
+            showToast("Test invoice created. The preview shows what prints.", "success");
           }}
         />
       )}
@@ -2205,11 +2213,11 @@ const TestBillModal: React.FC<TestBillModalProps> = ({
         onSubmit={handleSubmit}
       >
         <div className="inv-modal-h">
-          <h3>New bill · {shopName}</h3>
+          <h3>New invoice · {shopName}</h3>
           <p>
             {hasAnyAsks
-              ? "This is what staff see when saving a bill. Fields marked * must be filled."
-              : "Nothing is asked while billing. Bill details use your fixed values and item details come from your products."}
+              ? "This is what staff see when saving an invoice. Fields marked * must be filled."
+              : "Nothing is asked when creating an invoice. Invoice details use your fixed values and item details come from your products."}
           </p>
         </div>
 
@@ -2231,7 +2239,7 @@ const TestBillModal: React.FC<TestBillModalProps> = ({
                 }}
               />
               {errors[f.id] && (
-                <span className="inv-err-msg">Enter {f.label.toLowerCase()} to save this bill.</span>
+                <span className="inv-err-msg">Enter {f.label.toLowerCase()} to save this invoice.</span>
               )}
             </label>
           ))}
@@ -2284,14 +2292,14 @@ const TestBillModal: React.FC<TestBillModalProps> = ({
                 </table>
               </div>
               {itemErrors && (
-                <span className="inv-err-msg">Fill the required item details to save this bill.</span>
+                <span className="inv-err-msg">Fill the required item details to save this invoice.</span>
               )}
             </div>
           )}
 
           {!hasAnyAsks && (
             <div className="inv-note">
-              Set a field to “Ask while billing”, or an item detail to “Ask for each item”, to try this.
+              Set a field to “Ask on invoice”, or an item detail to “Ask for each item”, to try this.
             </div>
           )}
 
@@ -2308,7 +2316,7 @@ const TestBillModal: React.FC<TestBillModalProps> = ({
           </button>
           {hasAnyAsks && (
             <button type="submit" className="inv-btn primary">
-              Save bill
+              Save invoice
             </button>
           )}
         </div>

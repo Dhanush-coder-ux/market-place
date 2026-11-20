@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import {
   ListTree,
@@ -76,16 +76,16 @@ const MENU_ITEMS = [
   },
   {
     id: "templates",
-    label: "Invoice Templates",
+    label: "Invoice Settings",
     icon: FileText,
-    description: "Choose invoice design",
+    description: "A4 invoice design, fields & print options",
     accent: "blue",
   },
   {
     id: "billingtemplates",
-    label: "Billing Templates",
+    label: "Bill Settings",
     icon: ReceiptText,
-    description: "80mm & 58mm thermal receipts",
+    description: "POS bill & thermal receipt configuration",
     accent: "emerald",
   },
   {
@@ -129,9 +129,54 @@ const accentClasses: Record<string, { icon: string; badge: string }> = {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
+const TAB_ALIASES: Record<string, string> = {
+  "shop-profile": "shopprofile",
+  "shopprofile": "shopprofile",
+  "shop": "shopprofile",
+  "dropdown-settings": "dropdowns",
+  "dropdowns": "dropdowns",
+  "custom-fields": "customfields",
+  "customfields": "customfields",
+  "gst-configuration": "gst",
+  "gst": "gst",
+  "invoice-settings": "templates",
+  "invoicesettings": "templates",
+  "templates": "templates",
+  "bill-settings": "billingtemplates",
+  "billing-settings": "billingtemplates",
+  "billingtemplates": "billingtemplates",
+  "printers-config": "printers",
+  "printers": "printers",
+  "activity-log": "activity",
+  "activity": "activity",
+  "keyboard-shortcuts": "shortcuts",
+  "shortcuts": "shortcuts",
+  "plans-billing": "subscription",
+  "subscription": "subscription",
+};
+
+const TAB_TO_PARAM: Record<string, string> = {
+  shopprofile: "shop-profile",
+  dropdowns: "dropdown-settings",
+  customfields: "custom-fields",
+  gst: "gst-configuration",
+  templates: "invoice-settings",
+  billingtemplates: "billing-settings",
+  printers: "printers-config",
+  activity: "activity-log",
+  shortcuts: "keyboard-shortcuts",
+  subscription: "plans-billing",
+};
+
+const resolveTabParam = (param: string | null) => {
+  if (!param) return "shopprofile";
+  const lower = param.toLowerCase();
+  return TAB_ALIASES[lower] || (MENU_ITEMS.some((i) => i.id === param) ? param : "shopprofile");
+};
+
 export const ProfileSettingsPage = () => {
-  const [searchParams] = useSearchParams();
-  const initialTab = searchParams.get("tab") || "shopprofile";
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = resolveTabParam(searchParams.get("s") || searchParams.get("tab"));
   const [activeTab, setActiveTab] = useState(initialTab);
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     try {
@@ -142,12 +187,21 @@ export const ProfileSettingsPage = () => {
     }
   });
 
+  const handleSelectTab = useCallback((tabId: string) => {
+    setActiveTab(tabId);
+    const paramVal = TAB_TO_PARAM[tabId] || tabId;
+    setSearchParams({ s: paramVal }, { replace: true });
+  }, [setSearchParams]);
+
   React.useEffect(() => {
-    const tabParam = searchParams.get("tab");
-    if (tabParam && tabParam !== activeTab) {
-      setActiveTab(tabParam);
+    const rawParam = searchParams.get("s") || searchParams.get("tab");
+    if (rawParam) {
+      const resolved = resolveTabParam(rawParam);
+      if (resolved && resolved !== activeTab && MENU_ITEMS.some((i) => i.id === resolved)) {
+        setActiveTab(resolved);
+      }
     }
-  }, [searchParams]);
+  }, [searchParams, activeTab]);
   const { settings, setGstType } = usePurchaseSettings();
   const { showToast } = useToast();
   const [gstNumber, setGstNumber] = useState<string>("");
@@ -541,7 +595,7 @@ export const ProfileSettingsPage = () => {
               <div key={item.id} className="relative group shrink-0 md:w-full">
                 <button
                   type="button"
-                  onClick={() => setActiveTab(item.id)}
+                  onClick={() => handleSelectTab(item.id)}
                   className={`w-full flex items-center gap-3 py-2 rounded-xl text-left transition-all duration-150 cursor-pointer ${
                     isSidebarOpen ? "px-3" : "px-0 md:justify-center"
                   } ${

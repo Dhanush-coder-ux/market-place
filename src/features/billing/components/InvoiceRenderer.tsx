@@ -70,6 +70,7 @@ export interface InvoiceRendererProps {
     termsShow: boolean;
     terms: string;
     words: boolean;
+    showComputerGenerated?: boolean;
   };
   getItemCustomValue?: (field: any, item: any, index: number) => React.ReactNode;
 }
@@ -257,7 +258,7 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
           <div className={config.customer.wrapper}>
             <div className="flex justify-between items-start gap-4">
               <div>
-                <p className={config.customer.title}>Billed To</p>
+                <p className={config.customer.title}>Invoiced To</p>
                 <p className={config.customer.name}>{customerName || "Customer"}</p>
                 {phone && <p className={config.customer.phone}>{phone}</p>}
               </div>
@@ -269,7 +270,7 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
                       <div key={f.id} className="text-[11px] leading-tight">
                         <span className="text-slate-400 font-medium mr-1.5">{f.label}:</span>
                         <span className="font-semibold text-slate-800">
-                          {f.displayValue ?? f.value ?? "Asked while billing"}
+                          {f.displayValue ?? f.value ?? "Asked on invoice"}
                         </span>
                       </div>
                     ))}
@@ -284,7 +285,7 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
           <div className="mx-6 my-3 p-2.5 bg-emerald-50 border border-emerald-200/80 rounded-xl flex items-center justify-between text-emerald-800">
             <div className="flex items-center gap-2">
               <BadgePercent size={14} className="text-emerald-600 shrink-0" />
-              <span className="text-[11px] font-bold">You saved ₹{formatINR(billTotals.totalSavings)} on this bill!</span>
+              <span className="text-[11px] font-bold">You saved ₹{formatINR(billTotals.totalSavings)} on this invoice!</span>
             </div>
             {billTotals.productDiscountTotal + billTotals.lineDiscountTotal > 0 && (
               <span className="text-[10px] text-emerald-700 font-medium">
@@ -325,7 +326,6 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
                      <td className="py-3 px-2">
                        <p className={config.table.cellStrong}>{baseName}</p>
                        {variantName && <p className={config.table.cellMuted}>{cleanVariantLabel(variantName)}</p>}
-                       {line.code && <p className={`text-[9px] font-mono ${config.table.cellMuted}`}>{line.code}</p>}
                        {/* Custom Item Attributes (only under item name) */}
                        {itemUnder.length > 0 && (
                          <div className="mt-0.5 space-y-0.5">
@@ -603,9 +603,11 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
               )}
            </div>
         </div>
-        <div className="bg-transparent py-3 text-center print:bg-white border-t border-transparent">
-           <p className="text-[8px] text-slate-400 uppercase tracking-widest opacity-60">This is a computer-generated receipt and does not require a physical signature.</p>
-        </div>
+         {(resolvedSettings.footerSettings?.showComputerGenerated !== false) && (
+           <div className="bg-transparent py-3 text-center print:bg-white border-t border-transparent">
+              <p className="text-[8px] text-slate-400 uppercase tracking-widest opacity-60">This is a computer-generated invoice and does not require a physical signature.</p>
+           </div>
+         )}
 
       </div>
     </div>

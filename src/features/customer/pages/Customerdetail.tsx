@@ -320,7 +320,7 @@ export default function CustomerDetail() {
         }
         return [...prev, { shop_id: localStorage.getItem('shop_id') || SHOP_ID, customer_id: id, field_id: fieldId, value: editingValue }];
       });
-      showToast('Custom field updated', 'success');
+      showToast('Additional information updated', 'success');
     } catch {
       showToast('Failed to update field', 'error');
     } finally {
@@ -552,7 +552,7 @@ export default function CustomerDetail() {
                         <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-100">
                           <Layers size={16} />
                         </div>
-                        <h2 className="text-[10px] font-black text-slate-800 tracking-[0.15em]">CUSTOM ATTRIBUTES</h2>
+                        <h2 className="text-[10px] font-black text-slate-800 tracking-[0.15em]">ADDITIONAL INFORMATION</h2>
                       </div>
                       {cfLoading ? (
                         <div className="py-8 flex justify-center"><Loader /></div>

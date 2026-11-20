@@ -16,6 +16,7 @@ import {
 } from "../utils/printerService";
 import { useToast } from "@/context/ToastContext";
 import { QRCodeSVG } from "qrcode.react";
+import { extractItemAttributeValue } from "../utils/customFieldsHelper";
 
 /* ─── Types ─────────────────────────────────────────────────────────────── */
 
@@ -395,6 +396,14 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
               <span className="font-semibold text-[#12161F]">{dateStr}, {timeStr}</span>
             </div>
 
+            {/* Customer Custom Fields */}
+            {(details.customFields || []).filter((f: any) => f.placement === "customer" && (f.value || f.displayValue)).map((f: any) => (
+              <div key={f.id} className="flex justify-between text-[12.5px] py-1 border-t border-[#E6EAF1]">
+                <span className="text-[#7A8497] flex items-center gap-1.5">{f.label}</span>
+                <span className="font-semibold text-[#12161F]">{f.displayValue || f.value}</span>
+              </div>
+            ))}
+
             <div className="text-[9.5px] font-bold tracking-[0.1em] uppercase text-[#A7B0C0] flex justify-between mt-[18px] mb-2 pt-3.5 border-t border-[#E6EAF1]">
               <span>Items</span>
               <span>{itemsCount} items · {totalQty} units</span>
@@ -406,6 +415,8 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
                 const calcLine = details.billTotals?.lines?.[idx];
                 const itemTotal = calcLine ? calcLine.finalInclusive : (item.tprice ?? (item.qty * item.price));
                 const lineDisc = calcLine ? (calcLine.productDiscountAmount + calcLine.lineDiscountAmount + calcLine.billDiscountShare) : 0;
+                const itemFields = (details.customFields || []).filter((f: any) => f.placement === "item" && f.label);
+
                 return (
                   <div key={idx} className="flex justify-between gap-3 py-1.5 text-[13px]">
                     <div>
@@ -414,6 +425,21 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
                         {item.qty} {item.selectedUnit || 'pc'} × ₹{item.price?.toFixed(2)} · GST {itemGst}%
                         {lineDisc > 0 && <span className="ml-1 text-emerald-600 font-medium">(-₹{lineDisc.toFixed(2)})</span>}
                       </div>
+                      {/* Item Custom Fields / Attributes */}
+                      {itemFields.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-1">
+                          {itemFields.map((f: any) => {
+                            const val = extractItemAttributeValue(f, item, idx);
+                            if (!val || val === "—") return null;
+                            return (
+                              <span key={f.id} className="inline-flex items-center text-[10px] bg-slate-50 border border-slate-200/80 px-1.5 py-0.5 rounded text-slate-600">
+                                <span className="text-slate-400 mr-1">{f.label}:</span>
+                                <span className="font-semibold text-slate-700">{val}</span>
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                     <div className="font-mono font-semibold text-[#12161F] whitespace-nowrap">
                       ₹{itemTotal.toFixed(2)}
@@ -422,6 +448,18 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
                 );
               })}
             </div>
+
+            {/* Below-items custom fields */}
+            {(details.customFields || []).filter((f: any) => f.placement === "below" && (f.value || f.displayValue)).length > 0 && (
+              <div className="pt-2 border-t border-[#E6EAF1] space-y-1">
+                {(details.customFields || []).filter((f: any) => f.placement === "below" && (f.value || f.displayValue)).map((f: any) => (
+                  <div key={f.id} className="flex justify-between text-[12px] py-0.5">
+                    <span className="text-[#7A8497]">{f.label}:</span>
+                    <span className="font-semibold text-[#12161F]">{f.displayValue || f.value}</span>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div className="mt-3.5 pt-3 border-t border-[#E6EAF1]">
               {details.billTotals?.totalDiscountGiven > 0 ? (
@@ -769,10 +807,10 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
                     )}
                   </>
                 )}
-                {(details.customFields || []).filter((f: any) => f.placement === "customer" && f.value).map((f: any) => (
+                {(details.customFields || []).filter((f: any) => f.placement === "customer" && (f.value || f.displayValue)).map((f: any) => (
                   <div key={f.id} className="flex justify-between text-[10px]">
                     <span className="text-[#8A857C] font-medium">{f.label}</span>
-                    <span className="font-semibold text-[#1A1714]">{f.value}</span>
+                    <span className="font-semibold text-[#1A1714]">{f.displayValue || f.value}</span>
                   </div>
                 ))}
 
@@ -805,19 +843,29 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
                         {item.qty} {item.selectedUnit || "pc"} x {item.price?.toFixed(2)}
                         {itemGst > 0 && <span className="ml-1">GST@{itemGst}%</span>}
                       </div>
+                      {/* Item custom fields in receipt */}
+                      {(details.customFields || []).filter((f: any) => f.placement === "item" && f.label).map((f: any) => {
+                        const val = extractItemAttributeValue(f, item, idx);
+                        if (!val || val === "—") return null;
+                        return (
+                          <div key={f.id} className="text-[8.5px] text-[#6B655B] pl-0.5">
+                            • {f.label}: {val}
+                          </div>
+                        );
+                      })}
                     </div>
                   );
                 })}
 
                 {/* Below items custom fields */}
-                {(details.customFields || []).filter((f: any) => f.placement === "below" && f.value).length > 0 && (
+                {(details.customFields || []).filter((f: any) => f.placement === "below" && (f.value || f.displayValue)).length > 0 && (
                   <>
                     <hr className="receipt-separator" />
                     <div className="space-y-0.5 py-0.5">
-                      {(details.customFields || []).filter((f: any) => f.placement === "below" && f.value).map((f: any) => (
+                      {(details.customFields || []).filter((f: any) => f.placement === "below" && (f.value || f.displayValue)).map((f: any) => (
                         <div key={f.id} className="flex justify-between text-[10px]">
                           <span className="text-[#8A857C] font-medium">{f.label}:</span>
-                          <span className="font-semibold text-[#1A1714]">{f.value}</span>
+                          <span className="font-semibold text-[#1A1714]">{f.displayValue || f.value}</span>
                         </div>
                       ))}
                     </div>
@@ -968,6 +1016,11 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
                   <div>
                     {receiptConfig.footer?.terms || "Goods once sold will not be returned"}
                   </div>
+                  {receiptConfig.footer?.showComputerGenerated !== false && (
+                    <div className="text-[8px] text-[#A7B0C0] mt-1 text-center">
+                      This is a computer generated receipt
+                    </div>
+                  )}
                   {receiptConfig.footer?.showTearLine && (
                     <div className="text-[8px] mt-1.5 text-[#B0AAA2] tracking-wider text-center">
                       - - - - - - - - - - - - - - - - - - - -<br />Tear here

@@ -756,14 +756,27 @@ const Billing = () => {
 
   const hasItemsForBlocker = items.some(i => i.name && i.qty > 0);
 
+  const handleBack = useCallback(() => {
+    if (hasItemsForBlocker) {
+      if (!window.confirm("You have active items in your bill. Are you sure you want to leave?")) {
+        return;
+      }
+    }
+    if (window.history.length > 1 && document.referrer && !document.referrer.includes("/billing")) {
+      navigate(-1);
+    } else {
+      navigate("/");
+    }
+  }, [hasItemsForBlocker, navigate]);
+
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-slate-50/80 overflow-hidden h-full">
       {/* --- Mobile POS Top Header Bar (lg:hidden) --- */}
       <div className="lg:hidden shrink-0 bg-white border-b border-slate-200/90 px-3.5 py-2.5 shadow-xs">
         <div className="flex items-center justify-between mb-2">
           <button
-            onClick={() => navigate("/")}
-            className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors active:scale-95"
+            onClick={handleBack}
+            className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors active:scale-95 cursor-pointer"
           >
             <ArrowLeft size={15} />
             <span>Exit POS</span>
@@ -816,6 +829,7 @@ const Billing = () => {
             <BillingTable
               items={items}
               onItemsChange={handleItemsChange}
+              onBack={handleBack}
             />
           </div>
         </div>
@@ -828,6 +842,7 @@ const Billing = () => {
                 <BillingTable
                   items={items}
                   onItemsChange={handleItemsChange}
+                  onBack={handleBack}
                 />
               </div>
 

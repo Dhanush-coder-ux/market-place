@@ -48,6 +48,7 @@ type FormData = {
   discount_percent: string;
   offer_valid_until: string;
   cost_to_make: string;
+  buy_price_tax_inclusive: boolean;
   gst: string;
   hsn: string;
   sku: string;
@@ -470,7 +471,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     selling_price: (propInitialData.selling_price as string) || "",
     discount_percent: (propInitialData.discount_percent as string) || "0",
     offer_valid_until: (propInitialData.offer_valid_until as string) || "",
-    cost_to_make: "",
+    cost_to_make: (propInitialData.cost_to_make as string) || "",
+    buy_price_tax_inclusive: (propInitialData.buy_price_tax_inclusive as boolean) || false,
     gst: String((propInitialData.gst as string) || "18").replace("%", ""),
     hsn: "",
     sku: "",
@@ -685,10 +687,23 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   const numMrp = form.mrp ? Number(form.mrp) : 0;
   const numDiscount = form.discount_percent ? Number(form.discount_percent) : 0;
   const numCostToMake = form.cost_to_make ? Number(form.cost_to_make) : 0;
-  const costToMakeGstAmt = (isGstReg && gstRateNum > 0 && numCostToMake > 0)
-    ? Math.round((numCostToMake * (gstRateNum / 100)) * 100) / 100
-    : 0;
-  const effectiveCostToMake = Math.round((numCostToMake + costToMakeGstAmt) * 100) / 100;
+  const isBuyPriceInclusive = !!form.buy_price_tax_inclusive;
+
+  let baseCostToMake = numCostToMake;
+  let costToMakeGstAmt = 0;
+  let effectiveCostToMake = numCostToMake;
+
+  if (numCostToMake > 0 && isGstReg && gstRateNum > 0) {
+    if (isBuyPriceInclusive) {
+      baseCostToMake = Math.round((numCostToMake / (1 + gstRateNum / 100)) * 100) / 100;
+      costToMakeGstAmt = Math.round((numCostToMake - baseCostToMake) * 100) / 100;
+      effectiveCostToMake = numCostToMake;
+    } else {
+      baseCostToMake = numCostToMake;
+      costToMakeGstAmt = Math.round((numCostToMake * (gstRateNum / 100)) * 100) / 100;
+      effectiveCostToMake = Math.round((numCostToMake + costToMakeGstAmt) * 100) / 100;
+    }
+  }
 
   const priceCalc = useMemo(() => {
     if (numSellingPrice > 0) {
@@ -700,10 +715,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         offerValidUntil: form.offer_valid_until || null,
         isGstRegistered: isGstReg,
         costPrice: numCostToMake,
+        costGstMode: isBuyPriceInclusive ? 'inclusive' : 'exclusive',
       });
     }
     return null;
-  }, [numSellingPrice, numMrp, gstRateNum, numDiscount, form.offer_valid_until, isGstReg, numCostToMake]);
+  }, [numSellingPrice, numMrp, gstRateNum, numDiscount, form.offer_valid_until, isGstReg, numCostToMake, isBuyPriceInclusive]);
 
   const pricingHelperState = useMemo(() => {
     const hasMrp = numMrp > 0;
@@ -835,6 +851,17 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
               ? String(rawCost)
               : "";
 
+            const resolvedBuyPriceTaxInclusive = Boolean(
+              prod.buy_price_tax_inclusive ||
+              prod.cost_price_tax_inclusive ||
+              pInfo.buy_price_tax_inclusive ||
+              pInfo.cost_price_tax_inclusive ||
+              additional.buy_price_tax_inclusive ||
+              additional.cost_price_tax_inclusive ||
+              additional.cost_tax_inclusive ||
+              additional.cost_tax_type === 'inclusive'
+            );
+
             const resolvedTrackStock = prod.have_tracking ?? prod.is_stock_tracked ?? prod.track_stock ?? true;
 
             const nextForm = {
@@ -852,6 +879,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
               discount_percent: resolvedDiscount,
               offer_valid_until: prod.offer_valid_until || pInfo.offer_valid_until || additional.offer_valid_until || "",
               cost_to_make: resolvedCost,
+              buy_price_tax_inclusive: Boolean(resolvedBuyPriceTaxInclusive),
               gst: String(prod.gst || "18").replace("%", ""),
               hsn: String(additional.hsn || ""),
               sku: prod.sku || "",
@@ -1485,6 +1513,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         buy_price: form.cost_to_make !== "" && !isNaN(Number(form.cost_to_make))
           ? Number(form.cost_to_make)
           : null,
+        buy_price_tax_inclusive: form.buy_price_tax_inclusive,
+        cost_price_tax_inclusive: form.buy_price_tax_inclusive,
         sell_price: form.selling_price !== "" && !isNaN(Number(form.selling_price))
           ? Number(form.selling_price)
           : null,
@@ -1498,6 +1528,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
           ...customFieldsBlob,
           sell_price: form.selling_price !== "" && !isNaN(Number(form.selling_price)) ? Number(form.selling_price) : null,
           buy_price: form.cost_to_make !== "" && !isNaN(Number(form.cost_to_make)) ? Number(form.cost_to_make) : null,
+          cost_to_make: form.cost_to_make !== "" && !isNaN(Number(form.cost_to_make)) ? Number(form.cost_to_make) : null,
+          buy_price_tax_inclusive: form.buy_price_tax_inclusive,
+          cost_price_tax_inclusive: form.buy_price_tax_inclusive,
+          cost_tax_type: form.buy_price_tax_inclusive ? "inclusive" : "exclusive",
         },
       };
     } else {
@@ -1523,6 +1557,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         buy_price: form.cost_to_make !== "" && !isNaN(Number(form.cost_to_make))
           ? Number(form.cost_to_make)
           : null,
+        buy_price_tax_inclusive: form.buy_price_tax_inclusive,
+        cost_price_tax_inclusive: form.buy_price_tax_inclusive,
         sell_price: form.selling_price !== "" && !isNaN(Number(form.selling_price))
           ? Number(form.selling_price)
           : null,
@@ -1538,6 +1574,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         is_active: false,
         custom_fields: {
           ...customFieldsBlob,
+          buy_price: form.cost_to_make !== "" && !isNaN(Number(form.cost_to_make)) ? Number(form.cost_to_make) : null,
+          cost_to_make: form.cost_to_make !== "" && !isNaN(Number(form.cost_to_make)) ? Number(form.cost_to_make) : null,
+          buy_price_tax_inclusive: form.buy_price_tax_inclusive,
+          cost_price_tax_inclusive: form.buy_price_tax_inclusive,
+          cost_tax_type: form.buy_price_tax_inclusive ? "inclusive" : "exclusive",
           is_active: false,
         },
       };
@@ -2335,20 +2376,69 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                       />
                       <div>
                         <InputField
-                          label="Cost to make (Buy price)"
+                          customHeader={
+                            <div className="flex flex-wrap items-center justify-between gap-1.5 mb-1.5">
+                              <div className="flex items-center gap-1">
+                                <span className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
+                                  Cost to make (Buy price)
+                                </span>
+                                <span className="ml-1 text-[11px] font-normal text-slate-400 lowercase">
+                                  (optional)
+                                </span>
+                                <div className="group relative flex items-center ml-1">
+                                  <Info size={11} className="text-slate-400 cursor-help hover:text-indigo-500 transition-colors" />
+                                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-52 p-2.5 bg-slate-800 text-white text-[10px] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl normal-case font-medium tracking-normal leading-relaxed">
+                                    Estimated recipe / production cost to make this untracked item (optional).
+                                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-800" />
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="inline-flex items-center rounded-md bg-slate-100 p-0.5 border border-slate-200 shadow-2xs">
+                                <button
+                                  type="button"
+                                  onClick={() => setForm(p => ({ ...p, buy_price_tax_inclusive: false }))}
+                                  className={`px-2 py-0.5 text-[11px] font-medium rounded transition-all ${
+                                    !form.buy_price_tax_inclusive
+                                      ? "bg-white text-emerald-700 shadow-xs font-bold"
+                                      : "text-slate-500 hover:text-slate-800"
+                                  }`}
+                                >
+                                  Tax Exclusive
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setForm(p => ({ ...p, buy_price_tax_inclusive: true }))}
+                                  className={`px-2 py-0.5 text-[11px] font-medium rounded transition-all ${
+                                    form.buy_price_tax_inclusive
+                                      ? "bg-white text-emerald-700 shadow-xs font-bold"
+                                      : "text-slate-500 hover:text-slate-800"
+                                  }`}
+                                >
+                                  Tax Inclusive
+                                </button>
+                              </div>
+                            </div>
+                          }
                           name="cost_to_make"
-                          hint="optional"
                           type="number"
                           value={form.cost_to_make}
                           onChange={handleChange}
                           placeholder="0.00"
                           leftEl={<IndianRupee size={13} />}
-                          tooltip="Estimated recipe / production cost to make this untracked item (optional)."
                         />
                         {numCostToMake > 0 && isGstReg && gstRateNum > 0 && (
                           <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-emerald-800 bg-emerald-50/70 border border-emerald-200/60 rounded-md px-2 py-0.5 w-fit">
-                            <span>₹{formatINR(numCostToMake)} + ₹{formatINR(costToMakeGstAmt)} GST ({gstRateNum}%) =</span>
-                            <span className="font-extrabold text-emerald-950">₹{formatINR(effectiveCostToMake)} total cost</span>
+                            {!form.buy_price_tax_inclusive ? (
+                              <>
+                                <span>₹{formatINR(numCostToMake)} + ₹{formatINR(costToMakeGstAmt)} GST ({gstRateNum}%) =</span>
+                                <span className="font-extrabold text-emerald-950">₹{formatINR(effectiveCostToMake)} total cost</span>
+                              </>
+                            ) : (
+                              <>
+                                <span>₹{formatINR(effectiveCostToMake)} incl. GST</span>
+                                <span className="font-normal text-emerald-700">(₹{formatINR(baseCostToMake)} base + ₹{formatINR(costToMakeGstAmt)} GST {gstRateNum}%)</span>
+                              </>
+                            )}
                           </div>
                         )}
                       </div>
@@ -2441,14 +2531,14 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                               <>
                                 <strong>Live GST split:</strong> ₹{formatINR(priceCalc.tax.taxableValue)} base + ₹{formatINR(priceCalc.tax.gstAmount)} GST {gstRateNum}% = ₹{formatINR(priceCalc.finalPrice)}
                                 {numCostToMake > 0 && (
-                                  <span className="text-slate-500 font-medium ml-1">· Base Cost: ₹{formatINR(numCostToMake)}</span>
+                                  <span className="text-slate-500 font-medium ml-1">· Base Cost: ₹{formatINR(baseCostToMake)}</span>
                                 )}
                               </>
                             ) : (
                               <>
                                 <strong>Selling price:</strong> ₹{formatINR(priceCalc.finalPrice)}
                                 {numCostToMake > 0 && (
-                                  <span className="text-slate-500 font-medium ml-1">· Base Cost: ₹{formatINR(numCostToMake)}</span>
+                                  <span className="text-slate-500 font-medium ml-1">· Base Cost: ₹{formatINR(baseCostToMake)}</span>
                                 )}
                               </>
                             )}

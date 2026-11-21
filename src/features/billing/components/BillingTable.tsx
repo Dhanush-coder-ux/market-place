@@ -452,11 +452,28 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange, onBac
       0
     ) || 0;
 
+    const isCostInclusive = Boolean(
+      (variant as any)?.buy_price_tax_inclusive ||
+      (variant as any)?.cost_price_tax_inclusive ||
+      (variant as any)?.custom_fields?.buy_price_tax_inclusive ||
+      (variant as any)?.custom_fields?.cost_price_tax_inclusive ||
+      (variant as any)?.custom_fields?.cost_tax_type === 'inclusive' ||
+      targetProduct.buy_price_tax_inclusive ||
+      targetProduct.cost_price_tax_inclusive ||
+      (targetProduct as any)?.custom_fields?.buy_price_tax_inclusive ||
+      (targetProduct as any)?.custom_fields?.cost_price_tax_inclusive ||
+      (targetProduct as any)?.custom_fields?.cost_tax_type === 'inclusive'
+    );
+
     let costPriceVal: number | undefined = undefined;
     if (rawCost > 0) {
       const prodGst = parseInt(String((variant as any).gst || (variant as any).datas?.gst || targetProduct.gst || "0").replace(/[^0-9.]/g, "")) || 0;
-      const costGstAmt = prodGst > 0 ? Math.round((rawCost * (prodGst / 100)) * 100) / 100 : 0;
-      costPriceVal = Math.round((rawCost + costGstAmt) * 100) / 100;
+      if (isCostInclusive) {
+        costPriceVal = rawCost;
+      } else {
+        const costGstAmt = prodGst > 0 ? Math.round((rawCost * (prodGst / 100)) * 100) / 100 : 0;
+        costPriceVal = Math.round((rawCost + costGstAmt) * 100) / 100;
+      }
     }
 
     if (existingIndex !== -1) {
@@ -711,11 +728,22 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange, onBac
           (fullProduct as any).custom_fields?.buy_price ??
           0
         ) || 0;
+        const isCostInclusive = Boolean(
+          fullProduct.buy_price_tax_inclusive ||
+          fullProduct.cost_price_tax_inclusive ||
+          (fullProduct as any)?.custom_fields?.buy_price_tax_inclusive ||
+          (fullProduct as any)?.custom_fields?.cost_price_tax_inclusive ||
+          (fullProduct as any)?.custom_fields?.cost_tax_type === 'inclusive'
+        );
         let costPriceVal: number | undefined = undefined;
         if (rawCost > 0) {
           const prodGst = parseInt(String(fullProduct.gst || fullProduct.datas?.gst || "0").replace(/[^0-9.]/g, "")) || 0;
-          const costGstAmt = prodGst > 0 ? Math.round((rawCost * (prodGst / 100)) * 100) / 100 : 0;
-          costPriceVal = Math.round((rawCost + costGstAmt) * 100) / 100;
+          if (isCostInclusive) {
+            costPriceVal = rawCost;
+          } else {
+            const costGstAmt = prodGst > 0 ? Math.round((rawCost * (prodGst / 100)) * 100) / 100 : 0;
+            costPriceVal = Math.round((rawCost + costGstAmt) * 100) / 100;
+          }
         }
 
         if (existingIndex !== -1) {

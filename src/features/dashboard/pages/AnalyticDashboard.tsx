@@ -495,10 +495,9 @@ const AnalyticsDashboard = () => {
   const isGstReg = isShopGstRegistered();
 
   // ── Compute allocated procurement charges (transport & other charges per unit) & unit purchase costs ──
-  const { productAllocatedChargesMap, fallbackAllocatedChargePerUnit, productPurchaseUnitCostMap } = useMemo(() => {
-    let totalPurchasesCharges = 0;
-    let totalPurchasedUnits = 0;
+  const { productAllocatedChargesMap, batchAllocatedChargesMap, productPurchaseUnitCostMap } = useMemo(() => {
     const prodChargesMap: Record<string, { totalCharges: number; totalQty: number }> = {};
+    const batchChargesMap: Record<string, number> = {};
     const prodCostMap: Record<string, { totalSpend: number; totalQty: number }> = {};
 
     purchasesList.forEach((p: any) => {
@@ -537,24 +536,25 @@ const AnalyticsDashboard = () => {
         pStocks = Number(p.item_infos?.total_stocks ?? p.total_stocks ?? 0);
       }
 
-      if (pCharges > 0) {
-        totalPurchasesCharges += pCharges;
-        totalPurchasedUnits += (pStocks > 0 ? pStocks : 1);
+      const perUnitInPurchase = (pCharges > 0 && pStocks > 0) ? (pCharges / pStocks) : 0;
 
-        if (pStocks > 0) {
-          const perUnitInPurchase = pCharges / pStocks;
-          items.forEach((it: any) => {
-            const pid = it.product_id || it.inventory_id || it.id;
-            if (!pid) return;
-            const q = Number(it.stocks_infos?.stocks ?? it.stocks ?? it.quantity ?? it.entered_qty ?? 1);
-            if (!prodChargesMap[pid]) {
-              prodChargesMap[pid] = { totalCharges: 0, totalQty: 0 };
-            }
-            prodChargesMap[pid].totalCharges += perUnitInPurchase * q;
-            prodChargesMap[pid].totalQty += q;
-          });
+      items.forEach((it: any) => {
+        const pid = it.product_id || it.inventory_id || it.id;
+        const q = Number(it.stocks_infos?.stocks ?? it.stocks ?? it.quantity ?? it.entered_qty ?? 0);
+        if (pid && q > 0) {
+          if (!prodChargesMap[pid]) {
+            prodChargesMap[pid] = { totalCharges: 0, totalQty: 0 };
+          }
+          prodChargesMap[pid].totalCharges += perUnitInPurchase * q;
+          prodChargesMap[pid].totalQty += q;
         }
-      }
+
+        // Record specific batch charge if batch identifier is present
+        const bId = it.batch_infos?.name || it.batch_infos?.id || it.batch_number || it.batches?.batch_number || it.batch_id || it.id;
+        if (bId) {
+          batchChargesMap[String(bId)] = perUnitInPurchase;
+        }
+      });
 
       // Compute actual unit purchase price paid to supplier (inclusive of GST paid)
       items.forEach((it: any) => {
@@ -584,7 +584,7 @@ const AnalyticsDashboard = () => {
     const unitMap: Record<string, number> = {};
     Object.entries(prodChargesMap).forEach(([pid, val]) => {
       if (val.totalQty > 0) {
-        unitMap[pid] = val.totalCharges / val.totalQty;
+        unitMap[pid] = Math.round((val.totalCharges / val.totalQty) * 100) / 100;
       }
     });
 
@@ -595,10 +595,9 @@ const AnalyticsDashboard = () => {
       }
     });
 
-    const fallbackRate = totalPurchasedUnits > 0 ? (totalPurchasesCharges / totalPurchasedUnits) : 0;
     return {
       productAllocatedChargesMap: unitMap,
-      fallbackAllocatedChargePerUnit: fallbackRate,
+      batchAllocatedChargesMap: batchChargesMap,
       productPurchaseUnitCostMap: unitCostMap,
     };
   }, [purchasesList]);
@@ -779,20 +778,31 @@ const AnalyticsDashboard = () => {
 
         // True Unit cost with GST (what was paid to the supplier)
         const costAtSale = Number(ci.cost_at_sale ?? ci.cost_price ?? it?.cost_at_sale ?? 0);
-        const rawBp = Number(it?.raw_buy_price ?? it?.buy_price ?? ci.buy_price ?? 0);
+        const rawBp = Number(it?.raw_buy_price ?? it?.buy_price ?? ci.buy_price ?? ci.raw_buy_price ?? 0);
+        const isCostInclusive = Boolean(
+          ci.buy_price_tax_inclusive ??
+          ci.cost_price_tax_inclusive ??
+          it?.buy_price_tax_inclusive ??
+          it?.cost_price_tax_inclusive ??
+          it?.custom_fields?.buy_price_tax_inclusive ??
+          it?.custom_fields?.cost_price_tax_inclusive ??
+          it?.custom_fields?.cost_tax_type === 'inclusive'
+        );
         let unitCostWithGst = 0;
 
         if (pid && productPurchaseUnitCostMap[pid] && productPurchaseUnitCostMap[pid] > 0) {
           unitCostWithGst = productPurchaseUnitCostMap[pid];
         } else if (costAtSale > 0) {
-          // If costAtSale is approximately rawBp (base price excluding GST) and item has GST, add GST
-          if (prodGstRate > 0 && rawBp > 0 && Math.abs(costAtSale - rawBp) < 1) {
+          // If costAtSale is approximately rawBp (base price excluding GST) and item has GST and is not inclusive, add GST
+          if (!isCostInclusive && prodGstRate > 0 && rawBp > 0 && Math.abs(costAtSale - rawBp) < 1) {
             unitCostWithGst = Math.round(costAtSale * (1 + prodGstRate / 100) * 100) / 100;
           } else {
             unitCostWithGst = costAtSale;
           }
         } else if (rawBp > 0) {
-          unitCostWithGst = prodGstRate > 0 ? Math.round(rawBp * (1 + prodGstRate / 100) * 100) / 100 : rawBp;
+          unitCostWithGst = (!isCostInclusive && prodGstRate > 0)
+            ? Math.round(rawBp * (1 + prodGstRate / 100) * 100) / 100
+            : rawBp;
         }
 
         // Unit GST (only collected and remitted for GST registered shops)
@@ -812,10 +822,16 @@ const AnalyticsDashboard = () => {
           unitItc = unitCostWithGst - (unitCostWithGst / (1 + prodGstRate / 100));
         }
 
-        // Unit allocated charges
-        const unitCharge = (pid && productAllocatedChargesMap[pid] !== undefined && productAllocatedChargesMap[pid] > 0)
-          ? productAllocatedChargesMap[pid]
-          : fallbackAllocatedChargePerUnit;
+        // Unit allocated charges - ONLY apply if the sold product/batch actually incurred charges!
+        const batchKey = String(ci.batch_id || it?.batch_id || ci.batch_number || it?.batch_number || it?.batch_name || ci.batch || "");
+        let unitCharge = 0;
+        if (batchKey && batchAllocatedChargesMap[batchKey] !== undefined) {
+          unitCharge = batchAllocatedChargesMap[batchKey];
+        } else if (pid && productAllocatedChargesMap[pid] !== undefined && productAllocatedChargesMap[pid] > 0) {
+          unitCharge = productAllocatedChargesMap[pid];
+        } else {
+          unitCharge = 0;
+        }
 
         orderItemReturnedAmount += retQty * unitSp;
         orderActiveItemsCost += actQty * unitCostWithGst;
@@ -883,7 +899,7 @@ const AnalyticsDashboard = () => {
       exchangedOrdersCount: exchanged,
       salesReturnedProfit: returnedProfit,
     };
-  }, [filteredOrders, ordersList, activeRange, productAllocatedChargesMap, fallbackAllocatedChargePerUnit, productPurchaseUnitCostMap, isGstReg]);
+  }, [filteredOrders, ordersList, activeRange, productAllocatedChargesMap, batchAllocatedChargesMap, productPurchaseUnitCostMap, isGstReg]);
 
   const filteredPurchases = useMemo(() => {
     if (!purchasesList.length) return [];
@@ -1057,13 +1073,8 @@ const AnalyticsDashboard = () => {
     : (salesOverall.total_profit !== undefined ? Number(salesOverall.total_profit) : (netRevenue - totalCost));
 
   // Transport charges: allocated per sale / per sold unit
-  const transportCharges = allocatedSalesTransport > 0
-    ? (allocatedSalesTransport + salesTransportCharges)
-    : (salesTransportCharges > 0
-        ? salesTransportCharges
-        : (fallbackAllocatedChargePerUnit > 0
-            ? fallbackAllocatedChargePerUnit * Math.max(1, totalOrders)
-            : 0));
+  // ONLY applied if the sold items or sales order actually incurred transport/delivery charges
+  const transportCharges = Math.max(0, (allocatedSalesTransport || 0) + (salesTransportCharges || 0));
 
   // Input GST Claimed (ITC):
   // Claimed back on purchases of sold items; if 0, fallback to period purchase GST
@@ -1466,7 +1477,7 @@ const AnalyticsDashboard = () => {
 
           const unitTransport = (!isGstReg && pid && productAllocatedChargesMap[pid] !== undefined && productAllocatedChargesMap[pid] > 0)
             ? productAllocatedChargesMap[pid]
-            : (!isGstReg ? fallbackAllocatedChargePerUnit : 0);
+            : 0;
 
           const cost = (unitCostWithGst + unitTransport) * netQty;
           const profit = rev - cost;
@@ -1515,7 +1526,7 @@ const AnalyticsDashboard = () => {
         }
         return b.total_revenue - a.total_revenue;
       });
-  }, [ordersList, filteredOrders, stats, productNameMap, productPurchaseUnitCostMap, productAllocatedChargesMap, fallbackAllocatedChargePerUnit, isGstReg]);
+  }, [ordersList, filteredOrders, stats, productNameMap, productPurchaseUnitCostMap, productAllocatedChargesMap, isGstReg]);
 
   // Sales by Category
   const salesByCategory = useMemo(() => {
@@ -1986,10 +1997,12 @@ const AnalyticsDashboard = () => {
                                 <span className="font-semibold text-rose-600 tabular-nums">−{fmt(salesReturnedProfit)}</span>
                               </div>
 
-                              {/* Line 3: Retained Profit before freight */}
+                              {/* Line 3: Retained Profit */}
                               <div className="flex items-start justify-between gap-3 py-1 border-t border-slate-100">
                                 <div>
-                                  <div className="font-semibold text-slate-700 text-xs">= Retained Profit before freight</div>
+                                  <div className="font-semibold text-slate-700 text-xs">
+                                    {transportCharges > 0 ? "= Retained Profit before freight" : "= Retained Profit"}
+                                  </div>
                                   <div className="text-[10px] text-[#74839A]">
                                     Delivered Sell {fmt(sellingPrice)} − Buy Cost {fmt(purchaseCost)}
                                   </div>
@@ -2010,14 +2023,16 @@ const AnalyticsDashboard = () => {
                             </div>
                           )}
 
-                          {/* Line 4: Transport & Other Charges */}
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <div className="font-semibold text-slate-800">− Transport & Other Charges</div>
-                              <div className="text-[11px] text-[#74839A]">Allocated freight & procurement charges</div>
+                          {/* Line 4: Transport & Other Charges (only shown if incurred) */}
+                          {transportCharges > 0 && (
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <div className="font-semibold text-slate-800">− Transport & Other Charges</div>
+                                <div className="text-[11px] text-[#74839A]">Allocated freight & procurement charges</div>
+                              </div>
+                              <span className="font-semibold text-purple-700 tabular-nums">−{fmt(transportCharges)}</span>
                             </div>
-                            <span className="font-semibold text-purple-700 tabular-nums">−{fmt(transportCharges)}</span>
-                          </div>
+                          )}
 
                           <div className="pt-2 border-t border-dashed border-[#E5EAF0]" />
 
@@ -2116,14 +2131,16 @@ const AnalyticsDashboard = () => {
                             </span>
                           </div>
 
-                          {/* Step 6: Transport & Other Charges */}
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <div className="font-semibold text-slate-800">− Transport & Other Charges</div>
-                              <div className="text-[11px] text-[#74839A]">Allocated freight per sale</div>
+                          {/* Step 6: Transport & Other Charges (only shown if incurred) */}
+                          {transportCharges > 0 && (
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <div className="font-semibold text-slate-800">− Transport & Other Charges</div>
+                                <div className="text-[11px] text-[#74839A]">Allocated freight per sale</div>
+                              </div>
+                              <span className="font-semibold text-purple-700 tabular-nums">−{fmt(transportCharges)}</span>
                             </div>
-                            <span className="font-semibold text-purple-700 tabular-nums">−{fmt(transportCharges)}</span>
-                          </div>
+                          )}
 
                           {/* Divider */}
                           <div className="pt-2 border-t border-dashed border-[#E5EAF0]" />

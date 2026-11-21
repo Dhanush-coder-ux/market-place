@@ -89,22 +89,22 @@ export function runPricingTests(): boolean {
   );
   expectEq("T10 Kurta Bill Share", t10.lines[0].billDiscountShare, 100.00);
   expectEq("T10 Kurta Final", t10.lines[0].finalInclusive, 900.00);
-  expectEq("T10 Kurta Taxable", t10.lines[0].taxableValue, 855.00);
-  expectEq("T10 Kurta GST", t10.lines[0].gstAmount, 45.00);
+  expectEq("T10 Kurta Taxable", t10.lines[0].taxableValue, 857.14);
+  expectEq("T10 Kurta GST", t10.lines[0].gstAmount, 42.86);
 
   expectEq("T10 Headphone Bill Share", t10.lines[1].billDiscountShare, 200.00);
   expectEq("T10 Headphone Final", t10.lines[1].finalInclusive, 1800.00);
-  expectEq("T10 Headphone Taxable", t10.lines[1].taxableValue, 1476.00);
-  expectEq("T10 Headphone GST", t10.lines[1].gstAmount, 324.00);
+  expectEq("T10 Headphone Taxable", t10.lines[1].taxableValue, 1525.42);
+  expectEq("T10 Headphone GST", t10.lines[1].gstAmount, 274.58);
 
   expectEq("T10 Gross Subtotal", t10.baseSubtotal, 3000.00);
-  expectEq("T10 Total Taxable", t10.totalTaxable, 2331.00);
-  expectEq("T10 Total GST", t10.totalGst, 369.00);
+  expectEq("T10 Total Taxable", t10.totalTaxable, 2382.56);
+  expectEq("T10 Total GST", t10.totalGst, 317.44);
   expectEq("T10 Payable", t10.payable, 2700.00);
 
   // T11: Rounding test
-  expectEq("T11 Taxable 95.00", t2.taxableValue, 95.00);
-  expectEq("T11 GST 5.00", t2.gstAmount, 5.00);
+  expectEq("T11 Taxable 95.24", t2.taxableValue, 95.24);
+  expectEq("T11 GST 4.76", t2.gstAmount, 4.76);
 
   // T13: Expired offer check
   const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
@@ -181,6 +181,23 @@ export function runPricingTests(): boolean {
   });
   expectEq("T18 Zero Cost Profit", t18.profit ?? 0, 0);
   expectEq("T18 Zero Cost Margin %", t18.marginPercent ?? 0, 0);
+
+  // T19: Inclusive cost price in calculateProductEffectivePrice
+  // SP = ₹150 incl. 18% GST (base = 127.12)
+  // Cost = ₹100 incl. 18% GST (base = 84.75, GST = 15.25)
+  // Base profit = 127.12 - 84.75 = 42.37
+  // Margin % = 42.37 / 127.12 * 100 = 33.3%
+  const t19 = calculateProductEffectivePrice({
+    sellingPrice: 150,
+    gstRate: 18,
+    isGstRegistered: true,
+    costPrice: 100,
+    costGstMode: 'inclusive',
+  });
+  expectEq("T19 Taxable Base SP", t19.tax.taxableValue, 127.12);
+  expectEq("T19 Base Cost", t19.baseCostPrice || 0, 84.75);
+  expectEq("T19 Profit", t19.profit || 0, 42.37);
+  expectEq("T19 Margin %", t19.marginPercent || 0, 33.3);
 
   return true;
 }

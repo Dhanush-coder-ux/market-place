@@ -145,8 +145,12 @@ export const ProfitBreakdownModal: React.FC<ProfitBreakdownModalProps> = ({
                     Returned Profit <span className="text-slate-400">({fmt(salesReturnedProfit)})</span>
                     {" − "}
                     Output GST <span className="text-slate-400">({fmt(salesGstAmount)})</span>
-                    {" − "}
-                    Transport <span className="text-slate-400">({fmt(transportCharges)})</span>
+                    {transportCharges > 0 && (
+                      <>
+                        {" − "}
+                        Transport <span className="text-slate-400">({fmt(transportCharges)})</span>
+                      </>
+                    )}
                     {" + "}
                     Input GST ITC <span className="text-slate-400">({fmt(purchaseGstClaimed)})</span>
                     {" = "}
@@ -157,8 +161,12 @@ export const ProfitBreakdownModal: React.FC<ProfitBreakdownModalProps> = ({
                     Gross Profit <span className="text-slate-400">({fmt(grossProfit)})</span>
                     {" − "}
                     Output GST <span className="text-slate-400">({fmt(salesGstAmount)})</span>
-                    {" − "}
-                    Transport <span className="text-slate-400">({fmt(transportCharges)})</span>
+                    {transportCharges > 0 && (
+                      <>
+                        {" − "}
+                        Transport <span className="text-slate-400">({fmt(transportCharges)})</span>
+                      </>
+                    )}
                     {" + "}
                     Input GST ITC <span className="text-slate-400">({fmt(purchaseGstClaimed)})</span>
                     {" = "}
@@ -171,8 +179,12 @@ export const ProfitBreakdownModal: React.FC<ProfitBreakdownModalProps> = ({
                     Gross Sales Margin <span className="text-slate-400">({fmt(displayInitialGrossProfit)})</span>
                     {" − "}
                     Returned Profit <span className="text-slate-400">({fmt(salesReturnedProfit)})</span>
-                    {" − "}
-                    Transport & Other Charges <span className="text-slate-400">({fmt(transportCharges)})</span>
+                    {transportCharges > 0 && (
+                      <>
+                        {" − "}
+                        Transport & Other Charges <span className="text-slate-400">({fmt(transportCharges)})</span>
+                      </>
+                    )}
                     {" = "}
                     <strong className="text-emerald-700 font-bold">{fmt(netRealizedProfit)}</strong>
                   </>
@@ -181,8 +193,12 @@ export const ProfitBreakdownModal: React.FC<ProfitBreakdownModalProps> = ({
                     Selling Price <span className="text-slate-400">({fmt(sellingPrice)})</span>
                     {" − "}
                     Purchase Cost (incl. GST) <span className="text-slate-400">({fmt(purchaseCost)})</span>
-                    {" − "}
-                    Transport & Other Charges <span className="text-slate-400">({fmt(transportCharges)})</span>
+                    {transportCharges > 0 && (
+                      <>
+                        {" − "}
+                        Transport & Other Charges <span className="text-slate-400">({fmt(transportCharges)})</span>
+                      </>
+                    )}
                     {" = "}
                     <strong className="text-emerald-700 font-bold">{fmt(netRealizedProfit)}</strong>
                   </>
@@ -235,7 +251,9 @@ export const ProfitBreakdownModal: React.FC<ProfitBreakdownModalProps> = ({
                     {/* Subtotal: Retained Profit before freight */}
                     <div className="px-4 py-2.5 bg-slate-50/60 flex items-center justify-between font-medium">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-900 text-xs">= Retained Profit before freight</span>
+                        <span className="font-bold text-slate-900 text-xs">
+                          {transportCharges > 0 ? "= Retained Profit before freight" : "= Retained Profit"}
+                        </span>
                         <span className="text-[10px] text-slate-500">
                           (Sell {fmt(sellingPrice)} − Buy {fmt(purchaseCost)})
                         </span>
@@ -244,18 +262,20 @@ export const ProfitBreakdownModal: React.FC<ProfitBreakdownModalProps> = ({
                     </div>
 
                     {/* Step 3: Transport & Other Charges */}
-                    <div className="px-4 py-3 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
-                      <div className="flex items-start gap-2.5">
-                        <div className="w-5 h-5 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
-                          3
+                    {transportCharges > 0 && (
+                      <div className="px-4 py-3 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
+                        <div className="flex items-start gap-2.5">
+                          <div className="w-5 h-5 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
+                            3
+                          </div>
+                          <div>
+                            <div className="font-semibold text-slate-800">− Transport & Other Charges</div>
+                            <div className="text-[11px] text-slate-500">Allocated logistics, delivery, or procurement fees</div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="font-semibold text-slate-800">− Transport & Other Charges</div>
-                          <div className="text-[11px] text-slate-500">Allocated logistics, delivery, or procurement fees</div>
-                        </div>
+                        <span className="font-semibold text-purple-700 tabular-nums">−{fmt(transportCharges)}</span>
                       </div>
-                      <span className="font-semibold text-purple-700 tabular-nums">−{fmt(transportCharges)}</span>
-                    </div>
+                    )}
 
                     {/* Final Step: Net Profit */}
                     <div className="px-4 py-3.5 bg-emerald-50/80 border-t-2 border-emerald-300 flex items-center justify-between">
@@ -267,7 +287,7 @@ export const ProfitBreakdownModal: React.FC<ProfitBreakdownModalProps> = ({
                           </span>
                         </div>
                         <div className="text-[11px] text-emerald-800 mt-0.5">
-                          True cash profit (Gross Margin − Returns − Transport)
+                          {transportCharges > 0 ? "True cash profit (Gross Margin − Returns − Transport)" : "True cash profit (Gross Margin − Returns)"}
                         </div>
                       </div>
                       <span className="text-lg font-bold text-emerald-700 tabular-nums">
@@ -306,18 +326,20 @@ export const ProfitBreakdownModal: React.FC<ProfitBreakdownModalProps> = ({
                     </div>
 
                     {/* Step 3: Transport & Other Charges */}
-                    <div className="px-4 py-3 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
-                      <div className="flex items-start gap-2.5">
-                        <div className="w-5 h-5 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
-                          3
+                    {transportCharges > 0 && (
+                      <div className="px-4 py-3 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
+                        <div className="flex items-start gap-2.5">
+                          <div className="w-5 h-5 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
+                            3
+                          </div>
+                          <div>
+                            <div className="font-semibold text-slate-800">− Transport & Other Charges</div>
+                            <div className="text-[11px] text-slate-500">Allocated logistics, delivery, or procurement fees</div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="font-semibold text-slate-800">− Transport & Other Charges</div>
-                          <div className="text-[11px] text-slate-500">Allocated logistics, delivery, or procurement fees</div>
-                        </div>
+                        <span className="font-semibold text-purple-700 tabular-nums">−{fmt(transportCharges)}</span>
                       </div>
-                      <span className="font-semibold text-purple-700 tabular-nums">−{fmt(transportCharges)}</span>
-                    </div>
+                    )}
 
                     {/* Final Step: Net Profit */}
                     <div className="px-4 py-3.5 bg-emerald-50/80 border-t-2 border-emerald-300 flex items-center justify-between">
@@ -329,7 +351,7 @@ export const ProfitBreakdownModal: React.FC<ProfitBreakdownModalProps> = ({
                           </span>
                         </div>
                         <div className="text-[11px] text-emerald-800 mt-0.5">
-                          True cash profit (Selling Price − Purchase Cost − Transport)
+                          {transportCharges > 0 ? "True cash profit (Selling Price − Purchase Cost − Transport)" : "True cash profit (Selling Price − Purchase Cost)"}
                         </div>
                       </div>
                       <span className="text-lg font-bold text-emerald-700 tabular-nums">
@@ -400,25 +422,27 @@ export const ProfitBreakdownModal: React.FC<ProfitBreakdownModalProps> = ({
                       </span>
                     </div>
 
-                    {/* Step 4: Transport Cost */}
-                    <div className="px-4 py-3 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
-                      <div className="flex items-start gap-2.5">
-                        <div className="w-5 h-5 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
-                          4
+                    {/* Step 4: Transport Cost (only if incurred) */}
+                    {transportCharges > 0 && (
+                      <div className="px-4 py-3 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
+                        <div className="flex items-start gap-2.5">
+                          <div className="w-5 h-5 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
+                            4
+                          </div>
+                          <div>
+                            <div className="font-semibold text-slate-800">Transport & Additional Charges</div>
+                            <div className="text-[11px] text-slate-500">Allocated logistics, delivery, or freight fees</div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="font-semibold text-slate-800">Transport & Additional Charges</div>
-                          <div className="text-[11px] text-slate-500">Allocated logistics, delivery, or freight fees</div>
-                        </div>
+                        <span className="font-semibold text-purple-700 tabular-nums">−{fmt(transportCharges)}</span>
                       </div>
-                      <span className="font-semibold text-purple-700 tabular-nums">−{fmt(transportCharges)}</span>
-                    </div>
+                    )}
 
-                    {/* Step 5: Input GST ITC */}
+                    {/* Step: Input GST ITC */}
                     <div className="px-4 py-3 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
                       <div className="flex items-start gap-2.5">
                         <div className="w-5 h-5 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
-                          5
+                          {transportCharges > 0 ? 5 : 4}
                         </div>
                         <div>
                           <div className="font-semibold text-slate-800 flex items-center gap-1.5">
@@ -447,7 +471,7 @@ export const ProfitBreakdownModal: React.FC<ProfitBreakdownModalProps> = ({
                           </span>
                         </div>
                         <div className="text-[11px] text-emerald-800 mt-0.5">
-                          Actual profit in hand after GST remittance and transport
+                          {transportCharges > 0 ? "Actual profit in hand after GST remittance and transport" : "Actual profit in hand after GST remittance"}
                         </div>
                       </div>
                       <span className="text-lg font-bold text-emerald-700 tabular-nums">
@@ -514,25 +538,27 @@ export const ProfitBreakdownModal: React.FC<ProfitBreakdownModalProps> = ({
                       </span>
                     </div>
 
-                    {/* Step 4: Transport Cost */}
-                    <div className="px-4 py-3 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
-                      <div className="flex items-start gap-2.5">
-                        <div className="w-5 h-5 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
-                          4
+                    {/* Step 4: Transport Cost (only if incurred) */}
+                    {transportCharges > 0 && (
+                      <div className="px-4 py-3 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
+                        <div className="flex items-start gap-2.5">
+                          <div className="w-5 h-5 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
+                            4
+                          </div>
+                          <div>
+                            <div className="font-semibold text-slate-800">Transport & Additional Charges</div>
+                            <div className="text-[11px] text-slate-500">Allocated logistics, delivery, or freight fees</div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="font-semibold text-slate-800">Transport & Additional Charges</div>
-                          <div className="text-[11px] text-slate-500">Allocated logistics, delivery, or freight fees</div>
-                        </div>
+                        <span className="font-semibold text-purple-700 tabular-nums">−{fmt(transportCharges)}</span>
                       </div>
-                      <span className="font-semibold text-purple-700 tabular-nums">−{fmt(transportCharges)}</span>
-                    </div>
+                    )}
 
-                    {/* Step 5: Input GST ITC */}
+                    {/* Step: Input GST ITC */}
                     <div className="px-4 py-3 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
                       <div className="flex items-start gap-2.5">
                         <div className="w-5 h-5 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
-                          5
+                          {transportCharges > 0 ? 5 : 4}
                         </div>
                         <div>
                           <div className="font-semibold text-slate-800 flex items-center gap-1.5">
@@ -561,7 +587,7 @@ export const ProfitBreakdownModal: React.FC<ProfitBreakdownModalProps> = ({
                           </span>
                         </div>
                         <div className="text-[11px] text-emerald-800 mt-0.5">
-                          Actual profit in hand after GST remittance and transport
+                          {transportCharges > 0 ? "Actual profit in hand after GST remittance and transport" : "Actual profit in hand after GST remittance"}
                         </div>
                       </div>
                       <span className="text-lg font-bold text-emerald-700 tabular-nums">
@@ -608,7 +634,7 @@ export const ProfitBreakdownModal: React.FC<ProfitBreakdownModalProps> = ({
                   Therefore, all GST paid during procurement forms a direct part of your true purchase cost ({fmt(purchaseCost)}).
                 </p>
                 <p className="leading-relaxed text-slate-500">
-                  Your true net profit is: <strong>Selling Price ({fmt(sellingPrice)}) − Purchase Cost ({fmt(purchaseCost)}) − Transport & Other Charges ({fmt(transportCharges)}) = Net Profit ({fmt(netRealizedProfit)})</strong>.
+                  Your true net profit is: <strong>Selling Price ({fmt(sellingPrice)}) − Purchase Cost ({fmt(purchaseCost)}) {transportCharges > 0 ? `− Transport & Other Charges (${fmt(transportCharges)}) ` : ""}= Net Profit ({fmt(netRealizedProfit)})</strong>.
                 </p>
               </>
             )}

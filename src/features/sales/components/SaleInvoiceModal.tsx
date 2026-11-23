@@ -3,9 +3,12 @@ import { createPortal } from "react-dom";
 import { X, Download, Printer, Loader2, FileText } from "lucide-react";
 import { BiLogoWhatsapp } from "react-icons/bi";
 import { shopApi } from "@/services/api/shop";
+import { inventoryApi } from "@/services/api/inventory";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID, getShopId } from "@/services/endpoints";
 import { InvoiceRenderer } from "@/features/billing/components/InvoiceRenderer";
+import { getInvoiceSettings } from "@/features/billing/utils/printerService";
+import { mergeOrderCustomFields, extractProductHsn, extractProductMrp } from "@/features/billing/utils/customFieldsHelper";
 import { extractSaleCustomerInfo, formatUnitName } from "../type";
 import type { BillingItem } from "@/features/billing/types";
 import { type BillTotals, calculateTaxSplit } from "@/utils/pricing";
@@ -32,6 +35,9 @@ export const SaleInvoiceModal: React.FC<SaleInvoiceModalProps> = ({
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [template, setTemplate] = useState("minimal");
+  const [paperSize, setPaperSize] = useState<"a4" | "a5">("a4");
+  const [orientation, setOrientation] = useState<"portrait" | "landscape">("portrait");
+  const [fetchedProducts, setFetchedProducts] = useState<Record<string, any>>({});
 
   // Load template & shop data
   useEffect(() => {
@@ -39,6 +45,19 @@ export const SaleInvoiceModal: React.FC<SaleInvoiceModalProps> = ({
     const shopId = getShopId() || SHOP_ID;
     const savedTmpl = localStorage.getItem(`invoice_template_${shopId}`) || localStorage.getItem("invoice_template");
     if (savedTmpl) setTemplate(savedTmpl);
+
+    try {
+      const parsed = getInvoiceSettings(shopId || undefined);
+      if (parsed?.template) {
+        setTemplate(parsed.template);
+      }
+      if (parsed?.paperSize) {
+        setPaperSize(parsed.paperSize);
+      }
+      if (parsed?.orientation) {
+        setOrientation(parsed.orientation);
+      }
+    } catch (_) {}
 
     if (shopId && shopId !== "string") {
       shopApi
@@ -60,18 +79,18 @@ export const SaleInvoiceModal: React.FC<SaleInvoiceModalProps> = ({
 
     setFullSale(sale);
 
+    const activeShopId = (sale as any)?.shop_id || getShopId() || SHOP_ID;
     const hasDetailedItems =
       Array.isArray(sale.items) &&
       sale.items.length > 0 &&
-      (sale.items[0].name || sale.items[0].product_name || sale.calculation_infos);
+      (sale.items[0].batch_infos || sale.items[0].batch_number || sale.items[0].batch_name || sale.additional_infos?.items_snapshot);
 
-    if (!hasDetailedItems && sale.id) {
+    if ((!hasDetailedItems || !sale.additional_infos) && sale.id) {
       setLoadingDetails(true);
-      const activeShopId = getShopId() || SHOP_ID;
       api
         .getData(`${ENDPOINTS.ORDERS}/${activeShopId}/${sale.id}`)
         .then((res: any) => {
-          const ord = Array.isArray(res?.data) ? res.data[0] : res?.data;
+          const ord = Array.isArray(res?.data) ? res.data[0] : (res?.data ?? res);
           if (ord) {
             setFullSale(ord);
           }
@@ -100,6 +119,78 @@ export const SaleInvoiceModal: React.FC<SaleInvoiceModalProps> = ({
     return extractSaleCustomerInfo(activeSale, customerMap);
   }, [activeSale, customerMap]);
 
+  // Fetch missing product details (e.g. for product default HSN & MRP if missing from order snapshot)
+  useEffect(() => {
+    if (!isOpen || !activeSale) return;
+    const rawItems = Array.isArray(activeSale.items)
+      ? activeSale.items
+      : Array.isArray(activeSale.calculation_infos?.items)
+      ? activeSale.calculation_infos.items
+      : [];
+
+    const activeShopId = (activeSale as any)?.shop_id || getShopId() || SHOP_ID;
+    const missingIds = rawItems
+      .map((it: any, idx: number) => {
+        const snap = Array.isArray((activeSale as any)?.additional_infos?.items_snapshot)
+          ? (activeSale as any).additional_infos.items_snapshot[idx]
+          : null;
+        const hasHsn = it.hsn_code || it.hsn || it.hsnCode || snap?.hsnCode || snap?.hsn_code || snap?.hsn || it.datas?.hsn_code || it.datas?.hsn || it.datas?.tax_infos?.hsn;
+        const id = it.product_id || it.inventory_id || it.id;
+        return !hasHsn && id && !fetchedProducts[id] ? String(id) : null;
+      })
+      .filter((id: any): id is string => Boolean(id));
+
+    if (missingIds.length === 0) return;
+
+    const uniqueIds: string[] = Array.from(new Set(missingIds));
+    inventoryApi
+      .getInventoriesByIds(activeShopId, uniqueIds)
+      .then((res: any) => {
+        const items = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+        if (items.length > 0) {
+          setFetchedProducts((prev) => {
+            const next = { ...prev };
+            items.forEach((p: any) => {
+              if (p?.id) next[String(p.id)] = p;
+              if (p?._id) next[String(p._id)] = p;
+            });
+            return next;
+          });
+        } else {
+          uniqueIds.forEach((uid: string) => {
+            inventoryApi
+              .getInventoryById(activeShopId, uid)
+              .then((pRes: any) => {
+                const p = Array.isArray(pRes?.data) ? pRes.data[0] : (pRes?.data ?? pRes);
+                if (p) {
+                  setFetchedProducts((prev) => ({
+                    ...prev,
+                    [String(uid)]: p,
+                  }));
+                }
+              })
+              .catch(() => {});
+          });
+        }
+      })
+      .catch(() => {
+        uniqueIds.forEach((uid: string) => {
+          inventoryApi
+            .getInventoryById(activeShopId, uid)
+            .then((pRes: any) => {
+              const p = Array.isArray(pRes?.data) ? pRes.data[0] : (pRes?.data ?? pRes);
+              if (p) {
+                setFetchedProducts((prev) => ({
+                  ...prev,
+                  [String(uid)]: p,
+                }));
+              }
+            })
+            .catch(() => {});
+        });
+      });
+  }, [isOpen, activeSale, fetchedProducts]);
+
   // Parse items into BillingItem[] format
   const parsedItems: BillingItem[] = useMemo(() => {
     const rawItems = Array.isArray(activeSale.items)
@@ -109,25 +200,93 @@ export const SaleInvoiceModal: React.FC<SaleInvoiceModalProps> = ({
       : [];
 
     return rawItems.map((it: any, idx: number) => {
+      const prodId = String(it.product_id || it.inventory_id || it.id || "");
+      const prodData = fetchedProducts[prodId] || null;
+
       const name =
         it.name ||
         it.product_name ||
         it.datas?.product_name ||
         it.datas?.name ||
+        prodData?.name ||
+        prodData?.product_name ||
         productMap[it.inventory_id] ||
         `Item ${idx + 1}`;
 
       const qty = Number(it.entered_qty ?? it.quantity ?? it.qty ?? 1);
       const price = Number(it.sell_price ?? it.price ?? it.unit_price ?? 0);
-      const mrp = Number(it.mrp ?? it.datas?.mrp ?? price);
-      const rawGst = it.gst_rate ?? it.gst ?? it.tax_rate ?? 0;
+
+      const snapshotItem = Array.isArray((activeSale as any)?.additional_infos?.items_snapshot)
+        ? (activeSale as any).additional_infos.items_snapshot[idx]
+        : null;
+
+      const rawMrp =
+        it.mrp ??
+        it.datas?.mrp ??
+        it.pricing_infos?.mrp ??
+        snapshotItem?.mrp ??
+        (prodData ? extractProductMrp(prodData) : undefined) ??
+        price;
+      const mrp = Number(rawMrp);
+
+      const rawGst = it.gst_rate ?? it.gst ?? it.tax_rate ?? prodData?.gst ?? 0;
       const gstRate = typeof rawGst === "number" ? rawGst : (parseFloat(String(rawGst).replace("%", "")) || 0);
 
       const split = calculateTaxSplit(price, gstRate);
       const taxableRate = Number(it.taxable_value ?? split.taxableValue);
       const gstAmt = Number(it.gst_amount ?? split.gstAmount);
 
+      const batch_number =
+        it.batch_no ||
+        it.batch_name ||
+        it.batchName ||
+        it.batch_number ||
+        it.batch_infos?.batch_name ||
+        it.batch_infos?.batch_no ||
+        snapshotItem?.batchName ||
+        snapshotItem?.batchNumber ||
+        it.datas?.batch_no ||
+        it.datas?.batch_number ||
+        "";
+
+      const batch_name =
+        it.batchName ||
+        it.batch_name ||
+        it.batch_no ||
+        it.batch_number ||
+        it.batch_infos?.batch_name ||
+        snapshotItem?.batchName ||
+        "";
+
+      const expiry_date =
+        it.expiryDate ||
+        it.expiry_date ||
+        it.expiry ||
+        it.batch_infos?.exp_date ||
+        it.batch_infos?.expiry_date ||
+        snapshotItem?.expiryDate ||
+        it.datas?.expiry_date ||
+        it.datas?.expiry ||
+        "";
+
+      const hsn_code =
+        it.hsn_code ||
+        it.hsn ||
+        it.hsnCode ||
+        snapshotItem?.hsnCode ||
+        snapshotItem?.hsn_code ||
+        snapshotItem?.hsn ||
+        it.datas?.hsn_code ||
+        it.datas?.hsn ||
+        it.datas?.tax_infos?.hsn ||
+        it.datas?.tax_identifiers?.hsn ||
+        it.tax_infos?.hsn ||
+        it.tax_identifiers?.hsn ||
+        (prodData ? extractProductHsn(prodData) : "") ||
+        "";
+
       return {
+        ...it,
         id: it.id || it.product_id || it.inventory_id || String(idx),
         name,
         code: it.code || it.barcode || "",
@@ -135,6 +294,15 @@ export const SaleInvoiceModal: React.FC<SaleInvoiceModalProps> = ({
         price,
         mrp: mrp > 0 ? mrp : undefined,
         gst: gstRate,
+        hsn: hsn_code,
+        hsn_code: hsn_code,
+        hsnCode: hsn_code,
+        _product: prodData || undefined,
+        batch_no: batch_number,
+        batchName: batch_name,
+        batch_name: batch_name,
+        expiryDate: expiry_date,
+        expiry_date: expiry_date,
         productDiscountPercent: Number(it.product_discount_percent || 0),
         lineDiscountMode: (it.line_discount_mode === "%" ? "%" : "₹") as "%" | "₹",
         lineDiscountValue: Number(it.line_discount_value || 0),
@@ -143,7 +311,16 @@ export const SaleInvoiceModal: React.FC<SaleInvoiceModalProps> = ({
         unit: formatUnitName(it.entered_unit || it.unit || it.unit_infos?.name),
       };
     });
-  }, [activeSale, productMap]);
+  }, [activeSale, productMap, fetchedProducts]);
+
+  // Resolved Custom Fields for Invoice (merging template configuration with saved order values)
+  const invoiceCustomFields = useMemo(() => {
+    const s = activeSale;
+    const activeShopId = (s as any)?.shop_id || shopData?.id;
+    const configured = getInvoiceSettings(activeShopId)?.fields || [];
+    const fromOrder = (s as any)?.additional_infos?.custom_fields;
+    return mergeOrderCustomFields(configured, fromOrder);
+  }, [activeSale, shopData?.id]);
 
   // Payment breakdown
   const paymentsList = useMemo(() => {
@@ -236,28 +413,48 @@ export const SaleInvoiceModal: React.FC<SaleInvoiceModalProps> = ({
       deliveryFee,
       taxGroups: calc.tax_groups || [],
       lines: Array.isArray(calc.items)
-        ? calc.items.map((l: any) => ({
-            inventoryId: l.product_id || "",
-            name: l.name || "",
-            qty: Number(l.qty || 1),
-            mrp: Number(l.mrp || 0),
-            sellingPrice: Number(l.price || 0),
-            productDiscountAmount: Number(l.product_discount_amount || 0),
-            lineDiscountMode: l.line_discount_mode || "₹",
-            lineDiscountValue: Number(l.line_discount_value || 0),
-            lineDiscountAmount: Number(l.line_discount_amount || 0),
-            billDiscountShare: Number(l.bill_discount_share || 0),
-            finalInclusive: Number(l.final_inclusive || 0),
-            taxableValue: Number(l.taxable_value || 0),
-            gstRate: Number(l.gst_rate || 0),
-            gstAmount: Number(l.gst_amount || 0),
-            cgst: Number(l.cgst || 0),
-            sgst: Number(l.sgst || 0),
-            costPrice: Number(l.cost_at_sale || 0),
-          }))
+        ? calc.items.map((l: any, idx: number) => {
+            const pItem = parsedItems[idx];
+            const pId = String(l.product_id || pItem?.id || "");
+            const prodData = fetchedProducts[pId] || pItem?._product || null;
+            const itemHsn =
+              l.hsn_code ||
+              l.hsn ||
+              l.hsnCode ||
+              pItem?.hsn_code ||
+              pItem?.hsn ||
+              (prodData ? extractProductHsn(prodData) : "") ||
+              "";
+            const itemMrp = Number(l.mrp ?? pItem?.mrp ?? (prodData ? extractProductMrp(prodData) : 0) ?? 0);
+
+            return {
+              ...l,
+              inventoryId: l.product_id || pItem?.id || "",
+              name: l.name || pItem?.name || "",
+              qty: Number(l.qty || pItem?.qty || 1),
+              mrp: itemMrp > 0 ? itemMrp : (l.price ? Number(l.price) : 0),
+              sellingPrice: Number(l.price || pItem?.price || 0),
+              hsn: itemHsn,
+              hsn_code: itemHsn,
+              hsnCode: itemHsn,
+              _product: prodData || undefined,
+              productDiscountAmount: Number(l.product_discount_amount || 0),
+              lineDiscountMode: l.line_discount_mode || "₹",
+              lineDiscountValue: Number(l.line_discount_value || 0),
+              lineDiscountAmount: Number(l.line_discount_amount || 0),
+              billDiscountShare: Number(l.bill_discount_share || 0),
+              finalInclusive: Number(l.final_inclusive || 0),
+              taxableValue: Number(l.taxable_value || 0),
+              gstRate: Number(l.gst_rate || 0),
+              gstAmount: Number(l.gst_amount || 0),
+              cgst: Number(l.cgst || 0),
+              sgst: Number(l.sgst || 0),
+              costPrice: Number(l.cost_at_sale || 0),
+            };
+          })
         : [],
     };
-  }, [activeSale]);
+  }, [activeSale, parsedItems, fetchedProducts]);
 
   // Date and Time formatting
   const { dateStr, timeStr } = useMemo(() => {
@@ -349,41 +546,81 @@ export const SaleInvoiceModal: React.FC<SaleInvoiceModalProps> = ({
       src.height = img.naturalHeight;
       src.getContext("2d")!.drawImage(img, 0, 0);
 
-      const pdf = new JsPDFCtor({ unit: "mm", format: "a4", orientation: "portrait", compress: true });
+      const isA5 = paperSize === "a5";
+      const isLandscape = orientation === "landscape";
+      const pdf = new JsPDFCtor({
+        unit: "mm",
+        format: isA5 ? "a5" : "a4",
+        orientation: isLandscape ? "landscape" : "portrait",
+        compress: true,
+      });
       const pageW = pdf.internal.pageSize.getWidth();
       const pageH = pdf.internal.pageSize.getHeight();
-      const margin = 10;
+      const margin = isA5 ? 6 : 8;
       const printW = pageW - margin * 2;
       const printH = pageH - margin * 2;
 
       const pxPerMm = (src.width / 2) / printW;
-      const pagePixels = printH * pxPerMm * 2;
+      const fullHeightMm = (src.height / 2) / pxPerMm;
 
-      let top = 0;
-      let firstPage = true;
+      // If within 15% overflow of 1 page, scale to fit perfectly on a single page
+      if (fullHeightMm <= printH * 1.15) {
+        const scale = fullHeightMm > printH ? printH / fullHeightMm : 1;
+        const drawW = printW * scale;
+        const drawH = fullHeightMm * scale;
+        const drawX = margin + (printW - drawW) / 2;
+        pdf.addImage(img, "JPEG", drawX, margin, drawW, drawH);
+      } else {
+        const pagePixels = printH * pxPerMm * 2;
+        let top = 0;
+        let firstPage = true;
 
-      while (top < src.height) {
-        const slicePx = Math.min(pagePixels, src.height - top);
-        const sliceMm = slicePx / (pxPerMm * 2);
+        while (top < src.height) {
+          const remainingPx = src.height - top;
 
-        const strip = document.createElement("canvas");
-        strip.width = src.width;
-        strip.height = slicePx;
-        strip.getContext("2d")!.drawImage(
-          src,
-          0, top, src.width, slicePx,
-          0, 0, src.width, slicePx
-        );
+          // If remaining fits within 15% of pagePixels, scale this final page instead of creating another page
+          if (remainingPx <= pagePixels * 1.15) {
+            const scale = remainingPx > pagePixels ? pagePixels / remainingPx : 1;
+            const sliceMm = (remainingPx / (pxPerMm * 2)) * scale;
+            const drawW = printW * scale;
+            const drawX = margin + (printW - drawW) / 2;
 
-        if (!firstPage) {
-          pdf.addPage();
+            const strip = document.createElement("canvas");
+            strip.width = src.width;
+            strip.height = Math.ceil(remainingPx);
+            strip.getContext("2d")!.drawImage(
+              src,
+              0, top, src.width, Math.ceil(remainingPx),
+              0, 0, src.width, Math.ceil(remainingPx)
+            );
+
+            if (!firstPage) pdf.addPage();
+            pdf.addImage(strip.toDataURL("image/jpeg", 0.95), "JPEG", drawX, margin, drawW, sliceMm);
+            break;
+          }
+
+          const slicePx = Math.min(pagePixels, remainingPx);
+          const sliceMm = slicePx / (pxPerMm * 2);
+
+          const strip = document.createElement("canvas");
+          strip.width = src.width;
+          strip.height = Math.ceil(slicePx);
+          strip.getContext("2d")!.drawImage(
+            src,
+            0, top, src.width, Math.ceil(slicePx),
+            0, 0, src.width, Math.ceil(slicePx)
+          );
+
+          if (!firstPage) {
+            pdf.addPage();
+          }
+          firstPage = false;
+
+          const stripData = strip.toDataURL("image/jpeg", 0.95);
+          pdf.addImage(stripData, "JPEG", margin, margin, printW, sliceMm);
+
+          top += Math.ceil(slicePx);
         }
-        firstPage = false;
-
-        const stripData = strip.toDataURL("image/jpeg", 0.95);
-        pdf.addImage(stripData, "JPEG", margin, margin, printW, sliceMm);
-
-        top += slicePx;
       }
 
       const safeId = (orderId || "invoice").replace(/[^a-zA-Z0-9-_]/g, "_");
@@ -493,8 +730,8 @@ Thank you for your business!`;
           ${headStyles}
           <style>
             @page {
-              size: A4 portrait;
-              margin: 8mm;
+              size: ${paperSize.toUpperCase()} ${orientation};
+              margin: ${paperSize === "a5" ? "6mm" : "8mm"};
             }
             *, *::before, *::after {
               -webkit-print-color-adjust: exact !important;
@@ -518,7 +755,7 @@ Thank you for your business!`;
             }
             .invoice-print-wrapper {
               width: 100% !important;
-              max-width: 680px !important;
+              max-width: ${orientation === "landscape" ? (paperSize === "a5" ? "720px" : "960px") : "680px"} !important;
               margin: 0 auto !important;
               padding: 4mm 0 !important;
               background: #ffffff !important;
@@ -626,7 +863,7 @@ Thank you for your business!`;
             z-index: 999999 !important;
           }
           .no-print, .no-print * { display: none !important; }
-          @page { size: A4 portrait; margin: 8mm; }
+          @page { size: ${paperSize.toUpperCase()} ${orientation}; margin: ${paperSize === "a5" ? "6mm" : "8mm"}; }
         }
       `}</style>
 
@@ -634,7 +871,7 @@ Thank you for your business!`;
       <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm no-print" onClick={onClose} />
 
       {/* Modal Container */}
-      <div className="relative bg-slate-100 rounded-2xl shadow-[0_24px_80px_rgba(0,0,0,0.35)] w-full max-w-[820px] max-h-[90vh] h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 print:max-h-none print:h-auto print:bg-white print:rounded-none print:shadow-none print:w-full print:max-w-none">
+      <div className={`relative bg-slate-100 rounded-2xl shadow-[0_24px_80px_rgba(0,0,0,0.35)] w-full ${orientation === "landscape" ? "max-w-[1050px]" : "max-w-[820px]"} max-h-[90vh] h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 print:max-h-none print:h-auto print:bg-white print:rounded-none print:shadow-none print:w-full print:max-w-none`}>
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3.5 bg-white border-b border-slate-200/80 shrink-0 no-print">
@@ -662,7 +899,7 @@ Thank you for your business!`;
 
         {/* Invoice Scrollable Content */}
         <div
-          className="modal-content flex-1 min-h-0 overflow-y-auto overflow-x-auto py-4 px-2 sm:px-6 print:p-0 print:overflow-visible custom-scrollbar"
+          className="modal-content flex-1 min-h-0 overflow-y-auto overflow-x-hidden py-4 px-2 sm:px-6 print:p-0 print:overflow-visible custom-scrollbar"
           style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
         >
           {loadingDetails ? (
@@ -688,6 +925,9 @@ Thank you for your business!`;
                 finalAmount={finalAmount}
                 billTotals={reconstructedBillTotals}
                 invoiceRef={invoiceRef}
+                paperSize={paperSize}
+                orientation={orientation}
+                customFields={invoiceCustomFields}
               />
             </div>
           )}
@@ -699,7 +939,7 @@ Thank you for your business!`;
             <button
               onClick={handlePrint}
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-slate-200 text-[12px] font-semibold text-slate-700 bg-white hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
-              title="Print A4 Invoice"
+              title={`Print ${paperSize === "a5" ? "A5" : "A4"} Invoice`}
             >
               <Printer size={14} className="text-slate-600" />
               <span>Print</span>

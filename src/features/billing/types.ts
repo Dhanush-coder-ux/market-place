@@ -83,6 +83,7 @@ export interface BillingItem {
   batch?: any;
   hsn?: string;
   hsn_code?: string;
+  hsnCode?: string;
   serialnoId?: string;
   batchTracking?: boolean;
   manufacturingDate?: string;

@@ -51,6 +51,8 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
 
   const [shopData, setShopData] = useState<any>(null);
   const [template, setTemplate] = useState("minimal");
+  const [paperSize, setPaperSize] = useState<"a4" | "a5">("a4");
+  const [orientation, setOrientation] = useState<"portrait" | "landscape">("portrait");
 
   useEffect(() => {
     const shopId = localStorage.getItem("shop_id");
@@ -61,6 +63,12 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
       const parsed = getInvoiceSettings(shopId || undefined);
       if (parsed?.template) {
         setTemplate(parsed.template);
+      }
+      if (parsed?.paperSize) {
+        setPaperSize(parsed.paperSize);
+      }
+      if (parsed?.orientation) {
+        setOrientation(parsed.orientation);
       }
     } catch (_) {}
 
@@ -153,37 +161,72 @@ const InvoicePreviewModal: React.FC<InvoicePreviewModalProps> = ({
       src.height = img.naturalHeight;
       src.getContext('2d')!.drawImage(img, 0, 0);
 
-      const pdf    = new JsPDFCtor({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
-      const pageW  = pdf.internal.pageSize.getWidth();   // 210 mm
-      const pageH  = pdf.internal.pageSize.getHeight();  // 297 mm
-      const margin = 10;
-      const printW = pageW - margin * 2;   // 190 mm
-      const printH = pageH - margin * 2;   // 277 mm
+      const isA5 = paperSize === "a5";
+      const isLandscape = orientation === "landscape";
+      const pdf    = new JsPDFCtor({ unit: 'mm', format: isA5 ? 'a5' : 'a4', orientation: isLandscape ? 'landscape' : 'portrait', compress: true });
+      const pageW  = pdf.internal.pageSize.getWidth();
+      const pageH  = pdf.internal.pageSize.getHeight();
+      const margin = isA5 ? 6 : 8;
+      const printW = pageW - margin * 2;
+      const printH = pageH - margin * 2;
 
       const pxPerMm    = (src.width / 2) / printW;
-      const pagePixels = printH * pxPerMm * 2;
+      const fullHeightMm = (src.height / 2) / pxPerMm;
 
-      let top       = 0;
-      let firstPage = true;
+      // If within 15% overflow of 1 page, scale to fit perfectly on a single page
+      if (fullHeightMm <= printH * 1.15) {
+        const scale = fullHeightMm > printH ? printH / fullHeightMm : 1;
+        const drawW = printW * scale;
+        const drawH = fullHeightMm * scale;
+        const drawX = margin + (printW - drawW) / 2;
+        pdf.addImage(img, 'JPEG', drawX, margin, drawW, drawH);
+      } else {
+        const pagePixels = printH * pxPerMm * 2;
+        let top       = 0;
+        let firstPage = true;
 
-      while (top < src.height) {
-        const slicePx = Math.min(pagePixels, src.height - top);
-        const sliceMm = slicePx / (pxPerMm * 2);
+        while (top < src.height) {
+          const remainingPx = src.height - top;
 
-        const strip  = document.createElement('canvas');
-        strip.width  = src.width;
-        strip.height = Math.ceil(slicePx);
-        strip.getContext('2d')!.drawImage(
-          src,
-          0, top, src.width, Math.ceil(slicePx),
-          0, 0,   src.width, Math.ceil(slicePx),
-        );
+          // If remaining fits within 15% of pagePixels, scale this final page instead of creating another page
+          if (remainingPx <= pagePixels * 1.15) {
+            const scale = remainingPx > pagePixels ? pagePixels / remainingPx : 1;
+            const sliceMm = (remainingPx / (pxPerMm * 2)) * scale;
+            const drawW = printW * scale;
+            const drawX = margin + (printW - drawW) / 2;
 
-        if (!firstPage) pdf.addPage();
-        pdf.addImage(strip.toDataURL('image/jpeg', 0.95), 'JPEG', margin, margin, printW, sliceMm);
+            const strip  = document.createElement('canvas');
+            strip.width  = src.width;
+            strip.height = Math.ceil(remainingPx);
+            strip.getContext('2d')!.drawImage(
+              src,
+              0, top, src.width, Math.ceil(remainingPx),
+              0, 0,   src.width, Math.ceil(remainingPx),
+            );
 
-        top      += Math.ceil(slicePx);
-        firstPage = false;
+            if (!firstPage) pdf.addPage();
+            pdf.addImage(strip.toDataURL('image/jpeg', 0.95), 'JPEG', drawX, margin, drawW, sliceMm);
+            break;
+          }
+
+          const slicePx = Math.min(pagePixels, remainingPx);
+          const sliceMm = slicePx / (pxPerMm * 2);
+
+          const strip  = document.createElement('canvas');
+          strip.width  = src.width;
+          strip.height = Math.ceil(slicePx);
+          strip.getContext('2d')!.drawImage(
+            src,
+            0, top, src.width, Math.ceil(slicePx),
+            0, 0,   src.width, Math.ceil(slicePx),
+          );
+
+          if (!firstPage) pdf.addPage();
+          pdf.addImage(strip.toDataURL('image/jpeg', 0.95), 'JPEG', margin, margin, printW, sliceMm);
+
+          top      += Math.ceil(slicePx);
+          firstPage = false;
+        }
       }
 
       pdf.save(`Invoice_${orderId || 'preview'}.pdf`);
@@ -266,8 +309,8 @@ ${(err as Error)?.message ?? String(err)}`);
           ${headStyles}
           <style>
             @page {
-              size: A4 portrait;
-              margin: 8mm;
+              size: ${paperSize.toUpperCase()} ${orientation};
+              margin: ${paperSize === "a5" ? "6mm" : "8mm"};
             }
             *, *::before, *::after {
               -webkit-print-color-adjust: exact !important;
@@ -291,7 +334,7 @@ ${(err as Error)?.message ?? String(err)}`);
             }
             .invoice-print-wrapper {
               width: 100% !important;
-              max-width: 680px !important;
+              max-width: ${orientation === "landscape" ? (paperSize === "a5" ? "720px" : "960px") : "680px"} !important;
               margin: 0 auto !important;
               padding: 4mm 0 !important;
               background: #ffffff !important;
@@ -399,7 +442,7 @@ ${(err as Error)?.message ?? String(err)}`);
             z-index: 999999 !important;
           }
           .no-print, .no-print * { display: none !important; }
-          @page { size: A4 portrait; margin: 8mm; }
+          @page { size: ${paperSize.toUpperCase()} ${orientation}; margin: ${paperSize === "a5" ? "6mm" : "8mm"}; }
         }
       `}} />
 
@@ -407,7 +450,7 @@ ${(err as Error)?.message ?? String(err)}`);
       <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm no-print" onClick={onClose} />
 
       {/* Modal Container */}
-      <div className="relative bg-slate-100 rounded-2xl shadow-[0_24px_80px_rgba(0,0,0,0.35)] w-full max-w-[820px] max-h-[92dvh] h-[92dvh] sm:h-[88vh] sm:max-h-[88vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 print:max-h-none print:h-auto print:bg-white print:rounded-none print:shadow-none print:w-full print:max-w-none print:animate-none print:transform-none">
+      <div className={`relative bg-slate-100 rounded-2xl shadow-[0_24px_80px_rgba(0,0,0,0.35)] w-full ${orientation === "landscape" ? "max-w-[1050px]" : "max-w-[820px]"} max-h-[92dvh] h-[92dvh] sm:h-[88vh] sm:max-h-[88vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 print:max-h-none print:h-auto print:bg-white print:rounded-none print:shadow-none print:w-full print:max-w-none print:animate-none print:transform-none`}>
 
         {/* Modal Header */}
         <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-3.5 bg-white border-b border-slate-200/80 shrink-0 no-print">
@@ -421,7 +464,7 @@ ${(err as Error)?.message ?? String(err)}`);
 
         {/* Scrollable Receipt Paper (modal-content ensures no-scroll doesn't block scrolling) */}
         <div 
-          className="modal-content flex-1 min-h-0 overflow-y-auto overflow-x-auto py-4 px-2 sm:px-6 print:p-0 print:overflow-visible custom-scrollbar" 
+          className="modal-content flex-1 min-h-0 overflow-y-auto overflow-x-hidden py-4 px-2 sm:px-6 print:p-0 print:overflow-visible custom-scrollbar" 
           style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}
         >
           <div className="print-area">
@@ -442,6 +485,8 @@ ${(err as Error)?.message ?? String(err)}`);
               billDiscount={billDiscount}
               billTotals={billTotals}
               invoiceRef={invoiceRef}
+              paperSize={paperSize}
+              orientation={orientation}
               customFields={customFields}
               getItemCustomValue={(field, line, idx) => extractItemAttributeValue(field, line, idx, items?.[idx])}
             />

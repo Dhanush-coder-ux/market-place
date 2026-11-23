@@ -7,6 +7,7 @@ import {
   Download,
 } from "lucide-react";
 import { shopApi } from "@/services/api/shop";
+import { inventoryApi } from "@/services/api/inventory";
 import { useApi } from "@/context/ApiContext";
 import { ENDPOINTS, SHOP_ID, getShopId } from "@/services/endpoints";
 import {
@@ -19,6 +20,7 @@ import {
   getBillingReceiptConfig,
   getDigitalStoreUrl,
 } from "@/features/billing/utils/printerService";
+import { getReceiptCustomFields, extractItemAttributeValue, mergeOrderCustomFields, extractProductHsn, extractProductMrp } from "@/features/billing/utils/customFieldsHelper";
 import { PrinterConfigModal } from "@/features/billing/components/PrinterConfigModal";
 import { QRCodeSVG } from "qrcode.react";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
@@ -51,6 +53,7 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
   const [isPrinterConfigOpen, setIsPrinterConfigOpen] = useState(false);
   const [printersList, setPrintersList] = useState<SavedPrinter[]>([]);
   const [targetPrinterId, setTargetPrinterId] = useState<string>("");
+  const [fetchedProducts, setFetchedProducts] = useState<Record<string, any>>({});
   const receiptRef = useRef<HTMLDivElement>(null);
 
   // Sync printers list on mount and modal open
@@ -89,19 +92,19 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
 
     setFullSale(sale);
 
-    // If items are missing or shallow, fetch fresh single order detail
+    // Always fetch fresh single order detail if order id exists and detail is missing
+    const activeShopId = (sale as any)?.shop_id || getShopId() || SHOP_ID;
     const hasDetailedItems =
       Array.isArray(sale.items) &&
       sale.items.length > 0 &&
-      (sale.items[0].name || sale.items[0].product_name || sale.calculation_infos);
+      (sale.items[0].batch_infos || sale.items[0].batch_number || sale.items[0].batch_name || sale.additional_infos?.items_snapshot);
 
-    if (!hasDetailedItems && sale.id) {
+    if ((!hasDetailedItems || !sale.additional_infos) && sale.id) {
       setLoadingDetails(true);
-      const activeShopId = getShopId() || SHOP_ID;
       api
         .getData(`${ENDPOINTS.ORDERS}/${activeShopId}/${sale.id}`)
         .then((res: any) => {
-          const ord = Array.isArray(res?.data) ? res.data[0] : res?.data;
+          const ord = Array.isArray(res?.data) ? res.data[0] : (res?.data ?? res);
           if (ord) {
             setFullSale(ord);
           }
@@ -245,6 +248,79 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
     };
   }, [fullSale, sale]);
 
+  // Fetch missing product details (e.g. for product default HSN & MRP if missing from order snapshot)
+  useEffect(() => {
+    const s = fullSale || sale;
+    if (!isOpen || !s) return;
+    const rawItems = Array.isArray(s.items)
+      ? s.items
+      : Array.isArray(s.calculation_infos?.items)
+      ? s.calculation_infos.items
+      : [];
+
+    const activeShopId = (s as any)?.shop_id || getShopId() || SHOP_ID;
+    const missingIds = rawItems
+      .map((it: any, idx: number) => {
+        const snap = Array.isArray((s as any)?.additional_infos?.items_snapshot)
+          ? (s as any).additional_infos.items_snapshot[idx]
+          : null;
+        const hasHsn = it.hsn_code || it.hsn || it.hsnCode || snap?.hsnCode || snap?.hsn_code || snap?.hsn || it.datas?.hsn_code || it.datas?.hsn || it.datas?.tax_infos?.hsn;
+        const id = it.product_id || it.inventory_id || it.id;
+        return !hasHsn && id && !fetchedProducts[id] ? String(id) : null;
+      })
+      .filter((id: any): id is string => Boolean(id));
+
+    if (missingIds.length === 0) return;
+
+    const uniqueIds: string[] = Array.from(new Set(missingIds));
+    inventoryApi
+      .getInventoriesByIds(activeShopId, uniqueIds)
+      .then((res: any) => {
+        const items = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+        if (items.length > 0) {
+          setFetchedProducts((prev) => {
+            const next = { ...prev };
+            items.forEach((p: any) => {
+              if (p?.id) next[String(p.id)] = p;
+              if (p?._id) next[String(p._id)] = p;
+            });
+            return next;
+          });
+        } else {
+          uniqueIds.forEach((uid: string) => {
+            inventoryApi
+              .getInventoryById(activeShopId, uid)
+              .then((pRes: any) => {
+                const p = Array.isArray(pRes?.data) ? pRes.data[0] : (pRes?.data ?? pRes);
+                if (p) {
+                  setFetchedProducts((prev) => ({
+                    ...prev,
+                    [String(uid)]: p,
+                  }));
+                }
+              })
+              .catch(() => {});
+          });
+        }
+      })
+      .catch(() => {
+        uniqueIds.forEach((uid: string) => {
+          inventoryApi
+            .getInventoryById(activeShopId, uid)
+            .then((pRes: any) => {
+              const p = Array.isArray(pRes?.data) ? pRes.data[0] : (pRes?.data ?? pRes);
+              if (p) {
+                setFetchedProducts((prev) => ({
+                  ...prev,
+                  [String(uid)]: p,
+                }));
+              }
+            })
+            .catch(() => {});
+        });
+      });
+  }, [isOpen, fullSale, sale, fetchedProducts]);
+
   // Format parsed items
   const itemsList = useMemo(() => {
     const s = fullSale || sale;
@@ -252,11 +328,16 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
     const rawItems = Array.isArray(s.items) ? s.items : (Array.isArray(s.calculation_infos?.items) ? s.calculation_infos.items : []);
 
     return rawItems.map((it: any, idx: number) => {
+      const prodId = String(it.product_id || it.inventory_id || it.id || "");
+      const prodData = fetchedProducts[prodId] || null;
+
       const name =
         it.name ||
         it.product_name ||
         it.datas?.product_name ||
         it.datas?.name ||
+        prodData?.name ||
+        prodData?.product_name ||
         productMap[it.inventory_id] ||
         `Item ${idx + 1}`;
 
@@ -276,18 +357,114 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
       );
       const unit = formatUnitName(it.entered_unit || it.unit || it.unit_infos?.name);
 
+      const snapshotItem = Array.isArray((s as any)?.additional_infos?.items_snapshot)
+        ? (s as any).additional_infos.items_snapshot[idx]
+        : null;
+
+      const rawMrp =
+        it.mrp ??
+        it.datas?.mrp ??
+        it.pricing_infos?.mrp ??
+        snapshotItem?.mrp ??
+        (prodData ? extractProductMrp(prodData) : undefined) ??
+        unitPrice;
+      const mrp = Number(rawMrp);
+
+      const batch_number =
+        it.batch_number ||
+        it.batch_no ||
+        it.batch_name ||
+        it.batchName ||
+        it.batch_infos?.batch_name ||
+        it.batch_infos?.batch_no ||
+        snapshotItem?.batchName ||
+        snapshotItem?.batchNumber ||
+        it.datas?.batch_number ||
+        it.datas?.batch_no ||
+        "";
+
+      const batch_name =
+        it.batch_name ||
+        it.batchName ||
+        it.batch_number ||
+        it.batch_no ||
+        it.batch_infos?.batch_name ||
+        snapshotItem?.batchName ||
+        it.datas?.batch_name ||
+        "";
+
+      const expiry_date =
+        it.expiry_date ||
+        it.expiryDate ||
+        it.expiry ||
+        it.batch_infos?.exp_date ||
+        it.batch_infos?.expiry_date ||
+        snapshotItem?.expiryDate ||
+        it.datas?.expiry_date ||
+        "";
+
+      const hsn_code =
+        it.hsn_code ||
+        it.hsn ||
+        it.hsnCode ||
+        snapshotItem?.hsnCode ||
+        snapshotItem?.hsn_code ||
+        snapshotItem?.hsn ||
+        it.datas?.hsn_code ||
+        it.datas?.hsn ||
+        it.datas?.tax_infos?.hsn ||
+        it.datas?.tax_identifiers?.hsn ||
+        it.tax_infos?.hsn ||
+        it.tax_identifiers?.hsn ||
+        (prodData ? extractProductHsn(prodData) : "") ||
+        "";
+
       return {
+        ...it,
         id: it.id || idx,
         name,
         qty,
         unitPrice,
+        price: unitPrice,
+        mrp: mrp > 0 ? mrp : undefined,
         totalAmount,
         discount,
         unit,
+        batch_number,
+        batch_name,
+        batchName: batch_name,
+        batch_no: batch_number,
+        expiry_date,
+        expiryDate: expiry_date,
+        hsn_code,
+        hsn: hsn_code,
+        hsnCode: hsn_code,
+        _product: prodData || undefined,
         serial_numbers: Array.isArray(it.serial_numbers) ? it.serial_numbers : [],
       };
     });
-  }, [fullSale, sale, productMap]);
+  }, [fullSale, sale, productMap, fetchedProducts]);
+
+  // Resolved Custom Fields for Receipt (merging template configuration with saved order values)
+  const receiptCustomFields = useMemo(() => {
+    const s = fullSale || sale;
+    const activeShopId = (s as any)?.shop_id || shopData?.id;
+    const configured = getReceiptCustomFields(activeShopId);
+    const fromOrder = (s as any)?.additional_infos?.custom_fields;
+    return mergeOrderCustomFields(configured, fromOrder);
+  }, [fullSale, sale, shopData?.id]);
+
+  const receiptConfig = useMemo(() => {
+    const s = fullSale || sale;
+    const activeShopId = (s as any)?.shop_id || shopData?.id;
+    return getBillingReceiptConfig(activeShopId);
+  }, [fullSale, sale, shopData?.id]);
+
+  const itemCustomFields = useMemo(() => {
+    return (receiptCustomFields || []).filter(
+      (f: any) => f.placement === "item" && f.label && f.show !== false
+    );
+  }, [receiptCustomFields]);
 
   // Payment breakdown
   const paymentMethods = useMemo(() => {
@@ -356,6 +533,7 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
         dateStr: formattedDateTime.date,
         timeStr: formattedDateTime.time,
         items: itemsList.map((i: any) => ({
+          ...i,
           name: i.name,
           qty: i.qty,
           price: i.unitPrice,
@@ -389,6 +567,7 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
         digitalStoreQrMessage: (
           printersList.find((p) => p.id === targetPrinterId) || getPrinterConfig()
         )?.digitalStoreQrMessage,
+        customFields: receiptCustomFields,
       };
 
       const targetPrinter =
@@ -520,6 +699,14 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
                   <span>{customerInfo.phone}</span>
                 </div>
               )}
+              {(receiptCustomFields || [])
+                .filter((f: any) => f.placement === "customer" && (f.value || f.displayValue))
+                .map((f: any) => (
+                  <div key={f.id} className="flex justify-between">
+                    <span className="text-slate-500 font-medium">{f.label}:</span>
+                    <span className="font-semibold text-slate-800">{f.displayValue || f.value}</span>
+                  </div>
+                ))}
             </div>
 
             {/* Items Table */}
@@ -565,11 +752,40 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
                           Incl. ₹{it.discount.toFixed(2)} discount
                         </div>
                       )}
+                      {itemCustomFields.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {itemCustomFields.map((f: any) => {
+                            const val = extractItemAttributeValue(f, it, idx, it);
+                            if (!val || val === "—") return null;
+                            return (
+                              <span
+                                key={f.id}
+                                className="inline-flex items-center text-[9px] bg-slate-50 border border-slate-200/80 px-1 py-0.5 rounded text-slate-600 font-mono"
+                              >
+                                <span className="text-slate-400 mr-1">{f.label}:</span>
+                                <span className="font-semibold text-slate-700">{val}</span>
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
               )}
             </div>
+
+            {/* Custom fields below items */}
+            {(receiptCustomFields || []).filter((f: any) => f.placement === "below" && (f.value || f.displayValue)).length > 0 && (
+              <div className="py-2 border-b border-dashed border-slate-300 text-[10px] space-y-1">
+                {(receiptCustomFields || []).filter((f: any) => f.placement === "below" && (f.value || f.displayValue)).map((f: any) => (
+                  <div key={f.id} className="flex justify-between">
+                    <span className="text-slate-500">{f.label}:</span>
+                    <span className="font-semibold text-slate-800">{f.displayValue || f.value}</span>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Calculations Breakdown */}
             <div className="py-2.5 border-b border-dashed border-slate-300 text-[10.5px] space-y-1">
@@ -642,12 +858,12 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
             </div>
 
             {/* UPI QR Code (if enabled) */}
-            {Boolean(getBillingReceiptConfig().qr?.upi && getBillingReceiptConfig().qr?.upiId) && (
+            {Boolean(receiptConfig.qr?.upi && receiptConfig.qr?.upiId) && (
               <div className="pt-2.5 pb-2 text-center border-t border-dashed border-slate-200 flex flex-col items-center justify-center w-full">
                 <div className="flex justify-center my-1 w-full">
                   <div className="p-1.5 bg-white rounded-lg border border-slate-200 shadow-2xs inline-flex items-center justify-center mx-auto">
                     <QRCodeSVG
-                      value={`upi://pay?pa=${encodeURIComponent(getBillingReceiptConfig().qr.upiId)}&pn=${encodeURIComponent(shopData?.name || "")}&am=${Number((sale as any)?.final_amount || (sale as any)?.total_amount || 0).toFixed(2)}&cu=INR`}
+                      value={`upi://pay?pa=${encodeURIComponent(receiptConfig.qr.upiId)}&pn=${encodeURIComponent(shopData?.name || "")}&am=${Number((sale as any)?.final_amount || (sale as any)?.total_amount || 0).toFixed(2)}&cu=INR`}
                       size={95}
                       level="M"
                       style={{ display: "block", margin: "0 auto" }}
@@ -655,9 +871,9 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
                   </div>
                 </div>
                 <p className="text-[9px] font-bold text-slate-700 mt-0.5 text-center">
-                  {getBillingReceiptConfig().qr.upiCap || "Scan & Pay via UPI"}
+                  {receiptConfig.qr.upiCap || "Scan & Pay via UPI"}
                 </p>
-                <p className="text-[8px] text-slate-400 text-center">{getBillingReceiptConfig().qr.upiId}</p>
+                <p className="text-[8px] text-slate-400 text-center">{receiptConfig.qr.upiId}</p>
               </div>
             )}
 
@@ -665,14 +881,14 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
             {Boolean(
               (printersList.find((p) => p.id === targetPrinterId) || getPrinterConfig())
                 ?.includeDigitalStoreQr !== false && (shopData?.visible_online !== false) &&
-              getBillingReceiptConfig().qr?.store !== false
+              receiptConfig.qr?.store !== false
             ) && (
               <div className="pt-2.5 pb-2 text-center border-t border-dashed border-slate-200 flex flex-col items-center justify-center w-full">
                 <div className="flex justify-center my-1 w-full">
                   <div className="p-1.5 bg-white rounded-lg border border-slate-200 shadow-2xs inline-flex items-center justify-center mx-auto">
                     <QRCodeSVG
                       value={
-                        getBillingReceiptConfig().qr?.storeUrl ||
+                        receiptConfig.qr?.storeUrl ||
                         shopData?.additional_infos?.website ||
                         getDigitalStoreUrl((sale as any)?.shop_id || shopData?.id)
                       }
@@ -683,7 +899,7 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
                   </div>
                 </div>
                 <p className="text-[8.5px] font-medium text-slate-500 text-center">
-                  {getBillingReceiptConfig().qr?.storeCap || "Scan to visit our online store"}
+                  {receiptConfig.qr?.storeCap || "Scan to visit our online store"}
                 </p>
               </div>
             )}
@@ -691,9 +907,9 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
             {/* Footer */}
             <div className="pt-3 text-center text-[9px] text-slate-400 space-y-0.5">
               <p className="font-semibold text-slate-600">
-                {getBillingReceiptConfig().footer?.thanks || (printersList.find((p) => p.id === targetPrinterId) || getPrinterConfig())?.footerText || "Thank you for shopping with us! Please visit again."}
+                {receiptConfig.footer?.thanks || (printersList.find((p) => p.id === targetPrinterId) || getPrinterConfig())?.footerText || "Thank you for shopping with us! Please visit again."}
               </p>
-              <p>{getBillingReceiptConfig().footer?.terms || "Goods once sold will not be returned without bill."}</p>
+              <p>{receiptConfig.footer?.terms || "Goods once sold will not be returned without bill."}</p>
               <p className="text-[8px] text-slate-400 mt-1">
                 Reprinted on {new Date().toLocaleString("en-IN")}
               </p>

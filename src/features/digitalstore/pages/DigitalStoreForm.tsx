@@ -546,7 +546,7 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
 
   if (isEditMode) {
     return (
-      <div className="w-full min-h-screen bg-slate-50 p-3 md:p-6 lg:p-8 font-sans">
+      <div className="w-full h-full min-h-0 overflow-y-auto custom-scrollbar bg-slate-50 p-3 md:p-6 lg:p-8 font-sans pb-32 md:pb-28">
         <div className="w-full mx-auto max-w-3xl space-y-5">
           {/* Header */}
           <div className="flex items-center justify-between">
@@ -584,7 +584,7 @@ export default function StoreSetupWizard({ existingData }: { existingData?: Part
   }
 
   return (
-    <div className="w-full min-h-screen bg-slate-50 p-3 md:p-6 lg:p-8 font-sans">
+    <div className="w-full h-full min-h-0 overflow-y-auto custom-scrollbar bg-slate-50 p-3 md:p-6 lg:p-8 font-sans pb-32 md:pb-28">
       <div className="w-full mx-auto max-w-3xl space-y-5">
 
         {/* ── Stepper ── */}

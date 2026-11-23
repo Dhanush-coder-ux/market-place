@@ -5,6 +5,7 @@ export const ENDPOINTS = {
   CUSTOMERS: "/customers",
   CUSTOMER_CUSTOM_FIELDS: "/customers/custom-fields",    // gateway rewrites → /custom-fields on port 8007
   INVENTORIES: "/inventories",
+  INVENTORY_EXPORT: "/inventories/export",
   INVENTORY_CUSTOM_FIELDS: "/inventories/custom-fields",  // gateway rewrites → /custom-fields on port 8000
   S_ADJUSTMENTS: "/stockmovadj",
   S_MOVEMENTS: "/stockmovadj",

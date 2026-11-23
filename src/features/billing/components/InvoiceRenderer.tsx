@@ -47,6 +47,8 @@ export interface InvoiceRendererProps {
   billTotals?: BillTotals;
   invoiceRef?: React.RefObject<HTMLDivElement | null>;
   scale?: number;
+  paperSize?: "a4" | "a5";
+  orientation?: "portrait" | "landscape";
   customFields?: InvoiceRendererCustomField[];
   signature?: {
     show: boolean;
@@ -93,6 +95,8 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
   billTotals: billTotalsProp,
   invoiceRef,
   scale = 1,
+  paperSize,
+  orientation,
   customFields,
   signature,
   qrSettings,
@@ -110,6 +114,8 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
     let baseSig: any = undefined;
     let baseQr: any = undefined;
     let baseFooter: any = undefined;
+    let basePaperSize: "a4" | "a5" = "a4";
+    let baseOrientation: "portrait" | "landscape" = "portrait";
 
     try {
       const parsed = getInvoiceSettings(shopData?.id);
@@ -118,6 +124,8 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
         baseSig = parsed.sig;
         baseQr = parsed.qr;
         baseFooter = parsed.footer;
+        if (parsed.paperSize) basePaperSize = parsed.paperSize;
+        if (parsed.orientation) baseOrientation = parsed.orientation;
       }
     } catch (_) {}
 
@@ -129,7 +137,18 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
         show: f.show !== false,
         itemShow: f.itemShow || match?.itemShow || (f.placement === "item" ? "column" : undefined),
         itemSource: f.itemSource || match?.itemSource || (f.placement === "item" ? "product" : undefined),
-        attr: f.attr || match?.attr || (f.placement === "item" ? "batch" : undefined),
+        attr: f.attr || match?.attr || (() => {
+          if (f.placement !== "item") return undefined;
+          const l = (f.label || "").toLowerCase();
+          if (l.includes("batch")) return "batch";
+          if (l.includes("expir") || l.includes("exp")) return "expiry";
+          if (l.includes("hsn")) return "hsn";
+          if (l.includes("mrp")) return "mrp";
+          if (l.includes("mfr") || l.includes("manuf") || l.includes("brand") || l.includes("supplier")) return "mfr";
+          if (l.includes("pack") || l.includes("unit")) return "pack";
+          if (l.includes("size") || l.includes("color") || l.includes("colour")) return "size";
+          return "batch";
+        })(),
         value: f.value ?? (f.mode === "fixed" ? f.value : ""),
         displayValue: f.displayValue ?? f.value,
       };
@@ -140,8 +159,13 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
       signature: signature !== undefined ? signature : baseSig,
       qrSettings: qrSettings !== undefined ? qrSettings : baseQr,
       footerSettings: footerSettings !== undefined ? footerSettings : baseFooter,
+      paperSize: paperSize || basePaperSize || "a4",
+      orientation: orientation || baseOrientation || "portrait",
     };
-  }, [customFields, signature, qrSettings, footerSettings]);
+  }, [shopData?.id, customFields, signature, qrSettings, footerSettings, paperSize, orientation]);
+
+  const isA5 = resolvedSettings.paperSize === "a5";
+  const isLandscape = resolvedSettings.orientation === "landscape";
 
   // Split custom fields for item placement into separate columns vs subline items under the name
   const { itemCols, itemUnder } = useMemo(() => {
@@ -200,7 +224,17 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
     if (rawVal !== undefined && rawVal !== null && rawVal !== "" && rawVal !== "—") {
       return rawVal;
     }
-    return extractItemAttributeValue(f, line, i, filledItems[i] || items[i]);
+    const baseItem = filledItems[i] || items[i] || {};
+    const mergedItem = {
+      ...baseItem,
+      ...(line || {}),
+      hsn: line?.hsn || line?.hsn_code || line?.hsnCode || baseItem?.hsn || baseItem?.hsn_code || baseItem?.hsnCode || "",
+      hsn_code: line?.hsn_code || line?.hsn || line?.hsnCode || baseItem?.hsn_code || baseItem?.hsn || baseItem?.hsnCode || "",
+      hsnCode: line?.hsnCode || line?.hsn_code || line?.hsn || baseItem?.hsnCode || baseItem?.hsn_code || baseItem?.hsn || "",
+      mrp: line?.mrp || baseItem?.mrp,
+      _product: line?._product || baseItem?._product,
+    };
+    return extractItemAttributeValue(f, line, i, mergedItem);
   };
 
   return (
@@ -209,11 +243,15 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
     >
       <div 
          ref={invoiceRef} 
-         className={`${config.container} w-full max-w-[580px] shrink-0`}
+         className={`${config.container} w-full ${
+           isLandscape
+             ? (isA5 ? "max-w-[620px] text-[11px]" : "max-w-[820px]")
+             : (isA5 ? "max-w-[460px] text-[11px]" : "max-w-[580px]")
+         } shrink-0`}
          style={scale !== 1 ? { transform: `scale(${scale})`, transformOrigin: 'top center', marginBottom: `-${(1 - scale) * 100}%` } : undefined}
       >
         {/* Header */}
-        <div className={config.header.wrapper}>
+        <div className={`${config.header.wrapper} ${isA5 ? "!px-4 !pt-4 !pb-3" : ""}`}>
           <div className="flex gap-3.5 items-start">
              {logoUrl ? (
                <div className="w-11 h-11 rounded-xl overflow-hidden shrink-0 bg-white border border-slate-200/80 shadow-xs flex items-center justify-center p-1">
@@ -254,7 +292,7 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
         {/* Customer Info & Top Custom Fields */}
         {((Boolean(customerName) && !["walk-in", "walk-in customer", "walk in", "walk in customer", "walkin", "walkin customer"].includes(customerName.trim().toLowerCase())) ||
           (resolvedSettings.customFields && resolvedSettings.customFields.some((f) => f.show !== false && f.placement === "customer" && f.label?.trim()))) && (
-          <div className={config.customer.wrapper}>
+          <div className={`${config.customer.wrapper} ${isA5 ? "!px-4 !py-2.5" : ""}`}>
             <div className="flex justify-between items-start gap-4">
               <div>
                 <p className={config.customer.title}>Invoiced To</p>
@@ -281,7 +319,7 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
 
         {/* Customer Savings Highlight Banner (Section 8.3) */}
         {hasSavings && (
-          <div className="mx-6 my-3 p-2.5 bg-emerald-50 border border-emerald-200/80 rounded-xl flex items-center justify-between text-emerald-800">
+          <div className={`${isA5 ? "mx-4 my-2 p-2 text-[10px]" : "mx-6 my-3 p-2.5 text-[11px]"} bg-emerald-50 border border-emerald-200/80 rounded-xl flex items-center justify-between text-emerald-800`}>
             <div className="flex items-center gap-2">
               <BadgePercent size={14} className="text-emerald-600 shrink-0" />
               <span className="text-[11px] font-bold">You saved ₹{formatINR(billTotals.totalSavings)} on this invoice!</span>
@@ -295,23 +333,29 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
         )}
 
         {/* Table (Section 8.1) */}
-        <div className={`${config.table.wrapper} overflow-x-auto custom-scrollbar`}>
-          <table className="w-full min-w-full">
+        <div className={`${config.table.wrapper} w-full overflow-hidden`}>
+          <table className="w-full table-fixed border-collapse">
              <thead>
                <tr className={config.table.head}>
-                 <th className="text-left py-2.5 pl-4 sm:pl-6 pr-2 w-8 text-[9px] uppercase tracking-wider shrink-0">S.No</th>
-                 <th className="text-left py-2.5 px-2 text-[9px] uppercase tracking-wider min-w-[120px]">Item Description</th>
+                 <th className="text-left py-2.5 pl-3 sm:pl-4 pr-1 w-7 sm:w-8 text-[9px] uppercase tracking-wider shrink-0 truncate">S.No</th>
+                 <th className="text-left py-2.5 px-1.5 sm:px-2 text-[9px] uppercase tracking-wider truncate">Item Description</th>
                  {itemCols.map((col) => (
-                   <th key={col.id} className="text-left py-2.5 px-2 font-bold text-[9px] uppercase tracking-wider whitespace-nowrap min-w-[70px]">
+                   <th
+                     key={col.id}
+                     className={`text-left py-2.5 px-1 sm:px-1.5 font-bold text-[9px] uppercase tracking-wider truncate ${
+                       itemCols.length === 1 ? "w-[64px] sm:w-[74px]" : itemCols.length === 2 ? "w-[52px] sm:w-[62px]" : "w-[46px] sm:w-[54px]"
+                     }`}
+                     title={col.label}
+                   >
                      {col.label}
                    </th>
                  ))}
-                 <th className="text-right py-2.5 px-2 text-[9px] uppercase tracking-wider whitespace-nowrap min-w-[60px]">Rate</th>
-                 <th className="text-center py-2.5 px-1 text-[9px] uppercase tracking-wider whitespace-nowrap min-w-[36px]">Qty</th>
-                 <th className="text-right py-2.5 px-2 text-[9px] uppercase tracking-wider whitespace-nowrap min-w-[50px]">Disc</th>
-                 <th className="text-right py-2.5 px-2 text-[9px] uppercase tracking-wider whitespace-nowrap min-w-[60px]">Taxable</th>
-                 {includeGst && <th className="text-right py-2.5 px-2 text-[9px] uppercase tracking-wider whitespace-nowrap min-w-[45px]">GST</th>}
-                 <th className="text-right py-2.5 pl-2 pr-4 sm:pr-6 text-[9px] uppercase tracking-wider whitespace-nowrap min-w-[70px]">Amount</th>
+                 <th className="text-right py-2.5 px-1 sm:px-1.5 text-[9px] uppercase tracking-wider truncate w-[50px] sm:w-[58px]">Rate</th>
+                 <th className="text-center py-2.5 px-0.5 sm:px-1 text-[9px] uppercase tracking-wider truncate w-[28px] sm:w-[34px]">Qty</th>
+                 <th className="text-right py-2.5 px-1 sm:px-1.5 text-[9px] uppercase tracking-wider truncate w-[42px] sm:w-[48px]">Disc</th>
+                 <th className="text-right py-2.5 px-1 sm:px-1.5 text-[9px] uppercase tracking-wider truncate w-[50px] sm:w-[58px]">Taxable</th>
+                 {includeGst && <th className="text-right py-2.5 px-1 text-[9px] uppercase tracking-wider truncate w-[34px] sm:w-[40px]">GST</th>}
+                 <th className="text-right py-2.5 pl-1 pr-3 sm:pr-4 text-[9px] uppercase tracking-wider truncate w-[58px] sm:w-[68px]">Amount</th>
                </tr>
              </thead>
              <tbody>
@@ -321,18 +365,18 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
                  const hasLineDisc = lineDiscTotal > 0;
                  return (
                    <tr key={i} className={config.table.row}>
-                     <td className="py-2.5 pl-4 sm:pl-6 pr-2 text-[10px] text-slate-400 tabular-nums">{i + 1}</td>
-                     <td className="py-2.5 px-2">
-                       <p className={config.table.cellStrong}>{baseName}</p>
-                       {variantName && <p className={config.table.cellMuted}>{cleanVariantLabel(variantName)}</p>}
+                     <td className="py-2.5 pl-3 sm:pl-4 pr-1 text-[10px] text-slate-400 tabular-nums truncate">{i + 1}</td>
+                     <td className="py-2.5 px-1.5 sm:px-2 overflow-hidden">
+                       <p className={`${config.table.cellStrong} truncate`} title={baseName}>{baseName}</p>
+                       {variantName && <p className={`${config.table.cellMuted} truncate`} title={cleanVariantLabel(variantName)}>{cleanVariantLabel(variantName)}</p>}
                        {/* Custom Item Attributes (only under item name) */}
                        {itemUnder.length > 0 && (
-                         <div className="mt-0.5 space-y-0.5">
+                         <div className="mt-0.5 space-y-0.5 overflow-hidden">
                            {itemUnder.map((f) => {
                              const val = resolveItemFieldValue(f, line, i);
                              if (!val || val === "—") return null;
                              return (
-                               <p key={f.id} className="text-[9.5px] text-slate-500">
+                               <p key={f.id} className="text-[9.5px] text-slate-500 truncate" title={`${f.label}: ${val}`}>
                                  <span className="font-medium text-slate-600">{f.label}:</span> {val}
                                </p>
                              );
@@ -341,17 +385,17 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
                        )}
                        {/* Subline discount breakdown per Section 8.1 */}
                        {line.productDiscountAmount > 0 && (
-                         <p className="text-[9px] text-blue-600 font-medium mt-0.5">
+                         <p className="text-[9px] text-blue-600 font-medium mt-0.5 truncate" title={`Product offer: -₹${formatINR(line.productDiscountAmount)}`}>
                            • Product offer: -₹{formatINR(line.productDiscountAmount)}
                          </p>
                        )}
                        {line.lineDiscountAmount > 0 && (
-                         <p className="text-[9px] text-emerald-600 font-medium mt-0.5">
+                         <p className="text-[9px] text-emerald-600 font-medium mt-0.5 truncate" title={`Cashier discount: -₹${formatINR(line.lineDiscountAmount)}`}>
                            • Cashier discount: -₹{formatINR(line.lineDiscountAmount)}
                          </p>
                        )}
                        {line.billDiscountShare > 0 && (
-                         <p className="text-[9px] text-purple-600 font-medium mt-0.5">
+                         <p className="text-[9px] text-purple-600 font-medium mt-0.5 truncate" title={`Bill discount share: -₹${formatINR(line.billDiscountShare)}`}>
                            • Bill discount share: -₹{formatINR(line.billDiscountShare)}
                          </p>
                        )}
@@ -360,34 +404,34 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
                      {itemCols.map((col) => {
                        const val = resolveItemFieldValue(col, line, i);
                        return (
-                         <td key={col.id} className={`py-2.5 px-2 text-left text-[11px] tabular-nums ${config.table.cellMuted} whitespace-nowrap`}>
+                         <td key={col.id} className={`py-2.5 px-1 sm:px-1.5 text-left text-[10px] sm:text-[11px] tabular-nums ${config.table.cellMuted} truncate`} title={String(val || "")}>
                            {val || "—"}
                          </td>
                        );
                      })}
-                     <td className={`py-2.5 px-2 text-right text-[11px] tabular-nums ${config.table.cellMuted} whitespace-nowrap`}>
+                     <td className={`py-2.5 px-1 sm:px-1.5 text-right text-[10px] sm:text-[11px] tabular-nums ${config.table.cellMuted} truncate`}>
                        {line.mrp && line.mrp > line.sellingPrice ? (
-                         <div>
-                           <span className="line-through text-[9px] text-slate-400 block">₹{formatINR(line.mrp)}</span>
-                           <span className="font-semibold text-slate-800">₹{formatINR(line.sellingPrice)}</span>
+                         <div className="truncate">
+                           <span className="line-through text-[9px] text-slate-400 block truncate">₹{formatINR(line.mrp)}</span>
+                           <span className="font-semibold text-slate-800 truncate">₹{formatINR(line.sellingPrice)}</span>
                          </div>
                        ) : (
-                         <span>₹{formatINR(line.sellingPrice)}</span>
+                         <span className="truncate">₹{formatINR(line.sellingPrice)}</span>
                        )}
                      </td>
-                     <td className={`py-2.5 px-1 text-center text-[11px] tabular-nums ${config.table.cellStrong} whitespace-nowrap`}>{line.qty}</td>
-                     <td className="py-2.5 px-2 text-right text-[11px] tabular-nums text-emerald-600 font-medium whitespace-nowrap">
+                     <td className={`py-2.5 px-0.5 sm:px-1 text-center text-[10px] sm:text-[11px] tabular-nums ${config.table.cellStrong} truncate`}>{line.qty}</td>
+                     <td className="py-2.5 px-1 sm:px-1.5 text-right text-[10px] sm:text-[11px] tabular-nums text-emerald-600 font-medium truncate">
                        {hasLineDisc ? `-₹${formatINR(lineDiscTotal)}` : '—'}
                      </td>
-                     <td className={`py-2.5 px-2 text-right text-[11px] tabular-nums ${config.table.cellMuted} whitespace-nowrap`}>
+                     <td className={`py-2.5 px-1 sm:px-1.5 text-right text-[10px] sm:text-[11px] tabular-nums ${config.table.cellMuted} truncate`}>
                        ₹{formatINR(line.taxableValue)}
                      </td>
                      {includeGst && (
-                       <td className={`py-2.5 px-2 text-right text-[10px] tabular-nums ${config.table.cellMuted} whitespace-nowrap`}>
+                       <td className={`py-2.5 px-1 text-right text-[10px] tabular-nums ${config.table.cellMuted} truncate`}>
                          {line.gstRate}%
                        </td>
                      )}
-                     <td className={`py-2.5 pl-2 pr-4 sm:pr-6 text-right tabular-nums ${config.table.cellStrong} whitespace-nowrap`}>
+                     <td className={`py-2.5 pl-1 pr-3 sm:pr-4 text-right tabular-nums text-[10px] sm:text-[11px] ${config.table.cellStrong} truncate`}>
                        ₹{formatINR(line.finalInclusive)}
                      </td>
                    </tr>
@@ -439,8 +483,8 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
         )}
 
         {/* Summary (Section 8.1 & 8.3) */}
-        <div className={config.summary.wrapper}>
-          <div className="w-full sm:w-[280px] space-y-1.5">
+        <div className={`${config.summary.wrapper} ${isA5 ? "!px-4 !py-3" : ""}`}>
+          <div className={`w-full ${isA5 ? "sm:w-[240px]" : "sm:w-[280px]"} space-y-1.5`}>
              <div className={config.summary.row}>
                 <span>Base Subtotal (Gross SP)</span>
                 <span className={config.summary.value}>₹{formatINR(billTotals.baseSubtotal)}</span>
@@ -482,9 +526,9 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
                </div>
              )}
              
-             <div className={config.summary.totalWrapper}>
-               <span className={config.summary.totalText}>Grand Total</span>
-               <span className={config.summary.totalValue}>₹{formatINR(billTotals.payable)}</span>
+             <div className={`${config.summary.totalWrapper} ${isA5 ? "!pt-1.5 !mt-1.5" : ""}`}>
+               <span className={`${config.summary.totalText} ${isA5 ? "!text-[12px]" : ""}`}>Grand Total</span>
+               <span className={`${config.summary.totalValue} ${isA5 ? "!text-[16px]" : ""}`}>₹{formatINR(billTotals.payable)}</span>
              </div>
               {resolvedSettings.footerSettings?.words && (
                 <div className="pt-2 text-[10px] text-slate-500 italic">
@@ -492,7 +536,7 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
                 </div>
               )}
 
-             <div className="pt-3 mt-3 border-t border-slate-200/60 border-dashed">
+             <div className={`${isA5 ? "pt-2 mt-2" : "pt-3 mt-3"} border-t border-slate-200/60 border-dashed`}>
                 <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Payment</p>
                 {payments.map((p, idx) => {
                   const pInfo = payMeta[p.mode] || payMeta.cash;
@@ -514,11 +558,11 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
         {((resolvedSettings.qrSettings?.store && resolvedSettings.qrSettings?.storeUrl) ||
           (resolvedSettings.qrSettings?.upi && resolvedSettings.qrSettings?.upiId) ||
           Boolean(shopData?.visible_online && getPrinterConfig().includeDigitalStoreQr)) && (
-          <div className="mx-6 mb-3 p-3 bg-gradient-to-r from-slate-50 to-emerald-50/30 border border-slate-200/80 rounded-xl flex items-center justify-between gap-4">
+          <div className={`${isA5 ? "mx-4 mb-2 p-2" : "mx-6 mb-3 p-3"} bg-gradient-to-r from-slate-50 to-emerald-50/30 border border-slate-200/80 rounded-xl flex items-center justify-between gap-4`}>
             <div className="space-y-1">
               {resolvedSettings.qrSettings?.upi && resolvedSettings.qrSettings?.upiId ? (
                 <>
-                  <p className="text-[11px] font-bold text-slate-800">
+                  <p className={`${isA5 ? "text-[10px]" : "text-[11px]"} font-bold text-slate-800`}>
                     {resolvedSettings.qrSettings.upiCap || "Scan & Pay via UPI"}
                   </p>
                   <p className="text-[10px] text-slate-500">
@@ -527,7 +571,7 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
                 </>
               ) : (
                 <>
-                  <p className="text-[11px] font-bold text-slate-800">
+                  <p className={`${isA5 ? "text-[10px]" : "text-[11px]"} font-bold text-slate-800`}>
                     {resolvedSettings.qrSettings?.storeCap || "Scan to visit our online store"}
                   </p>
                   <p className="text-[10px] text-slate-500">
@@ -540,7 +584,7 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
               {resolvedSettings.qrSettings?.upi && resolvedSettings.qrSettings?.upiId ? (
                 <QRCodeSVG
                   value={`upi://pay?pa=${encodeURIComponent(resolvedSettings.qrSettings.upiId)}&pn=${encodeURIComponent(shopData?.name || "Merchant")}&am=${billTotals.payable}&cu=INR`}
-                  size={64}
+                  size={isA5 ? 50 : 64}
                   level="M"
                 />
               ) : (
@@ -550,7 +594,7 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
                     shopData?.additional_infos?.website ||
                     `${window.location.origin}/store/${shopData?.id || ""}`
                   }
-                  size={64}
+                  size={isA5 ? 50 : 64}
                   level="M"
                 />
               )}
@@ -559,13 +603,13 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
         )}
 
         {/* Footer */}
-        <div className={config.footer.wrapper}>
+        <div className={`${config.footer.wrapper} ${isA5 ? "!px-4 !py-3" : ""}`}>
            <div className="max-w-[60%]">
               <p className={config.footer.title}>
                 {resolvedSettings.footerSettings?.thanks ?? "Thank you for your business."}
               </p>
               {resolvedSettings.footerSettings?.termsShow !== false && (
-                <p className={config.footer.text}>
+                <p className={`${config.footer.text} ${isA5 ? "!text-[9px] !leading-snug" : ""}`}>
                   {resolvedSettings.footerSettings?.terms || "Goods once sold will not be taken back. All disputes subject to local jurisdiction."}
                 </p>
               )}
@@ -575,7 +619,7 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
                 <div className="text-right flex flex-col items-end">
                   {resolvedSettings.signature.mode === "type" ? (
                     <div
-                      className="text-xl text-[#1b2a6b] leading-none mb-1"
+                      className={`${isA5 ? "text-lg" : "text-xl"} text-[#1b2a6b] leading-none mb-1`}
                       style={{ fontFamily: "'Dancing Script', cursive" }}
                     >
                       {resolvedSettings.signature.name || "Signatory"}
@@ -584,13 +628,13 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
                     <img
                       src={resolvedSettings.signature.mode === "draw" ? resolvedSettings.signature.drawn : resolvedSettings.signature.image}
                       alt="Signature"
-                      className="max-h-11 max-w-[140px] object-contain mb-1"
+                      className={`${isA5 ? "max-h-7 max-w-[100px]" : "max-h-11 max-w-[140px]"} object-contain mb-1`}
                     />
                   ) : (
                     <div className="h-8 text-[11px] text-slate-300 italic flex items-center justify-end">Add a signature</div>
                   )}
                   {resolvedSettings.signature.name && (
-                    <div className="text-[11px] font-semibold text-slate-800 leading-tight">
+                    <div className={`${isA5 ? "text-[10px]" : "text-[11px]"} font-semibold text-slate-800 leading-tight`}>
                       {resolvedSettings.signature.name}
                       {resolvedSettings.signature.desig ? `, ${resolvedSettings.signature.desig}` : ""}
                     </div>
@@ -603,8 +647,8 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
            </div>
         </div>
          {(resolvedSettings.footerSettings?.showComputerGenerated !== false) && (
-           <div className="bg-transparent py-3 text-center print:bg-white border-t border-transparent">
-              <p className="text-[8px] text-slate-400 uppercase tracking-widest opacity-60">This is a computer-generated invoice and does not require a physical signature.</p>
+           <div className={`bg-transparent ${isA5 ? "py-1.5" : "py-2"} text-center print:bg-white border-t border-transparent`}>
+              <p className={`${isA5 ? "text-[7.5px]" : "text-[8px]"} text-slate-400 uppercase tracking-widest opacity-60`}>This is a computer-generated invoice and does not require a physical signature.</p>
            </div>
          )}
 

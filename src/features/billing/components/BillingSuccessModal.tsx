@@ -16,7 +16,7 @@ import {
 } from "../utils/printerService";
 import { useToast } from "@/context/ToastContext";
 import { QRCodeSVG } from "qrcode.react";
-import { extractItemAttributeValue } from "../utils/customFieldsHelper";
+import { extractItemAttributeValue, getReceiptCustomFields } from "../utils/customFieldsHelper";
 
 /* ─── Types ─────────────────────────────────────────────────────────────── */
 
@@ -179,6 +179,7 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
         dateStr: curDateStr,
         timeStr: curTimeStr,
         items: details.items.map((i: any) => ({
+          ...i,
           name: i.name,
           qty: i.qty,
           price: i.price,
@@ -210,7 +211,10 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
           printersList[0] ||
           getPrinterConfig()
         ).digitalStoreQrMessage,
-        customFields: details.customFields,
+        customFields:
+          details.customFields && details.customFields.length > 0
+            ? details.customFields
+            : getReceiptCustomFields(shopData?.id),
         paperWidth: receiptConfig.paperWidth,
         templateId: receiptConfig.templateId,
         upiId: receiptConfig.qr?.upiId,

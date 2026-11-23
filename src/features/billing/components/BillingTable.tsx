@@ -11,7 +11,7 @@ import { inventoryApi } from "@/services/api/inventory";
 import { SHOP_ID, getShopId } from "@/services/endpoints";
 import { isShopGstRegistered, calculateTaxSplit } from "@/utils/pricing";
 import { calculateDaysToExpiry, formatDate } from "@/features/inventory/components/StockTree";
-import { getActiveCustomFields, extractItemAttributeValue } from "../utils/customFieldsHelper";
+import { getActiveCustomFields, extractItemAttributeValue, extractProductHsn, extractProductMrp } from "../utils/customFieldsHelper";
 
 interface BillingTableProps {
   items: BillingItem[];
@@ -268,6 +268,9 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange, onBac
           }
         }
 
+        const prodHsn = extractProductHsn(p);
+        const prodMrp = extractProductMrp(p);
+
         return {
           ...p,
           product_name: p.name || "Unknown Product",
@@ -277,6 +280,10 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange, onBac
           barcodeDisplay: p.barcode || 'N/A',
           price: computedPrice,
           stocks: computedStock,
+          mrp: prodMrp !== undefined ? prodMrp : p.mrp,
+          hsn: prodHsn,
+          hsn_code: prodHsn,
+          hsnCode: prodHsn,
           variants: mappedVariants,
           batches: mappedBatches,
           has_variant: hasVariants,
@@ -476,6 +483,15 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange, onBac
       }
     }
 
+    const itemHsn =
+      extractProductHsn(variant) ||
+      extractProductHsn(targetProduct) ||
+      (variant as any)?.hsn ||
+      (variant as any)?.hsn_code ||
+      targetProduct.hsn ||
+      targetProduct.hsn_code ||
+      "";
+
     if (existingIndex !== -1) {
       updatedItems = items.map((item, idx) => {
         if (idx === existingIndex) {
@@ -488,7 +504,12 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange, onBac
             ...item,
             qty: newQty,
             serialNumbers: newSerials,
-            tprice: newQty * item.price
+            tprice: newQty * item.price,
+            hsn: item.hsn || itemHsn,
+            hsn_code: item.hsn_code || itemHsn,
+            hsnCode: item.hsnCode || itemHsn,
+            mrp: item.mrp || mrpVal,
+            _product: item._product || targetProduct,
           };
         }
         return item;
@@ -517,8 +538,9 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange, onBac
           batchName: resolvedBatchName,
           selectedBatch: selectedBatchObj,
           batch: selectedBatchObj,
-          hsn: targetProduct.hsn || targetProduct.hsn_code || targetProduct.datas?.hsn || targetProduct.datas?.hsn_code || targetProduct.additional_infos?.hsn || targetProduct.additional_infos?.hsn_code || (variant as any).hsn || (variant as any).hsn_code || "",
-          hsn_code: targetProduct.hsn_code || targetProduct.hsn || (variant as any).hsn_code || (variant as any).hsn || "",
+          hsn: itemHsn,
+          hsn_code: itemHsn,
+          hsnCode: itemHsn,
           serialnoId: variant.serialnoId || targetProduct.serialnoId,
           requireSerial: targetProduct.requireSerial,
           batchTracking: targetProduct.batchTracking,
@@ -746,6 +768,13 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange, onBac
           }
         }
 
+        const quickHsn =
+          extractProductHsn(pMapped) ||
+          extractProductHsn(fullProduct) ||
+          pMapped.hsn ||
+          pMapped.hsn_code ||
+          "";
+
         if (existingIndex !== -1) {
           updatedItems = items.map((item, idx) => {
             if (idx === existingIndex) {
@@ -753,7 +782,16 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange, onBac
               if (typeof item.maxStock === 'number') {
                 newQty = Math.min(newQty, item.maxStock);
               }
-              return { ...item, qty: newQty, tprice: newQty * item.price };
+              return {
+                ...item,
+                qty: newQty,
+                tprice: newQty * item.price,
+                hsn: item.hsn || quickHsn,
+                hsn_code: item.hsn_code || quickHsn,
+                hsnCode: item.hsnCode || quickHsn,
+                mrp: item.mrp || mrpVal,
+                _product: item._product || pMapped,
+              };
             }
             return item;
           });
@@ -778,8 +816,9 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange, onBac
               batchId: pMapped.batchId,
               batch_no: pMapped.batch_no || pMapped.batch_name || pMapped.batch || (pMapped.batches?.[0]?.batch_no || pMapped.batches?.[0]?.name) || "",
               batchName: pMapped.batch_name || pMapped.batch_no || pMapped.batch || (pMapped.batches?.[0]?.name) || "",
-              hsn: pMapped.hsn || pMapped.hsn_code || pMapped.datas?.hsn || pMapped.datas?.hsn_code || pMapped.additional_infos?.hsn || pMapped.additional_infos?.hsn_code || "",
-              hsn_code: pMapped.hsn_code || pMapped.hsn || "",
+              hsn: quickHsn,
+              hsn_code: quickHsn,
+              hsnCode: quickHsn,
               serialnoId: pMapped.serialnoId,
               requireSerial: false,
               batchTracking: pMapped.batchTracking,

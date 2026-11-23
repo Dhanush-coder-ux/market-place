@@ -6,7 +6,8 @@ import { QRCodeSVG } from "qrcode.react";
 import { extractItemAttributeValue } from "./customFieldsHelper";
 
 export type PrinterConnectionType = "system" | "bluetooth" | "usb" | "network";
-export type PaperWidth = "58mm" | "80mm";
+export type PaperWidth = "58mm" | "80mm" | "a4" | "a5";
+export type PrintOrientation = "portrait" | "landscape";
 
 export type ThermalTemplateId = "modern" | "classic" | "compact" | "gst";
 
@@ -15,6 +16,7 @@ export interface PrinterConfig {
   deviceName?: string;
   deviceId?: string;
   paperWidth: PaperWidth;
+  orientation?: PrintOrientation;
   templateId?: ThermalTemplateId;
   autoCut: boolean;
   openCashDrawer: boolean;
@@ -46,6 +48,7 @@ export const DEFAULT_PRINTER_CONFIG: PrinterConfig = {
   connectionType: "system",
   deviceName: "System Default Printer",
   paperWidth: "80mm",
+  orientation: "portrait",
   templateId: "modern",
   autoCut: true,
   openCashDrawer: false,
@@ -122,6 +125,7 @@ export function readScopedJson<T>(scopedKey: string, legacyKey: string, currentS
 
 export const DEFAULT_BILLING_RECEIPT_CONFIG = {
   paperWidth: "80mm" as PaperWidth,
+  orientation: "portrait" as PrintOrientation,
   templateId: "modern" as ThermalTemplateId,
   header: {
     showLogo: false,
@@ -181,12 +185,14 @@ export function getBillingReceiptConfig(shopId?: string) {
         ...DEFAULT_BILLING_RECEIPT_CONFIG,
         ...parsed,
         paperWidth: prConfig.paperWidth || parsed.paperWidth || "80mm",
+        orientation: prConfig.orientation || parsed.orientation || "portrait",
         templateId: prConfig.templateId || parsed.templateId || "modern",
       };
     }
     return {
       ...DEFAULT_BILLING_RECEIPT_CONFIG,
       paperWidth: prConfig.paperWidth || "80mm",
+      orientation: prConfig.orientation || "portrait",
       templateId: prConfig.templateId || "modern",
     };
   } catch (err) {
@@ -926,6 +932,7 @@ export interface ReceiptData {
   includeDigitalStoreQr?: boolean;
   digitalStoreQrMessage?: string;
   paperWidth?: PaperWidth;
+  orientation?: PrintOrientation;
   templateId?: ThermalTemplateId;
   upiId?: string;
   upiCap?: string;
@@ -1080,7 +1087,21 @@ export function generateEscPosQrCommands(url: string, is58mm = false): number[] 
   const pH = (storeLen >> 8) & 0xff;
   const moduleSize = is58mm ? 5 : 6;
 
+  // Print area: 80mm = 42 cols * 12 = 504 dots (0x01F8), 58mm = 32 cols * 12 = 384 dots (0x0180)
+  const widthDots = is58mm ? 384 : 504;
+  const wL = widthDots & 0xff;
+  const wH = (widthDots >> 8) & 0xff;
+
   const bytes: number[] = [];
+
+  // Ensure line buffer is flushed before alignment command
+  bytes.push(0x0a);
+
+  // Set Left Margin = 0: GS L 00 00
+  bytes.push(0x1d, 0x4c, 0x00, 0x00);
+
+  // Set Printable Area Width: GS W wL wH
+  bytes.push(0x1d, 0x57, wL, wH);
 
   // Align Center
   bytes.push(0x1b, 0x61, 0x01);
@@ -1192,6 +1213,7 @@ export function generateQrSvgHtml(url: string, size = 135): string {
         size: size,
         level: "M",
         includeMargin: false,
+        style: { display: "block", margin: "0 auto" },
       })
     );
   } catch (err) {
@@ -1668,9 +1690,16 @@ export function printViaSystemDriver(
   return new Promise((resolve) => {
     const receiptConfig = getBillingReceiptConfig();
     const effectiveWidth = data.paperWidth || config.paperWidth || receiptConfig.paperWidth || "80mm";
+    const isA4 = effectiveWidth === "a4";
+    const isA5 = effectiveWidth === "a5";
     const is58 = effectiveWidth === "58mm";
-    const widthMm = is58 ? "58mm" : "80mm";
+    const orientation = data.orientation || receiptConfig.orientation || config.orientation || "portrait";
+    const isLandscape = orientation === "landscape" && (isA4 || isA5);
+    const widthMm = isA4 ? "210mm" : isA5 ? "148mm" : is58 ? "58mm" : "80mm";
+    const pageSize = isA4 ? `A4 ${orientation}` : isA5 ? `A5 ${orientation}` : `${widthMm} auto`;
     const templateId = data.templateId || config.templateId || receiptConfig.templateId || "modern";
+    const bodyPadding = isA4 ? (isLandscape ? "10mm 16mm" : "12mm 16mm") : isA5 ? (isLandscape ? "6mm 10mm" : "8mm 10mm") : (templateId === "compact" ? "4px" : "8px");
+    const containerMaxW = isA4 ? (isLandscape ? "980px" : "760px") : isA5 ? (isLandscape ? "680px" : "520px") : widthMm;
 
     const shouldPrintDigitalQr = Boolean(data.includeDigitalStoreQr ?? (receiptConfig.qr?.store !== false && config.includeDigitalStoreQr));
     const digitalStoreUrl = data.digitalStoreUrl || receiptConfig.qr?.storeUrl || getDigitalStoreUrl(data.shopId);
@@ -1680,7 +1709,7 @@ export function printViaSystemDriver(
     const upiId = data.upiId || receiptConfig.qr?.upiId || "";
     const upiCap = data.upiCap || receiptConfig.qr?.upiCap || "Scan & Pay via UPI";
 
-    const qrSvgSize = is58 ? 105 : 130;
+    const qrSvgSize = isA4 ? 130 : isA5 ? 110 : is58 ? 105 : 130;
     const qrSvgHtml = (shouldPrintDigitalQr && digitalStoreUrl) ? generateQrSvgHtml(digitalStoreUrl, qrSvgSize) : "";
     const upiLink = upiId ? `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(data.shopName || "")}&am=${data.finalAmount.toFixed(2)}&cu=INR` : "";
     const upiSvgHtml = (shouldPrintUpiQr && upiLink) ? generateQrSvgHtml(upiLink, qrSvgSize) : "";
@@ -1747,18 +1776,19 @@ export function printViaSystemDriver(
         <title>Receipt - ${data.orderId || "Bill"}</title>
         <style>
           @page {
-            size: ${widthMm} auto;
-            margin: 0;
+            size: ${pageSize};
+            margin: ${isA4 ? "10mm" : isA5 ? "6mm" : "0"};
           }
           body {
             font-family: ${isClassic ? "'Courier New', Courier, monospace" : "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"};
-            font-size: ${isCompact ? "9.5px" : "11px"};
-            line-height: ${isCompact ? "1.25" : "1.35"};
+            font-size: ${isA4 ? "12px" : isA5 ? "11px" : isCompact ? "9.5px" : "11px"};
+            line-height: ${isA4 ? "1.4" : isA5 ? "1.35" : isCompact ? "1.25" : "1.35"};
             color: #000;
             background: #fff;
-            margin: 0;
-            padding: ${isCompact ? "4px" : "8px"};
-            width: ${widthMm};
+            margin: 0 auto;
+            padding: ${bodyPadding};
+            width: ${isA4 || isA5 ? "100%" : widthMm};
+            max-width: ${containerMaxW};
             box-sizing: border-box;
           }
           .center { text-align: center; }
@@ -1913,12 +1943,14 @@ export function printViaSystemDriver(
 
         ${shouldPrintUpiQr && upiSvgHtml ? `
         <div class="divider"></div>
-        <div class="qr-box">
-          <div style="display: flex; justify-content: center; align-items: center; margin: 4px auto; width: 100%;">
-            <div style="padding: 6px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; margin: 0 auto;">
-              ${upiSvgHtml}
-            </div>
-          </div>
+        <div class="qr-box" style="text-align: center; margin: 6px auto; width: 100%;">
+          <table role="presentation" style="margin: 0 auto; border-collapse: collapse; display: table;">
+            <tr>
+              <td align="center" style="padding: 4px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; text-align: center;">
+                ${upiSvgHtml}
+              </td>
+            </tr>
+          </table>
           <div style="font-weight: 800; font-size: 10px; margin-top: 3px; text-align: center;">${upiCap}</div>
           <div style="font-size: 9px; color: #475569; text-align: center;">${upiId}</div>
         </div>
@@ -1926,12 +1958,14 @@ export function printViaSystemDriver(
 
         ${shouldPrintDigitalQr && digitalStoreUrl ? `
         <div class="divider"></div>
-        <div class="qr-box">
-          <div style="display: flex; justify-content: center; align-items: center; margin: 4px auto; width: 100%;">
-            <div style="padding: 6px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; margin: 0 auto;">
-              ${qrSvgHtml}
-            </div>
-          </div>
+        <div class="qr-box" style="text-align: center; margin: 6px auto; width: 100%;">
+          <table role="presentation" style="margin: 0 auto; border-collapse: collapse; display: table;">
+            <tr>
+              <td align="center" style="padding: 4px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; text-align: center;">
+                ${qrSvgHtml}
+              </td>
+            </tr>
+          </table>
           <div style="font-weight: 800; font-size: 10px; margin-top: 3px; text-align: center;">${qrMessage}</div>
           <div style="font-size: 8.5px; color: #64748b; word-break: break-all; text-align: center;">${digitalStoreUrl.replace(/^https?:\/\//, '')}</div>
         </div>
@@ -2012,6 +2046,327 @@ export function printViaSystemDriver(
       }
     }, 250);
   });
+}
+
+/**
+ * Render thermal slip HTML for printing or iframe preview
+ */
+export function renderThermalSlipHtml(
+  data: ReceiptData,
+  config: PrinterConfig = DEFAULT_PRINTER_CONFIG
+): string {
+  const receiptConfig = getBillingReceiptConfig();
+  const effectiveWidth = data.paperWidth || config.paperWidth || receiptConfig.paperWidth || "80mm";
+  const isA4 = effectiveWidth === "a4";
+  const isA5 = effectiveWidth === "a5";
+  const is58 = effectiveWidth === "58mm";
+  const orientation = data.orientation || receiptConfig.orientation || config.orientation || "portrait";
+  const isLandscape = orientation === "landscape" && (isA4 || isA5);
+  const widthMm = isA4 ? "210mm" : isA5 ? "148mm" : is58 ? "58mm" : "80mm";
+  const pageSize = isA4 ? `A4 ${orientation}` : isA5 ? `A5 ${orientation}` : `${widthMm} auto`;
+  const templateId = data.templateId || config.templateId || receiptConfig.templateId || "modern";
+  const bodyPadding = isA4 ? (isLandscape ? "10mm 16mm" : "12mm 16mm") : isA5 ? (isLandscape ? "6mm 10mm" : "8mm 10mm") : (templateId === "compact" ? "4px" : "8px");
+  const containerMaxW = isA4 ? (isLandscape ? "980px" : "760px") : isA5 ? (isLandscape ? "680px" : "520px") : widthMm;
+
+  const shouldPrintDigitalQr = Boolean(data.includeDigitalStoreQr ?? (receiptConfig.qr?.store !== false && config.includeDigitalStoreQr));
+  const digitalStoreUrl = data.digitalStoreUrl || receiptConfig.qr?.storeUrl || getDigitalStoreUrl(data.shopId);
+  const qrMessage = data.digitalStoreQrMessage || receiptConfig.qr?.storeCap || config.digitalStoreQrMessage || DEFAULT_DIGITAL_STORE_QR_MESSAGE;
+
+  const shouldPrintUpiQr = Boolean(data.includeUpiQr ?? (receiptConfig.qr?.upi && receiptConfig.qr?.upiId));
+  const upiId = data.upiId || receiptConfig.qr?.upiId || "";
+  const upiCap = data.upiCap || receiptConfig.qr?.upiCap || "Scan & Pay via UPI";
+
+  const qrSvgSize = isA4 ? 130 : isA5 ? 110 : is58 ? 105 : 130;
+  const qrSvgHtml = (shouldPrintDigitalQr && digitalStoreUrl) ? generateQrSvgHtml(digitalStoreUrl, qrSvgSize) : "";
+  const upiLink = upiId ? `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(data.shopName || "")}&am=${data.finalAmount.toFixed(2)}&cu=INR` : "";
+  const upiSvgHtml = (shouldPrintUpiQr && upiLink) ? generateQrSvgHtml(upiLink, qrSvgSize) : "";
+
+  const cleanedAddress = cleanShopAddress(data.shopAddress);
+  const isClassic = templateId === "classic";
+  const isCompact = templateId === "compact";
+  const isGst = templateId === "gst";
+
+  const banner = data.invoiceTypeTag
+    ? data.invoiceTypeTag
+    : isGst
+      ? "DETAILED GST TAX INVOICE"
+      : data.isDuplicate
+        ? "TAX INVOICE • DUPLICATE COPY"
+        : "TAX INVOICE";
+
+  const isWalkIn =
+    !data.customerName ||
+    ["walk-in", "walk-in customer", "walk in", "walk in customer", "walkin", "walkin customer"].includes(
+      data.customerName.trim().toLowerCase()
+    );
+
+  const effectiveTaxableAmount = (data.taxableAmount && data.taxableAmount > 0 && (data.gstAmount === 0 || data.taxableAmount < data.finalAmount))
+    ? data.taxableAmount
+    : (data.gstAmount > 0 ? Math.max(0, data.finalAmount - data.gstAmount - (data.roundOff || 0)) : (data.totalAmount - (data.discountAmount || 0)));
+
+  const customerCustomFields = (data.customFields || []).filter((f) => f.placement === "customer" && (f.value || f.displayValue));
+  const belowCustomFields = (data.customFields || []).filter((f) => f.placement === "below" && (f.value || f.displayValue));
+  const itemCustomFields = (data.customFields || []).filter((f) => f.placement === "item" && f.label);
+
+  const itemsHtml = data.items
+    .map((item, idx) => {
+      const itemTotal = (item.tprice ?? item.qty * item.price).toFixed(2);
+      const itemMeta = itemCustomFields
+        .map((f) => {
+          const val = extractItemAttributeValue(f, item, idx);
+          return val && val !== "—" ? `<div style="font-size: 8.5px; color: #475569;">• ${f.label}: ${val}</div>` : "";
+        })
+        .filter(Boolean)
+        .join("");
+
+      return `
+      <div style="padding: 4px 0; border-bottom: 1px dashed #e2e8f0;">
+        <div style="font-weight: 700; color: #0f172a;">${item.name}</div>
+        ${itemMeta}
+        <div style="display: flex; justify-content: space-between; font-size: 10px; color: #475569; margin-top: 1px;">
+          <span style="color: #64748b;">${item.selectedUnit || "pc"}</span>
+          <span style="font-weight: 700;">${item.qty}</span>
+          <span>₹${item.price.toFixed(2)}</span>
+          <span style="font-weight: 700; color: #0f172a;">₹${itemTotal}</span>
+        </div>
+        ${item.discount && item.discount > 0 ? `<div style="font-size: 8.5px; color: #16a34a; font-style: italic;">Incl. ₹${item.discount.toFixed(2)} discount</div>` : ""}
+      </div>
+    `;
+    })
+    .join("");
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8" />
+      <title>Receipt - ${data.orderId || "Bill"}</title>
+      <style>
+        @page {
+          size: ${isA4 ? `A4 ${orientation}` : isA5 ? `A5 ${orientation}` : pageSize};
+          margin: ${isA4 ? "10mm" : isA5 ? "6mm" : "0"};
+        }
+        body {
+          font-family: ${isClassic ? "'Courier New', Courier, monospace" : "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"};
+          font-size: ${isA4 ? "12px" : isA5 ? "11px" : isCompact ? "9.5px" : "11px"};
+          line-height: ${isA4 ? "1.4" : isA5 ? "1.35" : isCompact ? "1.25" : "1.35"};
+          color: #000;
+          background: #fff;
+          margin: 0 auto;
+          padding: ${bodyPadding};
+          width: ${isA4 || isA5 ? "100%" : widthMm};
+          max-width: ${containerMaxW};
+          box-sizing: border-box;
+        }
+        .center { text-align: center; }
+        .center svg, .center img { margin: 0 auto; display: block; }
+        .bold { font-weight: bold; }
+        .title { font-size: ${isCompact ? "12px" : "14px"}; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 2px; }
+        .divider { border-bottom: ${isClassic ? "1px dashed #000" : "1px dashed #64748b"}; margin: ${isCompact ? "4px 0" : "6px 0"}; }
+        .divider-double { border-top: 1px dashed #000; border-bottom: 1px dashed #000; height: 3px; margin: 6px 0; }
+        .flex-between { display: flex; justify-content: space-between; margin-bottom: 2px; }
+        .banner { display: inline-block; padding: 2px 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+        .qr-box { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; margin: 8px 0; text-align: center; }
+        .qr-box svg { margin: 0 auto !important; display: block !important; }
+        @media print {
+          body { padding: 4px; width: 100%; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="center">
+        <div class="title">${data.shopName || "INVENTQ STORE"}</div>
+        ${receiptConfig.header?.tagline ? `<div style="font-size: 9px; color: #475569;">${receiptConfig.header.tagline}</div>` : ""}
+        ${receiptConfig.header?.showAddress !== false && cleanedAddress ? `<div style="font-size: 9.5px; color: #334155; margin-top: 1px;">${cleanedAddress}</div>` : ""}
+        ${receiptConfig.header?.showPhone !== false && data.shopPhone ? `<div style="font-size: 9.5px; color: #334155;">Ph: ${data.shopPhone}</div>` : ""}
+        ${receiptConfig.header?.showGst !== false && data.shopGst ? `<div style="font-size: 9.5px; font-weight: 700; color: #0f172a;">GSTIN: ${data.shopGst}</div>` : ""}
+        ${receiptConfig.header?.fssaiNo ? `<div style="font-size: 9.5px; color: #334155;">FSSAI: ${receiptConfig.header.fssaiNo}</div>` : ""}
+        <div class="banner">${banner}</div>
+      </div>
+
+      <div class="${isClassic ? 'divider-double' : 'divider'}"></div>
+
+      <div class="flex-between">
+        <span>Bill No: <strong style="color: #0f172a;">${data.orderId || "N/A"}</strong></span>
+        <span>${data.dateStr || new Date().toLocaleDateString("en-IN")} ${data.timeStr || new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}</span>
+      </div>
+
+      ${receiptConfig.meta?.showCashier !== false ? `
+      <div class="flex-between" style="font-size: 10px; color: #475569;">
+        <span>Cashier: ${receiptConfig.meta?.cashierName || "Counter 1"}</span>
+        ${receiptConfig.meta?.showTokenNo !== false ? `<span>Token: ${receiptConfig.meta?.tokenPrefix || "T-"}${data.orderId ? data.orderId.slice(-4) : "01"}</span>` : ""}
+      </div>` : ""}
+
+      ${receiptConfig.meta?.showCustomer !== false && (!isWalkIn || data.phone) ? `
+      <div class="flex-between" style="font-size: 10px; color: #475569;">
+        <span>Customer: <strong style="color: #0f172a;">${isWalkIn ? "Walk-in" : (data.customerName || "Customer")}</strong></span>
+        ${data.phone ? `<span>Ph: ${data.phone}</span>` : ""}
+      </div>` : ""}
+
+      ${customerCustomFields.map((f) => `
+        <div class="flex-between" style="font-size: 10px; color: #475569;">
+          <span>${f.label}:</span>
+          <span style="font-weight: 600; color: #0f172a;">${f.displayValue ?? f.value}</span>
+        </div>
+      `).join("")}
+
+      <div class="${isClassic ? 'divider-double' : 'divider'}"></div>
+
+      <div style="font-size: 9.5px; font-weight: 800; text-transform: uppercase; color: #475569; display: flex; justify-content: space-between; padding-bottom: 2px;">
+        <span>Item</span>
+        <div style="display: flex; gap: 14px;">
+          <span>Unit</span>
+          <span>Qty</span>
+          <span>Rate</span>
+          <span>Amount</span>
+        </div>
+      </div>
+      <div class="divider" style="margin: 2px 0 4px 0;"></div>
+
+      ${itemsHtml}
+
+      ${belowCustomFields.map((f) => `
+        <div class="flex-between" style="font-size: 10px; color: #475569; padding: 2px 0;">
+          <span>${f.label}:</span>
+          <span style="font-weight: 600; color: #0f172a;">${f.displayValue ?? f.value}</span>
+        </div>
+      `).join("")}
+
+      <div class="divider"></div>
+
+      <div class="flex-between" style="font-size: 10px; color: #475569;">
+        <span>Total Qty / Items:</span>
+        <span class="bold">${data.totalUnits || data.items.reduce((s, i) => s + i.qty, 0)} (${data.items.length} items)</span>
+      </div>
+
+      <div class="flex-between" style="font-size: 10px; color: #475569;">
+        <span>Gross Total:</span>
+        <span>₹${data.totalAmount.toFixed(2)}</span>
+      </div>
+
+      ${data.discountAmount && data.discountAmount > 0 ? `
+      <div class="flex-between" style="font-size: 10px; color: #16a34a; font-weight: 600;">
+        <span>Total Discount:</span>
+        <span>-₹${data.discountAmount.toFixed(2)}</span>
+      </div>` : ""}
+
+      ${receiptConfig.tax?.showTaxBreakup !== false ? `
+      <div class="flex-between" style="font-size: 10px; color: #475569;">
+        <span>Taxable Amount:</span>
+        <span>₹${effectiveTaxableAmount.toFixed(2)}</span>
+      </div>
+
+      ${data.gstAmount > 0 ? `
+        ${data.cgstAmount !== undefined && data.sgstAmount !== undefined ? `
+          <div class="flex-between" style="font-size: 9.5px; color: #64748b;">
+            <span>CGST ${data.cgstRate ? `(${data.cgstRate}%)` : ""}:</span>
+            <span>₹${data.cgstAmount.toFixed(2)}</span>
+          </div>
+          <div class="flex-between" style="font-size: 9.5px; color: #64748b;">
+            <span>SGST ${data.sgstRate ? `(${data.sgstRate}%)` : ""}:</span>
+            <span>₹${data.sgstAmount.toFixed(2)}</span>
+          </div>
+        ` : `
+          <div class="flex-between" style="font-size: 10px; color: #475569;">
+            <span>Total GST ${data.gstRate ? `(${data.gstRate}%)` : ""}:</span>
+            <span>₹${data.gstAmount.toFixed(2)}</span>
+          </div>
+        `}
+      ` : ""}
+      ` : ""}
+
+      ${data.deliveryFee && data.deliveryFee > 0 ? `
+      <div class="flex-between" style="font-weight: 600; color: #334155;">
+        <span>Delivery Fee:</span>
+        <span>+₹${data.deliveryFee.toFixed(2)}</span>
+      </div>` : ""}
+      ${data.roundOff && data.roundOff !== 0 ? `
+      <div class="flex-between" style="color: #475569; font-size: 10px;">
+        <span>Round Off:</span>
+        <span>${data.roundOff > 0 ? `+₹${data.roundOff.toFixed(2)}` : `-₹${Math.abs(data.roundOff).toFixed(2)}`}</span>
+      </div>` : ""}
+
+      <div class="${isClassic ? 'divider-double' : 'divider'}"></div>
+
+      <div class="flex-between" style="font-size: 14px; font-weight: 900; color: #0f172a;">
+        <span>GRAND TOTAL</span>
+        <span>₹${data.finalAmount.toFixed(2)}</span>
+      </div>
+
+      <div class="${isClassic ? 'divider-double' : 'divider'}"></div>
+
+      ${data.payments && data.payments.length > 0 ? `
+        ${data.payments.map(p => `
+          <div class="flex-between">
+            <span>Paid via ${p.mode.toUpperCase()}:</span>
+            <span class="bold">₹${p.amount.toFixed(2)}</span>
+          </div>
+          ${p.tendered && p.tendered > p.amount ? `
+          <div class="flex-between" style="font-size: 10px; color: #475569;">
+            <span>Tendered:</span>
+            <span>₹${p.tendered.toFixed(2)}</span>
+          </div>
+          <div class="flex-between" style="font-size: 10px; color: #475569;">
+            <span>Change Returned:</span>
+            <span>₹${(p.tendered - p.amount).toFixed(2)}</span>
+          </div>` : ""}
+        `).join("")}
+      ` : `
+        <div class="flex-between">
+          <span>Paid via CASH:</span>
+          <span class="bold">₹${data.finalAmount.toFixed(2)}</span>
+        </div>
+      `}
+
+      ${shouldPrintUpiQr && upiSvgHtml ? `
+      <div class="divider"></div>
+      <div class="qr-box" style="text-align: center; margin: 6px auto; width: 100%;">
+        <table role="presentation" style="margin: 0 auto; border-collapse: collapse; display: table;">
+          <tr>
+            <td align="center" style="padding: 4px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; text-align: center;">
+              ${upiSvgHtml}
+            </td>
+          </tr>
+        </table>
+        <div style="font-weight: 800; font-size: 10px; margin-top: 3px; text-align: center;">${upiCap}</div>
+        <div style="font-size: 9px; color: #475569; text-align: center;">${upiId}</div>
+      </div>
+      ` : ""}
+
+      ${shouldPrintDigitalQr && digitalStoreUrl ? `
+      <div class="divider"></div>
+      <div class="qr-box" style="text-align: center; margin: 6px auto; width: 100%;">
+        <table role="presentation" style="margin: 0 auto; border-collapse: collapse; display: table;">
+          <tr>
+            <td align="center" style="padding: 4px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; text-align: center;">
+              ${qrSvgHtml}
+            </td>
+          </tr>
+        </table>
+        <div style="font-weight: 800; font-size: 10px; margin-top: 3px; text-align: center;">${qrMessage}</div>
+        <div style="font-size: 8.5px; color: #64748b; word-break: break-all; text-align: center;">${digitalStoreUrl.replace(/^https?:\/\//, '')}</div>
+      </div>
+      ` : ""}
+
+      <div class="divider"></div>
+
+      <div class="center" style="font-size: 9px; color: #64748b; margin-top: 6px;">
+        <div style="font-weight: 700; color: #334155;">${receiptConfig.footer?.thanks || config.footerText || "Thank you for shopping with us! Please visit again."}</div>
+        ${receiptConfig.footer?.terms ? `<div>${receiptConfig.footer.terms}</div>` : `<div>Goods once sold will not be returned without bill.</div>`}
+        ${data.footerNote && data.footerNote.trim() && data.footerNote.trim() !== config.footerText?.trim() ? `<div style="margin-top: 2px; font-weight: 600; color: #475569;">${data.footerNote.trim()}</div>` : ""}
+        ${receiptConfig.footer?.showComputerGenerated !== false ? `
+        <div style="margin-top: 6px; font-size: 8px; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.6; text-align: center;">
+          This is a computer-generated receipt and does not require a physical signature.
+        </div>
+        ` : ""}
+        ${receiptConfig.footer?.showTearLine ? `
+        <div style="margin: 8px 0 2px; font-size: 9px; opacity: 0.6; text-align: center;">- - - - - - - - - - - - - - - - - - - -<br/>Tear here</div>
+        ` : ""}
+        ${data.reprintTimestamp || data.isDuplicate ? `<div style="margin-top: 3px; font-size: 8px; color: #94a3b8;">Reprinted on ${data.reprintTimestamp || new Date().toLocaleString("en-IN")}</div>` : ""}
+      </div>
+    </body>
+    </html>
+  `;
 }
 
 /* ───────────────────────────────────────────────────────────────────────────

@@ -28,6 +28,9 @@ export interface BillLineInput {
   name: string;
   code?: string;
   hsn?: string;
+  hsn_code?: string;
+  hsnCode?: string;
+  _product?: any;
   qty: number;
   sellingPrice: number; // Inclusive of GST per unit
   mrp?: number | null;

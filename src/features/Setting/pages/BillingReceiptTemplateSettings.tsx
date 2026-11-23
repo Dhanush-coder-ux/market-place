@@ -44,6 +44,7 @@ export interface CustomField {
 
 export interface BillingReceiptConfig {
   paperWidth: PaperWidth;
+  orientation?: "portrait" | "landscape";
   templateId: ThermalTemplateId;
   header: {
     showLogo: boolean;
@@ -105,6 +106,7 @@ const BASE_FIELD: Omit<CustomField, "id" | "label" | "show"> = {
 
 export const DEFAULT_CONFIG: BillingReceiptConfig = {
   paperWidth: "80mm",
+  orientation: "portrait",
   templateId: "modern",
   header: {
     showLogo: false,
@@ -387,6 +389,9 @@ export const BillingReceiptTemplateSettings: React.FC = () => {
     window.print();
   };
 
+  const isA4 = config.paperWidth === "a4";
+  const isA5 = config.paperWidth === "a5";
+  const isSheet = isA4 || isA5;
   const is80mm = config.paperWidth === "80mm";
 
   return (
@@ -395,15 +400,15 @@ export const BillingReceiptTemplateSettings: React.FC = () => {
       <div className="rcp-grid">
         {/* Left Column Controls */}
         <div className="rcp-form-col">
-          {/* Card 1: Thermal Paper Width */}
+          {/* Card 1: Bill & Thermal Paper Size */}
           <div className="rcp-card">
             <div className="rcp-card-h">
               <div>
                 <h2>
                   <Layers size={16} className="text-emerald-700" />
-                  Thermal Paper Width
+                  Bill Paper Format & Width
                 </h2>
-                <p>Choose your physical thermal printer roll size: 80 mm counter roll vs 58 mm compact roll.</p>
+                <p>Choose your print size: standard 80 mm / 58 mm thermal roll or full/half sheet A4 / A5 formats.</p>
               </div>
             </div>
 
@@ -432,7 +437,68 @@ export const BillingReceiptTemplateSettings: React.FC = () => {
                 </div>
                 <span className="rcp-width-sub">Compact 32 col mobile Bluetooth / handheld printer</span>
               </button>
+
+              <button
+                type="button"
+                className={`rcp-width-card ${config.paperWidth === "a4" ? "active" : ""}`}
+                onClick={() => setConfig((prev) => ({ ...prev, paperWidth: "a4" }))}
+              >
+                <div className="rcp-width-title">
+                  <span>A4 Sheet</span>
+                  {config.paperWidth === "a4" && <Check size={16} />}
+                </div>
+                <span className="rcp-width-sub">Full 210 × 297 mm document bill for laser / inkjet</span>
+              </button>
+
+              <button
+                type="button"
+                className={`rcp-width-card ${config.paperWidth === "a5" ? "active" : ""}`}
+                onClick={() => setConfig((prev) => ({ ...prev, paperWidth: "a5" }))}
+              >
+                <div className="rcp-width-title">
+                  <span>A5 Sheet</span>
+                  {config.paperWidth === "a5" && <Check size={16} />}
+                </div>
+                <span className="rcp-width-sub">Compact 148 × 210 mm half-sheet counter slip</span>
+              </button>
             </div>
+
+            {/* Orientation Toggle for A4 / A5 */}
+            {(config.paperWidth === "a4" || config.paperWidth === "a5") && (
+              <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid #e2e8f0" }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+                  Sheet Orientation
+                </div>
+                <div className="rcp-width-grid" style={{ marginBottom: 0 }}>
+                  <button
+                    type="button"
+                    className={`rcp-width-card ${(config.orientation || "portrait") === "portrait" ? "active" : ""}`}
+                    onClick={() => setConfig((prev) => ({ ...prev, orientation: "portrait" }))}
+                  >
+                    <div className="rcp-width-title">
+                      <span>Vertical (Portrait)</span>
+                      {(config.orientation || "portrait") === "portrait" && <Check size={16} />}
+                    </div>
+                    <span className="rcp-width-sub">
+                      {config.paperWidth === "a5" ? "148 × 210 mm · Standard tall half-sheet" : "210 × 297 mm · Standard tall page"}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`rcp-width-card ${config.orientation === "landscape" ? "active" : ""}`}
+                    onClick={() => setConfig((prev) => ({ ...prev, orientation: "landscape" }))}
+                  >
+                    <div className="rcp-width-title">
+                      <span>Horizontal (Landscape)</span>
+                      {config.orientation === "landscape" && <Check size={16} />}
+                    </div>
+                    <span className="rcp-width-sub">
+                      {config.paperWidth === "a5" ? "210 × 148 mm · Wide half-sheet layout" : "297 × 210 mm · Wide page for multi-column bills"}
+                    </span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Card 1b: Receipt Layout & Style */}
@@ -1323,14 +1389,28 @@ export const BillingReceiptTemplateSettings: React.FC = () => {
                   Print Test Slip
                 </button>
                 <div className="text-xs font-mono font-bold text-slate-500">
-                  {is80mm ? "80 mm · 42 Col" : "58 mm · 32 Col"}
+                  {isA4 ? "A4 · Full Sheet" : isA5 ? "A5 · Half Sheet" : is80mm ? "80 mm · 42 Col" : "58 mm · 32 Col"}
                 </div>
               </div>
             </div>
 
             {/* Live Paper Roll Stage */}
             <div className="rcp-stage">
-              <div className={`rcp-roll ${is80mm ? "w-80mm" : "w-58mm"}`}>
+              <div
+                className={`rcp-roll ${
+                  isA4
+                    ? config.orientation === "landscape"
+                      ? "w-a4 w-a4-landscape"
+                      : "w-a4"
+                    : isA5
+                    ? config.orientation === "landscape"
+                      ? "w-a5 w-a5-landscape"
+                      : "w-a5"
+                    : is80mm
+                    ? "w-80mm"
+                    : "w-58mm"
+                }`}
+              >
                 {/* Store Header */}
                 <div className="rcp-r-center">
                   {config.header.showStoreName && (
@@ -1404,11 +1484,11 @@ export const BillingReceiptTemplateSettings: React.FC = () => {
                               {f.label}
                             </th>
                           ))}
-                          <th style={{ textAlign: "center", width: is80mm ? "36px" : "28px" }}>Qty</th>
-                          {config.items.showRate && is80mm && (
-                            <th style={{ textAlign: "right", width: "50px" }}>Rate</th>
+                          <th style={{ textAlign: "center", width: isSheet ? "56px" : is80mm ? "36px" : "28px" }}>Qty</th>
+                          {config.items.showRate && (is80mm || isSheet) && (
+                            <th style={{ textAlign: "right", width: isSheet ? "70px" : "50px" }}>Rate</th>
                           )}
-                          <th style={{ textAlign: "right", width: is80mm ? "64px" : "50px" }}>Amt</th>
+                          <th style={{ textAlign: "right", width: isSheet ? "80px" : is80mm ? "64px" : "50px" }}>Amt</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1430,7 +1510,7 @@ export const BillingReceiptTemplateSettings: React.FC = () => {
                                 </td>
                               ))}
                               <td style={{ textAlign: "center" }}>{it.qty}</td>
-                              {config.items.showRate && is80mm && (
+                              {config.items.showRate && (is80mm || isSheet) && (
                                 <td style={{ textAlign: "right" }}>{it.rate.toFixed(2)}</td>
                               )}
                               <td style={{ textAlign: "right" }} className="rcp-r-bold">
@@ -1517,7 +1597,7 @@ export const BillingReceiptTemplateSettings: React.FC = () => {
                           <div className="rcp-qr-box" style={{ display: "flex", justifyContent: "center", alignItems: "center", width: "100%", margin: "0 auto" }}>
                             <QRCodeSVG
                               value={`upi://pay?pa=${encodeURIComponent(config.qr.upiId)}&pn=${encodeURIComponent(shopName)}&am=${subTotal.toFixed(2)}&cu=INR`}
-                              size={is80mm ? 90 : 76}
+                              size={isA4 ? 120 : isA5 ? 96 : is80mm ? 90 : 76}
                               level="M"
                               style={{ display: "block", margin: "0 auto" }}
                             />
@@ -1534,7 +1614,7 @@ export const BillingReceiptTemplateSettings: React.FC = () => {
                           <div className="rcp-qr-box" style={{ display: "flex", justifyContent: "center", alignItems: "center", width: "100%", margin: "0 auto" }}>
                             <QRCodeSVG
                               value={config.qr.storeUrl}
-                              size={is80mm ? 80 : 70}
+                              size={isA4 ? 110 : isA5 ? 88 : is80mm ? 80 : 70}
                               level="M"
                               style={{ display: "block", margin: "0 auto" }}
                             />

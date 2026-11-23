@@ -1171,6 +1171,88 @@ canvas#inv-pad {
   display: flex;
   flex-direction: column;
 }
+.inv-paper.a4.landscape {
+  width: 960px;
+  min-height: 680px;
+}
+
+.inv-paper.a5 {
+  width: 520px;
+  min-height: 720px;
+  display: flex;
+  flex-direction: column;
+  font-size: 11px;
+  line-height: 1.35;
+}
+.inv-paper.a5.landscape {
+  width: 680px;
+  min-height: 480px;
+}
+.inv-paper.a5 .inv-p-head {
+  padding: 18px 22px 14px;
+}
+.inv-paper.a5 .inv-p-biz h3 {
+  font-size: 16px;
+}
+.inv-paper.a5 .inv-p-meta {
+  padding: 12px 22px;
+}
+.inv-paper.a5 .inv-items th,
+.inv-paper.a5 .inv-items td {
+  padding: 6px 10px;
+}
+.inv-paper.a5 .inv-p-body {
+  padding: 12px 22px;
+}
+.inv-paper.a5 .inv-p-foot {
+  padding: 14px 22px;
+}
+
+/* Paper Size Selector Grid */
+.inv-width-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+.inv-width-card {
+  appearance: none;
+  border: 2px solid var(--inv-line);
+  background: var(--inv-surface);
+  border-radius: 12px;
+  padding: 14px 16px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+}
+.inv-width-card:hover {
+  border-color: var(--inv-line-2);
+  background: var(--inv-surface-2);
+}
+.inv-width-card.active {
+  border-color: var(--inv-brand);
+  background: var(--inv-brand-soft);
+}
+.inv-width-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--inv-fg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.inv-width-card.active .inv-width-title {
+  color: var(--inv-brand);
+}
+.inv-width-sub {
+  font-size: 11.5px;
+  color: var(--inv-muted);
+  line-height: 1.4;
+}
 
 /* Modern Template Header */
 .inv-p-head {
@@ -1330,6 +1412,7 @@ table.inv-items {
   width: 100%;
   border-collapse: collapse;
   font-size: 11.5px;
+  table-layout: fixed;
 }
 
 table.inv-items th {
@@ -1338,30 +1421,36 @@ table.inv-items th {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   text-align: left;
-  padding: 9px 8px;
+  padding: 8px 6px;
   color: #22352a;
   font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 table.inv-items td {
-  padding: 11px 8px;
+  padding: 9px 6px;
   border-bottom: 1px solid var(--inv-paper-line);
   vertical-align: top;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 table.inv-items .r {
   text-align: right;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 table.inv-items th:first-child,
 table.inv-items td:first-child {
-  padding-left: 30px;
+  padding-left: 18px;
 }
 
 table.inv-items th:last-child,
 table.inv-items td:last-child {
-  padding-right: 30px;
+  padding-right: 18px;
 }
 
 .inv-it-name {

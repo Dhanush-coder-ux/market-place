@@ -46,6 +46,23 @@ import type {
   InventoryCustomFieldValue,
 } from '../../features/inventory/types';
 
+export interface ProductExportPayload {
+  shop_id: string;
+  from_record?: number;
+  to_record?: number;
+  format?: "csv" | "xlsx";
+  query?: string;
+  from_date?: string;
+  to_date?: string;
+  category_id?: string;
+  unit_id?: string;
+  stock_status?: string;
+  is_active?: boolean;
+  have_tracking?: boolean;
+  user_id?: string;
+  product_ids?: string[];
+}
+
 const INV = ENDPOINTS.INVENTORIES;       // "/inventories"
 const CF = ENDPOINTS.INVENTORY_CUSTOM_FIELDS; // "/inventory-fields"
 
@@ -292,6 +309,32 @@ export const inventoryApi = {
 
   bulkReturnOrder: async (data: any) => {
     return await apiClient.post(ENDPOINTS.RETURN, data);
+  },
+
+  // ── Product Export (Backend-Generated) ───────────────────────────────────
+
+  /**
+   * Schedule product export job on backend (Worker / Redis).
+   * Backend: POST /inventories/export
+   */
+  exportProducts: async (data: ProductExportPayload) => {
+    return await apiClient.post(`${INV}/export`, data);
+  },
+
+  /**
+   * Check status of product export job.
+   * Backend: GET /inventories/export/status/{job_id}
+   */
+  getExportStatus: async (jobId: string) => {
+    return await apiClient.get(`${INV}/export/status/${jobId}`);
+  },
+
+  /**
+   * Download exported products directly as a binary blob (Excel / CSV).
+   * Backend: POST /inventories/export/download
+   */
+  downloadProductExport: async (data: ProductExportPayload): Promise<{ blob: Blob; filename: string }> => {
+    return await apiClient.downloadBlob(`${INV}/export/download`, data);
   },
 };
 

@@ -351,12 +351,13 @@ const ProductDetail = () => {
   const datas = product.custom_fields || product.additional_infos || product.datas || {};
   const name = String(product.name || "Unknown Product");
   // Prefer reorder_point_infos from root; batch-level handled in Inventory tab
-  const reorderPoint = (product as any).reorder_point_infos?.reorder_point ?? product.reorder_point ?? null;
+  const reorderPoint = (product as any).reorder_point_infos?.reorder_point ?? product.reorder_point ?? datas.reorder_point ?? (product as any).additional_infos?.reorder_point ?? null;
   const initials = name.slice(0, 2).toUpperCase();
   const rawSku = product.sku || datas.sku || "";
   const uiId = (product as any).ui_id || "";
   const skuValue = rawSku || uiId || product.id || "—";
-  const barcode = String(product.barcode || "—");
+  const barcode = String(product.barcode || datas.barcode || (product as any).bar_code || (product as any).barcode_infos?.barcode || "");
+  const hsnCode = String((product as any).hsn || datas.hsn || (product as any).hsn_code || datas.hsn_code || (product as any).additional_infos?.hsn || (product as any).additional_infos?.hsn_code || "");
   const categoryName = (product as any).category_infos?.name || product.category || "—";
   const unitName = (product as any).unit_infos?.name || product.unit || "—";
   const description = String(product.description || "—");
@@ -365,6 +366,14 @@ const ProductDetail = () => {
     ?? (product as any).selling_price
     ?? datas.sell_price
     ?? datas.selling_price
+    ?? (product as any).additional_infos?.sell_price
+    ?? (product as any).additional_infos?.selling_price
+    ?? null;
+  const productMrp = (product.pricing_infos as any)?.mrp
+    ?? (product.pricing_infos as any)?.additional_infos?.mrp
+    ?? (product as any).mrp
+    ?? datas.mrp
+    ?? (product as any).additional_infos?.mrp
     ?? null;
   const buyingPrice = product.pricing_infos?.buy_price
     ?? product.buy_price
@@ -421,7 +430,7 @@ const ProductDetail = () => {
 
   // GST is at root level in the new API response
   const gstValue = (product as any).gst || datas.gst || "—";
-  const storageLocation = (product as any).storage_location_infos?.storage_location || datas.storage_location || null;
+  const storageLocation = (product as any).storage_location_infos?.storage_location || (product as any).storage_location_infos?.name || (product as any).storage_location || datas.storage_location || (product as any).additional_infos?.storage_location || null;
   // Normalize variants: backend may return a dict {id: {...}} or an array
   const normalizeVariants = (raw: any): any[] => {
     if (!raw) return [];
@@ -432,6 +441,27 @@ const ProductDetail = () => {
   const combinations: any[] = normalizeVariants(product.variant_infos || product.variants);
   const variantTypes: any[] = datas.variant_types ?? datas.variantTypes ?? [];
   const batches: any[] = Array.isArray(product.batch_infos) ? product.batch_infos : (product.batch_infos ? [product.batch_infos] : (product.batches || []));
+
+  const batchBuyPrices = batches
+    .map((b: any) => b.pricing_infos?.buy_price ?? b.buy_price)
+    .filter((p: any) => p !== null && p !== undefined && !isNaN(Number(p)) && Number(p) > 0)
+    .map(Number);
+  const minBatchBuy = batchBuyPrices.length > 0 ? Math.min(...batchBuyPrices) : null;
+  const maxBatchBuy = batchBuyPrices.length > 0 ? Math.max(...batchBuyPrices) : null;
+
+  const batchSellPrices = batches
+    .map((b: any) => b.pricing_infos?.sell_price ?? b.sell_price)
+    .filter((p: any) => p !== null && p !== undefined && !isNaN(Number(p)) && Number(p) > 0)
+    .map(Number);
+  const minBatchSell = batchSellPrices.length > 0 ? Math.min(...batchSellPrices) : null;
+  const maxBatchSell = batchSellPrices.length > 0 ? Math.max(...batchSellPrices) : null;
+
+  const batchMrps = batches
+    .map((b: any) => b.pricing_infos?.mrp ?? b.pricing_infos?.additional_infos?.mrp ?? b.mrp)
+    .filter((p: any) => p !== null && p !== undefined && !isNaN(Number(p)) && Number(p) > 0)
+    .map(Number);
+  const minBatchMrp = batchMrps.length > 0 ? Math.min(...batchMrps) : null;
+  const maxBatchMrp = batchMrps.length > 0 ? Math.max(...batchMrps) : null;
 
   const extractSerials = (val: any): string[] => {
     if (!val) return [];
@@ -547,7 +577,22 @@ const ProductDetail = () => {
                         <p className="text-[10px] font-medium text-slate-400 tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
                           <Hash size={12} className="text-blue-400" /> Barcode
                         </p>
-                        {hasVariants || hasBatches ? (
+                        {barcode ? (
+                          <div className="flex flex-col">
+                            <p className="text-[13px] font-semibold text-slate-800">{barcode}</p>
+                            {(hasVariants || hasBatches) && (
+                              <button
+                                type="button"
+                                onClick={() => setActiveTab(inventoryTabIdx)}
+                                className="inline-flex items-center gap-1 text-[10px] font-semibold text-indigo-600 hover:text-indigo-800 transition-colors mt-0.5 text-left w-fit"
+                                title="View batch & variant barcodes"
+                              >
+                                <Layers size={10} className="text-indigo-500 shrink-0" />
+                                <span>Batch & Variant barcodes →</span>
+                              </button>
+                            )}
+                          </div>
+                        ) : (hasVariants || hasBatches) ? (
                           <div
                             className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
                             onClick={() => setActiveTab(inventoryTabIdx)}
@@ -558,7 +603,7 @@ const ProductDetail = () => {
                             </span>
                           </div>
                         ) : (
-                          <p className="text-[13px] font-semibold text-slate-800">{barcode}</p>
+                          <p className="text-[13px] font-semibold text-slate-400">—</p>
                         )}
                       </div>
                       <div className="md:col-span-2">
@@ -590,11 +635,14 @@ const ProductDetail = () => {
                           </p>
                           {hasBatches ? (
                             <div
-                              className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
+                              className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg w-fit cursor-pointer hover:bg-amber-100 transition-colors"
                               onClick={() => setActiveTab(inventoryTabIdx)}
+                              title="View in Batch & Variants tab"
                             >
-                              <Layers size={12} className="text-indigo-500" />
-                              <span className="text-[11px] font-bold text-indigo-600 truncate max-w-[140px]" title="Available in Batch & Variants tab">Available in Batch & Variants tab</span>
+                              <Layers size={12} className="text-amber-600" />
+                              <span className="text-[11px] font-bold text-amber-800 truncate max-w-[170px]">
+                                {batches.length > 0 ? `${batches.length} batch${batches.length !== 1 ? 'es' : ''} active` : "Batch tracking active"}
+                              </span>
                             </div>
                           ) : (
                             <p className="text-[13px] font-semibold text-slate-400">No batches</p>
@@ -666,15 +714,7 @@ const ProductDetail = () => {
                           <p className="text-[10px] font-medium text-slate-400 tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
                             <Download size={12} className="text-blue-400" /> Buy Price
                           </p>
-                          {hasVariants || hasBatches ? (
-                            <div
-                              className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
-                              onClick={() => setActiveTab(inventoryTabIdx)}
-                            >
-                              <Layers size={12} className="text-indigo-500" />
-                              <span className="text-[11px] font-bold text-indigo-600">Available in Batch & Variants tab</span>
-                            </div>
-                          ) : (buyingPrice !== null && buyingPrice !== undefined && Number(buyingPrice) > 0) ? (
+                          {numBuyingPrice > 0 ? (
                             <div className="flex flex-col">
                               <p className="text-[13px] font-semibold text-slate-800 tabular-nums flex items-baseline gap-1">
                                 {`₹${buyPriceWithGst.toFixed(2)}`}
@@ -689,6 +729,38 @@ const ProductDetail = () => {
                                   )}
                                 </span>
                               )}
+                              {(hasVariants || hasBatches) && (
+                                <span className="text-[9.5px] text-indigo-600 font-medium mt-0.5">
+                                  Product default
+                                  {minBatchBuy !== null && maxBatchBuy !== null && (
+                                    <span className="text-slate-400 ml-1">
+                                      (Batches: {minBatchBuy === maxBatchBuy ? `₹${minBatchBuy.toFixed(2)}` : `₹${minBatchBuy.toFixed(2)}–₹${maxBatchBuy.toFixed(2)}`})
+                                    </span>
+                                  )}
+                                </span>
+                              )}
+                            </div>
+                          ) : minBatchBuy !== null && maxBatchBuy !== null ? (
+                            <div className="flex flex-col">
+                              <p className="text-[13px] font-semibold text-slate-800 tabular-nums">
+                                {minBatchBuy === maxBatchBuy ? `₹${minBatchBuy.toFixed(2)}` : `₹${minBatchBuy.toFixed(2)} – ₹${maxBatchBuy.toFixed(2)}`}
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => setActiveTab(inventoryTabIdx)}
+                                className="inline-flex items-center gap-1 text-[9.5px] text-indigo-600 font-medium hover:underline mt-0.5"
+                              >
+                                <Layers size={10} />
+                                <span>Active batches ({batches.length})</span>
+                              </button>
+                            </div>
+                          ) : (hasVariants || hasBatches) ? (
+                            <div
+                              className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
+                              onClick={() => setActiveTab(inventoryTabIdx)}
+                            >
+                              <Layers size={12} className="text-indigo-500" />
+                              <span className="text-[11px] font-bold text-indigo-600">Available in Batch & Variants tab</span>
                             </div>
                           ) : (
                             <p className="text-[13px] font-semibold text-slate-400">—</p>
@@ -699,19 +771,11 @@ const ProductDetail = () => {
                           <p className="text-[10px] font-medium text-slate-400 tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
                             <Upload size={12} className="text-blue-400" /> Sell Price
                           </p>
-                          {hasVariants || hasBatches ? (
-                            <div
-                              className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
-                              onClick={() => setActiveTab(inventoryTabIdx)}
-                            >
-                              <Layers size={12} className="text-indigo-500" />
-                              <span className="text-[11px] font-bold text-indigo-600">Available in Batch & Variants tab</span>
-                            </div>
-                          ) : sellingPrice !== null ? (
+                          {(sellingPrice !== null && sellingPrice !== undefined && (Number(sellingPrice) > 0 || String(sellingPrice).trim() !== "")) ? (
                             <div className="flex flex-col">
                               <PriceCell
                                 sellingPrice={sellingPrice}
-                                mrp={datas.mrp}
+                                mrp={productMrp}
                                 gstRate={gstValue}
                                 discountPercent={datas.discount_percent || 0}
                                 offerValidUntil={datas.offer_valid_until}
@@ -722,6 +786,38 @@ const ProductDetail = () => {
                                   Taxable: ₹{spTaxableValue.toFixed(2)}
                                 </span>
                               )}
+                              {(hasVariants || hasBatches) && (
+                                <span className="text-[9.5px] text-indigo-600 font-medium mt-0.5">
+                                  Product default (all batches)
+                                  {minBatchSell !== null && maxBatchSell !== null && (minBatchSell !== numSellingPrice || maxBatchSell !== numSellingPrice) && (
+                                    <span className="text-slate-400 ml-1">
+                                      (Batches: {minBatchSell === maxBatchSell ? `₹${minBatchSell.toFixed(2)}` : `₹${minBatchSell.toFixed(2)}–₹${maxBatchSell.toFixed(2)}`})
+                                    </span>
+                                  )}
+                                </span>
+                              )}
+                            </div>
+                          ) : minBatchSell !== null && maxBatchSell !== null ? (
+                            <div className="flex flex-col">
+                              <p className="text-[13px] font-semibold text-slate-800 tabular-nums">
+                                {minBatchSell === maxBatchSell ? `₹${minBatchSell.toFixed(2)}` : `₹${minBatchSell.toFixed(2)} – ₹${maxBatchSell.toFixed(2)}`}
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => setActiveTab(inventoryTabIdx)}
+                                className="inline-flex items-center gap-1 text-[9.5px] text-indigo-600 font-medium hover:underline mt-0.5"
+                              >
+                                <Layers size={10} />
+                                <span>From active batches ({batches.length})</span>
+                              </button>
+                            </div>
+                          ) : (hasVariants || hasBatches) ? (
+                            <div
+                              className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
+                              onClick={() => setActiveTab(inventoryTabIdx)}
+                            >
+                              <Layers size={12} className="text-indigo-500" />
+                              <span className="text-[11px] font-bold text-indigo-600">Available in Batch & Variants tab</span>
                             </div>
                           ) : (
                             <p className="text-[13px] font-semibold text-slate-400">—</p>
@@ -731,7 +827,30 @@ const ProductDetail = () => {
                           <p className="text-[10px] font-medium text-slate-400 tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
                             <Tag size={12} className="text-blue-400" /> MRP
                           </p>
-                          {hasVariants || hasBatches ? (
+                          {(productMrp !== null && productMrp !== undefined && productMrp !== "" && !isNaN(Number(productMrp)) && Number(productMrp) > 0) ? (
+                            <div className="flex flex-col">
+                              <p className="text-[13px] font-semibold text-slate-800 tabular-nums">
+                                ₹{Number(productMrp).toFixed(2)}
+                              </p>
+                              {(hasVariants || hasBatches) && (
+                                <span className="text-[9.5px] text-indigo-600 font-medium mt-0.5">
+                                  Product default
+                                  {minBatchMrp !== null && maxBatchMrp !== null && (minBatchMrp !== Number(productMrp) || maxBatchMrp !== Number(productMrp)) && (
+                                    <span className="text-slate-400 ml-1">
+                                      (Batches: {minBatchMrp === maxBatchMrp ? `₹${minBatchMrp.toFixed(2)}` : `₹${minBatchMrp.toFixed(2)}–₹${maxBatchMrp.toFixed(2)}`})
+                                    </span>
+                                  )}
+                                </span>
+                              )}
+                            </div>
+                          ) : minBatchMrp !== null && maxBatchMrp !== null ? (
+                            <div className="flex flex-col">
+                              <p className="text-[13px] font-semibold text-slate-800 tabular-nums">
+                                {minBatchMrp === maxBatchMrp ? `₹${minBatchMrp.toFixed(2)}` : `₹${minBatchMrp.toFixed(2)} – ₹${maxBatchMrp.toFixed(2)}`}
+                              </p>
+                              <span className="text-[9.5px] text-slate-400 font-medium mt-0.5">From active batches</span>
+                            </div>
+                          ) : (hasVariants || hasBatches) ? (
                             <div
                               className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
                               onClick={() => setActiveTab(inventoryTabIdx)}
@@ -750,24 +869,19 @@ const ProductDetail = () => {
                           <p className="text-[10px] font-medium text-slate-400 tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
                             <Hash size={12} className="text-blue-400" /> HSN Code
                           </p>
-                          {hasVariants || hasBatches ? (
-                            <div
-                              className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
-                              onClick={() => setActiveTab(inventoryTabIdx)}
-                            >
-                              <Layers size={12} className="text-indigo-500" />
-                              <span className="text-[11px] font-bold text-indigo-600">Available in Batch & Variants tab</span>
-                            </div>
-                          ) : (
+                          <div className="flex flex-col">
                             <p className="text-[13px] font-semibold text-slate-800">
-                              {String(datas.hsn || "—")}
+                              {hsnCode || "—"}
                             </p>
-                          )}
+                            {(hasVariants || hasBatches) && hsnCode && (
+                              <span className="text-[9.5px] text-indigo-600 font-medium mt-0.5">Product default HSN</span>
+                            )}
+                          </div>
                         </div>
 
                         <DetailItem icon={BarChart2} label="GST Rate" value={gstValue} onClick={click("GST Rate", gstValue)} />
 
-                        {!hasVariants && !hasBatches && numSellingPrice > 0 && (
+                        {numSellingPrice > 0 && (
                           <div>
                             <p className="text-[10px] font-medium text-slate-400 tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
                               <TrendingUp size={12} className={hasCostBasis ? (profitAmount >= 0 ? "text-emerald-500" : "text-rose-500") : "text-slate-400"} /> Margin & Profit
@@ -813,16 +927,25 @@ const ProductDetail = () => {
                           <p className="text-[10px] font-medium text-slate-400  tracking-[0.05em] mb-1.5 flex items-center gap-1.5">
                             <Info size={12} className="text-blue-400" /> Reorder Point
                           </p>
-                          {(hasVariants || hasBatches) ? (
-                            <div
-                              className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
-                              onClick={() => setActiveTab(inventoryTabIdx)}
-                            >
-                              <Layers size={12} className="text-indigo-500" />
-                              <span className="text-[11px] font-bold text-indigo-600">Available in Batch & Variants tab</span>
+                          {reorderPoint !== null && reorderPoint !== undefined && reorderPoint !== "" ? (
+                            <div className="flex flex-col">
+                              <p className="text-[13px] font-semibold text-slate-800 tabular-nums">{String(reorderPoint)}</p>
+                              {(hasVariants || hasBatches) && (
+                                <span className="text-[9.5px] text-indigo-600 font-medium mt-0.5">Global reorder point</span>
+                              )}
                             </div>
-                          ) : reorderPoint !== null ? (
-                            <p className="text-[13px] font-semibold text-slate-800 tabular-nums">{String(reorderPoint)}</p>
+                          ) : (hasVariants || hasBatches) ? (
+                            <div className="flex flex-col">
+                              <span className="text-[12px] font-medium text-slate-600">Configured per batch</span>
+                              <button
+                                type="button"
+                                onClick={() => setActiveTab(inventoryTabIdx)}
+                                className="inline-flex items-center gap-1 text-[9.5px] text-indigo-600 font-medium hover:underline mt-0.5 w-fit"
+                              >
+                                <Layers size={10} />
+                                <span>View batches</span>
+                              </button>
+                            </div>
                           ) : (
                             <p className="text-[13px] font-semibold text-slate-400">—</p>
                           )}
@@ -832,14 +955,23 @@ const ProductDetail = () => {
                             <MapPin size={12} className="text-blue-400" /> Storage Location
                           </p>
                           {storageLocation ? (
-                            <p className="text-[13px] font-semibold text-slate-800">{storageLocation}</p>
+                            <div className="flex flex-col">
+                              <p className="text-[13px] font-semibold text-slate-800">{storageLocation}</p>
+                              {(hasVariants || hasBatches) && (
+                                <span className="text-[9.5px] text-slate-400 font-medium mt-0.5">Default (can vary per batch)</span>
+                              )}
+                            </div>
                           ) : (hasVariants || hasBatches) ? (
-                            <div
-                              className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg w-fit cursor-pointer hover:bg-indigo-100 transition-colors"
-                              onClick={() => setActiveTab(inventoryTabIdx)}
-                            >
-                              <Layers size={12} className="text-indigo-500" />
-                              <span className="text-[11px] font-bold text-indigo-600">Available in Batch & Variants tab</span>
+                            <div className="flex flex-col">
+                              <span className="text-[12px] font-medium text-slate-600">Configured per batch</span>
+                              <button
+                                type="button"
+                                onClick={() => setActiveTab(inventoryTabIdx)}
+                                className="inline-flex items-center gap-1 text-[9.5px] text-indigo-600 font-medium hover:underline mt-0.5 w-fit"
+                              >
+                                <Layers size={10} />
+                                <span>View batches</span>
+                              </button>
                             </div>
                           ) : (
                             <p className="text-[13px] font-semibold text-slate-400">—</p>

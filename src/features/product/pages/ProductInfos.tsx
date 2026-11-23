@@ -5,10 +5,11 @@ import {
   ChevronDown, ChevronRight, Layers,
   AlertCircle, Calendar, Hash, ExternalLink,
   Copy, Check, Pencil, Eye, MoreVertical, RefreshCw, History, Plus,
-  FileUp
+  FileUp, Download
 } from "lucide-react";
 import ActionMenu, { ActionMenuItem, ActionMenuDivider } from "@/components/common/ActionMenu";
 import ExcelImportModal from "@/components/common/ExcelImportModal";
+import ProductExportModal from "../components/ProductExportModal";
 import { VariantRows, BatchCards, SerialBadgeList, analyzeProductStock } from "../../inventory/components/StockTree";
 import { Modal } from "@/components/common/SuperUI";
 import { useHeader } from "@/context/HeaderContext";
@@ -1298,6 +1299,7 @@ const ProductInfos = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isExportOpen, setIsExportOpen] = useState(false);
 
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
@@ -1377,6 +1379,15 @@ const ProductInfos = () => {
         >
           <FileUp size={13} />
           Import
+        </button>
+
+        <button
+          onClick={() => setIsExportOpen(true)}
+          className="h-8 px-3 rounded-lg border border-slate-200 text-slate-600 font-medium text-[12px] bg-white hover:bg-slate-50 transition-colors flex items-center gap-1.5"
+          title="Export Products"
+        >
+          <Download size={13} />
+          Export
         </button>
 
         <GradientButton
@@ -2231,6 +2242,25 @@ const ProductInfos = () => {
           setRefreshKey((prev: number) => prev + 1);
         }}
         entityType="product"
+      />
+
+      {/* ── Backend Product Export Modal ── */}
+      <ProductExportModal
+        isOpen={isExportOpen}
+        onClose={() => setIsExportOpen(false)}
+        totalProductsCount={summaryStats.total || filteredProducts.length}
+        visibleProductsCount={filteredProducts.length}
+        visibleProductIds={filteredProducts.map((p) => String(p.id))}
+        activeFilters={{
+          search: debouncedSearch,
+          category: filterCategory,
+          brand: filterBrand,
+          status: filterStatus,
+          tracking: filterTracking,
+          fromDate,
+          toDate,
+        }}
+        availableCategories={availableCategories}
       />
     </div>
   );

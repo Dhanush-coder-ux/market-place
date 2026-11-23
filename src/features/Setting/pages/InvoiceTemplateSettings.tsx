@@ -8,6 +8,7 @@ import {
   Info,
   RotateCcw,
   Upload,
+  Check,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useToast } from "@/context/ToastContext";
@@ -69,12 +70,17 @@ export interface FooterSettings {
   showComputerGenerated?: boolean;
 }
 
+export type InvoicePaperSize = "a4" | "a5";
+export type PrintOrientation = "portrait" | "landscape";
+
 export interface InvoiceSettingsData {
   fields: CustomField[];
   sig: SignatureSettings;
   qr: QrSettings;
   footer: FooterSettings;
   template: string;
+  paperSize?: InvoicePaperSize;
+  orientation?: PrintOrientation;
 }
 
 // ── Constants & Helpers ────────────────────────────────────────────────
@@ -218,7 +224,13 @@ export const InvoiceTemplateSettings: React.FC = () => {
   const getInitialInvoiceState = (shopId: string): InvoiceSettingsData => {
     try {
       const s = getInvoiceSettings(shopId);
-      if (s) return s;
+      if (s) {
+        return {
+          ...s,
+          paperSize: s.paperSize || "a4",
+          orientation: s.orientation || "portrait",
+        };
+      }
       const legacyTmpl = localStorage.getItem(`invoice_template_${shopId}`) || localStorage.getItem("invoice_template");
       return {
         fields: [],
@@ -247,6 +259,8 @@ export const InvoiceTemplateSettings: React.FC = () => {
           showComputerGenerated: true,
         },
         template: legacyTmpl || "minimal",
+        paperSize: "a4",
+        orientation: "portrait",
       };
     } catch (_) {}
     return {
@@ -276,6 +290,8 @@ export const InvoiceTemplateSettings: React.FC = () => {
         showComputerGenerated: true,
       },
       template: "minimal",
+      paperSize: "a4",
+      orientation: "portrait",
     };
   };
 
@@ -483,6 +499,8 @@ export const InvoiceTemplateSettings: React.FC = () => {
     if (JSON.stringify(savedState.qr) !== JSON.stringify(state.qr)) count++;
     if (JSON.stringify(savedState.footer) !== JSON.stringify(state.footer)) count++;
     if (savedState.template !== state.template) count++;
+    if (savedState.paperSize !== state.paperSize) count++;
+    if (savedState.orientation !== state.orientation) count++;
     return count;
   }, [savedState, state]);
 
@@ -492,11 +510,11 @@ export const InvoiceTemplateSettings: React.FC = () => {
   const updateFit = useCallback(() => {
     if (!stageRef.current || !paperRef.current) return;
     const avail = stageRef.current.clientWidth - 32;
-    const w = paperRef.current.offsetWidth || (state.template === "thermal" ? 310 : 720);
+    const w = paperRef.current.offsetWidth || (state.template === "thermal" ? 310 : state.paperSize === "a5" ? 480 : 720);
     const s = Math.min(1, avail / w);
     setStageScale(s);
     setStageMargin(s < 1 ? 0 : (avail - w) / 2);
-  }, [state.template]);
+  }, [state.template, state.paperSize, state.orientation]);
 
   useEffect(() => {
     updateFit();
@@ -507,7 +525,7 @@ export const InvoiceTemplateSettings: React.FC = () => {
   useEffect(() => {
     const timer = setTimeout(updateFit, 50);
     return () => clearTimeout(timer);
-  }, [state.template, displayItems]);
+  }, [state.template, state.paperSize, state.orientation, displayItems]);
 
   // Keyboard shortcut Ctrl+S
   useEffect(() => {
@@ -1619,13 +1637,70 @@ export const InvoiceTemplateSettings: React.FC = () => {
               <div className="inv-card">
                 <div className="inv-card-h">
                   <div>
-                    <h2>Print size &amp; Specifications</h2>
-                    <p>Picked automatically from the template. You can still adjust print scaling in the browser.</p>
+                    <h2>Paper Format &amp; Size</h2>
+                    <p>Select whether invoices should be formatted for standard A4 sheets or compact A5 half-sheets.</p>
                   </div>
                 </div>
                 <div className="inv-card-b">
-                  <div className="inv-hint font-medium text-slate-700">
-                    {selectedTemplate.size}
+                  <div className="inv-width-grid">
+                    <button
+                      type="button"
+                      className={`inv-width-card ${(state.paperSize || "a4") === "a4" ? "active" : ""}`}
+                      onClick={() => setState((prev) => ({ ...prev, paperSize: "a4" }))}
+                    >
+                      <div className="inv-width-title">
+                        <span>A4 Format (Standard)</span>
+                        {(state.paperSize || "a4") === "a4" && <Check size={16} />}
+                      </div>
+                      <span className="inv-width-sub">210 × 297 mm · Standard full page for laser &amp; inkjet printers</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className={`inv-width-card ${state.paperSize === "a5" ? "active" : ""}`}
+                      onClick={() => setState((prev) => ({ ...prev, paperSize: "a5" }))}
+                    >
+                      <div className="inv-width-title">
+                        <span>A5 Format (Compact)</span>
+                        {state.paperSize === "a5" && <Check size={16} />}
+                      </div>
+                      <span className="inv-width-sub">148 × 210 mm · Compact half-sheet slip, saving 50% paper</span>
+                    </button>
+                  </div>
+
+                  {/* Orientation Toggle for A4 / A5 */}
+                  <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid var(--inv-line)" }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "var(--inv-muted)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+                      Page Orientation
+                    </div>
+                    <div className="inv-width-grid" style={{ marginBottom: 0 }}>
+                      <button
+                        type="button"
+                        className={`inv-width-card ${(state.orientation || "portrait") === "portrait" ? "active" : ""}`}
+                        onClick={() => setState((prev) => ({ ...prev, orientation: "portrait" }))}
+                      >
+                        <div className="inv-width-title">
+                          <span>Vertical (Portrait)</span>
+                          {(state.orientation || "portrait") === "portrait" && <Check size={16} />}
+                        </div>
+                        <span className="inv-width-sub">
+                          {state.paperSize === "a5" ? "148 × 210 mm · Standard tall half-sheet" : "210 × 297 mm · Standard tall page"}
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        className={`inv-width-card ${state.orientation === "landscape" ? "active" : ""}`}
+                        onClick={() => setState((prev) => ({ ...prev, orientation: "landscape" }))}
+                      >
+                        <div className="inv-width-title">
+                          <span>Horizontal (Landscape)</span>
+                          {state.orientation === "landscape" && <Check size={16} />}
+                        </div>
+                        <span className="inv-width-sub">
+                          {state.paperSize === "a5" ? "210 × 148 mm · Wide half-sheet layout" : "297 × 210 mm · Wide page for multi-column bills"}
+                        </span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1683,11 +1758,17 @@ export const InvoiceTemplateSettings: React.FC = () => {
                 <div
                   ref={paperRef}
                   className="shadow-xl shadow-slate-300/50 rounded-lg overflow-hidden pointer-events-none ring-1 ring-slate-200/50 bg-white shrink-0"
-                  style={{ width: 560 }}
+                  style={{
+                    width: state.orientation === "landscape"
+                      ? (state.paperSize === "a5" ? 620 : 820)
+                      : (state.paperSize === "a5" ? 460 : 560),
+                  }}
                 >
                   <InvoiceRenderer
                     templateId={state.template}
                     {...rendererMockData}
+                    paperSize={state.paperSize || "a4"}
+                    orientation={state.orientation || "portrait"}
                     customFields={state.fields.map((f) => ({
                       ...f,
                       displayValue: getCustomFieldValue(f),
@@ -1703,7 +1784,13 @@ export const InvoiceTemplateSettings: React.FC = () => {
                 /* ── Render Modern InventQ, Classic B&W, or Thermal 80 mm ── */
                 <div
                   ref={paperRef}
-                  className={`inv-paper ${state.template === "thermal" ? "thermal" : state.template === "classic" ? "a4 classic" : "a4"}`}
+                  className={`inv-paper ${
+                    state.template === "thermal"
+                      ? "thermal"
+                      : state.paperSize === "a5"
+                      ? (state.orientation === "landscape" ? "a5 landscape" : "a5")
+                      : (state.orientation === "landscape" ? "a4 landscape" : state.template === "classic" ? "a4 classic" : "a4")
+                  }`}
                 >
                   {state.template === "thermal" ? (
                     /* ── Thermal Receipt ── */
@@ -1916,30 +2003,35 @@ export const InvoiceTemplateSettings: React.FC = () => {
                       <table className="inv-items">
                         <thead>
                           <tr>
-                            <th style={{ width: 36 }}>S.No</th>
+                            <th style={{ width: 34 }}>S.No</th>
                             <th>Item description</th>
                             {itemCols.map((col) => (
-                              <th key={col.id} className={flashIds.has(col.id) ? "inv-flash" : ""}>
+                              <th
+                                key={col.id}
+                                className={flashIds.has(col.id) ? "inv-flash" : ""}
+                                style={{ width: itemCols.length === 1 ? 75 : itemCols.length === 2 ? 65 : 55 }}
+                                title={col.label}
+                              >
                                 {col.label}
                               </th>
                             ))}
-                            <th className="r">Rate</th>
-                            <th className="r">Qty</th>
-                            <th className="r">GST</th>
-                            <th className="r">Amount</th>
+                            <th className="r" style={{ width: 58 }}>Rate</th>
+                            <th className="r" style={{ width: 36 }}>Qty</th>
+                            <th className="r" style={{ width: 44 }}>GST</th>
+                            <th className="r" style={{ width: 70 }}>Amount</th>
                           </tr>
                         </thead>
                         <tbody>
                           {displayItems.map((it, idx) => (
                             <tr key={idx}>
                               <td>{idx + 1}</td>
-                              <td>
-                                <div className="inv-it-name">{it.n}</div>
-                                {it.v && <div style={{ color: "var(--inv-paper-muted)" }}>{it.v}</div>}
+                              <td style={{ overflow: "hidden" }}>
+                                <div className="inv-it-name" title={it.n}>{it.n}</div>
+                                {it.v && <div style={{ color: "var(--inv-paper-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={it.v}>{it.v}</div>}
                                 {itemUnder.length > 0 && (
                                   <div className="inv-it-extra">
                                     {itemUnder.map((u) => (
-                                      <span key={u.id} className={flashIds.has(u.id) ? "inv-flash" : ""}>
+                                      <span key={u.id} className={flashIds.has(u.id) ? "inv-flash" : ""} title={`${u.label}: ${getItemValue(u, it, idx)}`}>
                                         {u.label}: <b>{getItemValue(u, it, idx)}</b>
                                       </span>
                                     ))}
@@ -1947,7 +2039,7 @@ export const InvoiceTemplateSettings: React.FC = () => {
                                 )}
                               </td>
                               {itemCols.map((col) => (
-                                <td key={col.id} className={`xc ${flashIds.has(col.id) ? "inv-flash" : ""}`}>
+                                <td key={col.id} className={`xc ${flashIds.has(col.id) ? "inv-flash" : ""}`} title={String(getItemValue(col, it, idx) || "")}>
                                   {getItemValue(col, it, idx)}
                                 </td>
                               ))}

@@ -805,6 +805,13 @@ export const InventoryItemsCard = ({
             </div>
 
             <div className="p-6 max-h-[60vh] overflow-y-auto modal-content space-y-3">
+              <div className="p-3 bg-amber-50/90 border border-amber-200/90 rounded-lg flex items-start gap-2.5 text-xs text-amber-900 leading-relaxed">
+                <Info size={15} className="text-amber-600 shrink-0 mt-0.5" />
+                <span>
+                  <strong className="font-semibold text-amber-950">Pricing Notice:</strong> Selling price & MRP updates reflect across all batches for this product in inventory & billing. Storage location remains specific to this batch.
+                </span>
+              </div>
+
               {batchModal.allowNewBatch && (
                 <button
                   onClick={() => {
@@ -1133,10 +1140,23 @@ export const InventoryItemsCard = ({
                           if (val.length > 1 && val.startsWith("0") && val[1] !== ".") val = val.replace(/^0+/, "");
                           handleProductChange(index, product.marginType === "percent" ? "marginPercent" : product.marginType === "amount" ? "marginAmount" : "sellingPrice", val);
                         }}
+                        onBlur={(e) => {
+                          if (product.batchTracking && e.target.value) {
+                            showToast("Price updates will reflect across all batches for this product (storage location remains per-batch)", "info");
+                          } else if (isUpdate && e.target.value) {
+                            showToast("New selling price applies to all existing stock", "info");
+                          }
+                        }}
                         className="!h-9 !text-xs font-medium !w-full"
                         placeholder={product.marginType === "sellingPrice" ? "Price" : "Margin"}
                       />
                     </div>
+                    {product.batchTracking && (
+                      <div className="text-[8.5px] text-amber-800 bg-amber-50/90 border border-amber-200/90 rounded p-1.5 mt-1 leading-tight flex items-start gap-1">
+                        <Info size={10} className="text-amber-600 shrink-0 mt-0.5" />
+                        <span>Selling price & MRP updates reflect across all batches for this product (storage location remains per-batch).</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1160,7 +1180,10 @@ export const InventoryItemsCard = ({
                   <div className="pt-2 border-t border-slate-100 space-y-3 bg-slate-50/70 -mx-3.5 px-3.5 py-3">
                     {(type !== "PURCHASE" || purchaseType !== "PO_CREATE") && product.batchTracking && (
                       <div className="bg-white p-3 rounded-lg border border-amber-200 space-y-2">
-                        <span className="text-[11px] font-medium text-amber-900 flex items-center gap-1.5"><Package size={12} className="text-amber-500" /> Batch Details</span>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-medium text-amber-900 flex items-center gap-1.5"><Package size={12} className="text-amber-500" /> Batch Details</span>
+                          <span className="text-[9px] text-amber-700 bg-amber-50 border border-amber-200/60 px-1.5 py-0.5 rounded font-medium">Prices reflect across all batches</span>
+                        </div>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                           <Input label="Batch #" value={product.batchNum} onChange={(e) => handleProductChange(index, "batchNum", e.target.value)} disabled={product.batchNumReadOnly} className="!h-9 !text-xs" />
                           <Input label="Mfg Date" type="date" value={product.manufacturingDate} onChange={(e) => handleProductChange(index, "manufacturingDate", e.target.value)} disabled={product.batchNumReadOnly} className="!h-9 !text-xs" />
@@ -1182,8 +1205,28 @@ export const InventoryItemsCard = ({
                       </div>
                     )}
                     {expandedSettings.has(index) && (
-                      <div className="bg-white p-3 rounded-lg border border-slate-200">
-                        <Input label="Storage Location" value={product.storageLoc} onChange={(e) => handleProductChange(index, "storageLoc", e.target.value)} placeholder="e.g. Rack A1" className="!h-9 !text-xs" />
+                      <div className="bg-white p-3 rounded-lg border border-slate-200 space-y-2">
+                        <div>
+                          <Input
+                            label="MRP (Global for all batches)"
+                            type="number"
+                            value={product.mrp ?? ""}
+                            onChange={(e) => handleProductChange(index, "mrp", e.target.value ? Number(e.target.value) : "")}
+                            placeholder="e.g. 150.00"
+                            className="!h-9 !text-xs"
+                          />
+                          <p className="text-[9px] text-amber-600 font-medium mt-0.5">Reflects across all batches</p>
+                        </div>
+                        <div>
+                          <Input
+                            label="Storage Location (Batch Specific)"
+                            value={product.storageLoc}
+                            onChange={(e) => handleProductChange(index, "storageLoc", e.target.value)}
+                            placeholder="e.g. Rack A1"
+                            className="!h-9 !text-xs"
+                          />
+                          <p className="text-[9px] text-slate-400 font-medium mt-0.5">Specific to this batch/storage only</p>
+                        </div>
                       </div>
                     )}
                     {expandedBreakdown.has(index) && (
@@ -1572,7 +1615,9 @@ export const InventoryItemsCard = ({
                                   handleProductChange(index, product.marginType === "percent" ? "marginPercent" : product.marginType === "amount" ? "marginAmount" : "sellingPrice", val);
                                 }}
                                 onBlur={(e) => {
-                                  if (isUpdate && e.target.value) {
+                                  if (product.batchTracking && e.target.value) {
+                                    showToast("Price updates reflect across all batches for this product (storage location remains per-batch)", "info");
+                                  } else if (isUpdate && e.target.value) {
                                     showToast("New selling price applies to all existing stock", "info");
                                   }
                                 }}
@@ -1605,12 +1650,19 @@ export const InventoryItemsCard = ({
                               Customer sees: {offMrpPercent}% off · saves ₹{customerSavings.toFixed(2)}
                             </div>
                           )}
-                          {isUpdate && (
+                          {product.batchTracking ? (
+                            <div className="text-[8.5px] text-amber-800 bg-amber-50/90 border border-amber-200/90 rounded-md p-1.5 flex items-start gap-1.5 mt-1 leading-tight shadow-2xs">
+                              <Info size={11} className="text-amber-600 shrink-0 mt-0.5" />
+                              <span>
+                                <strong className="font-semibold text-amber-900">Batch Price Notice:</strong> Price changes reflect across all batches for this product (storage location remains per-batch).
+                              </span>
+                            </div>
+                          ) : isUpdate ? (
                             <div className="text-[8.5px] text-amber-600 flex items-start gap-1 font-medium leading-tight bg-amber-50/80 p-1.5 rounded border border-amber-200/50 mt-1">
                               <Info size={10} className="shrink-0 mt-0.5" />
                               Note: New selling price applies to all existing stock.
                             </div>
-                          )}
+                          ) : null}
                         </div>
                       </td>
 
@@ -1651,10 +1703,15 @@ export const InventoryItemsCard = ({
                             <div className="flex flex-wrap items-start gap-4">
                               {/* Batch Section */}
                               {(type !== "PURCHASE" || purchaseType !== "PO_CREATE") && product.batchTracking && (
-                                <div className="w-full max-w-[400px] bg-white p-3 rounded-lg border border-amber-200 shadow-sm shrink-0">
-                                  <div className="flex items-center gap-1.5 mb-2.5">
-                                    <Package size={12} className="text-amber-500" />
-                                    <span className="text-[11px] font-medium text-amber-900">Batch Details</span>
+                                <div className="w-full max-w-[420px] bg-white p-3 rounded-lg border border-amber-200 shadow-sm shrink-0">
+                                  <div className="flex items-center justify-between mb-2.5">
+                                    <div className="flex items-center gap-1.5">
+                                      <Package size={12} className="text-amber-500" />
+                                      <span className="text-[11px] font-medium text-amber-900">Batch Details</span>
+                                    </div>
+                                    <span className="text-[9px] text-amber-700 bg-amber-50 border border-amber-200/60 px-1.5 py-0.5 rounded font-medium">
+                                      Prices reflect across all batches
+                                    </span>
                                   </div>
                                   <div className="grid grid-cols-3 gap-2">
                                     <Input
@@ -1710,19 +1767,38 @@ export const InventoryItemsCard = ({
                             </div>
 
                               {expandedSettings.has(index) && (
-                                <div className="w-full max-w-[400px] bg-white p-3 rounded-lg border border-slate-200 shadow-sm shrink-0">
+                                <div className="w-full max-w-[420px] bg-white p-3 rounded-lg border border-slate-200 shadow-sm shrink-0">
                                   <div className="flex items-center gap-2 mb-3">
                                     <Settings size={14} className="text-slate-500" />
                                     <span className="text-xs font-medium text-slate-800">Additional Settings</span>
                                   </div>
-                                  <div className="grid grid-cols-1 gap-3">
-                                    <Input
-                                      label="Storage Location"
-                                      value={product.storageLoc}
-                                      onChange={(e) => handleProductChange(index, "storageLoc", e.target.value)}
-                                      placeholder="e.g. Rack A1"
-                                      className="!h-9 !text-xs"
-                                    />
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div>
+                                      <Input
+                                        label="MRP (Global for all batches)"
+                                        type="number"
+                                        value={product.mrp ?? ""}
+                                        onChange={(e) => handleProductChange(index, "mrp", e.target.value ? Number(e.target.value) : "")}
+                                        onBlur={(e) => {
+                                          if (product.batchTracking && e.target.value) {
+                                            showToast("MRP updates reflect across all batches for this product", "info");
+                                          }
+                                        }}
+                                        placeholder="e.g. 150.00"
+                                        className="!h-9 !text-xs"
+                                      />
+                                      <p className="text-[9px] text-amber-600 font-medium mt-1">Reflects across all batches</p>
+                                    </div>
+                                    <div>
+                                      <Input
+                                        label="Storage Location (Batch Specific)"
+                                        value={product.storageLoc}
+                                        onChange={(e) => handleProductChange(index, "storageLoc", e.target.value)}
+                                        placeholder="e.g. Rack A1"
+                                        className="!h-9 !text-xs"
+                                      />
+                                      <p className="text-[9px] text-slate-400 font-medium mt-1">Specific to this batch/storage only</p>
+                                    </div>
                                   </div>
                                 </div>
                               )}

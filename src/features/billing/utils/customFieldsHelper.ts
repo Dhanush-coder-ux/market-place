@@ -235,6 +235,105 @@ export function resolveCustomFields(
 }
 
 /**
+ * Merges shop template configured custom fields with custom fields saved on an order.
+ * Ensures template-defined item fields (Batch, Expiry, HSN, etc.) remain present while
+ * preserving any values captured on the order (e.g. Doctor name, Table No).
+ */
+export function mergeOrderCustomFields(
+  configuredFields: CustomFieldDefinition[] = [],
+  orderCustomFields?: any[]
+): CustomFieldDefinition[] {
+  const fromOrder = Array.isArray(orderCustomFields) ? orderCustomFields : [];
+  const mergedMap = new Map<string, any>();
+
+  // 1. Populate from configured fields in shop template settings
+  (configuredFields || []).forEach((f) => {
+    if (!f || f.show === false || !f.label) return;
+    const key = f.label.trim().toLowerCase();
+    mergedMap.set(key, { ...f });
+  });
+
+  // 2. Overlay values captured on the order
+  fromOrder.forEach((f: any) => {
+    if (!f || !f.label) return;
+    const key = f.label.trim().toLowerCase();
+    const existing = mergedMap.get(key);
+    if (existing) {
+      if (f.value !== undefined && f.value !== "") existing.value = f.value;
+      if (f.displayValue !== undefined && f.displayValue !== "") existing.displayValue = f.displayValue;
+      if (f.attr) existing.attr = f.attr;
+      if (f.itemShow) existing.itemShow = f.itemShow;
+      if (f.itemSource) existing.itemSource = f.itemSource;
+    } else {
+      mergedMap.set(key, {
+        id: f.id || `f_${key}`,
+        label: f.label.trim(),
+        placement: f.placement || "customer",
+        type: f.type || "text",
+        mode: f.mode || "fixed",
+        value: f.value || "",
+        displayValue: f.displayValue || f.value || "",
+        required: Boolean(f.required),
+        show: true,
+        itemSource: f.itemSource || (f.placement === "item" ? "product" : undefined),
+        attr: f.attr || (f.placement === "item" ? "batch" : undefined),
+        itemShow: f.itemShow || (f.placement === "item" ? "column" : undefined),
+      });
+    }
+  });
+
+  return Array.from(mergedMap.values());
+}
+
+/**
+ * Extracts a product's default HSN code from all common product/inventory schema locations.
+ */
+export function extractProductHsn(p: any): string {
+  if (!p) return "";
+  const cand =
+    p.hsn_code ||
+    p.hsn ||
+    p.hsnCode ||
+    p.tax_infos?.hsn ||
+    p.tax_infos?.hsn_code ||
+    p.tax_identifiers?.hsn ||
+    p.tax_identifiers?.hsn_code ||
+    p.additional_infos?.hsn ||
+    p.additional_infos?.hsn_code ||
+    p.additional_infos?.custom_fields?.hsn ||
+    p.additional_infos?.custom_fields?.hsn_code ||
+    p.custom_fields?.hsn ||
+    p.custom_fields?.hsn_code ||
+    p.datas?.hsn ||
+    p.datas?.hsn_code ||
+    p.datas?.tax_infos?.hsn ||
+    p.datas?.tax_infos?.hsn_code ||
+    p.datas?.tax_identifiers?.hsn ||
+    p.datas?.custom_fields?.hsn ||
+    "";
+  const s = String(cand).trim();
+  return s !== "undefined" && s !== "null" && s !== "—" ? s : "";
+}
+
+/**
+ * Extracts a product's default MRP from all common product/inventory schema locations.
+ */
+export function extractProductMrp(p: any): number | undefined {
+  if (!p) return undefined;
+  const raw =
+    p.mrp ??
+    p.pricing_infos?.mrp ??
+    p.additional_infos?.mrp ??
+    p.additional_infos?.custom_fields?.mrp ??
+    p.datas?.mrp ??
+    p.datas?.pricing_infos?.mrp ??
+    p.datas?.custom_fields?.mrp ??
+    p.custom_fields?.mrp;
+  const num = Number(raw);
+  return !isNaN(num) && num > 0 ? num : undefined;
+}
+
+/**
  * Extracts a product attribute value (Batch no, Expiry date, HSN, MRP, etc.) for a line item on an invoice.
  */
 export function extractItemAttributeValue(
@@ -280,6 +379,8 @@ export function extractItemAttributeValue(
     ...(item?.selectedBatch ? [item.selectedBatch] : []),
     ...(typeof line?.batch === "object" && line.batch !== null ? [line.batch] : []),
     ...(typeof item?.batch === "object" && item.batch !== null ? [item.batch] : []),
+    ...(line?.batch_infos && typeof line.batch_infos === "object" ? (Array.isArray(line.batch_infos) ? line.batch_infos : [line.batch_infos]) : []),
+    ...(item?.batch_infos && typeof item.batch_infos === "object" ? (Array.isArray(item.batch_infos) ? item.batch_infos : [item.batch_infos]) : []),
     ...(Array.isArray(line?.batches) ? line.batches : []),
     ...(Array.isArray(item?.batches) ? item.batches : []),
     ...(Array.isArray(prod?.batch_infos) ? prod.batch_infos : []),
@@ -335,9 +436,17 @@ export function extractItemAttributeValue(
     };
 
     const candidateBatches = [
+      line?.batch_infos?.batch_name,
+      line?.batch_infos?.name,
+      line?.batch_infos?.batch_no,
+      line?.batch_infos?.batch,
+      line?.batch_number,
       line?.batch_name,
       line?.batchName,
       line?.batch_no,
+      line?.datas?.batch_number,
+      line?.datas?.batch_no,
+      line?.datas?.batch_name,
       typeof line?.batch === "string" ? line.batch : null,
       line?.batch?.batch_name,
       line?.batch?.name,
@@ -345,9 +454,17 @@ export function extractItemAttributeValue(
       line?.selectedBatch?.batch_name,
       line?.selectedBatch?.name,
       line?.selectedBatch?.batch_no,
+      item?.batch_infos?.batch_name,
+      item?.batch_infos?.name,
+      item?.batch_infos?.batch_no,
+      item?.batch_infos?.batch,
+      item?.batch_number,
       item?.batch_name,
       item?.batchName,
       item?.batch_no,
+      item?.datas?.batch_number,
+      item?.datas?.batch_no,
+      item?.datas?.batch_name,
       typeof item?.batch === "string" ? item.batch : null,
       item?.batch?.batch_name,
       item?.batch?.name,
@@ -386,14 +503,26 @@ export function extractItemAttributeValue(
   // 2. Expiry date
   if (attr === "expiry") {
     const rawExp =
+      line?.batch_infos?.exp_date ||
+      line?.batch_infos?.expiry_date ||
+      line?.batch_infos?.expiry ||
       line?.expiryDate ||
       line?.expiry_date ||
       line?.expiry ||
       line?.exp_date ||
+      line?.datas?.expiry_date ||
+      line?.datas?.expiryDate ||
+      line?.datas?.expiry ||
+      line?.datas?.exp_date ||
+      item?.batch_infos?.exp_date ||
+      item?.batch_infos?.expiry_date ||
+      item?.batch_infos?.expiry ||
       item?.expiryDate ||
       item?.expiry_date ||
       item?.expiry ||
       item?.exp_date ||
+      item?.datas?.expiry_date ||
+      item?.datas?.expiryDate ||
       matchedBatch?.expiry_date ||
       matchedBatch?.expiryDate ||
       matchedBatch?.expiry ||
@@ -420,52 +549,145 @@ export function extractItemAttributeValue(
   }
 
   // 3. HSN code
-  if (attr === "hsn") {
+  if (attr === "hsn" || field.label?.toLowerCase().includes("hsn")) {
     const rawHsn =
-      line?.hsn ||
       line?.hsn_code ||
-      item?.hsn ||
+      line?.hsn ||
+      line?.hsnCode ||
+      line?.tax_infos?.hsn ||
+      line?.tax_infos?.hsn_code ||
+      line?.tax_identifiers?.hsn ||
+      line?.tax_identifiers?.hsn_code ||
+      line?.additional_infos?.hsn ||
+      line?.additional_infos?.hsn_code ||
+      line?.additional_infos?.custom_fields?.hsn ||
+      line?.additional_infos?.custom_fields?.hsn_code ||
+      line?.custom_fields?.hsn ||
+      line?.custom_fields?.hsn_code ||
+      line?.datas?.hsn ||
+      line?.datas?.hsn_code ||
+      line?.datas?.tax_infos?.hsn ||
+      line?.datas?.tax_infos?.hsn_code ||
+      line?.datas?.tax_identifiers?.hsn ||
+      line?.datas?.custom_fields?.hsn ||
+      line?.snapshotItem?.hsnCode ||
+      line?.snapshotItem?.hsn_code ||
+      line?.snapshotItem?.hsn ||
       item?.hsn_code ||
-      prod?.hsn ||
+      item?.hsn ||
+      item?.hsnCode ||
+      item?.tax_infos?.hsn ||
+      item?.tax_infos?.hsn_code ||
+      item?.tax_identifiers?.hsn ||
+      item?.tax_identifiers?.hsn_code ||
+      item?.additional_infos?.hsn ||
+      item?.additional_infos?.hsn_code ||
+      item?.additional_infos?.custom_fields?.hsn ||
+      item?.additional_infos?.custom_fields?.hsn_code ||
+      item?.custom_fields?.hsn ||
+      item?.custom_fields?.hsn_code ||
+      item?.datas?.hsn ||
+      item?.datas?.hsn_code ||
+      item?.datas?.tax_infos?.hsn ||
+      item?.datas?.tax_infos?.hsn_code ||
+      item?.datas?.tax_identifiers?.hsn ||
+      item?.datas?.custom_fields?.hsn ||
+      item?.snapshotItem?.hsnCode ||
+      item?.snapshotItem?.hsn_code ||
+      item?.snapshotItem?.hsn ||
       prod?.hsn_code ||
-      prod?.datas?.hsn ||
-      prod?.datas?.hsn_code ||
+      prod?.hsn ||
+      prod?.hsnCode ||
+      prod?.tax_infos?.hsn ||
+      prod?.tax_infos?.hsn_code ||
+      prod?.tax_identifiers?.hsn ||
+      prod?.tax_identifiers?.hsn_code ||
       prod?.additional_infos?.hsn ||
       prod?.additional_infos?.hsn_code ||
-      matchedVariant?.hsn ||
+      prod?.additional_infos?.custom_fields?.hsn ||
+      prod?.additional_infos?.custom_fields?.hsn_code ||
+      prod?.custom_fields?.hsn ||
+      prod?.custom_fields?.hsn_code ||
+      prod?.datas?.hsn ||
+      prod?.datas?.hsn_code ||
+      prod?.datas?.tax_infos?.hsn ||
+      prod?.datas?.tax_infos?.hsn_code ||
+      prod?.datas?.tax_identifiers?.hsn ||
+      prod?.datas?.custom_fields?.hsn ||
       matchedVariant?.hsn_code ||
+      matchedVariant?.hsn ||
+      matchedVariant?.hsnCode ||
       matchedVariant?.datas?.hsn ||
-      matchedVariant?.additional_infos?.hsn;
-    if (rawHsn) return String(rawHsn);
+      matchedVariant?.datas?.hsn_code ||
+      matchedVariant?.tax_infos?.hsn ||
+      matchedVariant?.tax_identifiers?.hsn ||
+      matchedVariant?.additional_infos?.hsn ||
+      matchedVariant?.additional_infos?.hsn_code ||
+      matchedBatch?.hsn_code ||
+      matchedBatch?.hsn;
+    if (rawHsn) {
+      const s = String(rawHsn).trim();
+      if (s !== "" && s !== "—" && s !== "undefined" && s !== "null") return s;
+    }
     return "—";
   }
 
   // 4. MRP
-  if (attr === "mrp") {
+  if (attr === "mrp" || field.label?.toLowerCase().includes("mrp")) {
     const rawMrp =
       line?.mrp ??
+      line?.datas?.mrp ??
+      line?.datas?.pricing_infos?.mrp ??
+      line?.pricing_infos?.mrp ??
+      line?.additional_infos?.mrp ??
+      line?.snapshotItem?.mrp ??
       item?.mrp ??
+      item?.datas?.mrp ??
+      item?.datas?.pricing_infos?.mrp ??
+      item?.pricing_infos?.mrp ??
+      item?.additional_infos?.mrp ??
+      item?.snapshotItem?.mrp ??
       matchedBatch?.mrp ??
       matchedVariant?.mrp ??
       prod?.mrp ??
-      prod?.pricing_infos?.mrp;
+      prod?.datas?.mrp ??
+      prod?.datas?.pricing_infos?.mrp ??
+      prod?.pricing_infos?.mrp ??
+      prod?.additional_infos?.mrp ??
+      prod?.additional_infos?.custom_fields?.mrp ??
+      prod?.custom_fields?.mrp;
     const num = Number(rawMrp);
     if (!isNaN(num) && num > 0) return `₹${num.toFixed(2)}`;
     return "—";
   }
 
-  // 5. Manufacturer
+  // 5. Manufacturer / Supplier
   if (attr === "mfr") {
     const rawMfr =
+      line?.supplier ||
+      line?.supplier_name ||
+      line?.supplier_infos?.name ||
+      line?.datas?.supplier ||
+      line?.datas?.supplier_name ||
       line?.manufacturer ||
       line?.mfr ||
+      item?.supplier ||
+      item?.supplier_name ||
+      item?.supplier_infos?.name ||
       item?.manufacturer ||
+      prod?.supplier ||
+      prod?.supplier_name ||
+      prod?.supplier_infos?.name ||
+      prod?.datas?.supplier ||
+      prod?.datas?.supplier_name ||
       prod?.manufacturer ||
       prod?.mfr ||
       prod?.additional_infos?.manufacturer ||
       prod?.brand ||
       prod?.brand_infos?.name ||
-      prod?.brand_name;
+      prod?.brand_name ||
+      prod?.vendor ||
+      prod?.vendor_name;
     if (rawMfr) return String(rawMfr);
     return "—";
   }

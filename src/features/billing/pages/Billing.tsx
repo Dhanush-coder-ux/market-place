@@ -26,6 +26,8 @@ import {
   getInvoiceCustomFields,
   getInitialCustomFieldValues,
   resolveCustomFields,
+  extractProductHsn,
+  extractProductMrp,
   type CustomFieldDefinition,
 } from "../utils/customFieldsHelper";
 
@@ -532,17 +534,44 @@ const Billing = () => {
         items: billTotals.lines.map(l => {
           const orig = filledItems.find(fi => fi.inventoryId === l.inventoryId || fi.id === l.id);
           const selUnit = orig?.selectedUnit || (orig as any)?.unit || null;
+          const batchNum = (orig as any)?.batchNumber || (orig as any)?.batch_number || (orig as any)?.batchName || (orig as any)?.batch_name || (orig as any)?.selectedBatch?.batch_name || null;
+          const batchNm = (orig as any)?.batchName || (orig as any)?.batch_name || (orig as any)?.batchNumber || (orig as any)?.selectedBatch?.batch_name || null;
+          const expDt = (orig as any)?.expiryDate || (orig as any)?.expiry_date || (orig as any)?.selectedBatch?.exp_date || (orig as any)?.selectedBatch?.expiry_date || null;
+          const hsnCd =
+            (orig as any)?.hsnCode ||
+            (orig as any)?.hsn_code ||
+            (orig as any)?.hsn ||
+            (l as any)?.hsnCode ||
+            (l as any)?.hsn_code ||
+            (l as any)?.hsn ||
+            (orig?._product ? extractProductHsn(orig._product) : null) ||
+            null;
+          const mrpVal =
+            l.mrp ??
+            (orig as any)?.mrp ??
+            (orig?._product ? extractProductMrp(orig._product) : null) ??
+            null;
+
           return {
             product_id: l.inventoryId,
             variant_id: orig?.variantId || null,
             batch_id: orig?.batchId || null,
+            batch_number: batchNum,
+            batch_name: batchNm,
+            batchName: batchNm,
+            batch_no: batchNum,
+            expiry_date: expDt,
+            expiryDate: expDt,
+            hsn_code: hsnCd,
+            hsn: hsnCd,
+            hsnCode: hsnCd,
             name: l.name,
             qty: l.qty,
             unit: selUnit,
             entered_unit: selUnit,
             entered_qty: orig?.qty ?? l.qty,
             price: l.sellingPrice,
-            mrp: l.mrp || null,
+            mrp: mrpVal,
             product_discount_amount: l.productDiscountAmount,
             line_discount_mode: l.lineDiscountMode || '₹',
             line_discount_value: l.lineDiscountValue || 0,
@@ -584,6 +613,34 @@ const Billing = () => {
           billing_type: isInvoice ? "INVOICE" : "BILL",
           is_invoice: isInvoice,
           custom_fields: resolvedCustomFields,
+          items_snapshot: filledItems.map(fi => {
+            const fiHsn =
+              (fi as any).hsnCode ||
+              (fi as any).hsn_code ||
+              (fi as any).hsn ||
+              (fi._product ? extractProductHsn(fi._product) : null) ||
+              null;
+            const fiMrp =
+              fi.mrp ??
+              (fi._product ? extractProductMrp(fi._product) : null) ??
+              null;
+
+            return {
+              inventoryId: fi.inventoryId,
+              name: fi.name,
+              batchId: fi.batchId,
+              batchName: (fi as any).batchName || (fi as any).batchNumber || (fi as any).selectedBatch?.batch_name,
+              batchNumber: (fi as any).batchNumber || (fi as any).batchName || (fi as any).selectedBatch?.batch_name,
+              expiryDate: (fi as any).expiryDate || (fi as any).selectedBatch?.exp_date || (fi as any).selectedBatch?.expiry_date,
+              hsnCode: fiHsn,
+              hsn_code: fiHsn,
+              hsn: fiHsn,
+              mrp: fiMrp,
+              qty: fi.qty,
+              sellingPrice: (fi as any).sellingPrice || fi.price,
+              price: fi.price,
+            };
+          }),
         },
       };
 

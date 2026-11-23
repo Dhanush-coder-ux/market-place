@@ -366,24 +366,27 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
         <div className="fixed inset-0 bg-[#12151A]/60 backdrop-blur-sm transition-all animate-in fade-in" />
 
         {/* Modal Container */}
-        <div className="relative bg-white rounded-[16px] shadow-[0_20px_50px_-12px_rgba(19,24,34,0.35)] w-full max-w-[380px] max-h-[90dvh] overflow-hidden transform animate-in fade-in zoom-in-95 duration-200 flex flex-col">
+        <div className="relative bg-white rounded-[16px] shadow-[0_20px_50px_-12px_rgba(19,24,34,0.35)] w-full max-w-[400px] max-h-[92dvh] overflow-hidden transform animate-in fade-in zoom-in-95 duration-200 flex flex-col">
           
           {/* Top Section */}
-          <div className="p-[20px_20px_16px] text-center border-b border-[#E6EAF1]">
-            <div className="w-12 h-12 rounded-full bg-[#12995A] grid place-items-center mx-auto mb-[12px] shadow-[0_0_0_6px_#E3F7EC]">
+          <div className="p-[18px_20px_14px] text-center border-b border-[#E6EAF1] shrink-0">
+            <div className="w-12 h-12 rounded-full bg-[#12995A] grid place-items-center mx-auto mb-[10px] shadow-[0_0_0_6px_#E3F7EC]">
               <Check size={24} color="white" strokeWidth={3.4} />
             </div>
             <h2 className="text-[17px] font-bold text-[#12161F] mb-1 tracking-tight">Bill saved</h2>
             <div className="font-mono text-[13px] font-semibold text-[#2C3E7A] bg-[#EDEFF7] inline-block px-3 py-1 rounded-full mt-1">
               {details.orderId || "N/A"}
             </div>
-            <div className="text-[12.5px] text-[#7A8497] mt-2">
+            <div className="text-[12.5px] text-[#7A8497] mt-1.5">
               Stock updated · Receipt ready to print
             </div>
           </div>
 
           {/* Body Section */}
-          <div className="p-[16px_20px_0] max-h-[50vh] overflow-y-auto custom-scrollbar">
+          <div
+            className="p-[14px_20px_0] flex-1 min-h-0 overflow-y-auto modal-content custom-scrollbar"
+            style={{ overflowY: "auto" }}
+          >
             
             {Boolean(details.customerName) && !["walk-in", "walk-in customer", "walk in", "walk in customer", "walkin", "walkin customer"].includes(details.customerName.trim().toLowerCase()) && (
               <div className="flex justify-between text-[12.5px] py-1.5">
@@ -408,12 +411,29 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
               </div>
             ))}
 
-            <div className="text-[9.5px] font-bold tracking-[0.1em] uppercase text-[#A7B0C0] flex justify-between mt-[18px] mb-2 pt-3.5 border-t border-[#E6EAF1]">
-              <span>Items</span>
-              <span>{itemsCount} items · {totalQty} units</span>
+            <div className="text-[9.5px] font-bold tracking-[0.1em] uppercase text-[#7A8497] flex items-center justify-between mt-[14px] mb-2 pt-2.5 border-t border-[#E6EAF1]">
+              <span className="flex items-center gap-1.5">
+                <span>Items</span>
+                <span className="font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-full font-mono text-[9.5px]">
+                  {itemsCount} {itemsCount === 1 ? "item" : "items"} · {totalQty} {totalQty === 1 ? "unit" : "units"}
+                </span>
+              </span>
+              {itemsCount > 3 && (
+                <span className="text-[10px] normal-case font-semibold text-emerald-700 bg-emerald-50/90 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <span>Scroll for all {itemsCount} products</span>
+                  <span className="animate-pulse">↓</span>
+                </span>
+              )}
             </div>
 
-            <div className="space-y-0.5">
+            <div
+              className={`space-y-0.5 modal-content custom-scrollbar ${
+                itemsCount > 3
+                  ? "max-h-[190px] overflow-y-auto pr-1.5 border border-slate-200/90 rounded-xl p-2 bg-slate-50/70 divide-y divide-slate-100"
+                  : ""
+              }`}
+              style={itemsCount > 3 ? { overflowY: "auto", maxHeight: "190px", scrollbarWidth: "thin" } : undefined}
+            >
               {details.items.map((item, idx) => {
                 const itemGst = typeof item.gst === 'number' ? item.gst : 0;
                 const calcLine = details.billTotals?.lines?.[idx];
@@ -423,8 +443,8 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
 
                 return (
                   <div key={idx} className="flex justify-between gap-3 py-1.5 text-[13px]">
-                    <div>
-                      <div className="font-semibold text-[#12161F] leading-tight">{item.name}</div>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-semibold text-[#12161F] leading-tight truncate">{item.name}</div>
                       <div className="text-[11px] text-[#7A8497] mt-0.5 font-mono">
                         {item.qty} {item.selectedUnit || 'pc'} × ₹{item.price?.toFixed(2)} · GST {itemGst}%
                         {lineDisc > 0 && <span className="ml-1 text-emerald-600 font-medium">(-₹{lineDisc.toFixed(2)})</span>}
@@ -445,7 +465,7 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
                         </div>
                       )}
                     </div>
-                    <div className="font-mono font-semibold text-[#12161F] whitespace-nowrap">
+                    <div className="font-mono font-semibold text-[#12161F] whitespace-nowrap ml-2">
                       ₹{itemTotal.toFixed(2)}
                     </div>
                   </div>
@@ -550,7 +570,7 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
           </div>
 
           {/* Footer Actions */}
-          <div className="p-[16px_20px_20px] mt-2 bg-[#F5F7FA] border-t border-[#E6EAF1]">
+          <div className="p-[16px_20px_20px] mt-1 bg-[#F5F7FA] border-t border-[#E6EAF1] shrink-0">
             {/* Destination Printer Selector */}
             <div className="mb-2.5 bg-white p-2.5 rounded-[10px] border border-[#E2E8F0] shadow-2xs">
               <div className="flex items-center justify-between mb-1.5 px-0.5">
@@ -650,22 +670,26 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
         className="fixed inset-0 bg-[#0A0C10]/70"
       />
 
-      {/* ── Printer Machine ─────────────────────────────────────────── */}
+      {/* ── Printer Machine & Action Container ─────────────────────────── */}
       <div
-        className="relative flex flex-col items-center max-h-[90vh] overflow-y-auto"
+        className="relative flex flex-col items-center w-full max-w-[360px] max-h-[94vh] h-[94vh] sm:h-auto sm:max-h-[92vh] overflow-hidden"
         style={{
           animation: "printerSlideIn 0.35s ease-out forwards",
-          scrollbarWidth: "none",
         }}
       >
-        {/* Printer Body */}
+        {/* Scrollable receipt paper and printer machine */}
         <div
-          className="relative w-full max-w-[360px] rounded-t-[18px] rounded-b-[6px] overflow-hidden"
-          style={{
-            background: "linear-gradient(180deg, #2A2F36 0%, #1E2328 100%)",
-            boxShadow: "0 8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06)",
-          }}
+          className="flex-1 min-h-0 w-full overflow-y-auto modal-content flex flex-col items-center custom-scrollbar"
+          style={{ overflowY: "auto", scrollbarWidth: "thin" }}
         >
+          {/* Printer Body */}
+          <div
+            className="relative w-full max-w-[360px] rounded-t-[18px] rounded-b-[6px] overflow-hidden"
+            style={{
+              background: "linear-gradient(180deg, #2A2F36 0%, #1E2328 100%)",
+              boxShadow: "0 8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06)",
+            }}
+          >
           {/* Printer top panel */}
           <div className="flex items-center justify-between px-5 pt-4 pb-3">
             {/* Brand / label */}
@@ -1050,10 +1074,11 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
             )}
           </div>
         )}
+        </div>
 
-        {/* ── Action Buttons (below printer) ───────────────────────────── */}
+        {/* ── Action Buttons (Docked at Bottom, Always Visible) ───────────────────────────── */}
         <div
-          className="w-full max-w-[360px] mt-4 flex flex-col gap-2 pb-[env(safe-area-inset-bottom)]"
+          className="shrink-0 w-full max-w-[360px] pt-2.5 pb-[max(8px,env(safe-area-inset-bottom))] flex flex-col gap-2 z-20 bg-[#0A0C10]/95 backdrop-blur-md border-t border-white/10 px-2 rounded-b-[14px]"
           style={{ animation: "printerSlideIn 0.4s ease-out 0.1s both" }}
         >
           {isAnimating && phase !== "tearaway" && (

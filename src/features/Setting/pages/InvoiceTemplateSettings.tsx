@@ -97,7 +97,7 @@ const BASE_FIELD: Omit<CustomField, "id" | "label" | "show"> = {
   placement: "customer",
   itemSource: "product",
   attr: "batch",
-  itemShow: "column",
+  itemShow: "under",
 };
 
 export const TYPES: Record<FieldType, string> = {
@@ -613,11 +613,15 @@ export const InvoiceTemplateSettings: React.FC = () => {
   // Custom Fields Operations
   const handleAddField = () => {
     if (state.fields.length >= MAX_FIELDS) return;
+    const activeCols = state.fields.filter(
+      (f) => f.placement === "item" && f.itemShow === "column" && f.show
+    ).length;
     const newField: CustomField = {
       ...BASE_FIELD,
       id: uid(),
       label: "",
       placement: "customer",
+      itemShow: activeCols < MAX_ITEM_COLS ? "column" : "under",
       show: true,
     };
     setState((prev) => ({ ...prev, fields: [...prev.fields, newField] }));
@@ -640,25 +644,52 @@ export const InvoiceTemplateSettings: React.FC = () => {
   };
 
   const handleUpdateField = (id: string, updates: Partial<CustomField>) => {
-    setState((prev) => ({
-      ...prev,
-      fields: prev.fields.map((f) => {
-        if (f.id !== id) return f;
-        const updated = { ...f, ...updates };
-        if (updates.placement === "item") {
-          updated.itemSource = updated.itemSource || "product";
-          updated.attr = updated.attr || "batch";
-          updated.itemShow = updated.itemShow || "column";
+    setState((prev) => {
+      const curField = prev.fields.find((f) => f.id === id);
+      const adjustedUpdates = { ...updates };
+
+      const nextPlacement = adjustedUpdates.placement ?? curField?.placement;
+      const nextItemShow = adjustedUpdates.itemShow ?? curField?.itemShow;
+
+      if (nextPlacement === "item" && nextItemShow === "column") {
+        const otherActiveCols = prev.fields.filter(
+          (f) => f.id !== id && f.placement === "item" && f.itemShow === "column" && f.show
+        ).length;
+        if (otherActiveCols >= MAX_ITEM_COLS) {
+          if (updates.itemShow === "column" || updates.placement === "item" || updates.show === true) {
+            showToast("You couldn't add more than 3 custom columns", "error");
+          }
+          adjustedUpdates.itemShow = "under";
         }
-        if (updates.mode === "fixed") {
-          updated.required = false;
-        }
-        if (updates.itemSource === "product") {
-          updated.required = false;
-        }
-        return updated;
-      }),
-    }));
+      }
+
+      return {
+        ...prev,
+        fields: prev.fields.map((f) => {
+          if (f.id !== id) return f;
+          const updated = { ...f, ...adjustedUpdates };
+          if (adjustedUpdates.placement === "item") {
+            updated.itemSource = updated.itemSource || "product";
+            updated.attr = updated.attr || "batch";
+            const otherActiveCols = prev.fields.filter(
+              (other) => other.id !== id && other.placement === "item" && other.itemShow === "column" && other.show
+            ).length;
+            if (otherActiveCols >= MAX_ITEM_COLS) {
+              updated.itemShow = "under";
+            } else if (!updated.itemShow) {
+              updated.itemShow = "column";
+            }
+          }
+          if (adjustedUpdates.mode === "fixed") {
+            updated.required = false;
+          }
+          if (adjustedUpdates.itemSource === "product") {
+            updated.required = false;
+          }
+          return updated;
+        }),
+      };
+    });
     setFlashIds((prev) => new Set([...prev, id]));
   };
 
@@ -1080,38 +1111,56 @@ export const InvoiceTemplateSettings: React.FC = () => {
 
                                     <div className="inv-fld">
                                       <span>Show it as</span>
-                                      <div className="inv-seg">
-                                        <label
-                                          className={field.itemShow === "column" ? "active" : ""}
-                                          onClick={() => handleUpdateField(field.id, { itemShow: "column" })}
-                                        >
-                                          <input type="radio" checked={field.itemShow === "column"} readOnly />
-                                          <span>
-                                            <b>Its own column</b>
-                                            <small>Easy to scan. Best for short values like batch and expiry.</small>
-                                          </span>
-                                        </label>
-                                        <label
-                                          className={field.itemShow === "under" ? "active" : ""}
-                                          onClick={() => handleUpdateField(field.id, { itemShow: "under" })}
-                                        >
-                                          <input type="radio" checked={field.itemShow === "under"} readOnly />
-                                          <span>
-                                            <b>Under the item name</b>
-                                            <small>Saves space. Good for longer values.</small>
-                                          </span>
-                                        </label>
-                                      </div>
+                                      {(() => {
+                                        const isFieldActiveCol = field.itemShow === "column" && itemColIds.includes(field.id);
+                                        const isColLimitReached = !isFieldActiveCol && itemColIds.length >= MAX_ITEM_COLS;
+                                        return (
+                                          <>
+                                            <div className="inv-seg">
+                                              <label
+                                                className={`${isFieldActiveCol ? "active" : ""} ${isColLimitReached ? "opacity-40 cursor-not-allowed" : ""}`}
+                                                onClick={() => {
+                                                  if (isColLimitReached) {
+                                                    showToast("You couldn't add more than 3 custom columns", "error");
+                                                    return;
+                                                  }
+                                                  handleUpdateField(field.id, { itemShow: "column" });
+                                                }}
+                                                title={isColLimitReached ? "You couldn't add more than 3 custom columns" : ""}
+                                              >
+                                                <input type="radio" checked={isFieldActiveCol} readOnly />
+                                                <span>
+                                                  <b>Its own column</b>
+                                                  <small>
+                                                    {isColLimitReached
+                                                      ? "Max 3 columns reached"
+                                                      : "Easy to scan. Best for short values like batch and expiry."}
+                                                  </small>
+                                                </span>
+                                              </label>
+                                              <label
+                                                className={!isFieldActiveCol ? "active" : ""}
+                                                onClick={() => handleUpdateField(field.id, { itemShow: "under" })}
+                                              >
+                                                <input type="radio" checked={!isFieldActiveCol} readOnly />
+                                                <span>
+                                                  <b>Under the item name</b>
+                                                  <small>Saves space. Good for longer values.</small>
+                                                </span>
+                                              </label>
+                                            </div>
+                                            {isColLimitReached && (
+                                              <div className="inv-note" style={{ marginTop: 6, color: "#b91c1c", borderColor: "#fecaca", backgroundColor: "#fef2f2" }}>
+                                                <Info size={15} className="text-red-600" />
+                                                <span className="text-red-700 font-medium">
+                                                  You couldn't add more than 3 custom columns (3/{MAX_ITEM_COLS} used). This field will show under the item name.
+                                                </span>
+                                              </div>
+                                            )}
+                                          </>
+                                        );
+                                      })()}
                                     </div>
-
-                                    {field.itemShow === "column" && !itemColIds.includes(field.id) && field.show && (
-                                      <div className="inv-note">
-                                        <Info size={16} />
-                                        <span>
-                                          Only {MAX_ITEM_COLS} extra columns fit on an invoice, and they're already used. This one prints under the item name until you free a column.
-                                        </span>
-                                      </div>
-                                    )}
                                   </>
                                 ) : (
                                   <>
@@ -1304,7 +1353,7 @@ export const InvoiceTemplateSettings: React.FC = () => {
                           <img
                             src={state.sig.image}
                             alt="Uploaded signature"
-                            className="cursor-pointer"
+                            className="cursor-pointer mx-auto block object-contain"
                             onClick={() => document.getElementById("sigFileInput")?.click()}
                           />
                         ) : (
@@ -2148,7 +2197,7 @@ export const InvoiceTemplateSettings: React.FC = () => {
                               {state.sig.mode === "type" ? (
                                 <span className="typed">{state.sig.name || "Signatory"}</span>
                               ) : sigSrc ? (
-                                <img src={sigSrc} alt="Signature" />
+                                <img src={sigSrc} alt="Signature" className="mx-auto block object-contain" />
                               ) : (
                                 <span className="inv-ph">Add a signature</span>
                               )}

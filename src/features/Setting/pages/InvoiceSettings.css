@@ -827,6 +827,9 @@ textarea.inv-in {
   background: #fff;
   border-radius: 6px;
   padding: 4px;
+  display: block;
+  margin: 0 auto;
+  object-fit: contain;
 }
 
 .inv-sig-drop {
@@ -1608,12 +1611,16 @@ table.inv-items td.xc {
 .inv-sign {
   text-align: center;
   min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .inv-sign .for {
   font-size: 11px;
   font-weight: 600;
   margin-bottom: 4px;
+  text-align: center;
 }
 
 .inv-sign .img {
@@ -1621,11 +1628,15 @@ table.inv-items td.xc {
   display: flex;
   align-items: flex-end;
   justify-content: center;
+  width: 100%;
 }
 
 .inv-sign .img img {
   max-height: 54px;
   max-width: 170px;
+  display: block;
+  margin: 0 auto;
+  object-fit: contain;
 }
 
 .inv-sign .img .typed {
@@ -1633,6 +1644,8 @@ table.inv-items td.xc {
   font-size: 28px;
   color: #1b2a6b;
   line-height: 1;
+  text-align: center;
+  margin: 0 auto;
 }
 
 .inv-sign .ln {
@@ -1641,12 +1654,15 @@ table.inv-items td.xc {
   padding-top: 4px;
   font-size: 10.5px;
   color: var(--inv-paper-muted);
+  text-align: center;
+  width: 100%;
 }
 
 .inv-sign .nm {
   font-weight: 700;
   color: var(--inv-paper-ink);
   font-size: 11px;
+  text-align: center;
 }
 
 .inv-pwr {

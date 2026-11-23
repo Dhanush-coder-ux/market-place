@@ -494,6 +494,9 @@
   .no-scroll .overflow-y-auto:not(.modal-content) {
     overflow-y: hidden !important;
   }
+  .no-scroll .modal-content {
+    overflow-y: auto !important;
+  }
 
   /* Hide spinners/arrows from all number inputs globally to prevent accidental clicks */
   input[type="number"]::-webkit-outer-spin-button,

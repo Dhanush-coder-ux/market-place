@@ -616,10 +616,10 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
            </div>
            <div>
               {resolvedSettings.signature?.show ? (
-                <div className="text-right flex flex-col items-end">
+                <div className="text-center flex flex-col items-center min-w-[150px] ml-auto">
                   {resolvedSettings.signature.mode === "type" ? (
                     <div
-                      className={`${isA5 ? "text-lg" : "text-xl"} text-[#1b2a6b] leading-none mb-1`}
+                      className={`${isA5 ? "text-lg" : "text-xl"} text-[#1b2a6b] leading-none mb-1 text-center`}
                       style={{ fontFamily: "'Dancing Script', cursive" }}
                     >
                       {resolvedSettings.signature.name || "Signatory"}
@@ -628,18 +628,19 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
                     <img
                       src={resolvedSettings.signature.mode === "draw" ? resolvedSettings.signature.drawn : resolvedSettings.signature.image}
                       alt="Signature"
-                      className={`${isA5 ? "max-h-7 max-w-[100px]" : "max-h-11 max-w-[140px]"} object-contain mb-1`}
+                      className={`${isA5 ? "max-h-7 max-w-[100px]" : "max-h-11 max-w-[140px]"} object-contain mb-1 mx-auto block`}
                     />
                   ) : (
-                    <div className="h-8 text-[11px] text-slate-300 italic flex items-center justify-end">Add a signature</div>
+                    <div className="h-8 text-[11px] text-slate-300 italic flex items-center justify-center">Add a signature</div>
                   )}
                   {resolvedSettings.signature.name && (
-                    <div className={`${isA5 ? "text-[10px]" : "text-[11px]"} font-semibold text-slate-800 leading-tight`}>
+                    <div className={`${isA5 ? "text-[10px]" : "text-[11px]"} font-semibold text-slate-800 leading-tight text-center`}>
                       {resolvedSettings.signature.name}
                       {resolvedSettings.signature.desig ? `, ${resolvedSettings.signature.desig}` : ""}
                     </div>
                   )}
-                  <p className={config.footer.signature}>{resolvedSettings.signature.label || "Authorized Signatory"}</p>
+                  <div className="w-full border-t border-slate-300 my-1" />
+                  <p className={`${config.footer.signature} text-center`}>{resolvedSettings.signature.label || "Authorized Signatory"}</p>
                 </div>
               ) : (
                 <p className={config.footer.signature}>Authorized Signatory</p>

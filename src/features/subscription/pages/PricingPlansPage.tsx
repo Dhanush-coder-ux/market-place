@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Layers, Store, Users, Database, Award, Loader2, CreditCard, History } from "lucide-react";
-import { SubscriptionData, SubscriptionCatalogResponse, TransactionItem } from "../types";
+import { SubscriptionData, SubscriptionCatalogResponse, TransactionItem, PlanItem, AddonItem } from "../types";
 import { subscriptionApi } from "@/services/api/subscription";
 import { RazorpayCheckoutModal } from "../components/RazorpayCheckoutModal";
 
@@ -142,6 +142,10 @@ const STYLES = `
   .pb-root .plan-card:hover {
     border-color: #cbd5e1;
     box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  }
+  .pb-root .plan-card.is-popular {
+    border: 2px solid var(--t-primary);
+    box-shadow: 0 4px 14px -3px rgba(37,99,235,0.18);
   }
   .pb-root .plan-card.is-current {
     border: 2px solid var(--t-primary);
@@ -395,6 +399,133 @@ const STYLES = `
   .pb-root .market-notice { background: #FFFBEB; border: 1px solid #FDE68A; border-radius: var(--r-s); padding: 14px 18px; font-size: 12px; color: #78350F; line-height: 1.6; margin-top: 18px; margin-bottom: 16px; }
   .pb-root .tax-disclaimer { text-align: center; font-size: 11px; color: var(--faint); margin-top: 14px; margin-bottom: 30px; }
 `;
+
+export const FRONTEND_PLANS: PlanItem[] = [
+  {
+    id: "digital_store",
+    name: "Digital Store",
+    monthly_price: 399,
+    annual_price: 3990,
+    currency: "INR",
+    badge: null,
+    description: "For businesses that want to take their products online without changing their existing system.",
+    button_text: "Start Digital Store",
+    limits: {
+      max_locations: 1,
+      max_users: 1,
+      max_skus: 500,
+      max_digital_stores: 1,
+    },
+    included_features: [
+      "1 digital store",
+      "Up to 500 SKUs with 3 product images each",
+      "Online product catalogue",
+      "Online orders update your sales and stock automatically",
+      "Post offers and new launches to your customers on ShopIQ",
+      "0% commission on online orders",
+      "Online orders from customers",
+      "Store profile & business information",
+      "Marketplace visibility",
+      "Customer reviews",
+      "1 user",
+      "Email Support",
+    ],
+  },
+  {
+    id: "basic",
+    name: "Basic",
+    monthly_price: 699,
+    annual_price: 3500,
+    biennial_price: 5999,
+    currency: "INR",
+    badge: "MOST POPULAR",
+    description: "Everything a single location business needs to run the business and grow online.",
+    button_text: "Start Business",
+    limits: {
+      max_locations: 1,
+      max_users: 2,
+      max_skus: 500,
+      max_digital_stores: 1,
+    },
+    included_features: [
+      "1 business location",
+      "2 users — 1 Admin + 1 Biller",
+      "Up to 500 SKUs",
+      "Dashboard & business overview",
+      "Sales & billing",
+      "Purchase management",
+      "Inventory management & stock movements",
+      "Supplier management & outstanding",
+      "Customer management & outstanding",
+      "Sales & purchase returns",
+      "Custom bill fields, signature and QR codes on bills",
+      "GST bills and Business reports",
+      "Staff logins with their own access",
+      "Email + WhatsApp Support",
+    ],
+  },
+  {
+    id: "pro",
+    name: "Pro",
+    monthly_price: 1499,
+    annual_price: 7990,
+    currency: "INR",
+    badge: null,
+    description: "For growing businesses that manage multiple locations and larger product catalogues.",
+    button_text: "Go Pro",
+    limits: {
+      max_locations: 2,
+      max_users: 4,
+      max_skus: 1000,
+      max_digital_stores: 2,
+    },
+    included_features: [
+      "2 business locations",
+      "4 users",
+      "Up to 1000 SKUs for each store",
+      "2 digital stores",
+      "Multi-store management",
+      "Store-wise inventory",
+      "Store-wise sales & reports",
+      "Priority call support",
+    ],
+  },
+];
+
+export const FRONTEND_ADDONS: AddonItem[] = [
+  {
+    id: "extra_store",
+    name: "Extra Store / Location",
+    price: 599,
+    billing_cycle: "monthly",
+    description: "Add another business location with its own stock and billing.",
+    type: "location",
+  },
+  {
+    id: "extra_user",
+    name: "Extra User",
+    price: 199,
+    billing_cycle: "monthly",
+    description: "Add billing staff, managers or other business users.",
+    type: "user",
+  },
+  {
+    id: "sku_expansion",
+    name: "SKU Expansion",
+    price: 299,
+    billing_cycle: "monthly",
+    description: "Increase catalogue capacity from 500 to up to 5,000 SKUs.",
+    type: "sku",
+  },
+  {
+    id: "verified_badge",
+    name: "Verified Business Badge",
+    price: 699,
+    billing_cycle: "year",
+    description: "Issued after successful business verification. Not automatically granted by payment.",
+    type: "badge",
+  },
+];
 
 export interface PricingPlansPageProps {
   isEmbedded?: boolean;
@@ -901,7 +1032,22 @@ const PricingPlansPage: React.FC<PricingPlansPageProps> = ({ isEmbedded = false 
       ]);
       if (txRes && Array.isArray(txRes)) setTransactions(txRes);
 
-      if (catRes) setCatalog(catRes);
+      if (catRes) {
+        setCatalog({
+          ...catRes,
+          plans: FRONTEND_PLANS,
+          addons: FRONTEND_ADDONS,
+        });
+      } else {
+        setCatalog({
+          plans: FRONTEND_PLANS,
+          addons: FRONTEND_ADDONS,
+          trial_days: 14,
+          razorpay_key_id: "rzp_test_placeholder",
+          currency: "INR",
+          marketplace_policy: "No commission on retailer sales",
+        });
+      }
       if (subRes) setCurrentSub(subRes);
 
       // 1. Renewal Date Formatting
@@ -984,11 +1130,11 @@ const PricingPlansPage: React.FC<PricingPlansPageProps> = ({ isEmbedded = false 
     );
   }
 
-  const plans = catalog?.plans || [];
-  const addons = catalog?.addons || [];
+  const plans = catalog?.plans || FRONTEND_PLANS;
+  const addons = catalog?.addons || FRONTEND_ADDONS;
   const curPlanObj = plans.find(p => p.id === currentSub?.plan_id) || plans.find(p => p.id === "basic") || plans[0];
   const curPrice = billingCycle === "biennial"
-    ? (curPlanObj?.biennial_price || (curPlanObj?.id === "basic" ? 7000 : (curPlanObj?.annual_price || 0) * 2))
+    ? (curPlanObj?.biennial_price || (curPlanObj?.id === "basic" ? 5999 : (curPlanObj?.annual_price || 0) * 2))
     : (billingCycle === "annual" ? curPlanObj?.annual_price : curPlanObj?.monthly_price);
 
   // Proration calculation: dynamically computed from current renewal / expiry date
@@ -1027,7 +1173,7 @@ const PricingPlansPage: React.FC<PricingPlansPageProps> = ({ isEmbedded = false 
     if (targetPlan) {
       const targetTier = PLAN_TIER[targetPlan.id] || 0;
       const targetPrice = billingCycle === "biennial"
-        ? (targetPlan.biennial_price || (targetPlan.id === "basic" ? 7000 : targetPlan.annual_price * 2))
+        ? (targetPlan.biennial_price || (targetPlan.id === "basic" ? 5999 : targetPlan.annual_price * 2))
         : (billingCycle === "annual" ? targetPlan.annual_price : targetPlan.monthly_price);
       
       if (isSubActive && targetTier > curTier) {
@@ -1242,8 +1388,11 @@ const PricingPlansPage: React.FC<PricingPlansPageProps> = ({ isEmbedded = false 
             {/* ===== BILLING CYCLE TOGGLE ===== */}
             <div className="cyc-row" id="plans">
               <div>
-                <div className="sec-t">Choose your plan</div>
-                <div className="sec-s">Change anytime. We only charge the difference.</div>
+                <div className="sec-t">Simple pricing. No commission. Grow your business.</div>
+                <div className="sec-s">
+                  Choose the plan that fits your business. Upgrade or cancel anytime. ·{" "}
+                  <span style={{ color: "#16a34a", fontWeight: 600 }}>✓ 14-day free trial • No card required</span>
+                </div>
               </div>
               <div className="cyc">
                 <button className={billingCycle === "monthly" ? "on" : ""} onClick={() => setBillingCycle("monthly")}>Monthly</button>
@@ -1259,7 +1408,7 @@ const PricingPlansPage: React.FC<PricingPlansPageProps> = ({ isEmbedded = false 
                 const isCur = p.id === curPlanObj?.id;
                 const isSel = p.id === selPlan;
                 const price = billingCycle === "biennial"
-                  ? (p.biennial_price || (p.id === "basic" ? 7000 : p.annual_price * 2))
+                  ? (p.biennial_price || (p.id === "basic" ? 5999 : p.annual_price * 2))
                   : (billingCycle === "annual" ? p.annual_price : p.monthly_price);
 
                 // Feature category heading
@@ -1305,27 +1454,32 @@ const PricingPlansPage: React.FC<PricingPlansPageProps> = ({ isEmbedded = false 
                       Downgrade not available
                     </button>
                   );
-                } else if (targetTier > curTier) {
+                } else if (isSubActive && targetTier > curTier) {
                   btn = (
                     <button className="plan-btn btn-primary" onClick={() => setSelPlan(p.id)}>
                       Upgrade to {p.name}
                     </button>
                   );
                 } else {
+                  const isPopular = p.badge === "MOST POPULAR";
                   btn = (
-                    <button className="plan-btn btn-outline" onClick={() => setSelPlan(p.id)}>
-                      Select {p.name}
+                    <button className={`plan-btn ${isPopular ? "btn-primary" : "btn-outline"}`} onClick={() => setSelPlan(p.id)}>
+                      {p.button_text}
                     </button>
                   );
                 }
 
                 return (
-                  <div key={p.id} className={`plan-card ${isCur ? "is-current" : ""} ${isSel ? "is-selected" : ""}`}>
-                    {isCur && (
+                  <div key={p.id} className={`plan-card ${isCur ? "is-current" : ""} ${isSel ? "is-selected" : ""} ${p.badge && !isCur && !isSel ? "is-popular" : ""}`}>
+                    {isCur ? (
                       <div className="plan-top-banner" style={currentSub?.status === "expired" ? { background: "#dc2626" } : {}}>
                         {currentSub?.status === "expired" ? "EXPIRED PLAN" : "CURRENT PLAN"}
                       </div>
-                    )}
+                    ) : p.badge ? (
+                      <div className="plan-top-banner">
+                        {p.badge}
+                      </div>
+                    ) : null}
                     <div className="plan-body">
                       <h3 className="plan-title">{p.name}</h3>
                       <p className="plan-desc">{p.description}</p>
@@ -1333,16 +1487,23 @@ const PricingPlansPage: React.FC<PricingPlansPageProps> = ({ isEmbedded = false 
                       <div className="plan-price-wrap">
                         <span className="price-amount">{inr(price)}</span>
                         <span className="price-cycle">
-                          {billingCycle === "annual" ? "/ year" : (billingCycle === "biennial" ? "/ 2-year" : "/ month")}
+                          /{billingCycle === "annual" ? "year + 18% GST" : (billingCycle === "biennial" ? "2-year + 18% GST" : "month + 18% GST")}
                         </span>
                       </div>
                       <div className="plan-billed-sub">
-                        {p.id === "basic" && billingCycle === "monthly" && "₹3,500/year · Save 58% · First 100"}
-                        {p.id === "digital_store" && billingCycle === "monthly" && "₹2,990 /year"}
-                        {p.id === "pro" && billingCycle === "monthly" && "Save 17% vs ₹1,799/month"}
-                        {p.id === "basic" && billingCycle === "annual" && "Save 58% vs ₹8,388 at monthly billing"}
-                        {p.id === "basic" && billingCycle === "biennial" && "Save 58% vs ₹16,776 monthly billing"}
-                        {p.id !== "basic" && billingCycle !== "monthly" && `Billed ${billingCycle}`}
+                        {billingCycle === "monthly" && "Billed monthly"}
+                        {billingCycle === "annual" && (
+                          p.id === "basic"
+                            ? "Billed annually · Save 58% vs ₹8,388 at monthly billing"
+                            : p.id === "pro"
+                            ? "Billed annually (1st year special ₹7,990) · Save 56% vs ₹17,988 monthly billing"
+                            : "Billed annually · Save 17% vs ₹4,788 monthly billing"
+                        )}
+                        {billingCycle === "biennial" && (
+                          p.id === "basic"
+                            ? "Billed for 2 years · Save 64% vs ₹16,776 monthly billing"
+                            : `Billed ${billingCycle}`
+                        )}
                       </div>
 
                       {btn}
@@ -1383,7 +1544,7 @@ const PricingPlansPage: React.FC<PricingPlansPageProps> = ({ isEmbedded = false 
                   <div className="offer-title">Basic Annual Plan</div>
                   <div className="offer-price">
                     <span>₹3,500</span>
-                    <span className="offer-period">/ year</span>
+                    <span className="offer-period">/ year + 18% GST</span>
                   </div>
                   <div className="offer-savings">Save 58% vs ₹8,388 at monthly billing</div>
                 </div>
@@ -1402,10 +1563,11 @@ const PricingPlansPage: React.FC<PricingPlansPageProps> = ({ isEmbedded = false 
                   <div className="offer-tag">FIRST 100 ONLY</div>
                   <div className="offer-title">Basic 2-Year Plan</div>
                   <div className="offer-price">
-                    <span>₹7,000</span>
+                    <span>₹5,999</span>
+                    <span className="offer-period">/ 2-year + 18% GST</span>
                   </div>
                   <div className="offer-subtext">total for 24 months</div>
-                  <div className="offer-savings">Save 58% vs ₹16,776 monthly billing</div>
+                  <div className="offer-savings">Save 64% vs ₹16,776 monthly billing</div>
                 </div>
                 <div>
                   <div className="offer-divider" />
@@ -1441,7 +1603,7 @@ const PricingPlansPage: React.FC<PricingPlansPageProps> = ({ isEmbedded = false 
             <div className="cyc-row" style={{ marginTop: "24px" }}>
               <div>
                 <div className="sec-t">Optional add-ons</div>
-                <div className="sec-s">Extend your plan as the business grows. Billed with your subscription.</div>
+                <div className="sec-s">Extend any plan as the business grows. Billed alongside your subscription.</div>
               </div>
             </div>
 
@@ -1488,7 +1650,11 @@ const PricingPlansPage: React.FC<PricingPlansPageProps> = ({ isEmbedded = false 
                     <span className="ai">{Icon}</span>
                     <div className="an">{a.name}</div>
                     <div className="ap">
-                      {isComplimentary ? <span style={{ color: "#16a34a" }}>FREE</span> : `${inr(a.price)} / ${a.billing_cycle}`}
+                      {isComplimentary ? (
+                        <span style={{ color: "#16a34a" }}>FREE</span>
+                      ) : (
+                        `${inr(a.price)} / ${a.billing_cycle === 'year' ? 'year' : 'month'} + 18% GST`
+                      )}
                     </div>
                     <div className="ad">{a.description}</div>
                     {ctrl}

@@ -42,7 +42,7 @@ export const RazorpayCheckoutModal: React.FC<RazorpayCheckoutModalProps> = ({
   if (!isOpen) return null;
 
   const basePrice = billingCycle === "biennial"
-    ? (selectedPlan.biennial_price || (selectedPlan.id === "basic" ? 7000 : selectedPlan.annual_price * 2))
+    ? (selectedPlan.biennial_price || (selectedPlan.id === "basic" ? 5999 : selectedPlan.annual_price * 2))
     : billingCycle === "annual"
     ? selectedPlan.annual_price
     : selectedPlan.monthly_price;

@@ -1421,7 +1421,7 @@ export function buildEscPosBuffer(data: ReceiptData, config: PrinterConfig): Uin
       const item = data.items[idx];
       addLine(item.name);
       for (const f of itemCustomFields) {
-        const val = extractItemAttributeValue(f, item, idx);
+        const val = extractItemAttributeValue(f, item, idx, item);
         if (val && val !== "—") {
           addLine(`  ${f.label}: ${val}`);
         }
@@ -1455,7 +1455,7 @@ export function buildEscPosBuffer(data: ReceiptData, config: PrinterConfig): Uin
       const item = data.items[idx];
       addLine(item.name);
       for (const f of itemCustomFields) {
-        const val = extractItemAttributeValue(f, item, idx);
+        const val = extractItemAttributeValue(f, item, idx, item);
         if (val && val !== "—") {
           addLine(`  ${f.label}: ${val}`);
         }
@@ -1746,7 +1746,7 @@ export function printViaSystemDriver(
         const itemTotal = (item.tprice ?? item.qty * item.price).toFixed(2);
         const itemMeta = itemCustomFields
           .map((f) => {
-            const val = extractItemAttributeValue(f, item, idx);
+            const val = extractItemAttributeValue(f, item, idx, item);
             return val && val !== "—" ? `<div style="font-size: 8.5px; color: #475569;">• ${f.label}: ${val}</div>` : "";
           })
           .filter(Boolean)
@@ -2113,7 +2113,7 @@ export function renderThermalSlipHtml(
       const itemTotal = (item.tprice ?? item.qty * item.price).toFixed(2);
       const itemMeta = itemCustomFields
         .map((f) => {
-          const val = extractItemAttributeValue(f, item, idx);
+          const val = extractItemAttributeValue(f, item, idx, item);
           return val && val !== "—" ? `<div style="font-size: 8.5px; color: #475569;">• ${f.label}: ${val}</div>` : "";
         })
         .filter(Boolean)

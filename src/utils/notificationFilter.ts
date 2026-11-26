@@ -154,17 +154,13 @@ export const isDigitalStoreNotification = (notif: NotificationItem): boolean => 
 };
 
 /**
- * Filters notifications according to the active environment:
- * - Production: ONLY digital store notifications are allowed.
- * - Development: ALL notifications are allowed.
+ * Filters notifications according to the active environment.
+ * For the main InventQ merchant app, all notifications (ERP, inventory, purchase, sync, digital store)
+ * are allowed so the user receives full operational updates.
  */
 export const filterNotificationsByEnvironment = (
   notifications: NotificationItem[],
-  isProd?: boolean
+  _isProd?: boolean
 ): NotificationItem[] => {
-  const prod = isProd ?? isProductionEnvironment();
-  if (!prod) {
-    return notifications;
-  }
-  return notifications.filter(isDigitalStoreNotification);
+  return notifications || [];
 };

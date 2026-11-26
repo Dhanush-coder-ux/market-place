@@ -4,7 +4,7 @@ import {
   Megaphone, Tag, AlertCircle, RefreshCw,
   Plus, Search, Trash2, Edit3, X,
   Clock, Eye, Image as ImageIcon, Send,
-  Calendar, RotateCcw, Copy,
+  Calendar, RotateCcw, Copy, Upload,
 } from "lucide-react";
 import { useToast } from "@/context/ToastContext";
 import { useBusinessApi } from "@/context/BusinessApiContext";
@@ -263,6 +263,58 @@ export default function Announcements({ onCountChange }: AnnouncementsProps) {
 
   const messageRef = useRef<HTMLTextAreaElement>(null);
   const composerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+
+  // ── Image Upload & File Handling ──
+  const handleImageFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      showToast("Please select a valid image file (JPG, PNG, WebP)", "error");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      showToast("Image size exceeds 5MB limit", "error");
+      return;
+    }
+
+    setIsUploadingImage(true);
+    const activeShopId = localStorage.getItem("shop_id") || SHOP_ID;
+
+    // Immediate local preview using FileReader
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64Url = reader.result as string;
+      setImageUrl(base64Url);
+
+      // Attempt upload to backend media/shop endpoint
+      try {
+        const res: any = await shop.uploadShopImage(file, "banner", activeShopId);
+        const uploadedUrl = res?.data?.url || res?.data?.image_url || res?.data?.banner_url || res?.url;
+        if (uploadedUrl) {
+          setImageUrl(uploadedUrl);
+          showToast("Image uploaded successfully!", "success");
+        }
+      } catch (uploadErr) {
+        console.warn("Backend image upload failed, using local data URL:", uploadErr);
+        showToast("Image attached to announcement", "success");
+      } finally {
+        setIsUploadingImage(false);
+      }
+    };
+    reader.onerror = () => {
+      setIsUploadingImage(false);
+      showToast("Failed to read image file", "error");
+    };
+    reader.readAsDataURL(file);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   // ── Mapping Helpers ──
   const apiToType = (t: string): AnnouncementType => {
@@ -653,36 +705,106 @@ export default function Announcements({ onCountChange }: AnnouncementsProps) {
               />
             </div>
 
-            {/* 3. Optional Image or Banner URL */}
+            {/* 3. Optional Image or Banner Upload & URL */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Banner Image URL <span className="text-slate-400 font-normal">(Optional)</span>
-              </label>
-              <div className="relative">
-                <ImageIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  type="url"
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  placeholder="https://images.unsplash.com/... or paste image link"
-                  className="w-full h-9 pl-9 pr-3 bg-slate-50/50 hover:bg-white focus:bg-white border border-slate-200 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 outline-none focus:border-[#286038] focus:ring-2 focus:ring-[#286038]/15 transition-all shadow-2xs font-mono"
-                />
-              </div>
-              {imageUrl && (
-                <div className="mt-2 relative rounded-lg overflow-hidden border border-slate-200 max-h-24 bg-slate-100">
-                  <img
-                    src={imageUrl}
-                    alt="Preview"
-                    className="w-full h-24 object-cover"
-                    onError={(e) => (e.currentTarget.style.display = "none")}
-                  />
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-semibold text-slate-700">
+                  Banner Image <span className="text-slate-400 font-normal">(Optional)</span>
+                </label>
+                {imageUrl && (
                   <button
                     type="button"
                     onClick={() => setImageUrl("")}
-                    className="absolute top-1 right-1 w-6 h-6 rounded-md bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors"
+                    className="text-[11px] text-rose-600 hover:text-rose-700 font-medium flex items-center gap-1 cursor-pointer"
                   >
-                    <X size={12} />
+                    <Trash2 size={11} />
+                    <span>Remove image</span>
                   </button>
+                )}
+              </div>
+
+              {/* Hidden file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageFileSelect}
+              />
+
+              {imageUrl ? (
+                <div className="relative rounded-xl overflow-hidden border border-slate-200 bg-slate-100 shadow-2xs group">
+                  <img
+                    src={imageUrl}
+                    alt="Preview"
+                    className="w-full h-32 sm:h-36 object-cover"
+                    onError={(e) => (e.currentTarget.style.display = "none")}
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-2.5 py-1.5 bg-white text-slate-800 rounded-lg text-xs font-semibold hover:bg-slate-50 transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Upload size={12} />
+                      <span>Change Image</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setImageUrl("")}
+                      className="px-2.5 py-1.5 bg-rose-600 text-white rounded-lg text-xs font-semibold hover:bg-rose-700 transition-colors shadow-sm flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <X size={12} />
+                      <span>Remove</span>
+                    </button>
+                  </div>
+                  <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-black/60 text-[10px] font-medium text-white backdrop-blur-xs flex items-center gap-1">
+                    <ImageIcon size={11} />
+                    <span>Image Attached</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const file = e.dataTransfer.files?.[0];
+                      if (file && fileInputRef.current) {
+                        const dt = new DataTransfer();
+                        dt.items.add(file);
+                        fileInputRef.current.files = dt.files;
+                        handleImageFileSelect({ target: fileInputRef.current } as any);
+                      }
+                    }}
+                    className="border-2 border-dashed border-slate-200 hover:border-[#286038] hover:bg-emerald-50/20 rounded-xl p-3 sm:p-4 text-center cursor-pointer transition-all group"
+                  >
+                    <div className="w-9 h-9 rounded-full bg-slate-100 group-hover:bg-emerald-100/60 mx-auto flex items-center justify-center mb-1.5 transition-colors">
+                      {isUploadingImage ? (
+                        <span className="w-4 h-4 border-2 border-[#286038] border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <Upload size={16} className="text-slate-500 group-hover:text-[#286038]" />
+                      )}
+                    </div>
+                    <p className="text-xs font-bold text-slate-700 group-hover:text-[#286038]">
+                      {isUploadingImage ? "Processing image..." : "Upload Announcement Image"}
+                    </p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Click to browse from computer or drag & drop (JPG, PNG, max 5MB)
+                    </p>
+                  </div>
+
+                  <div className="relative">
+                    <ImageIcon size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="url"
+                      value={imageUrl}
+                      onChange={(e) => setImageUrl(e.target.value)}
+                      placeholder="Or paste external image link (https://...)"
+                      className="w-full h-8 pl-8 pr-3 bg-slate-50/50 hover:bg-white focus:bg-white border border-slate-200 rounded-lg text-[11px] text-slate-800 placeholder:text-slate-400 outline-none focus:border-[#286038] focus:ring-1 focus:ring-[#286038]/20 transition-all font-mono"
+                    />
+                  </div>
                 </div>
               )}
             </div>
@@ -764,7 +886,7 @@ export default function Announcements({ onCountChange }: AnnouncementsProps) {
               <div className="rounded-xl overflow-hidden border border-slate-200/90 shadow-2xs bg-white transition-all">
                 {/* Banner Image Preview if image URL exists */}
                 {imageUrl.trim() && (
-                  <div className="w-full h-28 sm:h-32 bg-slate-100 relative overflow-hidden border-b border-slate-100">
+                  <div className="w-full h-36 sm:h-44 bg-slate-100 relative overflow-hidden border-b border-slate-100">
                     <img
                       src={imageUrl.trim()}
                       alt="Storefront banner preview"
@@ -1070,11 +1192,11 @@ export default function Announcements({ onCountChange }: AnnouncementsProps) {
 
                       {/* Optional Banner Image Preview */}
                       {item.imageUrl && (
-                        <div className="mt-2.5 rounded-lg overflow-hidden border border-slate-200 max-h-28 bg-slate-50">
+                        <div className="mt-2.5 rounded-xl overflow-hidden border border-slate-200 bg-slate-50 relative group">
                           <img
                             src={item.imageUrl}
                             alt="Banner"
-                            className="w-full h-28 object-cover"
+                            className="w-full h-32 sm:h-36 object-cover transition-transform duration-300 group-hover:scale-102"
                             onError={(e) => (e.currentTarget.style.display = "none")}
                           />
                         </div>

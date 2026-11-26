@@ -29,6 +29,60 @@ const formatStockValue = (val: number | null | undefined) => {
   return Number(n.toFixed(2)).toString();
 };
 
+const resolveMovementUser = (a: any, finalType?: string): string => {
+  if (!a) return "System";
+  const typeStr = String(finalType || a?.movement_type || a?.type || "").toUpperCase();
+  const descStr = String(a?.description || "").toLowerCase();
+  const addedByStr = String(a?.added_by || "");
+  const roleStr = String(a?.user_info?.role || a?.role || "").toLowerCase();
+  const originStr = String(a?.additional_infos?.origin || a?.origin || "").toUpperCase();
+
+  const isOnlineOrder =
+    typeStr.includes("ONLINE") ||
+    descStr.includes("online") ||
+    addedByStr.includes("(Online)") ||
+    roleStr === "customer" ||
+    originStr.includes("ONLINE");
+
+  const acceptedBy =
+    a?.accepted_by ||
+    a?.additional_infos?.accepted_by ||
+    a?.status_updated_by ||
+    a?.additional_infos?.status_updated_by ||
+    a?.additional_infos?.order_accepted_by ||
+    a?.additional_infos?.executed_by ||
+    a?.executed_by;
+
+  if (isOnlineOrder) {
+    if (acceptedBy && String(acceptedBy).trim() && !String(acceptedBy).includes("(Online)")) {
+      return String(acceptedBy);
+    }
+    // If not accepted yet or fallback, avoid customer name and show Staff / Merchant or System
+    if (
+      addedByStr &&
+      !addedByStr.includes("(Online)") &&
+      roleStr !== "customer" &&
+      addedByStr.toLowerCase() !== "customer" &&
+      addedByStr.toLowerCase() !== "system" &&
+      !descStr.includes(addedByStr.toLowerCase())
+    ) {
+      return addedByStr;
+    }
+    return "Staff / Merchant";
+  }
+
+  return String(
+    acceptedBy ||
+    a?.added_by ||
+    a?.user_name ||
+    a?.user_info?.name ||
+    a?.user ||
+    a?.executed_by ||
+    a?.performed_by ||
+    "System"
+  );
+};
+
 function ProductDetailsList({ prod }: { prod: any }) {
   const variantObj = prod.variant_infos || prod.variant;
   const batchObj = prod.batch_infos || prod.batch;
@@ -215,7 +269,7 @@ const StockMovementDetail = () => {
                     </div>
                     <div className="flex justify-between items-center py-2 border-b border-slate-100 last:border-0">
                       <span className="text-[11px] font-medium text-slate-500">Executed By</span>
-                      <span className="text-[11px] font-bold text-slate-700">{adjustment.added_by || adjustment.user_name || adjustment.user_info?.name || adjustment.user || adjustment.executed_by || adjustment.performed_by || "System"}</span>
+                      <span className="text-[11px] font-bold text-slate-700">{resolveMovementUser(adjustment, adjustment.movement_type)}</span>
                     </div>
                   </div>
                 </div>

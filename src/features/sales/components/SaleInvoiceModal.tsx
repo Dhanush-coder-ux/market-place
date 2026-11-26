@@ -135,8 +135,9 @@ export const SaleInvoiceModal: React.FC<SaleInvoiceModalProps> = ({
           ? (activeSale as any).additional_infos.items_snapshot[idx]
           : null;
         const hasHsn = it.hsn_code || it.hsn || it.hsnCode || snap?.hsnCode || snap?.hsn_code || snap?.hsn || it.datas?.hsn_code || it.datas?.hsn || it.datas?.tax_infos?.hsn;
+        const hasMrp = it.mrp || it.datas?.mrp || it.pricing_infos?.mrp || snap?.mrp;
         const id = it.product_id || it.inventory_id || it.id;
-        return !hasHsn && id && !fetchedProducts[id] ? String(id) : null;
+        return (!hasHsn || !hasMrp) && id && !fetchedProducts[id] ? String(id) : null;
       })
       .filter((id: any): id is string => Boolean(id));
 
@@ -220,22 +221,6 @@ export const SaleInvoiceModal: React.FC<SaleInvoiceModalProps> = ({
         ? (activeSale as any).additional_infos.items_snapshot[idx]
         : null;
 
-      const rawMrp =
-        it.mrp ??
-        it.datas?.mrp ??
-        it.pricing_infos?.mrp ??
-        snapshotItem?.mrp ??
-        (prodData ? extractProductMrp(prodData) : undefined) ??
-        price;
-      const mrp = Number(rawMrp);
-
-      const rawGst = it.gst_rate ?? it.gst ?? it.tax_rate ?? prodData?.gst ?? 0;
-      const gstRate = typeof rawGst === "number" ? rawGst : (parseFloat(String(rawGst).replace("%", "")) || 0);
-
-      const split = calculateTaxSplit(price, gstRate);
-      const taxableRate = Number(it.taxable_value ?? split.taxableValue);
-      const gstAmt = Number(it.gst_amount ?? split.gstAmount);
-
       const batch_number =
         it.batch_no ||
         it.batch_name ||
@@ -257,6 +242,22 @@ export const SaleInvoiceModal: React.FC<SaleInvoiceModalProps> = ({
         it.batch_infos?.batch_name ||
         snapshotItem?.batchName ||
         "";
+
+      const rawMrp =
+        it.mrp ??
+        it.datas?.mrp ??
+        it.pricing_infos?.mrp ??
+        snapshotItem?.mrp ??
+        (prodData ? extractProductMrp(prodData, batch_number || batch_name || it.batchId) : undefined) ??
+        price;
+      const mrp = Number(rawMrp);
+
+      const rawGst = it.gst_rate ?? it.gst ?? it.tax_rate ?? prodData?.gst ?? 0;
+      const gstRate = typeof rawGst === "number" ? rawGst : (parseFloat(String(rawGst).replace("%", "")) || 0);
+
+      const split = calculateTaxSplit(price, gstRate);
+      const taxableRate = Number(it.taxable_value ?? split.taxableValue);
+      const gstAmt = Number(it.gst_amount ?? split.gstAmount);
 
       const expiry_date =
         it.expiryDate ||
@@ -425,7 +426,24 @@ export const SaleInvoiceModal: React.FC<SaleInvoiceModalProps> = ({
               pItem?.hsn ||
               (prodData ? extractProductHsn(prodData) : "") ||
               "";
-            const itemMrp = Number(l.mrp ?? pItem?.mrp ?? (prodData ? extractProductMrp(prodData) : 0) ?? 0);
+            const pItemAny = pItem as any;
+            const batchCand =
+              l.batch_no ||
+              l.batch_name ||
+              l.batchName ||
+              l.batch_number ||
+              pItemAny?.batch_no ||
+              pItemAny?.batch_name ||
+              pItemAny?.batchName ||
+              pItemAny?.batch_number ||
+              l.batchId ||
+              pItemAny?.batchId;
+            const itemMrp = Number(
+              l.mrp ??
+              pItem?.mrp ??
+              (prodData ? extractProductMrp(prodData, batchCand) : 0) ??
+              0
+            );
 
             return {
               ...l,
@@ -434,6 +452,12 @@ export const SaleInvoiceModal: React.FC<SaleInvoiceModalProps> = ({
               qty: Number(l.qty || pItem?.qty || 1),
               mrp: itemMrp > 0 ? itemMrp : (l.price ? Number(l.price) : 0),
               sellingPrice: Number(l.price || pItem?.price || 0),
+              batch_number: l.batch_number || l.batch_no || pItemAny?.batch_number || pItemAny?.batch_no || "",
+              batch_no: l.batch_no || l.batch_number || pItemAny?.batch_no || pItemAny?.batch_number || "",
+              batch_name: l.batch_name || l.batchName || pItemAny?.batch_name || pItemAny?.batchName || "",
+              batchName: l.batch_name || l.batchName || pItemAny?.batch_name || pItemAny?.batchName || "",
+              expiry_date: l.expiry_date || l.expiryDate || pItemAny?.expiry_date || pItemAny?.expiryDate || "",
+              expiryDate: l.expiry_date || l.expiryDate || pItemAny?.expiry_date || pItemAny?.expiryDate || "",
               hsn: itemHsn,
               hsn_code: itemHsn,
               hsnCode: itemHsn,

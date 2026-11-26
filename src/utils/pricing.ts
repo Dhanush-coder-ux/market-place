@@ -17,6 +17,8 @@ export interface ProductPricingInfo {
   sellingPrice: number; // Inclusive of GST
   gstRate: number;      // 0, 5, 12, 18, 28
   discountPercent?: number; // 0 - 99.99
+  discountType?: "price" | "percent" | string | null;
+  discountAmount?: number | null;
   offerValidUntil?: string | null;
   costPrice?: number;
   costGstMode?: 'inclusive' | 'exclusive';
@@ -172,9 +174,22 @@ export function calculateProductEffectivePrice(input: ProductPricingInfo & { isG
     }
   }
 
-  const discountPercent = !isOfferExpired && input.discountPercent ? Math.max(0, Math.min(99.99, Number(input.discountPercent))) : 0;
-  const discountAmount = Math.round((sellingPrice * discountPercent / 100) * 100) / 100;
-  const finalPrice = Math.round((sellingPrice - discountAmount) * 100) / 100;
+  let discountPercent = 0;
+  let discountAmount = 0;
+  const isAmountBased = (input.discountType === "price" || input.discountType === "amount") ||
+    (input.discountAmount !== undefined && input.discountAmount !== null && Number(input.discountAmount) > 0 && input.discountType !== "percent" && input.discountType !== "percentage");
+
+  if (!isOfferExpired) {
+    if (isAmountBased && input.discountAmount !== undefined && input.discountAmount !== null && Number(input.discountAmount) > 0) {
+      discountAmount = Math.min(sellingPrice, Math.max(0, Math.round(Number(input.discountAmount) * 100) / 100));
+      discountPercent = sellingPrice > 0 ? Math.round(((discountAmount / sellingPrice) * 100) * 100) / 100 : 0;
+    } else if (input.discountPercent) {
+      discountPercent = Math.max(0, Math.min(99.99, Number(input.discountPercent)));
+      discountAmount = Math.round((sellingPrice * discountPercent / 100) * 100) / 100;
+    }
+  }
+
+  const finalPrice = Math.round(Math.max(0, sellingPrice - discountAmount) * 100) / 100;
 
   // Selling price is ALWAYS inclusive of GST.
   // Tax split is extracted from the inclusive finalPrice (Rule 1).
@@ -212,6 +227,8 @@ export function calculateProductEffectivePrice(input: ProductPricingInfo & { isG
     sellingPrice,
     discountPercent,
     discountAmount,
+    discountType: isAmountBased ? "price" : "percent",
+    isAmountBased,
     finalPrice,
     effectivePrice: finalPrice,
     isOfferExpired,

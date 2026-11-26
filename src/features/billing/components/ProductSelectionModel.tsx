@@ -4,6 +4,7 @@ import { X, CheckCircle2, AlertCircle, Barcode, CalendarDays, ChevronRight, Arro
 import { InventoryItem, ProductVariant, cleanVariantLabel, formatVariantLabel } from "../types";
 import { AntBadge } from "@/components/ui/AntBadge";
 import { calculateDaysToExpiry, formatDate } from "@/features/inventory/components/StockTree";
+import { extractProductHsn } from "../utils/customFieldsHelper";
 
 const formatExpiryBadgeInfo = (dateStr?: string) => {
   if (!dateStr) return { text: '—', variant: 'ps-draft' };
@@ -99,6 +100,22 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
 
     const finalVariant = { ...activeV };
     const activeB = b !== undefined ? b : selectedBatch;
+
+    const resolvedHsn =
+      activeB?.hsn ||
+      activeB?.hsn_code ||
+      activeB?.hsnCode ||
+      (product as any)?.hsn ||
+      (product as any)?.hsn_code ||
+      (product as any)?.hsnCode ||
+      extractProductHsn(product) ||
+      extractProductHsn(activeB) ||
+      extractProductHsn(activeV) ||
+      "";
+    (finalVariant as any).hsn = resolvedHsn;
+    (finalVariant as any).hsn_code = resolvedHsn;
+    (finalVariant as any).hsnCode = resolvedHsn;
+    (finalVariant as any)._product = product;
 
     if (product?.batchTracking && activeB) {
       finalVariant.batchId = activeB.id || activeB.batchId || activeB._id;

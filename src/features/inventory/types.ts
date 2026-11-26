@@ -140,6 +140,9 @@ export interface UpdateInventoryPayload {
   reorder_point?: number;
   online_reorder_point?: number;
   custom_fields?: Record<string, any>;
+  additional_infos?: Record<string, any>;
+  additional_details?: Array<{ id: string; title: string; content: string }>;
+  return_policy?: any;
   visible_online?: boolean;
   is_active?: boolean;
 }

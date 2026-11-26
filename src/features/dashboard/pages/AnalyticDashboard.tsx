@@ -923,8 +923,11 @@ const AnalyticsDashboard = () => {
     purchasesStocksFromList,
     totalPurchaseReturnsCount,
   } = useMemo(() => {
+    // When date filtering is active (activeRange !== "all" or dateRange is set),
+    // strictly respect filteredPurchases so a period with 0 purchases correctly yields 0 spend and 0 GST.
+    const isDateFiltered = activeRange !== "all" || Boolean(dateRange?.start && dateRange?.end);
     let list = filteredPurchases;
-    if (list.length === 0 && purchasesList.length > 0) {
+    if (!isDateFiltered && list.length === 0 && purchasesList.length > 0) {
       list = selectedSupplier
         ? purchasesList.filter((p: any) => (p.supplier_id === selectedSupplier || p.supplier === selectedSupplier) && String(p?.status || "").toUpperCase() !== "CANCELLED" && String(p?.status || "").toUpperCase() !== "DRAFT")
         : purchasesList.filter((p: any) => String(p?.status || "").toUpperCase() !== "CANCELLED" && String(p?.status || "").toUpperCase() !== "DRAFT");
@@ -1028,7 +1031,7 @@ const AnalyticsDashboard = () => {
       purchasesStocksFromList: netStocks,
       totalPurchaseReturnsCount: returnsCount,
     };
-  }, [filteredPurchases, purchasesList, selectedSupplier]);
+  }, [filteredPurchases, purchasesList, selectedSupplier, activeRange, dateRange]);
 
   const isFiltered = activeRange !== "all";
 
@@ -1077,12 +1080,17 @@ const AnalyticsDashboard = () => {
   const transportCharges = Math.max(0, (allocatedSalesTransport || 0) + (salesTransportCharges || 0));
 
   // Input GST Claimed (ITC):
-  // Claimed back on purchases of sold items; if 0, fallback to period purchase GST
-  const purchaseGstClaimed = soldItemsInputGst > 0
-    ? soldItemsInputGst
-    : (totalPurchaseStocks > 0 && purchaseGstAmount > 0
-        ? (purchaseGstAmount / totalPurchaseStocks) * Math.max(1, totalOrders)
-        : (purchaseGstAmount > 0 ? purchaseGstAmount : 0));
+  // ITC claimed against sales only applies to goods actually sold in this period.
+  // If no sales were made (totalOrders === 0, netRevenue === 0, or filteredOrders is empty),
+  // purchaseGstClaimed against sales MUST BE 0.
+  const hasNoSales = totalOrders === 0 || netRevenue === 0 || (ordersList.length > 0 && filteredOrders.length === 0);
+  const purchaseGstClaimed = hasNoSales
+    ? 0
+    : soldItemsInputGst > 0
+      ? soldItemsInputGst
+      : (totalPurchaseStocks > 0 && purchaseGstAmount > 0
+          ? Math.min(purchaseGstAmount, (purchaseGstAmount / totalPurchaseStocks) * totalOrders)
+          : (purchaseGstAmount > 0 ? purchaseGstAmount : 0));
 
   const canClaimItc = isGstReg;
   const itcAmount = canClaimItc ? purchaseGstClaimed : 0;
@@ -1095,8 +1103,19 @@ const AnalyticsDashboard = () => {
 
   // Current sales-based Input GST (ITC on sold units)
   const salesBasedPurchaseGst = isGstReg ? itcAmount : 0;
-  const netGstPayable = isGstReg ? Math.max(0, salesGstAmount - salesBasedPurchaseGst) : 0;
-  const itcSurplus = isGstReg ? Math.max(0, salesBasedPurchaseGst - salesGstAmount) : 0;
+  // When no sales occurred and salesGstAmount === 0:
+  // Net GST payable is 0.
+  // itcSurplus accurately reflects whether there was actual purchase GST in that period or 0.
+  const netGstPayable = isGstReg
+    ? (hasNoSales && salesGstAmount === 0
+        ? 0
+        : Math.max(0, salesGstAmount - salesBasedPurchaseGst))
+    : 0;
+  const itcSurplus = isGstReg
+    ? (hasNoSales && salesGstAmount === 0
+        ? (purchaseGstAmount > 0 ? purchaseGstAmount : 0)
+        : Math.max(0, salesBasedPurchaseGst - salesGstAmount))
+    : 0;
 
   // For non-GST registered sellers, Gross and Net are identical (Selling - Cost - Charges = ₹10.00).
   const totalProfit = !isGstReg

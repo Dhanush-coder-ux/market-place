@@ -673,6 +673,59 @@ export default function StockMovementPage() {
       return t ? t.toUpperCase() : "ADJUSTMENT";
     };
 
+    const resolveMovementUser = (a: any, finalType?: string): string => {
+      const typeStr = String(finalType || a?.movement_type || a?.type || "").toUpperCase();
+      const descStr = String(a?.description || "").toLowerCase();
+      const addedByStr = String(a?.added_by || "");
+      const roleStr = String(a?.user_info?.role || a?.role || "").toLowerCase();
+      const originStr = String(a?.additional_infos?.origin || a?.origin || "").toUpperCase();
+
+      const isOnlineOrder =
+        typeStr.includes("ONLINE") ||
+        descStr.includes("online") ||
+        addedByStr.includes("(Online)") ||
+        roleStr === "customer" ||
+        originStr.includes("ONLINE");
+
+      const acceptedBy =
+        a?.accepted_by ||
+        a?.additional_infos?.accepted_by ||
+        a?.status_updated_by ||
+        a?.additional_infos?.status_updated_by ||
+        a?.additional_infos?.order_accepted_by ||
+        a?.additional_infos?.executed_by ||
+        a?.executed_by;
+
+      if (isOnlineOrder) {
+        if (acceptedBy && String(acceptedBy).trim() && !String(acceptedBy).includes("(Online)")) {
+          return String(acceptedBy);
+        }
+        // If not accepted yet or fallback, avoid customer name and show Staff / Merchant or System
+        if (
+          addedByStr &&
+          !addedByStr.includes("(Online)") &&
+          roleStr !== "customer" &&
+          addedByStr.toLowerCase() !== "customer" &&
+          addedByStr.toLowerCase() !== "system" &&
+          !descStr.includes(addedByStr.toLowerCase())
+        ) {
+          return addedByStr;
+        }
+        return "Staff / Merchant";
+      }
+
+      return String(
+        acceptedBy ||
+        a?.added_by ||
+        a?.user_name ||
+        a?.user_info?.name ||
+        a?.user ||
+        a?.executed_by ||
+        a?.performed_by ||
+        "System"
+      );
+    };
+
     const adjMovements: Movement[] = aData.map((a: any) => {
       const finalType = mapType(a.movement_type || a.type || "");
       const dateStr = String(a.created_at || a.adjusted_date || a.date || a.updated_at || new Date().toISOString());
@@ -739,7 +792,7 @@ export default function StockMovementPage() {
         ref: a.ui_id ? `REF-${a.ui_id}` : (smId?.slice(0, 8).toUpperCase() || "—"),
         date: dateStr,
         status: "Completed" as StatusType,
-        user: String(a.added_by || a.user_name || a.user_info?.name || a.user || a.executed_by || a.performed_by || "System"),
+        user: resolveMovementUser(a, finalType),
         notes: a.description || "",
         variant: firstItem.variant,
         batch: firstItem.batch,

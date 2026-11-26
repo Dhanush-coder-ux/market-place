@@ -11,7 +11,7 @@ import { inventoryApi } from "@/services/api/inventory";
 import { SHOP_ID, getShopId } from "@/services/endpoints";
 import { isShopGstRegistered, calculateTaxSplit } from "@/utils/pricing";
 import { calculateDaysToExpiry, formatDate } from "@/features/inventory/components/StockTree";
-import { getActiveCustomFields, extractItemAttributeValue, extractProductHsn, extractProductMrp } from "../utils/customFieldsHelper";
+import { getActiveCustomFields, extractItemAttributeValue, extractProductHsn, extractProductMrp, extractProductGstRate } from "../utils/customFieldsHelper";
 
 interface BillingTableProps {
   items: BillingItem[];
@@ -290,7 +290,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange, onBac
           has_batch: hasBatches,
           isBatchProduct: isBatchProduct,
           isStockTracked: p.have_tracking !== false && p.is_stock_tracked !== false && p.track_stock !== false && p.type !== "service",
-          gst: parseInt(String(p.gst || p.datas?.gst || "18").replace("%", ""))
+          gst: extractProductGstRate(p)
         };
       });
       setSearchResults(mapped);
@@ -474,7 +474,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange, onBac
 
     let costPriceVal: number | undefined = undefined;
     if (rawCost > 0) {
-      const prodGst = parseInt(String((variant as any).gst || (variant as any).datas?.gst || targetProduct.gst || "0").replace(/[^0-9.]/g, "")) || 0;
+      const prodGst = extractProductGstRate(variant) || extractProductGstRate(targetProduct);
       if (isCostInclusive) {
         costPriceVal = rawCost;
       } else {
@@ -488,8 +488,13 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange, onBac
       extractProductHsn(targetProduct) ||
       (variant as any)?.hsn ||
       (variant as any)?.hsn_code ||
+      (variant as any)?.hsnCode ||
       targetProduct.hsn ||
       targetProduct.hsn_code ||
+      targetProduct.hsnCode ||
+      targetProduct.datas?.hsn ||
+      targetProduct.datas?.hsn_code ||
+      targetProduct.datas?.tax_infos?.hsn ||
       "";
 
     if (existingIndex !== -1) {
@@ -509,7 +514,8 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange, onBac
             hsn_code: item.hsn_code || itemHsn,
             hsnCode: item.hsnCode || itemHsn,
             mrp: item.mrp || mrpVal,
-            _product: item._product || targetProduct,
+            gst: item.gst || extractProductGstRate(variant) || extractProductGstRate(targetProduct),
+            _product: item._product || (variant as any)?._product || targetProduct,
           };
         }
         return item;
@@ -547,11 +553,11 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange, onBac
           manufacturingDate: variant.manufacturingDate || targetProduct.manufacturingDate,
           expiryDate: variant.expiryDate || selectedBatchObj?.expiryDate || selectedBatchObj?.expiry_date || targetProduct.expiryDate || targetProduct.expiry_date || "",
           maxStock: targetProduct.isStockTracked !== false ? variant.stock : undefined,
-          gst: parseInt(String((variant as any).gst || (variant as any).datas?.gst || targetProduct.gst || "0").replace(/[^0-9.]/g, "")) || 0,
+          gst: extractProductGstRate(variant) || extractProductGstRate(targetProduct),
           unitInfos: targetProduct.unitInfos,
           selectedUnit: targetProduct.unitInfos?.name || null,
           factor: 1,
-          _product: targetProduct,
+          _product: (variant as any)?._product || targetProduct,
         }
       ];
     }
@@ -709,7 +715,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange, onBac
         batchId: fullProduct.batch_infos?.[0]?.id || fullProduct.batches?.[0]?.id,
         unitInfos: fullProduct.unit_infos || fullProduct.unit,
         isStockTracked: fullProduct.have_tracking !== false && fullProduct.is_stock_tracked !== false && fullProduct.track_stock !== false && fullProduct.type !== "service",
-        gst: parseInt(String(fullProduct.gst || fullProduct.datas?.gst || "18").replace("%", ""))
+        gst: extractProductGstRate(fullProduct)
       };
 
       const hasVariants = pMapped.variants && pMapped.variants.length > 0;
@@ -759,7 +765,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange, onBac
         );
         let costPriceVal: number | undefined = undefined;
         if (rawCost > 0) {
-          const prodGst = parseInt(String(fullProduct.gst || fullProduct.datas?.gst || "0").replace(/[^0-9.]/g, "")) || 0;
+          const prodGst = extractProductGstRate(fullProduct);
           if (isCostInclusive) {
             costPriceVal = rawCost;
           } else {
@@ -773,6 +779,13 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange, onBac
           extractProductHsn(fullProduct) ||
           pMapped.hsn ||
           pMapped.hsn_code ||
+          pMapped.hsnCode ||
+          fullProduct.hsn ||
+          fullProduct.hsn_code ||
+          fullProduct.hsnCode ||
+          fullProduct.datas?.hsn ||
+          fullProduct.datas?.hsn_code ||
+          fullProduct.datas?.tax_infos?.hsn ||
           "";
 
         if (existingIndex !== -1) {
@@ -790,6 +803,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange, onBac
                 hsn_code: item.hsn_code || quickHsn,
                 hsnCode: item.hsnCode || quickHsn,
                 mrp: item.mrp || mrpVal,
+                gst: item.gst || extractProductGstRate(pMapped),
                 _product: item._product || pMapped,
               };
             }
@@ -893,6 +907,10 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange, onBac
               expiryDate: foundBatch.expiry_date || foundBatch.expiryDate,
               manufacturingDate: foundBatch.manufacturing_date || foundBatch.manufacturingDate,
               batch_no: foundBatch.batch_no || foundBatch.name || foundBatch.batch,
+              hsn: foundBatch.hsn || foundBatch.hsn_code || foundBatch.hsnCode || pMapped.hsn || pMapped.hsn_code || extractProductHsn(foundBatch) || extractProductHsn(pMapped),
+              hsn_code: foundBatch.hsn_code || foundBatch.hsn || foundBatch.hsnCode || pMapped.hsn_code || pMapped.hsn || extractProductHsn(foundBatch) || extractProductHsn(pMapped),
+              hsnCode: foundBatch.hsnCode || foundBatch.hsn || foundBatch.hsn_code || pMapped.hsnCode || extractProductHsn(foundBatch) || extractProductHsn(pMapped),
+              _product: pMapped,
             };
           }
         }
@@ -1361,11 +1379,15 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange, onBac
                             {cleanVariantLabel(variantName)}
                           </AntBadge>
                         )}
-                        {item.gst !== undefined && (
-                          <AntBadge variant="lb-gst" type="tag" icon={<Tag size={10} className="mr-1 inline" />}>
-                            GST {item.gst}%
-                          </AntBadge>
-                        )}
+                        {(() => {
+                          const effectiveGst = extractProductGstRate(item._product) || (typeof item.gst === 'number' ? item.gst : 0);
+                          if (effectiveGst <= 0) return null;
+                          return (
+                            <AntBadge variant="lb-gst" type="tag" icon={<Tag size={10} className="mr-1 inline" />}>
+                              GST {effectiveGst}%
+                            </AntBadge>
+                          );
+                        })()}
                         {item.mrp && item.mrp > item.price && (
                           <span className="text-[10px] text-slate-400 font-medium line-through">
                             MRP ₹{item.mrp.toFixed(2)}
@@ -1577,7 +1599,7 @@ const BillingTable: React.FC<BillingTableProps> = ({ items, onItemsChange, onBac
                     {/* Unit Price Display */}
                     {(() => {
                       const isGstReg = isShopGstRegistered();
-                      const rawGstRate = typeof item.gst === 'number' ? item.gst : (parseFloat(String(item.gst || '18').replace(/[^0-9.]/g, '')) || 0);
+                      const rawGstRate = extractProductGstRate(item._product) || (typeof item.gst === 'number' ? item.gst : 0);
                       const gstRate = isGstReg ? rawGstRate : 0;
                       const prodDiscPct = item.productDiscountPercent || 0;
                       const prodDiscPerUnit = item.price * (prodDiscPct / 100);

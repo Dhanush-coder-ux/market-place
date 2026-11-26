@@ -36,6 +36,7 @@ export interface VariantCombination {
   sku: string;
   price: string;
   buy_price: string;
+  online_sell_price?: number;
   mrp: string;
   discount_type?: "price" | "percent";
   discount_value?: string;

@@ -37,8 +37,16 @@ export const utilityApi = {
     return await apiClient.get(`${ENDPOINTS.SHOP_CATEGORIES}/by/id/${shopId}/${id}`);
   },
 
-  initShopCategories: async (shopId: string) => {
-    return await apiClient.post(`${ENDPOINTS.SHOP_CATEGORIES}/${shopId}`, {});
+  getPredefinedShopCategories: async () => {
+    return await apiClient.get(`${ENDPOINTS.SHOP_CATEGORIES}/predefined`);
+  },
+
+  initShopCategories: async (shopId: string, categories?: string[]) => {
+    return await apiClient.post(`${ENDPOINTS.SHOP_CATEGORIES}/${shopId}`, { categories: categories || [] });
+  },
+
+  syncShopCategories: async (shopId: string, categories: string[]) => {
+    return await apiClient.post(`${ENDPOINTS.SHOP_CATEGORIES}/${shopId}`, { categories: categories || [] });
   },
 
   // ── Shop Units ───────────────────────────────────────────────────────────────

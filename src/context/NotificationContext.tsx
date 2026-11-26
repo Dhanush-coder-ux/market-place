@@ -1,8 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback, ReactNode } from "react";
 import { notificationApi, NotificationItem, NotificationCreate } from "@/services/api/notification";
 import { 
-  isProductionEnvironment, 
-  isDigitalStoreNotification, 
+  isProductionEnvironment,
   filterNotificationsByEnvironment, 
   getEnvironmentName 
 } from "@/utils/notificationFilter";
@@ -190,10 +189,6 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
           try {
             const data: NotificationItem = JSON.parse(event.data);
-            // Environment check: In production, allow ONLY digital store related notifications
-            if (isProductionEnvironment() && !isDigitalStoreNotification(data)) {
-              return;
-            }
             if (data && (data.title || data.message)) {
               // Add to state if not already present
               setNotifications((prev) => {

@@ -21,6 +21,7 @@ const normalizeItems = (res: any): ListItem[] => {
     ? data
     : data?.datas ?? data?.items ?? data?.results ?? [];
 
+  const seen = new Set<string>();
   return (Array.isArray(rawItems) ? rawItems : [])
     .map((item: any) => ({
       id: String(item.id ?? item.datas?.id ?? ""),
@@ -28,7 +29,13 @@ const normalizeItems = (res: any): ListItem[] => {
       shortName: item.short_name ?? item.datas?.short_name,
       isDefault: item.is_default ?? item.datas?.is_default ?? false,
     }))
-    .filter((item: ListItem) => item.id && item.name);
+    .filter((item: ListItem) => {
+      if (!item.id || !item.name) return false;
+      const key = item.name.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 };
 
 export const CustomListSettings: React.FC<CustomListSettingsProps> = ({ type }) => {
@@ -82,7 +89,8 @@ export const CustomListSettings: React.FC<CustomListSettingsProps> = ({ type }) 
         setItems((prev) => {
           if (append) {
             const existingIds = new Set(prev.map((i) => i.id));
-            const newUnique = norm.filter((i) => !existingIds.has(i.id));
+            const existingNames = new Set(prev.map((i) => i.name.toLowerCase()));
+            const newUnique = norm.filter((i) => !existingIds.has(i.id) && !existingNames.has(i.name.toLowerCase()));
             return [...prev, ...newUnique];
           }
           return norm;

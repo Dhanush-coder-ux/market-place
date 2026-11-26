@@ -15,7 +15,7 @@ import {
   MoreVertical, GripVertical, Trash2,
   ChevronLeft, ChevronRight,
 } from "lucide-react";
-import { inventoryApi, inventoryCustomFieldsApi } from "../../../services/api/inventory";
+import { inventoryApi } from "../../../services/api/inventory";
 import { SHOP_ID } from "../../../services/endpoints";
 import { useToast } from "../../../context/ToastContext";
 import { RightSidebarFilter } from "@/components/common/RightSidebarFilter";
@@ -23,6 +23,12 @@ import { useNavigate } from "react-router-dom";
 import { DigitalStoreActionBar } from "../components/DigitalStoreActionBar";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+export interface AdditionalSection {
+  id: string;
+  title: string;
+  content: string;
+}
+
 interface Product {
   id: string;
   name: string;
@@ -30,6 +36,10 @@ interface Product {
   price: number;
   buyPrice?: number;
   onlineSellPrice?: number;
+  mrp?: number;
+  discountPercent?: number;
+  discountType?: "price" | "percent";
+  discountAmount?: number;
   stock: number;
   category: string;
   status: "Active" | "Out of Stock" | "Draft";
@@ -48,6 +58,7 @@ interface Product {
   gst: string;
   isActive: boolean;
   haveTracking?: boolean;
+  additionalDetails?: AdditionalSection[];
   returnPolicy?: {
     type?: string;
     title?: string;
@@ -60,6 +71,32 @@ interface Product {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+export const round2 = (val: number | string | undefined | null): number => {
+  if (val === undefined || val === null || val === "") return 0;
+  const num = Number(val);
+  if (isNaN(num)) return 0;
+  return Math.round((num + Number.EPSILON) * 100) / 100;
+};
+
+export function productHasImage(product?: { image?: string; images?: string[]; image_url?: string[] | string; raw?: any }): boolean {
+  if (!product) return false;
+  const isValid = (img?: any): boolean => {
+    if (!img || typeof img !== "string") return false;
+    const clean = img.trim();
+    return clean !== "" && !clean.includes("placehold.co") && !clean.includes("placeholder");
+  };
+  if (isValid(product.image)) return true;
+  if (Array.isArray(product.images) && product.images.some(isValid)) return true;
+  if (Array.isArray(product.image_url) && product.image_url.some(isValid)) return true;
+  if (typeof product.image_url === "string" && isValid(product.image_url)) return true;
+  const raw = product.raw;
+  if (raw) {
+    if (Array.isArray(raw.image_url) && raw.image_url.some(isValid)) return true;
+    if (typeof raw.image_url === "string" && isValid(raw.image_url)) return true;
+    if (Array.isArray(raw.images) && raw.images.some(isValid)) return true;
+  }
+  return false;
+}
 
 const POLICY_OPTIONS = [
   {
@@ -97,13 +134,18 @@ function stockStyle(stock: number, haveTracking: boolean = true): { textColor: s
 }
 
 // ─── Visibility Toggle ────────────────────────────────────────────────────────
-function AppVisibilityToggle({ visible, onChange, loading }: { visible: boolean; onChange: () => void; loading?: boolean }) {
+function AppVisibilityToggle({ visible, onChange, loading, hasImage = true }: { visible: boolean; onChange: () => void; loading?: boolean; hasImage?: boolean }) {
+  const isEnablingDisabled = !visible && !hasImage;
+  const tooltipText = isEnablingDisabled
+    ? "Product must have at least 1 image to be enabled on the digital store"
+    : (visible ? "Visible on app — click to hide" : "Hidden from app — click to show");
+
   return (
     <button
-      onClick={(e) => { e.stopPropagation(); if (!loading) onChange(); }}
-      disabled={loading}
-      title={visible ? "Visible on app — click to hide" : "Hidden from app — click to show"}
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-[12px] font-medium transition-all cursor-pointer disabled:opacity-50 ${visible
+      onClick={(e) => { e.stopPropagation(); if (!loading && !isEnablingDisabled) onChange(); }}
+      disabled={loading || isEnablingDisabled}
+      title={tooltipText}
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-[12px] font-medium transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${visible
         ? "bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100"
         : "bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100"
         }`}
@@ -260,8 +302,8 @@ function ProductCard({
 
         {/* Actions */}
         <div className="flex items-center justify-between gap-2">
-          <AppVisibilityToggle visible={product.visibleOnApp} onChange={onToggleVisibility} loading={actionLoading} />
-          <CardMoreMenu onEdit={onEdit} onToggleVisibility={onToggleVisibility} visible={product.visibleOnApp} actionLoading={actionLoading} />
+          <AppVisibilityToggle visible={product.visibleOnApp} onChange={onToggleVisibility} loading={actionLoading} hasImage={productHasImage(product)} />
+          <CardMoreMenu onEdit={onEdit} onToggleVisibility={onToggleVisibility} visible={product.visibleOnApp} actionLoading={actionLoading} hasImage={productHasImage(product)} />
         </div>
       </div>
     </div>
@@ -380,12 +422,12 @@ function ProductRow({
 
       {/* Visibility */}
       <td className="px-4 py-4 border-b border-slate-200">
-        <AppVisibilityToggle visible={product.visibleOnApp} onChange={onToggleVisibility} loading={actionLoading} />
+        <AppVisibilityToggle visible={product.visibleOnApp} onChange={onToggleVisibility} loading={actionLoading} hasImage={productHasImage(product)} />
       </td>
 
       {/* Actions */}
       <td className="px-4 py-4 border-b border-slate-200 text-right sticky right-0 bg-white group-hover:bg-slate-50 border-l border-slate-200 z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] transition-colors whitespace-nowrap">
-        <RowMoreMenu onEdit={onEdit} onToggleVisibility={onToggleVisibility} visible={product.visibleOnApp} actionLoading={actionLoading} />
+        <RowMoreMenu onEdit={onEdit} onToggleVisibility={onToggleVisibility} visible={product.visibleOnApp} actionLoading={actionLoading} hasImage={productHasImage(product)} />
       </td>
     </tr>
   );
@@ -397,12 +439,15 @@ function RowMoreMenu({
   onToggleVisibility,
   visible,
   actionLoading,
+  hasImage = true,
 }: {
   onEdit: () => void;
   onToggleVisibility: () => void;
   visible: boolean;
   actionLoading?: boolean;
+  hasImage?: boolean;
 }) {
+  const isEnablingDisabled = !visible && !hasImage;
   return (
     <div className="flex justify-end">
       <DropdownMenu>
@@ -419,8 +464,9 @@ function RowMoreMenu({
 
           <DropdownMenuItem
             onClick={onToggleVisibility}
-            disabled={actionLoading}
-            className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 cursor-pointer rounded-lg transition-colors disabled:opacity-50"
+            disabled={actionLoading || isEnablingDisabled}
+            title={isEnablingDisabled ? "Product must have at least 1 image to be enabled on the digital store" : undefined}
+            className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 cursor-pointer rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {visible ? (
               <>
@@ -454,12 +500,15 @@ function CardMoreMenu({
   onToggleVisibility,
   visible,
   actionLoading,
+  hasImage = true,
 }: {
   onEdit: () => void;
   onToggleVisibility: () => void;
   visible: boolean;
   actionLoading?: boolean;
+  hasImage?: boolean;
 }) {
+  const isEnablingDisabled = !visible && !hasImage;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -475,8 +524,9 @@ function CardMoreMenu({
 
         <DropdownMenuItem
           onClick={onToggleVisibility}
-          disabled={actionLoading}
-          className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 cursor-pointer rounded-lg transition-colors disabled:opacity-50"
+          disabled={actionLoading || isEnablingDisabled}
+          title={isEnablingDisabled ? "Product must have at least 1 image to be enabled on the digital store" : undefined}
+          className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 cursor-pointer rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {visible ? (
             <>
@@ -522,7 +572,6 @@ const ProductDashboard = () => {
 
   // Custom Field / Edit Modal State
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [shopFields, setShopFields] = useState<any[]>([]);
   const [savingProduct, setSavingProduct] = useState(false);
 
   // Additional Details State
@@ -587,30 +636,49 @@ const ProductDashboard = () => {
         let price = 0;
         let buyPrice = 0;
         let onlineSellPrice = 0;
+        let mrp: number | undefined = undefined;
+        let discountPercent: number | undefined = undefined;
+        let discountType: "price" | "percent" | undefined = undefined;
+        let discountAmount: number | undefined = undefined;
 
         if (hasBatch && Array.isArray(p.batch_infos) && p.batch_infos.length > 0) {
           totalStock = p.batch_infos.reduce((sum: number, b: any) => {
             return sum + (b.stock_infos?.available_stocks ?? b.stock_infos?.physical_stocks ?? 0);
           }, 0);
           const batchWithPrice = p.batch_infos.find((b: any) => b.pricing_infos?.sell_price);
-          price = batchWithPrice?.pricing_infos?.sell_price ?? 0;
-          buyPrice = batchWithPrice?.pricing_infos?.buy_price ?? 0;
-          onlineSellPrice = batchWithPrice?.pricing_infos?.online_sell_price ?? price;
+          price = round2(batchWithPrice?.pricing_infos?.sell_price ?? 0);
+          buyPrice = round2(batchWithPrice?.pricing_infos?.buy_price ?? 0);
+          onlineSellPrice = round2(batchWithPrice?.pricing_infos?.online_sell_price ?? price);
+          mrp = batchWithPrice?.pricing_infos?.mrp ?? p.pricing_infos?.mrp ?? p.mrp;
+          discountPercent = batchWithPrice?.pricing_infos?.discount_percent ?? p.pricing_infos?.discount_percent ?? p.discount_percent;
+          discountType = batchWithPrice?.pricing_infos?.discount_type ?? batchWithPrice?.pricing_infos?.additional_infos?.discount_type ?? p.pricing_infos?.discount_type ?? p.pricing_infos?.additional_infos?.discount_type ?? p.discount_type;
+          discountAmount = batchWithPrice?.pricing_infos?.discount_amount ?? batchWithPrice?.pricing_infos?.additional_infos?.discount_amount ?? p.pricing_infos?.discount_amount ?? p.pricing_infos?.additional_infos?.discount_amount ?? p.discount_amount;
         } else if (hasVariant && p.variants && typeof p.variants === "object") {
           const variantList = Object.values(p.variants) as any[];
           totalStock = variantList.reduce((sum: number, v: any) => {
             return sum + (v.stock_infos?.available_stocks ?? v.stock_infos?.physical_stocks ?? 0);
           }, 0);
           const variantWithPrice = variantList.find((v: any) => v.pricing_infos?.sell_price);
-          price = variantWithPrice?.pricing_infos?.sell_price ?? 0;
-          buyPrice = variantWithPrice?.pricing_infos?.buy_price ?? 0;
-          onlineSellPrice = variantWithPrice?.pricing_infos?.online_sell_price ?? price;
+          price = round2(variantWithPrice?.pricing_infos?.sell_price ?? 0);
+          buyPrice = round2(variantWithPrice?.pricing_infos?.buy_price ?? 0);
+          onlineSellPrice = round2(variantWithPrice?.pricing_infos?.online_sell_price ?? price);
+          mrp = variantWithPrice?.pricing_infos?.mrp ?? p.pricing_infos?.mrp ?? p.mrp;
+          discountPercent = variantWithPrice?.pricing_infos?.discount_percent ?? p.pricing_infos?.discount_percent ?? p.discount_percent;
+          discountType = variantWithPrice?.pricing_infos?.discount_type ?? variantWithPrice?.pricing_infos?.additional_infos?.discount_type ?? p.pricing_infos?.discount_type ?? p.pricing_infos?.additional_infos?.discount_type ?? p.discount_type;
+          discountAmount = variantWithPrice?.pricing_infos?.discount_amount ?? variantWithPrice?.pricing_infos?.additional_infos?.discount_amount ?? p.pricing_infos?.discount_amount ?? p.pricing_infos?.additional_infos?.discount_amount ?? p.discount_amount;
         } else {
           totalStock = p.stock_infos?.available_stocks ?? p.stock_infos?.physical_stocks ?? 0;
-          price = p.pricing_infos?.sell_price ?? p.sell_price ?? 0;
-          buyPrice = p.pricing_infos?.buy_price ?? p.buy_price ?? 0;
-          onlineSellPrice = p.pricing_infos?.online_sell_price ?? p.online_sell_price ?? price;
+          price = round2(p.pricing_infos?.sell_price ?? p.sell_price ?? 0);
+          buyPrice = round2(p.pricing_infos?.buy_price ?? p.buy_price ?? 0);
+          onlineSellPrice = round2(p.pricing_infos?.online_sell_price ?? p.online_sell_price ?? price);
+          mrp = p.pricing_infos?.mrp ?? p.mrp ?? p.pricing_infos?.additional_infos?.mrp ?? p.additional_infos?.mrp ?? p.custom_fields?.mrp;
+          discountPercent = p.pricing_infos?.discount_percent ?? p.discount_percent ?? p.pricing_infos?.additional_infos?.discount_percent ?? p.additional_infos?.discount_percent ?? p.custom_fields?.discount_percent;
+          discountType = p.pricing_infos?.discount_type ?? p.pricing_infos?.additional_infos?.discount_type ?? p.discount_type ?? p.additional_infos?.discount_type ?? p.custom_fields?.discount_type;
+          discountAmount = p.pricing_infos?.discount_amount ?? p.pricing_infos?.additional_infos?.discount_amount ?? p.discount_amount ?? p.additional_infos?.discount_amount ?? p.custom_fields?.discount_amount;
         }
+
+        const numMrp = mrp !== undefined && mrp !== null && !isNaN(Number(mrp)) && Number(mrp) > 0 ? round2(mrp) : undefined;
+        const numDisc = discountPercent !== undefined && discountPercent !== null && !isNaN(Number(discountPercent)) && Number(discountPercent) > 0 ? round2(discountPercent) : undefined;
 
         const batchCount = Array.isArray(p.batch_infos) ? p.batch_infos.length : 0;
         const variantCount = p.variants && typeof p.variants === "object" ? Object.keys(p.variants).length : 0;
@@ -627,6 +695,25 @@ const ProductDashboard = () => {
           }
         }
 
+        // Product-specific additional details (isolated from global custom fields)
+        const rawDetails = p.additional_infos?.additional_details ?? p.additional_details;
+        let additionalDetails: AdditionalSection[] = [];
+        if (Array.isArray(rawDetails)) {
+          additionalDetails = rawDetails
+            .filter((sec: any) => sec && typeof sec === "object")
+            .map((sec: any, idx: number) => ({
+              id: String(sec.id || Date.now() + idx),
+              title: String(sec.title || sec.name || sec.key || ""),
+              content: String(sec.content || sec.value || ""),
+            }));
+        } else if (rawDetails && typeof rawDetails === "object") {
+          additionalDetails = Object.entries(rawDetails).map(([key, val], idx) => ({
+            id: String(Date.now() + idx),
+            title: key,
+            content: String(val ?? ""),
+          }));
+        }
+
         return {
           id: p.id,
           name: p.name || "Unnamed Product",
@@ -635,6 +722,10 @@ const ProductDashboard = () => {
           price,
           buyPrice,
           onlineSellPrice,
+          mrp: numMrp,
+          discountPercent: numDisc,
+          discountType: (discountType === "price" || discountType === "percent") ? discountType : undefined,
+          discountAmount: discountAmount !== undefined && discountAmount !== null && !isNaN(Number(discountAmount)) && Number(discountAmount) > 0 ? round2(discountAmount) : undefined,
           stock: Math.floor(totalStock),
           category: p.category_infos?.name || p.category_id || "Uncategorized",
           status: !p.is_active ? "Draft" : (p.have_tracking !== false && totalStock === 0) ? "Out of Stock" : "Active",
@@ -653,6 +744,7 @@ const ProductDashboard = () => {
           gst: p.gst || "0%",
           isActive: p.is_active ?? true,
           haveTracking: p.have_tracking ?? true,
+          additionalDetails,
           raw: p,
         };
       });
@@ -674,9 +766,6 @@ const ProductDashboard = () => {
 
   useEffect(() => { 
     loadProducts(1, limit); 
-    inventoryCustomFieldsApi.getAllFields(SHOP_ID).then((res) => {
-      setShopFields(res);
-    }).catch(console.error);
   }, []);
 
   const handlePrevPage = () => {
@@ -706,78 +795,31 @@ const ProductDashboard = () => {
     return Array.from(cats);
   }, [products]);
 
-  const loadCustomFieldsForProduct = async (product: Product, currentShopFields: any[]) => {
-    try {
-      const values = await inventoryCustomFieldsApi.getValuesByProduct(SHOP_ID, product.id);
-      const sections = values.map((v, i) => {
-        const field = currentShopFields.find(f => f.id === v.field_id);
-        return {
-          id: Date.now().toString() + i,
-          title: field?.label_name || "",
-          content: v.value
-        };
-      });
-      setAdditionalSections(sections.slice(0, 3));
-    } catch (err) {
-      console.error(err);
-      showToast("Error loading custom fields", "error");
-      setAdditionalSections([]);
-    }
-  };
-
   const handleOpenEdit = (product: Product) => {
     setEditingProduct(product);
-    setAdditionalSections([]);
     const existingPolicy = product.returnPolicy || {};
     setProductPolicyType(existingPolicy.type || "store_default");
     setProductPolicyDetails(existingPolicy.details || existingPolicy.subtitle || "");
-    loadCustomFieldsForProduct(product, shopFields);
+    const details = product.additionalDetails || [];
+    setAdditionalSections(details.slice(0, 3));
   };
-
-
 
   const handleSaveProduct = async () => {
     if (!editingProduct) return;
     try {
       setSavingProduct(true);
-      
-      let currentShopFields = [...shopFields];
-      
-      const missingFields = additionalSections.filter(sec => 
-        sec.title.trim() && !currentShopFields.find(f => f.label_name.toLowerCase() === sec.title.trim().toLowerCase())
-      );
 
-      if (missingFields.length > 0) {
-        await inventoryCustomFieldsApi.createField({
-          shop_id: SHOP_ID,
-          field_infos: missingFields.map(sec => ({
-            field_name: sec.title.trim().toLowerCase().replace(/\s+/g, '_'),
-            label_name: sec.title.trim(),
-            type: "text",
-            visible_online: true
-          }))
-        });
-        
-        currentShopFields = await inventoryCustomFieldsApi.getAllFields(SHOP_ID);
-        setShopFields(currentShopFields);
-      }
-
-      const valuesToSave = additionalSections
+      const cleanedDetails = additionalSections
         .filter(sec => sec.title.trim() && sec.content.trim())
-        .map(sec => {
-          const field = currentShopFields.find(f => f.label_name.toLowerCase() === sec.title.trim().toLowerCase());
-          return field ? { field_id: field.id, value: sec.content.trim() } : null;
-        })
-        .filter(Boolean) as { field_id: string; value: string }[];
+        .map(sec => ({
+          id: sec.id,
+          title: sec.title.trim(),
+          content: sec.content.trim()
+        }));
 
-      if (valuesToSave.length > 0) {
-        await inventoryCustomFieldsApi.bulkUpsertValues({
-          shop_id: SHOP_ID,
-          product_id: editingProduct.id,
-          values: valuesToSave,
-        });
-      }
-      const onlinePrice = editingProduct.onlineSellPrice !== undefined ? editingProduct.onlineSellPrice : editingProduct.price;
+      const onlinePrice = editingProduct.onlineSellPrice !== undefined 
+        ? round2(editingProduct.onlineSellPrice) 
+        : round2(editingProduct.price);
       
       let returnPolicyToSave = null;
       if (productPolicyType !== "store_default") {
@@ -823,6 +865,12 @@ const ProductDashboard = () => {
         };
       }
 
+      if (editingProduct.visibleOnApp && !productHasImage(editingProduct)) {
+        showToast("Product must have at least 1 image to be enabled on the digital store", "error");
+        setSavingProduct(false);
+        return;
+      }
+
       await inventoryApi.updateInventory({
         id: editingProduct.id,
         shop_id: SHOP_ID,
@@ -830,10 +878,15 @@ const ProductDashboard = () => {
         description: editingProduct.description,
         online_sell_price: onlinePrice,
         return_policy: returnPolicyToSave,
+        additional_details: cleanedDetails,
+        additional_infos: {
+          ...(editingProduct.raw?.additional_infos || {}),
+          additional_details: cleanedDetails,
+        }
       } as any);
       showToast("Product updated successfully", "success");
       setEditingProduct(null);
-      loadProducts();
+      loadProducts(page, limit);
     } catch (err) {
       console.error(err);
       showToast("Error updating product details", "error");
@@ -863,6 +916,13 @@ const ProductDashboard = () => {
   const toggleVisibility = async (id: string) => {
     const current = products.find((p) => p.id === id);
     if (!current) return;
+
+    const hasImage = current.image && current.image.trim() !== "" && !current.image.includes("placehold.co") && !current.image.includes("placeholder");
+    if (!current.visibleOnApp && !hasImage) {
+      showToast("Product must have at least 1 image to be enabled on the digital store", "error");
+      return;
+    }
+
     try {
       setTogglingId(id);
       await inventoryApi.updateInventory({
@@ -872,9 +932,10 @@ const ProductDashboard = () => {
       });
       setProducts((prev) => prev.map((p) => p.id === id ? { ...p, visibleOnApp: !p.visibleOnApp } : p));
       showToast("Product visibility updated", "success");
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      showToast("Failed to toggle product visibility", "error");
+      const errorMsg = err?.response?.data?.detail || err?.message || "Failed to toggle product visibility";
+      showToast(typeof errorMsg === "string" ? errorMsg : "Failed to toggle product visibility", "error");
     } finally {
       setTogglingId(null);
     }
@@ -890,16 +951,36 @@ const ProductDashboard = () => {
 
   const bulkToggleVisibility = async (visible: boolean) => {
     try {
-      setLoading(true);
-      for (const id of selectedIds) {
-        await inventoryApi.updateInventory({ id, shop_id: SHOP_ID, visible_online: visible });
+      const selectedProducts = products.filter((p) => selectedIds.includes(p.id));
+      let targets = selectedProducts;
+
+      if (visible) {
+        const withImages = selectedProducts.filter((p) => productHasImage(p));
+        const skippedCount = selectedProducts.length - withImages.length;
+        if (skippedCount > 0) {
+          showToast(
+            `Skipped ${skippedCount} product(s) without images. Products must have at least 1 image to be visible online.`,
+            "error"
+          );
+        }
+        targets = withImages;
       }
-      showToast(`Updated visibility for ${selectedIds.length} products`, "success");
+
+      if (targets.length === 0) {
+        return;
+      }
+
+      setLoading(true);
+      for (const prod of targets) {
+        await inventoryApi.updateInventory({ id: prod.id, shop_id: SHOP_ID, visible_online: visible });
+      }
+      showToast(`Updated visibility for ${targets.length} product${targets.length > 1 ? "s" : ""}`, "success");
       setSelectedIds([]);
-      loadProducts();
-    } catch (err) {
+      loadProducts(page, limit);
+    } catch (err: any) {
       console.error(err);
-      showToast("Error updating visibility", "error");
+      const errorMsg = err?.response?.data?.detail || err?.message || "Error updating visibility";
+      showToast(typeof errorMsg === "string" ? errorMsg : "Error updating visibility", "error");
     } finally {
       setLoading(false);
     }
@@ -1177,16 +1258,16 @@ const ProductDashboard = () => {
                       <input
                         type="number"
                         readOnly
-                        value={editingProduct.price || 0}
+                        value={editingProduct.price ? round2(editingProduct.price).toFixed(2) : "0.00"}
                         className="w-full bg-transparent px-3 text-sm font-medium text-blue-600 outline-none"
                       />
                     </div>
                     {(() => {
                       const gstRate = parseFloat(editingProduct.gst.replace(/[^0-9.]/g, '')) || 0;
                       if (gstRate > 0) {
-                        const price = Number(editingProduct.price);
-                        const taxable = price / (1 + gstRate / 100);
-                        const gstAmt = price - taxable;
+                        const price = round2(editingProduct.price);
+                        const taxable = round2(price / (1 + gstRate / 100));
+                        const gstAmt = round2(price - taxable);
                         return (
                           <span className="text-[10px] text-slate-500 font-medium">
                             ₹{taxable.toFixed(2)} + ₹{gstAmt.toFixed(2)} GST (Incl.)
@@ -1206,8 +1287,12 @@ const ProductDashboard = () => {
                       </div>
                       <input
                         type="number"
-                        value={editingProduct.onlineSellPrice ?? editingProduct.price ?? 0}
-                        onChange={(e) => setEditingProduct({ ...editingProduct, onlineSellPrice: e.target.value !== "" ? Number(e.target.value) : 0 })}
+                        step="0.01"
+                        value={editingProduct.onlineSellPrice !== undefined ? round2(editingProduct.onlineSellPrice) : (editingProduct.price ? round2(editingProduct.price) : 0)}
+                        onChange={(e) => {
+                          const val = e.target.value !== "" ? parseFloat(e.target.value) : 0;
+                          setEditingProduct({ ...editingProduct, onlineSellPrice: isNaN(val) ? 0 : round2(val) });
+                        }}
                         className="w-full bg-transparent px-3 text-sm font-semibold text-slate-800 outline-none"
                         placeholder="e.g. 299"
                       />
@@ -1215,9 +1300,9 @@ const ProductDashboard = () => {
                     {(() => {
                       const gstRate = parseFloat(editingProduct.gst.replace(/[^0-9.]/g, '')) || 0;
                       if (gstRate > 0) {
-                        const price = Number(editingProduct.onlineSellPrice ?? editingProduct.price ?? 0);
-                        const taxable = price / (1 + gstRate / 100);
-                        const gstAmt = price - taxable;
+                        const price = round2(editingProduct.onlineSellPrice ?? editingProduct.price ?? 0);
+                        const taxable = round2(price / (1 + gstRate / 100));
+                        const gstAmt = round2(price - taxable);
                         return (
                           <span className="text-[10px] text-slate-500 font-medium">
                             ₹{taxable.toFixed(2)} + ₹{gstAmt.toFixed(2)} GST (Incl.)
@@ -1229,6 +1314,56 @@ const ProductDashboard = () => {
                   </div>
                 </div>
               </div>
+
+              {/* ── Discount & Effective Online Price Preview ── */}
+              {(() => {
+                const onlineBase = round2(editingProduct.onlineSellPrice ?? editingProduct.price ?? 0);
+                const catalogPrice = round2(editingProduct.price ?? 0);
+                const discPct = round2(editingProduct.discountPercent ?? 0);
+                const discAmt = round2(editingProduct.discountAmount ?? 0);
+                const isAmountDisc = editingProduct.discountType === "price" && discAmt > 0;
+                const mrp = round2(editingProduct.mrp ?? 0);
+
+                const hasDiscount = isAmountDisc || discPct > 0 || (mrp > onlineBase && mrp > 0);
+                const calculatedDiscountAmt = isAmountDisc
+                  ? Math.min(onlineBase, discAmt)
+                  : (discPct > 0 ? round2((onlineBase * discPct) / 100) : 0);
+                const effectiveOnlinePrice = Math.max(0, round2(onlineBase - calculatedDiscountAmt));
+                const savingsFromMrp = mrp > effectiveOnlinePrice ? round2(mrp - effectiveOnlinePrice) : (onlineBase > effectiveOnlinePrice ? round2(onlineBase - effectiveOnlinePrice) : 0);
+
+                if (!hasDiscount && onlineBase === catalogPrice) return null;
+
+                return (
+                  <div className="p-3 bg-emerald-50/60 rounded-lg border border-emerald-200/80 space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-600 font-medium">Customer Online Price:</span>
+                      <span className="text-base font-bold text-emerald-700">₹{effectiveOnlinePrice.toFixed(2)}</span>
+                    </div>
+                    {isAmountDisc ? (
+                      <div className="flex items-center justify-between text-[11px] text-emerald-600">
+                        <span>Product Discount (₹{calculatedDiscountAmt.toFixed(2)} OFF):</span>
+                        <span>-₹{calculatedDiscountAmt.toFixed(2)}</span>
+                      </div>
+                    ) : (discPct > 0 && (
+                      <div className="flex items-center justify-between text-[11px] text-emerald-600">
+                        <span>Product Discount ({discPct}%):</span>
+                        <span>-₹{calculatedDiscountAmt.toFixed(2)}</span>
+                      </div>
+                    ))}
+                    {mrp > onlineBase && (
+                      <div className="flex items-center justify-between text-[11px] text-slate-500">
+                        <span>Catalog MRP:</span>
+                        <span className="line-through">₹{mrp.toFixed(2)}</span>
+                      </div>
+                    )}
+                    {savingsFromMrp > 0 && (
+                      <div className="text-[10px] font-medium text-emerald-800 pt-1 border-t border-emerald-200/60">
+                        Shoppers save ₹{savingsFromMrp.toFixed(2)} when buying online.
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
 
             <div className="border-t border-slate-100" />
@@ -1246,7 +1381,7 @@ const ProductDashboard = () => {
                 </span>
                 <h4 className="font-semibold text-slate-800 text-sm truncate mt-1">{editingProduct.name}</h4>
                 <p className="text-[11px] text-slate-400 mt-0.5">
-                  ₹{editingProduct.price} · {editingProduct.stock} in stock
+                  ₹{round2(editingProduct.price).toFixed(2)} · {editingProduct.stock} in stock
                 </p>
               </div>
             </div>

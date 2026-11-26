@@ -28,6 +28,7 @@ import {
   resolveCustomFields,
   extractProductHsn,
   extractProductMrp,
+  extractProductGstRate,
   type CustomFieldDefinition,
 } from "../utils/customFieldsHelper";
 
@@ -202,7 +203,7 @@ const Billing = () => {
         qty: i.qty,
         sellingPrice: i.price,
         mrp: i.mrp,
-        gstRate: typeof i.gst === 'number' ? i.gst : (parseFloat(String(i.gst || '18').replace(/[^0-9.]/g, '')) || 0),
+        gstRate: extractProductGstRate(i._product) || extractProductGstRate(i) || (typeof i.gst === 'number' ? i.gst : (parseFloat(String(i.gst || '0').replace(/[^0-9.]/g, '')) || 0)),
         productDiscountPercent: i.productDiscountPercent || 0,
         lineDiscountMode: i.lineDiscountMode || '₹',
         lineDiscountValue: i.lineDiscountValue || 0,
@@ -620,10 +621,12 @@ const Billing = () => {
               (fi as any).hsn ||
               (fi._product ? extractProductHsn(fi._product) : null) ||
               null;
+            const fiBatch = (fi as any).batchNumber || (fi as any).batchName || (fi as any).batch_no || (fi as any).batch_name || (fi as any).selectedBatch?.batch_name || fi.batchId;
             const fiMrp =
               fi.mrp ??
-              (fi._product ? extractProductMrp(fi._product) : null) ??
+              (fi._product ? extractProductMrp(fi._product, fiBatch) : null) ??
               null;
+            const fiGst = extractProductGstRate(fi._product) || extractProductGstRate(fi) || (typeof fi.gst === 'number' ? fi.gst : 0);
 
             return {
               inventoryId: fi.inventoryId,
@@ -639,6 +642,9 @@ const Billing = () => {
               qty: fi.qty,
               sellingPrice: (fi as any).sellingPrice || fi.price,
               price: fi.price,
+              gst: fiGst,
+              gstRate: fiGst,
+              gst_rate: fiGst,
             };
           }),
         },
@@ -706,7 +712,28 @@ const Billing = () => {
         showToast(isInvoice ? "Invoice generated successfully" : "Order confirmed successfully", "success");
 
         setSuccessDetails({
-          items: [...items],
+          items: filledItems.map((item) => {
+            const resolvedHsn =
+              item.hsnCode ||
+              item.hsn_code ||
+              item.hsn ||
+              (item._product ? extractProductHsn(item._product) : "") ||
+              extractProductHsn(item) ||
+              "";
+            const itemBatch = (item as any).batchNumber || (item as any).batchName || (item as any).batch_no || (item as any).batch_name || (item as any).selectedBatch?.batch_name || item.batchId;
+            const resolvedMrp =
+              item.mrp ??
+              (item._product ? extractProductMrp(item._product, itemBatch) : undefined) ??
+              item.price;
+            return {
+              ...item,
+              hsn: resolvedHsn,
+              hsn_code: resolvedHsn,
+              hsnCode: resolvedHsn,
+              mrp: resolvedMrp,
+              _product: item._product,
+            };
+          }),
           payments: [...paymentsArg],
           totalAmount,
           gstAmount,
@@ -716,7 +743,10 @@ const Billing = () => {
           customerName: customerName || "Walk-in Customer",
           phone: phone || "",
           orderId: resolvedOrderId,
-          customFields: resolvedCustomFields,
+          customFields:
+            resolvedCustomFields && resolvedCustomFields.length > 0
+              ? resolvedCustomFields
+              : (billingType === "INVOICE" ? getInvoiceCustomFields() : getReceiptCustomFields()),
         });
 
         if (isInvoice) {

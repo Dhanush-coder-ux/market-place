@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { User, Clock, Check, Printer, Plus, Power, Settings } from "lucide-react";
 import { ReusableSelect } from "@/components/ui";
@@ -16,7 +16,9 @@ import {
 } from "../utils/printerService";
 import { useToast } from "@/context/ToastContext";
 import { QRCodeSVG } from "qrcode.react";
-import { extractItemAttributeValue, getReceiptCustomFields } from "../utils/customFieldsHelper";
+import { extractItemAttributeValue, getReceiptCustomFields, extractProductHsn, extractProductMrp, extractProductGstRate } from "../utils/customFieldsHelper";
+import { inventoryApi } from "@/services/api/inventory";
+import { SHOP_ID, getShopId } from "@/services/endpoints";
 
 /* ─── Types ─────────────────────────────────────────────────────────────── */
 
@@ -77,6 +79,7 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
   const [phase, setPhase] = useState<AnimPhase | null>(null);
   const [closing, setClosing] = useState(false);
   const [shopData, setShopData] = useState<any>(null);
+  const [fetchedProducts, setFetchedProducts] = useState<Record<string, any>>({});
   const [receiptConfig, setReceiptConfig] = useState(() => getBillingReceiptConfig());
   const [isPrinterConfigOpen, setIsPrinterConfigOpen] = useState(false);
   const [printersList, setPrintersList] = useState<SavedPrinter[]>(() => getPrintersList());
@@ -178,15 +181,19 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
         phone: details.phone,
         dateStr: curDateStr,
         timeStr: curTimeStr,
-        items: details.items.map((i: any) => ({
-          ...i,
-          name: i.name,
-          qty: i.qty,
-          price: i.price,
-          tprice: i.tprice,
-          selectedUnit: i.selectedUnit,
-          discount: i.discount,
-        })),
+        items: details.items.map((i: any) => {
+          const enriched = getEnrichedItem(i);
+          return {
+            ...enriched,
+            name: i.name,
+            qty: i.qty,
+            price: i.price,
+            mrp: enriched.mrp ?? i.mrp,
+            tprice: i.tprice,
+            selectedUnit: i.selectedUnit,
+            discount: i.discount,
+          };
+        }),
         totalAmount: subtotalVal,
         discountAmount: discountVal,
         taxableAmount: taxableVal,
@@ -211,10 +218,7 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
           printersList[0] ||
           getPrinterConfig()
         ).digitalStoreQrMessage,
-        customFields:
-          details.customFields && details.customFields.length > 0
-            ? details.customFields
-            : getReceiptCustomFields(shopData?.id),
+        customFields: effectiveCustomFields,
         paperWidth: receiptConfig.paperWidth,
         templateId: receiptConfig.templateId,
         upiId: receiptConfig.qr?.upiId,
@@ -289,6 +293,124 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
       }).catch(console.error);
     }
   }, [isOpen]);
+
+  /* Effective Custom Fields (falls back to saved shop configuration if not explicitly provided) */
+  const effectiveCustomFields = useMemo(() => {
+    if (details?.customFields && details.customFields.length > 0) {
+      return details.customFields;
+    }
+    return getReceiptCustomFields(shopData?.id);
+  }, [details?.customFields, shopData?.id]);
+
+  /* Fetch fallback inventory details for items missing HSN/MRP */
+  useEffect(() => {
+    if (!isOpen || !details?.items || details.items.length === 0) return;
+
+    const activeShopId = shopData?.id || localStorage.getItem("shop_id") || getShopId() || SHOP_ID;
+    const missingIds = details.items
+      .map((it: any) => {
+        const hasHsn =
+          it.hsn_code ||
+          it.hsn ||
+          it.hsnCode ||
+          it.datas?.hsn_code ||
+          it.datas?.hsn ||
+          it.datas?.tax_infos?.hsn ||
+          (it._product ? extractProductHsn(it._product) : null);
+        const hasMrp = it.mrp || it.datas?.mrp || it.pricing_infos?.mrp || (it._product ? extractProductMrp(it._product) : null);
+        const id = it.inventoryId || it.inventory_id || it.product_id || it.id;
+        return (!hasHsn || !hasMrp) && id && !fetchedProducts[String(id)] ? String(id) : null;
+      })
+      .filter((id: any): id is string => Boolean(id));
+
+    if (missingIds.length === 0) return;
+
+    const uniqueIds: string[] = Array.from(new Set(missingIds));
+    inventoryApi
+      .getInventoriesByIds(activeShopId, uniqueIds)
+      .then((res: any) => {
+        const items = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+        if (items.length > 0) {
+          setFetchedProducts((prev) => {
+            const next = { ...prev };
+            items.forEach((p: any) => {
+              if (p?.id) next[String(p.id)] = p;
+              if (p?._id) next[String(p._id)] = p;
+            });
+            return next;
+          });
+        } else {
+          uniqueIds.forEach((uid: string) => {
+            inventoryApi
+              .getInventoryById(activeShopId, uid)
+              .then((pRes: any) => {
+                const p = Array.isArray(pRes?.data) ? pRes.data[0] : (pRes?.data ?? pRes);
+                if (p) {
+                  setFetchedProducts((prev) => ({
+                    ...prev,
+                    [String(uid)]: p,
+                  }));
+                }
+              })
+              .catch(() => {});
+          });
+        }
+      })
+      .catch(() => {
+        uniqueIds.forEach((uid: string) => {
+          inventoryApi
+            .getInventoryById(activeShopId, uid)
+            .then((pRes: any) => {
+              const p = Array.isArray(pRes?.data) ? pRes.data[0] : (pRes?.data ?? pRes);
+              if (p) {
+                setFetchedProducts((prev) => ({
+                  ...prev,
+                  [String(uid)]: p,
+                }));
+              }
+            })
+            .catch(() => {});
+        });
+      });
+  }, [isOpen, details?.items, fetchedProducts, shopData?.id]);
+
+  const getEnrichedItem = useCallback(
+    (it: any) => {
+      const prodId = String(it.inventoryId || it.inventory_id || it.product_id || it.id || "");
+      const pData = fetchedProducts[prodId] || null;
+      const mergedProd = it._product || pData || null;
+      const hsnVal =
+        it.hsn ||
+        it.hsn_code ||
+        it.hsnCode ||
+        (mergedProd ? extractProductHsn(mergedProd) : "") ||
+        extractProductHsn(it) ||
+        "";
+      const batchCand = it.batch_no || it.batchName || it.batch_name || it.batchNumber || it.batchId;
+      const mrpVal =
+        it.mrp ??
+        it.pricing_infos?.mrp ??
+        it.datas?.mrp ??
+        (mergedProd ? extractProductMrp(mergedProd, batchCand) : undefined);
+      const gstVal =
+        extractProductGstRate(mergedProd) ||
+        extractProductGstRate(it) ||
+        (typeof it.gst === "number" ? it.gst : 0) ||
+        it.gstRate ||
+        0;
+      return {
+        ...it,
+        _product: mergedProd,
+        hsn: hsnVal,
+        hsn_code: hsnVal,
+        hsnCode: hsnVal,
+        mrp: mrpVal ?? it.mrp,
+        gst: gstVal,
+        gstRate: gstVal,
+      };
+    },
+    [fetchedProducts]
+  );
 
   const handleClose = useCallback(() => {
     if (isAnimating) return;
@@ -404,7 +526,7 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
             </div>
 
             {/* Customer Custom Fields */}
-            {(details.customFields || []).filter((f: any) => f.placement === "customer" && (f.value || f.displayValue)).map((f: any) => (
+            {(effectiveCustomFields || []).filter((f: any) => f.placement === "customer" && (f.value || f.displayValue)).map((f: any) => (
               <div key={f.id} className="flex justify-between text-[12.5px] py-1 border-t border-[#E6EAF1]">
                 <span className="text-[#7A8497] flex items-center gap-1.5">{f.label}</span>
                 <span className="font-semibold text-[#12161F]">{f.displayValue || f.value}</span>
@@ -435,11 +557,12 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
               style={itemsCount > 3 ? { overflowY: "auto", maxHeight: "190px", scrollbarWidth: "thin" } : undefined}
             >
               {details.items.map((item, idx) => {
+                const enrichedItem = getEnrichedItem(item);
                 const itemGst = typeof item.gst === 'number' ? item.gst : 0;
                 const calcLine = details.billTotals?.lines?.[idx];
                 const itemTotal = calcLine ? calcLine.finalInclusive : (item.tprice ?? (item.qty * item.price));
                 const lineDisc = calcLine ? (calcLine.productDiscountAmount + calcLine.lineDiscountAmount + calcLine.billDiscountShare) : 0;
-                const itemFields = (details.customFields || []).filter((f: any) => f.placement === "item" && f.label);
+                const itemFields = (effectiveCustomFields || []).filter((f: any) => f.placement === "item" && f.label);
 
                 return (
                   <div key={idx} className="flex justify-between gap-3 py-1.5 text-[13px]">
@@ -453,7 +576,7 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
                       {itemFields.length > 0 && (
                         <div className="flex flex-wrap gap-1.5 mt-1">
                           {itemFields.map((f: any) => {
-                            const val = extractItemAttributeValue(f, item, idx);
+                            const val = extractItemAttributeValue(f, enrichedItem, idx, enrichedItem);
                             if (!val || val === "—") return null;
                             return (
                               <span key={f.id} className="inline-flex items-center text-[10px] bg-slate-50 border border-slate-200/80 px-1.5 py-0.5 rounded text-slate-600">
@@ -474,9 +597,9 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
             </div>
 
             {/* Below-items custom fields */}
-            {(details.customFields || []).filter((f: any) => f.placement === "below" && (f.value || f.displayValue)).length > 0 && (
+            {(effectiveCustomFields || []).filter((f: any) => f.placement === "below" && (f.value || f.displayValue)).length > 0 && (
               <div className="pt-2 border-t border-[#E6EAF1] space-y-1">
-                {(details.customFields || []).filter((f: any) => f.placement === "below" && (f.value || f.displayValue)).map((f: any) => (
+                {(effectiveCustomFields || []).filter((f: any) => f.placement === "below" && (f.value || f.displayValue)).map((f: any) => (
                   <div key={f.id} className="flex justify-between text-[12px] py-0.5">
                     <span className="text-[#7A8497]">{f.label}:</span>
                     <span className="font-semibold text-[#12161F]">{f.displayValue || f.value}</span>
@@ -835,7 +958,7 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
                     )}
                   </>
                 )}
-                {(details.customFields || []).filter((f: any) => f.placement === "customer" && (f.value || f.displayValue)).map((f: any) => (
+                {(effectiveCustomFields || []).filter((f: any) => f.placement === "customer" && (f.value || f.displayValue)).map((f: any) => (
                   <div key={f.id} className="flex justify-between text-[10px]">
                     <span className="text-[#8A857C] font-medium">{f.label}</span>
                     <span className="font-semibold text-[#1A1714]">{f.displayValue || f.value}</span>
@@ -854,8 +977,13 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
 
                 {/* ── Items List ─────────────────────────────── */}
                 {details.items.map((item, idx) => {
-                  const itemGst = typeof item.gst === "number" ? item.gst : 0;
+                  const enrichedItem = getEnrichedItem(item);
                   const calcLine = details.billTotals?.lines?.[idx];
+                  const itemGst =
+                    enrichedItem.gst ||
+                    calcLine?.gstRate ||
+                    extractProductGstRate(enrichedItem._product) ||
+                    (typeof item.gst === "number" ? item.gst : 0);
                   const itemTotal = calcLine ? calcLine.finalInclusive : (item.tprice ?? (item.qty * item.price));
                   return (
                     <div key={idx} className="mb-1.5">
@@ -872,8 +1000,8 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
                         {itemGst > 0 && <span className="ml-1">GST@{itemGst}%</span>}
                       </div>
                       {/* Item custom fields in receipt */}
-                      {(details.customFields || []).filter((f: any) => f.placement === "item" && f.label).map((f: any) => {
-                        const val = extractItemAttributeValue(f, item, idx);
+                      {(effectiveCustomFields || []).filter((f: any) => f.placement === "item" && f.label).map((f: any) => {
+                        const val = extractItemAttributeValue(f, enrichedItem, idx, enrichedItem);
                         if (!val || val === "—") return null;
                         return (
                           <div key={f.id} className="text-[8.5px] text-[#6B655B] pl-0.5">
@@ -886,11 +1014,11 @@ export const BillingSuccessModal: React.FC<BillingSuccessModalProps> = ({
                 })}
 
                 {/* Below items custom fields */}
-                {(details.customFields || []).filter((f: any) => f.placement === "below" && (f.value || f.displayValue)).length > 0 && (
+                {(effectiveCustomFields || []).filter((f: any) => f.placement === "below" && (f.value || f.displayValue)).length > 0 && (
                   <>
                     <hr className="receipt-separator" />
                     <div className="space-y-0.5 py-0.5">
-                      {(details.customFields || []).filter((f: any) => f.placement === "below" && (f.value || f.displayValue)).map((f: any) => (
+                      {(effectiveCustomFields || []).filter((f: any) => f.placement === "below" && (f.value || f.displayValue)).map((f: any) => (
                         <div key={f.id} className="flex justify-between text-[10px]">
                           <span className="text-[#8A857C] font-medium">{f.label}:</span>
                           <span className="font-semibold text-[#1A1714]">{f.displayValue || f.value}</span>

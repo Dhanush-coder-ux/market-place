@@ -20,7 +20,7 @@ import { InlineSerialManager } from "@/components/common/InlineSerialManager";
 
 import { useApi } from "@/context/ApiContext";
 import { useToast } from "@/context/ToastContext";
-import { ENDPOINTS, SHOP_ID } from "@/services/endpoints";
+import { ENDPOINTS, SHOP_ID, getShopId } from "@/services/endpoints";
 import { Switch } from "@/components/ui/switch";
 import {
   VariantType,
@@ -73,23 +73,26 @@ const QuickCreateDropdownModal: React.FC<QuickCreateDropdownModalProps> = ({ isO
     setLoading(true);
 
     try {
+      const activeShopId = getShopId() || SHOP_ID;
       if (type === "Category") {
         const res = await utilityApi.createShopCategory({
-          shop_id: SHOP_ID,
+          shop_id: activeShopId,
           name: name.trim(),
           description: description.trim() || undefined
         });
-        const data = res.data || res;
-        if (data && data.id) onSuccess({ id: data.id, name: data.name });
+        const data = res?.data ?? res;
+        const targetId = data?.id ?? data?._id;
+        if (targetId) onSuccess({ id: targetId, name: data.name || name.trim() });
       } else {
         const res = await utilityApi.createShopUnit({
-          shop_id: SHOP_ID,
+          shop_id: activeShopId,
           name: name.trim(),
           short_name: shortName.trim().toUpperCase(),
           description: description.trim() || undefined
         });
-        const data = res.data || res;
-        if (data && data.id) onSuccess({ id: data.id, name: data.name });
+        const data = res?.data ?? res;
+        const targetId = data?.id ?? data?._id;
+        if (targetId) onSuccess({ id: targetId, name: data.name || name.trim() });
       }
       setName("");
       setShortName("");

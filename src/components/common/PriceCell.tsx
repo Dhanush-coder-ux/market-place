@@ -6,6 +6,8 @@ export interface PriceCellProps {
   mrp?: number | string | null;
   gstRate?: number | string | null;
   discountPercent?: number | string | null;
+  discountType?: "price" | "percent" | string | null;
+  discountAmount?: number | string | null;
   offerValidUntil?: string | null;
   className?: string;
   size?: 'sm' | 'md' | 'lg';
@@ -25,6 +27,8 @@ export const PriceCell: React.FC<PriceCellProps> = ({
   mrp,
   gstRate = 18,
   discountPercent = 0,
+  discountType,
+  discountAmount,
   offerValidUntil,
   className = '',
   size = 'md',
@@ -41,6 +45,9 @@ export const PriceCell: React.FC<PriceCellProps> = ({
   const cleanDiscount = typeof discountPercent === 'string'
     ? parseFloat(discountPercent.replace(/[^0-9.]/g, '')) || 0
     : Number(discountPercent) || 0;
+  const cleanDiscountAmount = typeof discountAmount === 'string'
+    ? parseFloat(discountAmount.replace(/[^0-9.]/g, '')) || 0
+    : Number(discountAmount) || 0;
 
   if (numSellingPrice === null || isNaN(numSellingPrice) || numSellingPrice <= 0) {
     return (
@@ -53,16 +60,18 @@ export const PriceCell: React.FC<PriceCellProps> = ({
     );
   }
 
-  const { finalPrice, tax, offMrpPercent, customerSaving, isOfferExpired, isGstRegistered: isReg } = calculateProductEffectivePrice({
+  const { finalPrice, tax, offMrpPercent, customerSaving, isOfferExpired, isGstRegistered: isReg, discountAmount: resDiscountAmount, isAmountBased } = calculateProductEffectivePrice({
     sellingPrice: numSellingPrice,
     mrp: numMrp,
     gstRate: cleanGstRate,
     discountPercent: cleanDiscount,
+    discountType,
+    discountAmount: cleanDiscountAmount,
     offerValidUntil,
     isGstRegistered,
   });
 
-  const isDiscountApplied = cleanDiscount > 0 && !isOfferExpired;
+  const isDiscountApplied = (resDiscountAmount > 0 || cleanDiscount > 0) && !isOfferExpired;
   const hasMrpSaving = numMrp !== null && numMrp > finalPrice;
 
   const fontSizes = {
@@ -102,9 +111,9 @@ export const PriceCell: React.FC<PriceCellProps> = ({
               {offMrpPercent}% off MRP · Saves ₹{formatINR(customerSaving)}
             </span>
           )}
-          {isDiscountApplied && cleanDiscount > 0 && (
+          {isDiscountApplied && resDiscountAmount > 0 && (
             <span className="inline-flex items-center px-1.5 py-0.2 text-[9.5px] font-bold text-blue-700 bg-blue-50 border border-blue-200/60 rounded">
-              {cleanDiscount}% Offer
+              {isAmountBased ? `₹${formatINR(resDiscountAmount)} OFF` : `${cleanDiscount}% Offer`}
             </span>
           )}
         </div>

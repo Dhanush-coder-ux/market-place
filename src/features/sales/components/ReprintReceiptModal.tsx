@@ -20,7 +20,7 @@ import {
   getBillingReceiptConfig,
   getDigitalStoreUrl,
 } from "@/features/billing/utils/printerService";
-import { getReceiptCustomFields, extractItemAttributeValue, mergeOrderCustomFields, extractProductHsn, extractProductMrp } from "@/features/billing/utils/customFieldsHelper";
+import { getReceiptCustomFields, extractItemAttributeValue, mergeOrderCustomFields, extractProductHsn, extractProductMrp, extractProductGstRate } from "@/features/billing/utils/customFieldsHelper";
 import { PrinterConfigModal } from "@/features/billing/components/PrinterConfigModal";
 import { QRCodeSVG } from "qrcode.react";
 import { ReusableSelect } from "@/components/ui/ReusableSelect";
@@ -193,16 +193,23 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
     } else if (calc.tax_rate !== undefined && Number(calc.tax_rate) > 0) {
       gstRate = Number(calc.tax_rate);
     } else if (itemsRaw.length > 0) {
-      const rawItGst = itemsRaw[0].gst_rate || itemsRaw[0].tax_rate || itemsRaw[0].gst_percentage || itemsRaw[0].gst || 0;
-      const itRate = typeof rawItGst === "number" ? rawItGst : (parseFloat(String(rawItGst).replace("%", "")) || 0);
-      if (itRate > 0) gstRate = itRate;
+      for (const rawIt of itemsRaw) {
+        const prodId = String(rawIt.product_id || rawIt.inventory_id || rawIt.id || "");
+        const itRate = extractProductGstRate(rawIt) || (fetchedProducts[prodId] ? extractProductGstRate(fetchedProducts[prodId]) : 0);
+        if (itRate > 0) {
+          gstRate = itRate;
+          break;
+        }
+      }
     }
     if (gstRate === 0 && effectiveTaxable > 0 && gst > 0) {
       gstRate = Math.round((gst / effectiveTaxable) * 100);
     }
 
     // Ensure GST inclusive math is accurate (selling price is inclusive of GST)
-    if (gstRate > 0 && grandTotal > 0) {
+    if (taxable > 0 && gst > 0) {
+      effectiveTaxable = taxable;
+    } else if (gstRate > 0 && grandTotal > 0) {
       const split = calculateTaxSplit(grandTotal, gstRate);
       effectiveTaxable = split.taxableValue;
       gst = split.gstAmount;
@@ -246,7 +253,7 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
       itemsCount: itemsRaw.length,
       totalUnits: itemsRaw.reduce((acc: number, it: any) => acc + Number(it.quantity ?? it.qty ?? 1), 0),
     };
-  }, [fullSale, sale]);
+  }, [fullSale, sale, fetchedProducts]);
 
   // Fetch missing product details (e.g. for product default HSN & MRP if missing from order snapshot)
   useEffect(() => {
@@ -265,8 +272,10 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
           ? (s as any).additional_infos.items_snapshot[idx]
           : null;
         const hasHsn = it.hsn_code || it.hsn || it.hsnCode || snap?.hsnCode || snap?.hsn_code || snap?.hsn || it.datas?.hsn_code || it.datas?.hsn || it.datas?.tax_infos?.hsn;
+        const hasMrp = it.mrp || it.datas?.mrp || it.pricing_infos?.mrp || snap?.mrp;
+        const hasGst = (extractProductGstRate(it) > 0) || (extractProductGstRate(snap) > 0) || (it.gst_rate || it.gst || it.tax_rate || snap?.gst || snap?.gstRate || snap?.gst_rate);
         const id = it.product_id || it.inventory_id || it.id;
-        return !hasHsn && id && !fetchedProducts[id] ? String(id) : null;
+        return (!hasHsn || !hasMrp || !hasGst) && id && !fetchedProducts[id] ? String(id) : null;
       })
       .filter((id: any): id is string => Boolean(id));
 
@@ -361,15 +370,6 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
         ? (s as any).additional_infos.items_snapshot[idx]
         : null;
 
-      const rawMrp =
-        it.mrp ??
-        it.datas?.mrp ??
-        it.pricing_infos?.mrp ??
-        snapshotItem?.mrp ??
-        (prodData ? extractProductMrp(prodData) : undefined) ??
-        unitPrice;
-      const mrp = Number(rawMrp);
-
       const batch_number =
         it.batch_number ||
         it.batch_no ||
@@ -392,6 +392,15 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
         snapshotItem?.batchName ||
         it.datas?.batch_name ||
         "";
+
+      const rawMrp =
+        it.mrp ??
+        it.datas?.mrp ??
+        it.pricing_infos?.mrp ??
+        snapshotItem?.mrp ??
+        (prodData ? extractProductMrp(prodData, batch_number || batch_name || it.batchId) : undefined) ??
+        unitPrice;
+      const mrp = Number(rawMrp);
 
       const expiry_date =
         it.expiry_date ||
@@ -419,6 +428,13 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
         (prodData ? extractProductHsn(prodData) : "") ||
         "";
 
+      const itemGst =
+        extractProductGstRate(it) ||
+        extractProductGstRate(snapshotItem) ||
+        (prodData ? extractProductGstRate(prodData) : 0) ||
+        totals.gstRate ||
+        0;
+
       return {
         ...it,
         id: it.id || idx,
@@ -430,6 +446,8 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
         totalAmount,
         discount,
         unit,
+        gst: itemGst,
+        gstRate: itemGst,
         batch_number,
         batch_name,
         batchName: batch_name,
@@ -735,7 +753,7 @@ export const ReprintReceiptModal: React.FC<ReprintReceiptModalProps> = ({
                       </div>
                       <div className="flex justify-between items-center text-slate-600 mt-0.5">
                         <span className="text-[9px] text-slate-400">
-                          {it.unit ? `${it.unit}` : ""}
+                          {it.unit ? `${it.unit}` : ""}{it.gst > 0 ? ` · GST@${it.gst}%` : ""}
                         </span>
                         <span className="w-10 text-center font-bold">
                           {it.qty}

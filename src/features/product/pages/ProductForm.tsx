@@ -9,7 +9,7 @@ import {
 import { GradientButton } from "@/components/ui/GradientButton";
 import { useApi } from "@/context/ApiContext";
 import { useBusinessApi } from "@/context/BusinessApiContext";
-import { SHOP_ID, ENDPOINTS } from "@/services/endpoints";
+import { SHOP_ID, getShopId, ENDPOINTS } from "@/services/endpoints";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { apiClient } from "@/services/api/apiClient";
 import { useHeader } from "@/context/HeaderContext";
@@ -242,23 +242,26 @@ const QuickCreateDropdownModal: React.FC<QuickCreateDropdownModalProps> = ({ isO
     setLoading(true);
 
     try {
+      const activeShopId = getShopId() || SHOP_ID;
       if (type === "categories") {
         const res = await utilityApi.createShopCategory({
-          shop_id: SHOP_ID,
+          shop_id: activeShopId,
           name: name.trim(),
           description: description.trim() || undefined,
         });
-        const data = res.data || res;
-        if (data && data.id) onSuccess({ id: data.id, name: data.name });
+        const data = res?.data ?? res;
+        const targetId = data?.id ?? data?._id;
+        if (targetId) onSuccess({ id: targetId, name: data.name || name.trim() });
       } else {
         const res = await utilityApi.createShopUnit({
-          shop_id: SHOP_ID,
+          shop_id: activeShopId,
           name: name.trim(),
           short_name: shortName.trim().toUpperCase(),
           description: description.trim() || undefined,
         });
-        const data = res.data || res;
-        if (data && data.id) onSuccess({ id: data.id, name: data.name });
+        const data = res?.data ?? res;
+        const targetId = data?.id ?? data?._id;
+        if (targetId) onSuccess({ id: targetId, name: data.name || name.trim() });
       }
       setName("");
       setShortName("");
@@ -373,6 +376,12 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   const customFieldValuesRef = useRef(customFieldValues);
   customFieldValuesRef.current = customFieldValues;
   const handleSubmitRef = useRef<any>(null);
+
+  // Digital Store & Pricing preservation refs (for preserving online prices and digital store configs during edits)
+  const existingOnlineSellPriceRef = useRef<number | null>(null);
+  const existingReturnPolicyRef = useRef<any>(null);
+  const existingOnlineReorderPointRef = useRef<number | null>(null);
+  const existingCustomFieldsRef = useRef<Record<string, any>>({});
 
   // Add Product form does not manage opening stocks (stocks are handled via Live Stock List or Purchases)
   const isInitialStockActive = false;
@@ -500,6 +509,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   const [supplierDetails, setSupplierDetails] = useState<any>(null);
   const [existingImages, setExistingImages] = useState<string[]>([]);
   const [selectedImageFiles, setSelectedImageFiles] = useState<File[]>([]);
+  const [deletedExistingImages, setDeletedExistingImages] = useState<string[]>([]);
   const [isUploadingImages, setIsUploadingImages] = useState(false);
   const [baseName, setBaseName] = useState("");
   const [showBarcodeGen, setShowBarcodeGen] = useState(false);
@@ -712,6 +722,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         mrp: numMrp > 0 ? numMrp : null,
         gstRate: gstRateNum,
         discountPercent: numDiscount,
+        discountType: discountType,
+        discountAmount: discountType === "price" && discountAmount !== "" && !isNaN(Number(discountAmount)) ? Number(discountAmount) : null,
         offerValidUntil: form.offer_valid_until || null,
         isGstRegistered: isGstReg,
         costPrice: numCostToMake,
@@ -719,7 +731,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       });
     }
     return null;
-  }, [numSellingPrice, numMrp, gstRateNum, numDiscount, form.offer_valid_until, isGstReg, numCostToMake, isBuyPriceInclusive]);
+  }, [numSellingPrice, numMrp, gstRateNum, numDiscount, discountType, discountAmount, form.offer_valid_until, isGstReg, numCostToMake, isBuyPriceInclusive]);
 
   const pricingHelperState = useMemo(() => {
     const hasMrp = numMrp > 0;
@@ -773,8 +785,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
   const missingFields: string[] = [];
   if (!form.name.trim()) missingFields.push("name");
   if (!form.category) missingFields.push("category");
-  // Image is only required for new products; in edit mode the server already has images
-  if (!id && existingImages.length === 0 && selectedImageFiles.length === 0) missingFields.push("image");
+  // Images are only required if the product is enabled for the online digital store
+  if (form.visible_online && existingImages.length === 0 && selectedImageFiles.length === 0) missingFields.push("image");
   if (!form.track_stock && !form.selling_price) missingFields.push("selling price");
 
   useEffect(() => {
@@ -826,6 +838,46 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
               ? String(rawSellingPrice)
               : "";
 
+            // Capture and preserve digital store online price and policy settings
+            const resolvedOnlineSellPrice = prod.pricing_infos?.online_sell_price ??
+              prod.online_sell_price ??
+              additional.online_sell_price;
+            if (resolvedOnlineSellPrice !== undefined && resolvedOnlineSellPrice !== null && !isNaN(Number(resolvedOnlineSellPrice))) {
+              existingOnlineSellPriceRef.current = Number(resolvedOnlineSellPrice);
+            }
+
+            const resolvedReturnPolicy = prod.return_policy ??
+              additional.return_policy ??
+              prod.custom_fields?.return_policy;
+            if (resolvedReturnPolicy) {
+              existingReturnPolicyRef.current = resolvedReturnPolicy;
+            }
+
+            const resolvedOnlineRop = prod.reorder_point_infos?.online_reorder_point ??
+              prod.online_reorder_point ??
+              additional.online_reorder_point;
+            if (resolvedOnlineRop !== undefined && resolvedOnlineRop !== null && !isNaN(Number(resolvedOnlineRop))) {
+              existingOnlineReorderPointRef.current = Number(resolvedOnlineRop);
+            }
+
+            existingCustomFieldsRef.current = {
+              ...(additional || {}),
+              ...(prod.custom_fields || {}),
+            };
+
+            const rawDiscountType = prod.discount_type ??
+              pInfo.discount_type ??
+              additional.discount_type ??
+              prod.custom_fields?.discount_type;
+            const resolvedDiscountType: "price" | "percent" =
+              (rawDiscountType === "percent" || rawDiscountType === "percentage") ? "percent" : "price";
+            setDiscountType(resolvedDiscountType);
+
+            const rawDiscountAmount = prod.discount_amount ??
+              pInfo.discount_amount ??
+              additional.discount_amount ??
+              prod.custom_fields?.discount_amount;
+
             const resolvedDiscount = String(
               prod.discount_percent ??
               pInfo.discount_percent ??
@@ -835,7 +887,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
 
             // Compute initial direct price discount amount
             const baseForDiscount = Number(resolvedSellingPrice) || Number(resolvedMrp) || 0;
-            if (baseForDiscount > 0 && Number(resolvedDiscount) > 0) {
+            if (rawDiscountAmount !== undefined && rawDiscountAmount !== null && Number(rawDiscountAmount) > 0) {
+              const numAmt = Number(rawDiscountAmount);
+              setDiscountAmount(numAmt % 1 === 0 ? String(numAmt) : numAmt.toFixed(2));
+            } else if (baseForDiscount > 0 && Number(resolvedDiscount) > 0) {
               const initAmt = (baseForDiscount * Number(resolvedDiscount)) / 100;
               setDiscountAmount(initAmt % 1 === 0 ? String(initAmt) : initAmt.toFixed(2));
             } else {
@@ -917,8 +972,26 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
               });
             }
 
-            const imgList = prod.image_url || additional.images || [];
-            if (imgList && Array.isArray(imgList)) setExistingImages(imgList);
+            const rawImgs = prod.image_url || additional.images || prod.images || [];
+            let parsedImgs: string[] = [];
+            if (Array.isArray(rawImgs)) {
+              parsedImgs = rawImgs;
+            } else if (typeof rawImgs === "string" && rawImgs.trim()) {
+              try {
+                const jsonParsed = JSON.parse(rawImgs);
+                parsedImgs = Array.isArray(jsonParsed) ? jsonParsed : [rawImgs];
+              } catch {
+                parsedImgs = [rawImgs];
+              }
+            }
+            const validExisting = parsedImgs.filter((img): img is string =>
+              typeof img === "string" &&
+              img.trim() !== "" &&
+              !img.includes("placehold.co") &&
+              !img.includes("placeholder")
+            );
+            setExistingImages(validExisting);
+            setDeletedExistingImages([]);
 
             const loadedBrand = additional.brand || "";
             const loadedName = prod.name || "";
@@ -979,6 +1052,12 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                   initialDiscType = "percent";
                 }
 
+                const varOnlineSellPrice = pricing.online_sell_price !== undefined && pricing.online_sell_price !== null
+                  ? pricing.online_sell_price
+                  : (v.online_sell_price !== undefined && v.online_sell_price !== null
+                    ? v.online_sell_price
+                    : (v.additional_infos?.online_sell_price !== undefined ? v.additional_infos.online_sell_price : undefined));
+
                 return {
                   id: v.id || uid(),
                   attributes: attrs,
@@ -986,6 +1065,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                   sku: v.additional_infos?.sku || v.sku || v.barcode || "",
                   price: varSellPrice,
                   buy_price: String(pricing.buy_price || v.buy_price || ""),
+                  online_sell_price: varOnlineSellPrice !== undefined ? Number(varOnlineSellPrice) : undefined,
                   mrp: varMrp,
                   discount_type: initialDiscType,
                   discount_value: initialDiscVal,
@@ -1169,9 +1249,16 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       return;
     }
     setSelectedImageFiles(prev => [...prev, ...files.slice(0, allowedCount)]);
+    e.target.value = "";
   };
 
-  const removeExistingImage = (index: number) => setExistingImages(prev => prev.filter((_, i) => i !== index));
+  const removeExistingImage = (index: number) => {
+    const targetUrl = existingImages[index];
+    if (targetUrl) {
+      setDeletedExistingImages(prev => [...prev, targetUrl]);
+    }
+    setExistingImages(prev => prev.filter((_, i) => i !== index));
+  };
   const removeSelectedImage = (index: number) => setSelectedImageFiles(prev => prev.filter((_, i) => i !== index));
 
   /* ─── Submit ─── */
@@ -1230,6 +1317,12 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     }
     if (!form.category) {
       showToast("Category is required", "error");
+      return;
+    }
+
+    const totalImages = existingImages.length + selectedImageFiles.length;
+    if (form.visible_online && totalImages === 0) {
+      showToast("Product must have at least 1 image to be enabled for online store", "error");
       return;
     }
 
@@ -1355,6 +1448,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         : (form.mrp !== "" && !isNaN(Number(form.mrp)) && Number(form.mrp) > 0 ? Number(form.mrp) : null);
 
       let variantDiscPercent = 0;
+      let variantDiscType = combo.discount_type || discountType;
+      let variantDiscAmt = 0;
       if (combo.discount_percent !== undefined && combo.discount_percent !== "" && !isNaN(Number(combo.discount_percent))) {
         variantDiscPercent = Number(combo.discount_percent);
       } else if (combo.discount_value !== undefined && combo.discount_value !== "" && !isNaN(Number(combo.discount_value))) {
@@ -1362,10 +1457,19 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
           variantDiscPercent = Number(combo.discount_value);
         } else if (parsedMrp && parsedMrp > 0) {
           variantDiscPercent = Number(((Number(combo.discount_value) / parsedMrp) * 100).toFixed(2));
+          variantDiscAmt = Number(combo.discount_value);
         }
       } else if (form.discount_percent !== "" && !isNaN(Number(form.discount_percent))) {
         variantDiscPercent = Number(form.discount_percent);
       }
+      if (variantDiscAmt === 0 && variantDiscType === "price" && discountAmount !== "" && !isNaN(Number(discountAmount))) {
+        variantDiscAmt = Number(discountAmount);
+      }
+
+      // For existing variants on update, preserve their existing online_sell_price if available
+      const varOnlinePrice = combo.online_sell_price !== undefined && combo.online_sell_price !== null
+        ? Number(combo.online_sell_price)
+        : (parsedSellPrice || 0);
 
       return {
         ...(id && !isNew ? { id: combo.id } : {}),   // only include id on update for existing variants
@@ -1376,9 +1480,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         reorder_point: Number(combo.reorder_point) || Number(form.reorder_point) || 1,
         buy_price: parsedBuyPrice,
         sell_price: parsedSellPrice,
-        online_sell_price: parsedSellPrice || 0,
+        online_sell_price: varOnlinePrice,
         mrp: parsedMrp,
         discount_percent: variantDiscPercent,
+        discount_type: variantDiscType,
+        discount_amount: variantDiscAmt,
         offer_valid_until: form.offer_valid_until || null,
         visible_online: form.visible_online,
         ...(isInitialStockActive && combo.stock && Number(combo.stock) > 0 ? {
@@ -1429,6 +1535,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
 
     // ── Shared custom_fields blob (stored as extra metadata) ─────────────────
     const customFieldsBlob: Record<string, any> = {
+      ...(existingCustomFieldsRef.current || {}),
       brand: form.brand,
       mrp: Number(form.mrp) || 0,
       discount_percent: Number(form.discount_percent) || 0,
@@ -1465,6 +1572,16 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       values: customFieldValuesList,
     };
 
+    if (existingOnlineSellPriceRef.current !== null && existingOnlineSellPriceRef.current !== undefined) {
+      customFieldsBlob.online_sell_price = existingOnlineSellPriceRef.current;
+    }
+    if (existingReturnPolicyRef.current) {
+      customFieldsBlob.return_policy = existingReturnPolicyRef.current;
+    }
+    if (existingOnlineReorderPointRef.current !== null && existingOnlineReorderPointRef.current !== undefined) {
+      customFieldsBlob.online_reorder_point = existingOnlineReorderPointRef.current;
+    }
+
     // For non-variant products with serial tracking, embed serial numbers
     if (!form.has_variants && form.serial_tracking && baseSerials.length > 0) {
       customFieldsBlob.serial_numbers = baseSerials;
@@ -1486,9 +1603,25 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     // ── BUILD PAYLOAD ────────────────────────────────────────────────────────
     let payload: any;
 
+    const resolvedDiscountType = discountType;
+    const resolvedDiscountAmount = discountType === "price"
+      ? (discountAmount !== "" && !isNaN(Number(discountAmount)) ? Number(discountAmount) : 0)
+      : (form.discount_percent !== "" && !isNaN(Number(form.discount_percent)) && getEffectiveBasePrice() > 0
+          ? Number(((getEffectiveBasePrice() * Number(form.discount_percent)) / 100).toFixed(2))
+          : 0);
+    const resolvedDiscountPercent = discountType === "percent"
+      ? (form.discount_percent !== "" && !isNaN(Number(form.discount_percent)) ? Number(form.discount_percent) : 0)
+      : (discountAmount !== "" && !isNaN(Number(discountAmount)) && getEffectiveBasePrice() > 0
+          ? Number(((Number(discountAmount) / getEffectiveBasePrice()) * 100).toFixed(2))
+          : 0);
+
     if (id) {
       // ── UPDATE: UpdateProdInvSchema ──────────────────────────────────────
       // Required: id, shop_id. All other fields optional — only send what changed.
+      const resolvedOnlineSp = (existingOnlineSellPriceRef.current !== null && existingOnlineSellPriceRef.current !== undefined)
+        ? existingOnlineSellPriceRef.current
+        : (form.selling_price !== "" && !isNaN(Number(form.selling_price)) ? Number(form.selling_price) : 0);
+
       payload = {
         id,
         shop_id: SHOP_ID,
@@ -1518,12 +1651,16 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
         sell_price: form.selling_price !== "" && !isNaN(Number(form.selling_price))
           ? Number(form.selling_price)
           : null,
-        online_sell_price: form.selling_price !== "" && !isNaN(Number(form.selling_price))
-          ? Number(form.selling_price)
-          : 0,
+        online_sell_price: resolvedOnlineSp,
         mrp: form.mrp !== "" && !isNaN(Number(form.mrp)) && Number(form.mrp) > 0 ? Number(form.mrp) : null,
-        discount_percent: form.discount_percent !== "" && !isNaN(Number(form.discount_percent)) ? Number(form.discount_percent) : 0,
+        discount_percent: resolvedDiscountPercent,
+        discount_type: resolvedDiscountType,
+        discount_amount: resolvedDiscountAmount,
         offer_valid_until: form.offer_valid_until || null,
+        return_policy: existingReturnPolicyRef.current || undefined,
+        online_reorder_point: existingOnlineReorderPointRef.current !== null && existingOnlineReorderPointRef.current !== undefined
+          ? existingOnlineReorderPointRef.current
+          : undefined,
         custom_fields: {
           ...customFieldsBlob,
           sell_price: form.selling_price !== "" && !isNaN(Number(form.selling_price)) ? Number(form.selling_price) : null,
@@ -1532,6 +1669,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
           buy_price_tax_inclusive: form.buy_price_tax_inclusive,
           cost_price_tax_inclusive: form.buy_price_tax_inclusive,
           cost_tax_type: form.buy_price_tax_inclusive ? "inclusive" : "exclusive",
+          online_sell_price: resolvedOnlineSp,
+          discount_percent: resolvedDiscountPercent,
+          discount_type: resolvedDiscountType,
+          discount_amount: resolvedDiscountAmount,
         },
       };
     } else {
@@ -1566,7 +1707,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
           ? Number(form.selling_price)
           : 0,
         mrp: form.mrp !== "" && !isNaN(Number(form.mrp)) && Number(form.mrp) > 0 ? Number(form.mrp) : null,
-        discount_percent: form.discount_percent !== "" && !isNaN(Number(form.discount_percent)) ? Number(form.discount_percent) : 0,
+        discount_percent: resolvedDiscountPercent,
+        discount_type: resolvedDiscountType,
+        discount_amount: resolvedDiscountAmount,
         offer_valid_until: form.offer_valid_until || null,
         gst: gstFormatted,
         reorder_point: Number(form.reorder_point) || 1,
@@ -1580,6 +1723,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
           cost_price_tax_inclusive: form.buy_price_tax_inclusive,
           cost_tax_type: form.buy_price_tax_inclusive ? "inclusive" : "exclusive",
           is_active: false,
+          discount_percent: resolvedDiscountPercent,
+          discount_type: resolvedDiscountType,
+          discount_amount: resolvedDiscountAmount,
         },
       };
 
@@ -1604,6 +1750,48 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
       }
     }
 
+    // ── In edit mode (id exists): upload new images and delete removed images FIRST ──
+    // This ensures the primary DB and image storage have the new image state before
+    // backend update validation (e.g. online store image requirement) runs.
+    if (id) {
+      if (deletedExistingImages.length > 0) {
+        try {
+          await apiClient.delete("/inventories/upload/images", {
+            data: {
+              shop_id: SHOP_ID,
+              product_id: id,
+              urls: deletedExistingImages,
+            }
+          });
+        } catch (delErr) {
+          console.error("Failed to delete removed images:", delErr);
+        }
+      }
+
+      if (selectedImageFiles.length > 0) {
+        setIsUploadingImages(true);
+        const uploadFormData = new FormData();
+        uploadFormData.append("shop_id", SHOP_ID);
+        uploadFormData.append("product_id", id);
+        selectedImageFiles.forEach(file => {
+          uploadFormData.append("files", file);
+        });
+        try {
+          await apiClient.postFormData("/inventories/upload/images", uploadFormData);
+        } catch (uploadErr: any) {
+          console.error("Failed to upload images:", uploadErr);
+          const uploadErrMsg = uploadErr?.message || uploadErr?.detail?.description || uploadErr?.detail?.msg || "Failed to upload product images.";
+          showToast(uploadErrMsg, "error");
+          isSubmittingRef.current = false;
+          setIsSubmitting(false);
+          setIsUploadingImages(false);
+          return;
+        } finally {
+          setIsUploadingImages(false);
+        }
+      }
+    }
+
     // ── API call ─────────────────────────────────────────────────────────────
     let res;
     try {
@@ -1625,8 +1813,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
     if (res) {
       const savedProductId = res.data?.id || res.id || id;
 
-      // ── Upload any newly selected images ──────────────────────────────────
-      if (savedProductId && selectedImageFiles.length > 0) {
+      // ── Upload any newly selected images for CREATE mode (!id) ────────────
+      if (!id && savedProductId && selectedImageFiles.length > 0) {
         setIsUploadingImages(true);
         const uploadFormData = new FormData();
         uploadFormData.append("shop_id", SHOP_ID);
@@ -1933,6 +2121,39 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                           </div>
                         );
                       })}
+                    </div>
+
+                    {/* Digital Store Visibility Toggle */}
+                    <div className="pt-3 border-t border-slate-100">
+                      <div className="flex items-center justify-between p-3 bg-slate-50/80 rounded-xl border border-slate-200/80">
+                        <div className="flex items-center gap-2.5">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${form.visible_online ? "bg-emerald-600 text-white shadow-xs" : "bg-slate-200 text-slate-400"}`}>
+                            <Zap size={15} />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <h4 className="text-xs font-bold text-slate-800">Online Digital Store</h4>
+                              <span className={`text-[9.5px] font-semibold px-1.5 py-0.5 rounded ${form.visible_online ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-600"}`}>
+                                {form.visible_online ? "Online" : "Offline only"}
+                              </span>
+                            </div>
+                            <p className="text-[10.5px] text-slate-500 mt-0.5 leading-tight">
+                              {form.visible_online
+                                ? "Visible on app (requires at least 1 image)."
+                                : "Only in offline POS/inventory. Images optional."}
+                            </p>
+                          </div>
+                        </div>
+                        <Switch
+                          checked={form.visible_online}
+                          onCheckedChange={(checked) => {
+                            if (checked && existingImages.length === 0 && selectedImageFiles.length === 0) {
+                              showToast("Please add at least 1 image to enable for online store", "warning");
+                            }
+                            setForm(p => ({ ...p, visible_online: checked }));
+                          }}
+                        />
+                      </div>
                     </div>
 
                     {/* Helper notes moved from sidebar */}
@@ -2308,7 +2529,14 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                             <strong>Live GST split:</strong> ₹{formatINR(priceCalc.tax.taxableValue)} base + ₹{formatINR(priceCalc.tax.gstAmount)} GST {gstRateNum}% = ₹{formatINR(priceCalc.finalPrice)}
                           </span>
                           <div className="flex items-center gap-2">
-                            {priceCalc.customerSaving > 0 && (
+                            {priceCalc.discountAmount > 0 && (
+                              <span className="text-emerald-700 font-bold bg-emerald-100/70 px-2 py-0.5 rounded-md text-[11px]">
+                                {discountType === "price"
+                                  ? `Flat ₹${formatINR(priceCalc.discountAmount)} OFF · Saves ₹${formatINR(priceCalc.discountAmount)}`
+                                  : `${priceCalc.discountPercent}% discount · Saves ₹${formatINR(priceCalc.discountAmount)}`}
+                              </span>
+                            )}
+                            {priceCalc.customerSaving > 0 && (!priceCalc.discountAmount || priceCalc.discountAmount <= 0) && (
                               <span className="text-emerald-700 font-bold bg-emerald-100/70 px-2 py-0.5 rounded-md text-[11px]">
                                 {priceCalc.offMrpPercent}% off MRP · Saves ₹{formatINR(priceCalc.customerSaving)}
                               </span>
@@ -2545,14 +2773,23 @@ const ProductForm: React.FC<ProductFormProps> = ({ initialData: propInitialData 
                           </span>
 
                           <div className="flex items-center gap-2">
-                            {priceCalc.customerSaving > 0 && (
+                            {priceCalc.discountAmount > 0 && (
+                              <span className="text-emerald-700 font-bold bg-emerald-100/70 px-2 py-0.5 rounded-md text-[11px]">
+                                {discountType === "price"
+                                  ? `Flat ₹${formatINR(priceCalc.discountAmount)} OFF · Saves ₹${formatINR(priceCalc.discountAmount)}`
+                                  : `${priceCalc.discountPercent}% discount · Saves ₹${formatINR(priceCalc.discountAmount)}`}
+                              </span>
+                            )}
+                            {priceCalc.customerSaving > 0 && (!priceCalc.discountAmount || priceCalc.discountAmount <= 0) && (
                               <span className="text-emerald-700 font-bold bg-emerald-100/70 px-2 py-0.5 rounded-md text-[11px]">
                                 {priceCalc.offMrpPercent}% off MRP · Saves ₹{formatINR(priceCalc.customerSaving)}
                               </span>
                             )}
                             {priceCalc.discountAmount > 0 && priceCalc.customerSaving <= 0 && (
                               <span className="text-emerald-700 font-bold bg-emerald-100/70 px-2 py-0.5 rounded-md text-[11px]">
-                                {priceCalc.discountPercent}% discount · Saves ₹{formatINR(priceCalc.discountAmount)}
+                                {priceCalc.isAmountBased
+                                  ? `₹${priceCalc.discountAmount} discount · Saves ₹${formatINR(priceCalc.discountAmount)}`
+                                  : `${priceCalc.discountPercent}% discount · Saves ₹${formatINR(priceCalc.discountAmount)}`}
                               </span>
                             )}
                             {priceCalc.profit !== undefined && Number(form.cost_to_make) > 0 && (

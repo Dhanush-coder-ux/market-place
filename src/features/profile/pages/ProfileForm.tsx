@@ -18,6 +18,7 @@ import { useApi } from "@/context/ApiContext";
 import { usePurchaseSettings } from "@/context/PurchaseContext";
 import { ENDPOINTS } from "@/services/endpoints";
 import { getGatewayBaseUrl } from "@/services/api/tokenManager";
+import { utilityApi } from "@/services/api/utility";
 import { GradientButton } from "@/components/ui/GradientButton";
 import { SearchSelect } from "@/components/inputbuilders/SearchSelect";
 import LocationMapPicker from "@/components/ui/LocationMapPicker";
@@ -45,14 +46,33 @@ export interface ProfileData {
 }
 
 const categoryOptions = [
-  { label: "Electronics", value: "electronics" },
-  { label: "Clothing & Apparel", value: "clothing" },
-  { label: "Groceries & Food", value: "groceries" },
-  { label: "Home & Furniture", value: "home" },
-  { label: "Books & Stationery", value: "books" },
-  { label: "Health & Beauty", value: "health" },
-  { label: "Sports & Outdoors", value: "sports" },
-  { label: "Other", value: "other" },
+  { label: "Health & Medicines", value: "Pharmacies" },
+  { label: "Pharmacies & Healthcare", value: "Pharmacies" },
+  { label: "Groceries & Kirana", value: "Groceries / Kirana" },
+  { label: "Electronics & Mobile", value: "Electronics / Mobile" },
+  { label: "Fashion & Lifestyle / Clothing", value: "Fashion / Lifestyle" },
+  { label: "Bakeries & Confectionery", value: "Bakeries" },
+  { label: "Food Stores & Restaurants", value: "Food Stores" },
+  { label: "Home Decor & Handicrafts", value: "Decor / Handicrafts" },
+  { label: "Boutiques & Textiles", value: "Boutiques / Textiles" },
+  { label: "Home Appliances", value: "Home Appliances" },
+  { label: "Footwear & Leather", value: "Footwear / Leather" },
+  { label: "Bags & Trolleys", value: "Bags / Trolleys" },
+  { label: "Sports & Fitness", value: "Sports / Fitness" },
+  { label: "Bookstores & Stationery", value: "Bookstores" },
+  { label: "Toys & Gifts", value: "Toys / Gifts" },
+  { label: "Pet Shops", value: "Pet Shops" },
+  { label: "Homemade & Organic", value: "Homemade Organic" },
+  { label: "General Retail", value: "GENERAL" },
+  // Backward compatibility options
+  { label: "Health & Beauty (Legacy)", value: "health" },
+  { label: "Electronics (Legacy)", value: "electronics" },
+  { label: "Clothing & Apparel (Legacy)", value: "clothing" },
+  { label: "Groceries & Food (Legacy)", value: "groceries" },
+  { label: "Home & Furniture (Legacy)", value: "home" },
+  { label: "Books & Stationery (Legacy)", value: "books" },
+  { label: "Sports & Outdoors (Legacy)", value: "sports" },
+  { label: "Other (Legacy)", value: "other" },
 ];
 
 const ProfileForm: React.FC = () => {
@@ -238,6 +258,15 @@ const ProfileForm: React.FC = () => {
             },
             body: fd
           });
+        }
+
+        // 3. Immediately synchronize product categories based on selected shop categories
+        if (shopIdToUse && formData.category && formData.category.length > 0) {
+          try {
+            await utilityApi.syncShopCategories(shopIdToUse, formData.category);
+          } catch (syncErr) {
+            console.error("Failed to sync shop categories:", syncErr);
+          }
         }
 
         showToast(

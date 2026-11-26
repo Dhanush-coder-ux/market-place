@@ -7,7 +7,7 @@ import { calculateBillTotals, formatINR, type BillTotals } from "@/utils/pricing
 import { getPrinterConfig, getInvoiceSettings } from "../utils/printerService";
 import { QRCodeSVG } from "qrcode.react";
 import { numberToWords } from "../../Setting/pages/InvoiceTemplateSettings";
-import { extractItemAttributeValue } from "../utils/customFieldsHelper";
+import { extractItemAttributeValue, extractProductMrp, inferItemAttr } from "../utils/customFieldsHelper";
 
 const payMeta: Record<string, { label: string; icon: React.ReactNode }> = {
   cash:   { label: "Cash",       icon: <Banknote   size={12} strokeWidth={1.5} /> },
@@ -137,17 +137,9 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
         show: f.show !== false,
         itemShow: f.itemShow || match?.itemShow || (f.placement === "item" ? "column" : undefined),
         itemSource: f.itemSource || match?.itemSource || (f.placement === "item" ? "product" : undefined),
-        attr: f.attr || match?.attr || (() => {
+        attr: (() => {
           if (f.placement !== "item") return undefined;
-          const l = (f.label || "").toLowerCase();
-          if (l.includes("batch")) return "batch";
-          if (l.includes("expir") || l.includes("exp")) return "expiry";
-          if (l.includes("hsn")) return "hsn";
-          if (l.includes("mrp")) return "mrp";
-          if (l.includes("mfr") || l.includes("manuf") || l.includes("brand") || l.includes("supplier")) return "mfr";
-          if (l.includes("pack") || l.includes("unit")) return "pack";
-          if (l.includes("size") || l.includes("color") || l.includes("colour")) return "size";
-          return "batch";
+          return inferItemAttr(f.label, f.attr || match?.attr);
         })(),
         value: f.value ?? (f.mode === "fixed" ? f.value : ""),
         displayValue: f.displayValue ?? f.value,
@@ -224,15 +216,31 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
     if (rawVal !== undefined && rawVal !== null && rawVal !== "" && rawVal !== "—") {
       return rawVal;
     }
-    const baseItem = filledItems[i] || items[i] || {};
+    const baseItem: any = filledItems[i] || items[i] || {};
+    const mergedProd = (line as any)?._product || baseItem?._product;
+    const batchCand =
+      (line as any)?.batch_no ||
+      (line as any)?.batch_name ||
+      (line as any)?.batchName ||
+      (line as any)?.batchNumber ||
+      baseItem?.batch_no ||
+      baseItem?.batch_name ||
+      baseItem?.batchName ||
+      baseItem?.batchNumber ||
+      (line as any)?.batchId ||
+      baseItem?.batchId;
+    const effectiveMrp =
+      (line as any)?.mrp ??
+      baseItem?.mrp ??
+      (mergedProd ? extractProductMrp(mergedProd, batchCand) : undefined);
     const mergedItem = {
       ...baseItem,
       ...(line || {}),
       hsn: line?.hsn || line?.hsn_code || line?.hsnCode || baseItem?.hsn || baseItem?.hsn_code || baseItem?.hsnCode || "",
       hsn_code: line?.hsn_code || line?.hsn || line?.hsnCode || baseItem?.hsn_code || baseItem?.hsn || baseItem?.hsnCode || "",
       hsnCode: line?.hsnCode || line?.hsn_code || line?.hsn || baseItem?.hsnCode || baseItem?.hsn_code || baseItem?.hsn || "",
-      mrp: line?.mrp || baseItem?.mrp,
-      _product: line?._product || baseItem?._product,
+      mrp: effectiveMrp,
+      _product: mergedProd,
     };
     return extractItemAttributeValue(f, line, i, mergedItem);
   };
@@ -410,14 +418,32 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
                        );
                      })}
                      <td className={`py-2.5 px-1 sm:px-1.5 text-right text-[10px] sm:text-[11px] tabular-nums ${config.table.cellMuted} truncate`}>
-                       {line.mrp && line.mrp > line.sellingPrice ? (
-                         <div className="truncate">
-                           <span className="line-through text-[9px] text-slate-400 block truncate">₹{formatINR(line.mrp)}</span>
-                           <span className="font-semibold text-slate-800 truncate">₹{formatINR(line.sellingPrice)}</span>
-                         </div>
-                       ) : (
-                         <span className="truncate">₹{formatINR(line.sellingPrice)}</span>
-                       )}
+                       {(() => {
+                         const baseItem: any = filledItems[i] || items[i] || {};
+                         const mergedProd = (line as any)?._product || baseItem?._product;
+                         const batchCand =
+                           (line as any)?.batch_no ||
+                           (line as any)?.batch_name ||
+                           (line as any)?.batchName ||
+                           (line as any)?.batchNumber ||
+                           baseItem?.batch_no ||
+                           baseItem?.batch_name ||
+                           baseItem?.batchName ||
+                           baseItem?.batchNumber;
+                         const lineMrp =
+                           (line as any)?.mrp ??
+                           baseItem?.mrp ??
+                           (mergedProd ? extractProductMrp(mergedProd, batchCand) : undefined);
+                         if (lineMrp && lineMrp > line.sellingPrice) {
+                           return (
+                             <div className="truncate">
+                               <span className="line-through text-[9px] text-slate-400 block truncate">₹{formatINR(lineMrp)}</span>
+                               <span className="font-semibold text-slate-800 truncate">₹{formatINR(line.sellingPrice)}</span>
+                             </div>
+                           );
+                         }
+                         return <span className="truncate">₹{formatINR(line.sellingPrice)}</span>;
+                       })()}
                      </td>
                      <td className={`py-2.5 px-0.5 sm:px-1 text-center text-[10px] sm:text-[11px] tabular-nums ${config.table.cellStrong} truncate`}>{line.qty}</td>
                      <td className="py-2.5 px-1 sm:px-1.5 text-right text-[10px] sm:text-[11px] tabular-nums text-emerald-600 font-medium truncate">

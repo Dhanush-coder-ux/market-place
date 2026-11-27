@@ -100,19 +100,9 @@ export interface ToastContextType {
 
 // ─── Message Extractor Helper ─────────────────────────────────────────────────
 
-export function compactToastText(input: unknown, maxLen: number = 120): string {
+export function compactToastText(input: unknown, maxLen: number = 300): string {
   if (input === null || input === undefined) return "";
   let clean = String(input).trim();
-
-  // If contains semicolons, split and take first distinct message + (+N more errors)
-  if (clean.includes(";")) {
-    const parts = clean.split(/;\s*/).map((p) => p.trim()).filter(Boolean);
-    if (parts.length > 1) {
-      clean = `${parts[0]} (+${parts.length - 1} more errors)`;
-    } else if (parts.length === 1) {
-      clean = parts[0];
-    }
-  }
 
   if (clean.length > maxLen) {
     clean = clean.slice(0, maxLen - 1).trimEnd() + "…";
@@ -124,33 +114,49 @@ export function extractMessage(message: unknown): { title: string; description?:
   if (typeof message === "string") {
     let trimmed = message.trim();
 
-    // If string contains multiple semicolons, format cleanly before splitting
-    if (trimmed.includes(";")) {
-      const parts = trimmed.split(/;\s*/).map((p) => p.trim()).filter(Boolean);
-      if (parts.length > 1) {
-        trimmed = `${parts[0]} (+${parts.length - 1} more errors)`;
-      } else if (parts.length === 1) {
-        trimmed = parts[0];
-      }
-    }
-
+    // If string contains multiple lines, use first line as title and rest as description
     if (trimmed.includes("\n")) {
       const [first, ...rest] = trimmed.split("\n");
-      const title = compactToastText(first, 60);
-      const desc = compactToastText(rest.join("\n"), 120);
+      const title = compactToastText(first, 180);
+      const desc = compactToastText(rest.join("\n").trim(), 400);
       return { title, description: desc || undefined };
     }
 
+    // Check for "Prefix: details" (e.g. "Validation Error: Email already exists")
     const colonIdx = trimmed.indexOf(": ");
-    if (colonIdx > 0 && colonIdx <= 45 && !trimmed.slice(0, colonIdx).includes("http")) {
-      const title = compactToastText(trimmed.slice(0, colonIdx), 60);
-      const desc = compactToastText(trimmed.slice(colonIdx + 2), 120);
+    if (colonIdx > 0 && colonIdx <= 60 && !trimmed.slice(0, colonIdx).includes("http")) {
+      const title = compactToastText(trimmed.slice(0, colonIdx), 180);
+      const desc = compactToastText(trimmed.slice(colonIdx + 2), 400);
       if (desc) {
         return { title, description: desc };
       }
     }
 
-    return { title: compactToastText(trimmed, 60) };
+    // Check for "First part; details" (e.g. "Payment failed; please try another card")
+    const semiIdx = trimmed.indexOf("; ");
+    if (semiIdx > 0 && semiIdx <= 60) {
+      const title = compactToastText(trimmed.slice(0, semiIdx), 180);
+      const desc = compactToastText(trimmed.slice(semiIdx + 2), 400);
+      if (desc) {
+        return { title, description: desc };
+      }
+    }
+
+    // If string is long (> 60 chars) without newlines or colons,
+    // split intelligently at sentence boundary if one exists early on
+    if (trimmed.length > 60) {
+      const sentenceEnd = trimmed.search(/[.!?]\s+/);
+      if (sentenceEnd > 15 && sentenceEnd <= 70) {
+        const title = compactToastText(trimmed.slice(0, sentenceEnd + 1), 180);
+        const desc = compactToastText(trimmed.slice(sentenceEnd + 2), 400);
+        if (desc) {
+          return { title, description: desc };
+        }
+      }
+    }
+
+    // Otherwise allow title up to 180 characters, which wraps naturally in the UI
+    return { title: compactToastText(trimmed, 180) };
   }
 
   if (message && typeof message === "object") {
@@ -176,12 +182,12 @@ export function extractMessage(message: unknown): { title: string; description?:
         : undefined;
 
     return {
-      title: compactToastText(titleCandidate, 60),
-      description: descCandidate ? compactToastText(descCandidate, 120) : undefined,
+      title: compactToastText(titleCandidate, 180),
+      description: descCandidate ? compactToastText(descCandidate, 400) : undefined,
     };
   }
 
-  return { title: compactToastText(String(message || ""), 60) };
+  return { title: compactToastText(String(message || ""), 180) };
 }
 
 // Normalize progress between 0 and 1
@@ -213,9 +219,9 @@ function shouldRateLimit(key: string, cooldownMs = 1200): boolean {
 export const toast = {
   show: (message: string | any, type: ToastType = "success", options?: Partial<ToastOptions>): string => {
     const extracted = extractMessage(message);
-    const title = compactToastText(options?.title || extracted.title, 60);
+    const title = compactToastText(options?.title || extracted.title, 180);
     const description = (options?.description || extracted.description)
-      ? compactToastText(options?.description || extracted.description, 120)
+      ? compactToastText(options?.description || extracted.description, 400)
       : undefined;
 
     if (!title) return "";
@@ -224,7 +230,7 @@ export const toast = {
     if (shouldRateLimit(key)) return "";
 
     const opts: ToastOptions = {
-      duration: options?.duration ?? (type === "error" ? 5000 : 3800),
+      duration: options?.duration ?? (type === "error" ? 6000 : 3800),
       ...options,
       title,
       description,
@@ -274,8 +280,8 @@ export const toast = {
       progress: norm,
       duration: null,
       ...options,
-      title: compactToastText(title, 60),
-      description: description ? compactToastText(description, 120) : undefined,
+      title: compactToastText(title, 180),
+      description: description ? compactToastText(description, 400) : undefined,
     });
   },
 
@@ -288,8 +294,8 @@ export const toast = {
     const norm = normalizeProgress(progress);
     dynaura.update(id, {
       progress: norm,
-      ...(title ? { title: compactToastText(title, 60) } : {}),
-      ...(description !== undefined ? { description: compactToastText(description, 120) } : {}),
+      ...(title ? { title: compactToastText(title, 180) } : {}),
+      ...(description !== undefined ? { description: compactToastText(description, 400) } : {}),
     });
   },
 
@@ -300,8 +306,8 @@ export const toast = {
   ): void => {
     dynaura.update(id, {
       type: "success",
-      title: compactToastText(title, 60),
-      description: description ? compactToastText(description, 120) : undefined,
+      title: compactToastText(title, 180),
+      description: description ? compactToastText(description, 400) : undefined,
       progress: undefined,
       duration: 4000,
       confetti: true,
@@ -315,10 +321,10 @@ export const toast = {
   ): void => {
     dynaura.update(id, {
       type: "error",
-      title: compactToastText(title, 60),
-      description: description ? compactToastText(description, 120) : undefined,
+      title: compactToastText(title, 180),
+      description: description ? compactToastText(description, 400) : undefined,
       progress: undefined,
-      duration: 5000,
+      duration: 6000,
     });
   },
 

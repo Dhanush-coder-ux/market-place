@@ -787,41 +787,56 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
 
           {/* Dedicated Pricing & Taxation Section */}
           <div className="pt-2">
-            <h4 className="text-xs font-bold text-slate-700 mb-3 flex items-center gap-1.5">
-              <IndianRupee size={14} className="text-emerald-600" /> Pricing & Taxation
-            </h4>
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                <IndianRupee size={14} className="text-emerald-600" /> Pricing & Taxation
+              </h4>
+              <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                All prices are Tax (GST) Inclusive
+              </span>
+            </div>
             <div className={`grid grid-cols-1 sm:grid-cols-2 ${shouldHideBuyPrice ? "lg:grid-cols-3" : "lg:grid-cols-4"} gap-4`}>
               {!shouldHideBuyPrice && (
+                <div className="space-y-1">
+                  <Input
+                    label="Buy Price (Cost Price - Incl. GST)"
+                    name="buy_price"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={form.buy_price}
+                    onChange={handleChange}
+                    placeholder="0.00"
+                    leftIcon={<IndianRupee size={14} />}
+                    required={isInitialStockActive}
+                  />
+                  <span className="text-[10px] text-slate-400 font-medium block pl-1">
+                    Inclusive of GST
+                  </span>
+                </div>
+              )}
+              <div className="space-y-1">
                 <Input
-                  label="Buy Price (Cost Price)"
-                  name="buy_price"
+                  label="Sell Price (Incl. GST)"
+                  name="sell_price"
                   type="number"
                   min="0"
                   step="0.01"
-                  value={form.buy_price}
+                  value={form.sell_price}
                   onChange={handleChange}
                   placeholder="0.00"
                   leftIcon={<IndianRupee size={14} />}
                   required={isInitialStockActive}
+                  error={
+                    form.mrp && form.sell_price && Number(form.sell_price) > Number(form.mrp)
+                      ? "Cannot exceed MRP"
+                      : undefined
+                  }
                 />
-              )}
-              <Input
-                label="Sell Price"
-                name="sell_price"
-                type="number"
-                min="0"
-                step="0.01"
-                value={form.sell_price}
-                onChange={handleChange}
-                placeholder="0.00"
-                leftIcon={<IndianRupee size={14} />}
-                required={isInitialStockActive}
-                error={
-                  form.mrp && form.sell_price && Number(form.sell_price) > Number(form.mrp)
-                    ? "Cannot exceed MRP"
-                    : undefined
-                }
-              />
+                <span className="text-[10px] text-slate-400 font-medium block pl-1">
+                  Inclusive of GST
+                </span>
+              </div>
               <Input
                 label="MRP (optional)"
                 name="mrp"
@@ -887,11 +902,11 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
                     <div className="flex items-center gap-2.5 mt-1 text-xs font-bold text-slate-700 flex-wrap">
                       {!shouldHideBuyPrice && (
                         <>
-                          <span>Buy: <span className={form.buy_price && Number(form.buy_price) > 0 ? "text-emerald-700 font-mono" : "text-amber-600"}>{form.buy_price ? `₹${form.buy_price}` : "Not set"}</span></span>
+                          <span>Buy (Incl. GST): <span className={form.buy_price && Number(form.buy_price) > 0 ? "text-emerald-700 font-mono" : "text-amber-600"}>{form.buy_price ? `₹${form.buy_price}` : "Not set"}</span></span>
                           <span>•</span>
                         </>
                       )}
-                      <span>Sell: <span className={form.sell_price && Number(form.sell_price) > 0 ? "text-emerald-700 font-mono" : "text-amber-600"}>{form.sell_price ? `₹${form.sell_price}` : (form.mrp ? `₹${form.mrp}` : "Not set")}</span></span>
+                      <span>Sell (Incl. GST): <span className={form.sell_price && Number(form.sell_price) > 0 ? "text-emerald-700 font-mono" : "text-amber-600"}>{form.sell_price ? `₹${form.sell_price}` : (form.mrp ? `₹${form.mrp}` : "Not set")}</span></span>
                       {form.mrp && (
                         <>
                           <span>•</span>
@@ -1036,7 +1051,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
                           </div>
                         )}
                         <div>
-                          <label className="text-[10px] font-bold text-slate-500 mb-1 block">Buy Price</label>
+                          <label className="text-[10px] font-bold text-slate-500 mb-1 block">Buy Price (Incl. GST)</label>
                           <input
                             type="number"
                             min="0"
@@ -1051,7 +1066,7 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
                           />
                         </div>
                         <div>
-                          <label className="text-[10px] font-bold text-slate-500 mb-1 block">Sell Price</label>
+                          <label className="text-[10px] font-bold text-slate-500 mb-1 block">Sell Price (Incl. GST)</label>
                           <input
                             type="number"
                             min="0"
@@ -1227,12 +1242,12 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
             <div className={`grid grid-cols-2 ${shouldHideBuyPrice ? "md:grid-cols-3" : "md:grid-cols-4"} gap-4 pt-6 border-t border-slate-200/60`}>
               {!shouldHideBuyPrice && (
                 <div className="space-y-1">
-                  <p className="text-[10px] font-black text-slate-400">Buy Price</p>
+                  <p className="text-[10px] font-black text-slate-400">Buy Price (Incl. GST)</p>
                   <p className="text-sm font-bold text-slate-700">{form.buy_price ? `₹${form.buy_price}` : "N/A"}</p>
                 </div>
               )}
               <div className="space-y-1">
-                <p className="text-[10px] font-black text-slate-400">Sell Price</p>
+                <p className="text-[10px] font-black text-slate-400">Sell Price (Incl. GST)</p>
                 <p className="text-sm font-bold text-slate-700">{form.sell_price ? `₹${form.sell_price}` : (form.mrp ? `₹${form.mrp}` : "N/A")}</p>
               </div>
               <div className="space-y-1">
@@ -1594,6 +1609,10 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
           storage_location: combo.location?.trim() || form.location || null,
           reorder_point: Number(combo.reorder_point) || Number(form.reorder_point) || 1,
           buy_price: combo.buy_price && !isNaN(Number(combo.buy_price)) ? Number(combo.buy_price) : (parsedBuyPrice || 0),
+          buy_price_tax_inclusive: true,
+          cost_price_tax_inclusive: true,
+          cost_tax_type: "inclusive",
+          pricing_tax_type: "inclusive",
           sell_price: combo.price && !isNaN(Number(combo.price)) ? Number(combo.price) : (parsedSellPrice || parsedMrp || 0),
           online_sell_price: combo.price && !isNaN(Number(combo.price)) ? Number(combo.price) : (parsedSellPrice || parsedMrp || 0),
           mrp: combo.mrp && !isNaN(Number(combo.mrp)) ? Number(combo.mrp) : parsedMrp,
@@ -1615,6 +1634,10 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
               expiry_date: b.expiry_date || undefined,
               stocks: isInitialStockActive && b.stocks ? Number(b.stocks) : undefined,
               buy_price: b.buy_price && !isNaN(Number(b.buy_price)) ? Number(b.buy_price) : (vData.buy_price || undefined),
+              buy_price_tax_inclusive: true,
+              cost_price_tax_inclusive: true,
+              cost_tax_type: "inclusive",
+              pricing_tax_type: "inclusive",
               sell_price: b.sell_price && !isNaN(Number(b.sell_price)) ? Number(b.sell_price) : (vData.sell_price || undefined),
               serial_numbers: isInitialStockActive && form.serial_tracking ? (b.serial_numbers || combo.serial_numbers) : undefined,
             }));
@@ -1625,6 +1648,10 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
               expiry_date: combo.batch.expiry_date || undefined,
               stocks: isInitialStockActive && combo.stock ? Number(combo.stock) : undefined,
               buy_price: combo.batch.buy_price && !isNaN(Number(combo.batch.buy_price)) ? Number(combo.batch.buy_price) : (vData.buy_price || undefined),
+              buy_price_tax_inclusive: true,
+              cost_price_tax_inclusive: true,
+              cost_tax_type: "inclusive",
+              pricing_tax_type: "inclusive",
               sell_price: combo.batch.sell_price && !isNaN(Number(combo.batch.sell_price)) ? Number(combo.batch.sell_price) : (vData.sell_price || undefined),
               serial_numbers: isInitialStockActive && form.serial_tracking ? (combo.batch.serial_numbers || combo.serial_numbers) : undefined,
             }];
@@ -1654,6 +1681,10 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
         variant_infos: mappedVariants,
         storage_location: form.location || null,
         buy_price: parsedBuyPrice,
+        buy_price_tax_inclusive: true,
+        cost_price_tax_inclusive: true,
+        cost_tax_type: "inclusive",
+        pricing_tax_type: "inclusive",
         sell_price: parsedSellPrice,
         online_sell_price: parsedSellPrice || 0,
         mrp: parsedMrp,
@@ -1665,6 +1696,11 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
           mrp: parsedMrp || 0,
           sell_price: parsedSellPrice,
           buy_price: parsedBuyPrice,
+          cost_to_make: parsedBuyPrice,
+          buy_price_tax_inclusive: true,
+          cost_price_tax_inclusive: true,
+          cost_tax_type: "inclusive",
+          pricing_tax_type: "inclusive",
           hsn: form.hsn,
           sku: "",
           supplier: "",
@@ -1689,6 +1725,10 @@ export const QuickCreateProductModal: React.FC<QuickCreateProductModalProps> = (
           expiry_date: b.expiry_date || undefined,
           stocks: isInitialStockActive && b.stocks ? Number(b.stocks) : undefined,
           buy_price: b.buy_price && !isNaN(Number(b.buy_price)) ? Number(b.buy_price) : (parsedBuyPrice || undefined),
+          buy_price_tax_inclusive: true,
+          cost_price_tax_inclusive: true,
+          cost_tax_type: "inclusive",
+          pricing_tax_type: "inclusive",
           sell_price: b.sell_price && !isNaN(Number(b.sell_price)) ? Number(b.sell_price) : (parsedSellPrice || undefined),
           serial_numbers: isInitialStockActive && form.serial_tracking && b.serial_numbers && b.serial_numbers.length > 0 ? b.serial_numbers : undefined,
         }));

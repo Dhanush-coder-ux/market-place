@@ -880,26 +880,26 @@ const AnalyticsDashboard = () => {
     const netActiveOrders = Math.max(0, totalCompleted - fullyReturned);
 
     return {
-      salesGrossRevenue: grossRev,
-      salesReturnsRefunds: totalRefunds,
-      salesRevenueWithGst: netRealizedRev,
-      salesTaxableRevenue: netTaxableRev,
-      salesCostWithGst: activeCost,
-      salesReturnedCost: returnedCost,
-      salesGstAmount: activeTax,
-      salesReturnedGst: returnedTax,
-      salesTransportCharges: activeTransport,
+      salesGrossRevenue: Number(salesOverall.gross_revenue ?? (salesOverall.total_sales_amounts ?? grossRev)),
+      salesReturnsRefunds: Number(salesOverall.refund_amount ?? totalRefunds),
+      salesRevenueWithGst: Number(salesOverall.total_sales_amounts ?? netRealizedRev),
+      salesTaxableRevenue: Number(salesOverall.taxable_revenue ?? netTaxableRev),
+      salesCostWithGst: Number(salesOverall.total_cost ?? activeCost),
+      salesReturnedCost: Number(salesOverall.returned_cost ?? returnedCost),
+      salesGstAmount: isGstReg ? Number(salesOverall.sales_gst_amount ?? activeTax) : 0,
+      salesReturnedGst: isGstReg ? Number(salesOverall.returned_gst ?? returnedTax) : 0,
+      salesTransportCharges: Number(salesOverall.transport_charges ?? activeTransport),
       allocatedSalesTransport: activeAllocatedTransport,
-      soldItemsInputGst: activeInputGst,
-      ordersCountFromList: netActiveOrders,
+      soldItemsInputGst: isGstReg ? Number(salesOverall.itc_amount ?? activeInputGst) : 0,
+      ordersCountFromList: Number(salesOverall.total_sales ?? netActiveOrders),
       totalOrdersPlacedCount: totalPlaced,
-      completedOrdersCount: totalCompleted,
+      completedOrdersCount: Number(salesOverall.total_sales ?? totalCompleted),
       fullyReturnedOrdersCount: fullyReturned,
       partiallyReturnedOrdersCount: partiallyReturned,
       exchangedOrdersCount: exchanged,
       salesReturnedProfit: returnedProfit,
     };
-  }, [filteredOrders, ordersList, activeRange, productAllocatedChargesMap, batchAllocatedChargesMap, productPurchaseUnitCostMap, isGstReg]);
+  }, [filteredOrders, ordersList, activeRange, productAllocatedChargesMap, batchAllocatedChargesMap, productPurchaseUnitCostMap, isGstReg, salesOverall]);
 
   const filteredPurchases = useMemo(() => {
     if (!purchasesList.length) return [];
@@ -1022,16 +1022,16 @@ const AnalyticsDashboard = () => {
     const taxableSpend = Math.max(0, netSpend - netGst);
 
     return {
-      purchaseGrossSpend: grossSpend,
-      totalPurchaseReturns: totalReturns,
-      purchaseWithGst: netSpend,
-      purchaseTaxableSpend: taxableSpend,
-      purchaseGstAmount: netGst,
-      purchasesCountFromList: list.length,
-      purchasesStocksFromList: netStocks,
-      totalPurchaseReturnsCount: returnsCount,
+      purchaseGrossSpend: Number(purchaseOverall.gross_spend ?? (purchaseOverall.total_purchase_amounts ?? grossSpend)),
+      totalPurchaseReturns: Number(purchaseOverall.total_returns ?? totalReturns),
+      purchaseWithGst: Number(purchaseOverall.total_purchase_amounts ?? netSpend),
+      purchaseTaxableSpend: Number(purchaseOverall.taxable_spend ?? taxableSpend),
+      purchaseGstAmount: isGstReg ? Number(purchaseOverall.gst_amount ?? netGst) : 0,
+      purchasesCountFromList: Number(purchaseOverall.total_purchase ?? list.length),
+      purchasesStocksFromList: Number(purchaseOverall.total_purchase_stocks ?? netStocks),
+      totalPurchaseReturnsCount: Number(purchaseOverall.returns_count ?? returnsCount),
     };
-  }, [filteredPurchases, purchasesList, selectedSupplier, activeRange, dateRange]);
+  }, [filteredPurchases, purchasesList, selectedSupplier, activeRange, dateRange, purchaseOverall, isGstReg]);
 
   const isFiltered = activeRange !== "all";
 
@@ -1071,13 +1071,17 @@ const AnalyticsDashboard = () => {
     : (totalCost > 0 ? totalCost : Math.max(0, netRevenue - (salesOverall.total_profit !== undefined ? Number(salesOverall.total_profit) : 0)));
 
   // Gross Profit = Selling Price (with GST) − Purchase Cost (with GST) of delivered items
-  const grossProfit = (salesRevenueWithGst > 0 && effectiveCost > 0)
-    ? (salesRevenueWithGst - effectiveCost)
-    : (salesOverall.total_profit !== undefined ? Number(salesOverall.total_profit) : (netRevenue - totalCost));
+  const grossProfit = salesOverall.gross_profit !== undefined
+    ? Number(salesOverall.gross_profit)
+    : ((salesRevenueWithGst > 0 && effectiveCost > 0)
+        ? (salesRevenueWithGst - effectiveCost)
+        : (salesOverall.total_profit !== undefined ? Number(salesOverall.total_profit) : (netRevenue - totalCost)));
 
   // Transport charges: allocated per sale / per sold unit
   // ONLY applied if the sold items or sales order actually incurred transport/delivery charges
-  const transportCharges = Math.max(0, (allocatedSalesTransport || 0) + (salesTransportCharges || 0));
+  const transportCharges = salesOverall.transport_charges !== undefined
+    ? Number(salesOverall.transport_charges)
+    : Math.max(0, (allocatedSalesTransport || 0) + (salesTransportCharges || 0));
 
   // Input GST Claimed (ITC):
   // ITC claimed against sales only applies to goods actually sold in this period.
@@ -1086,11 +1090,13 @@ const AnalyticsDashboard = () => {
   const hasNoSales = totalOrders === 0 || netRevenue === 0 || (ordersList.length > 0 && filteredOrders.length === 0);
   const purchaseGstClaimed = hasNoSales
     ? 0
-    : soldItemsInputGst > 0
-      ? soldItemsInputGst
-      : (totalPurchaseStocks > 0 && purchaseGstAmount > 0
-          ? Math.min(purchaseGstAmount, (purchaseGstAmount / totalPurchaseStocks) * totalOrders)
-          : (purchaseGstAmount > 0 ? purchaseGstAmount : 0));
+    : (salesOverall.itc_amount !== undefined
+        ? Number(salesOverall.itc_amount)
+        : (soldItemsInputGst > 0
+            ? soldItemsInputGst
+            : (totalPurchaseStocks > 0 && purchaseGstAmount > 0
+                ? Math.min(purchaseGstAmount, (purchaseGstAmount / totalPurchaseStocks) * totalOrders)
+                : (purchaseGstAmount > 0 ? purchaseGstAmount : 0))));
 
   const canClaimItc = isGstReg;
   const itcAmount = canClaimItc ? purchaseGstClaimed : 0;
@@ -1099,7 +1105,9 @@ const AnalyticsDashboard = () => {
   // Net Realized Profit = Gross Profit − Output GST (if reg) − Transport + Input GST ITC (if reg)
   // For Non-GST shops: Output GST is 0, ITC is 0, so:
   // Net Profit = Gross Profit − Transport = Selling Price − Purchase Cost − Transport = 130 - 100 - 20 = 10.00!
-  const netRealizedProfit = grossProfit - outputGstDeduction - transportCharges + itcAmount;
+  const netRealizedProfit = salesOverall.total_profit !== undefined
+    ? Number(salesOverall.total_profit)
+    : (grossProfit - outputGstDeduction - transportCharges + itcAmount);
 
   // Current sales-based Input GST (ITC on sold units)
   const salesBasedPurchaseGst = isGstReg ? itcAmount : 0;
@@ -1107,14 +1115,18 @@ const AnalyticsDashboard = () => {
   // Net GST payable is 0.
   // itcSurplus accurately reflects whether there was actual purchase GST in that period or 0.
   const netGstPayable = isGstReg
-    ? (hasNoSales && salesGstAmount === 0
-        ? 0
-        : Math.max(0, salesGstAmount - salesBasedPurchaseGst))
+    ? (salesOverall.net_gst_payable !== undefined
+        ? Number(salesOverall.net_gst_payable)
+        : (hasNoSales && salesGstAmount === 0
+            ? 0
+            : Math.max(0, salesGstAmount - salesBasedPurchaseGst)))
     : 0;
   const itcSurplus = isGstReg
-    ? (hasNoSales && salesGstAmount === 0
-        ? (purchaseGstAmount > 0 ? purchaseGstAmount : 0)
-        : Math.max(0, salesBasedPurchaseGst - salesGstAmount))
+    ? (salesOverall.itc_surplus !== undefined
+        ? Number(salesOverall.itc_surplus)
+        : (hasNoSales && salesGstAmount === 0
+            ? (purchaseGstAmount > 0 ? purchaseGstAmount : 0)
+            : Math.max(0, salesBasedPurchaseGst - salesGstAmount)))
     : 0;
 
   // For non-GST registered sellers, Gross and Net are identical (Selling - Cost - Charges = ₹10.00).
@@ -1162,6 +1174,13 @@ const AnalyticsDashboard = () => {
   
   const customerOutstanding = Number(customerOverall?.total_outstandings ?? 0);
   const receivedAmount = useMemo(() => {
+    if (salesOverall.total_received_amount !== undefined && Number(salesOverall.total_received_amount) > 0) {
+      return Number(salesOverall.total_received_amount);
+    }
+    if (salesOverall.total_bill_amount !== undefined && Number(salesOverall.total_bill_amount) > 0) {
+      return Number(salesOverall.total_bill_amount);
+    }
+
     if (ordersList.length > 0) {
       let sumReceived = 0;
       let hasCompletedOrders = false;
@@ -1233,13 +1252,6 @@ const AnalyticsDashboard = () => {
       });
 
       if (hasCompletedOrders) return sumReceived;
-    }
-
-    if (salesOverall.total_received_amount && salesOverall.total_received_amount > 0) {
-      return Number(salesOverall.total_received_amount);
-    }
-    if (salesOverall.total_bill_amount && salesOverall.total_bill_amount > 0) {
-      return Number(salesOverall.total_bill_amount);
     }
 
     return Number(customerOverall?.total_cleared_amounts ?? Math.max(0, netRevenue - customerOutstanding));

@@ -1275,7 +1275,7 @@ export const InventoryItemsCard = ({
                     </span>
                   </div>
                 </th>
-                <th className="py-2.5 px-3 text-left text-[10px] font-medium text-slate-400 uppercase tracking-wider" style={{ width: '260px' }}>Pricing & Margin / Unit (optional)</th>
+                <th className="py-2.5 px-3 text-left text-[10px] font-medium text-slate-400 uppercase tracking-wider" style={{ width: '270px' }}>Pricing & Margin / Unit (optional)</th>
                 <th className="py-2.5 px-3 text-right text-[10px] font-medium text-slate-400 uppercase tracking-wider" style={{ width: '90px' }}>Actions</th>
               </tr>
             </thead>
@@ -1586,7 +1586,7 @@ export const InventoryItemsCard = ({
                       </td>
 
                       {/* Pricing & Margin */}
-                      <td className="py-2.5 px-2 align-top pr-6">
+                      <td className="py-2.5 px-2 align-top pr-3 whitespace-normal">
                         <div className="flex flex-col gap-1.5">
                           <div className="flex items-center gap-2">
                             <div className="flex bg-slate-100 rounded-lg p-0.5 shrink-0">
@@ -1641,26 +1641,26 @@ export const InventoryItemsCard = ({
                             </div>
                           </div>
                           {isExceedingMrp && (
-                            <div className="text-[8.5px] text-rose-700 font-bold bg-rose-50 p-1.5 rounded border border-rose-200 flex items-center gap-1 mt-1">
+                            <div className="text-[8.5px] text-rose-700 font-bold bg-rose-50 p-1.5 rounded border border-rose-200 flex items-center gap-1 mt-1 whitespace-normal break-words">
                               🔴 Selling price cannot be above MRP (₹{rowMrp.toFixed(2)})
                             </div>
                           )}
                           {!isExceedingMrp && customerSavings > 0 && (
-                            <div className="text-[8.5px] text-emerald-700 font-medium bg-emerald-50/70 p-1 rounded border border-emerald-200/50 mt-1">
+                            <div className="text-[8.5px] text-emerald-700 font-medium bg-emerald-50/70 p-1 rounded border border-emerald-200/50 mt-1 whitespace-normal break-words">
                               Customer sees: {offMrpPercent}% off · saves ₹{customerSavings.toFixed(2)}
                             </div>
                           )}
                           {product.batchTracking ? (
-                            <div className="text-[8.5px] text-amber-800 bg-amber-50/90 border border-amber-200/90 rounded-md p-1.5 flex items-start gap-1.5 mt-1 leading-tight shadow-2xs">
+                            <div className="text-[8.5px] text-amber-800 bg-amber-50/90 border border-amber-200/90 rounded-md p-1.5 flex items-start gap-1.5 mt-1 leading-tight shadow-2xs whitespace-normal break-words">
                               <Info size={11} className="text-amber-600 shrink-0 mt-0.5" />
-                              <span>
+                              <span className="whitespace-normal break-words">
                                 <strong className="font-semibold text-amber-900">Batch Price Notice:</strong> Price changes reflect across all batches for this product (storage location remains per-batch).
                               </span>
                             </div>
                           ) : isUpdate ? (
-                            <div className="text-[8.5px] text-amber-600 flex items-start gap-1 font-medium leading-tight bg-amber-50/80 p-1.5 rounded border border-amber-200/50 mt-1">
+                            <div className="text-[8.5px] text-amber-600 flex items-start gap-1 font-medium leading-tight bg-amber-50/80 p-1.5 rounded border border-amber-200/50 mt-1 whitespace-normal break-words">
                               <Info size={10} className="shrink-0 mt-0.5" />
-                              Note: New selling price applies to all existing stock.
+                              <span className="whitespace-normal break-words">Note: New selling price applies to all existing stock.</span>
                             </div>
                           ) : null}
                         </div>
@@ -1703,7 +1703,7 @@ export const InventoryItemsCard = ({
                             <div className="flex flex-wrap items-start gap-4">
                               {/* Batch Section */}
                               {(type !== "PURCHASE" || purchaseType !== "PO_CREATE") && product.batchTracking && (
-                                <div className="w-full max-w-[420px] bg-white p-3 rounded-lg border border-amber-200 shadow-sm shrink-0">
+                                <div className="flex-1 min-w-[300px] max-w-[420px] bg-white p-3 rounded-lg border border-amber-200 shadow-sm">
                                   <div className="flex items-center justify-between mb-2.5">
                                     <div className="flex items-center gap-1.5">
                                       <Package size={12} className="text-amber-500" />
@@ -1748,7 +1748,7 @@ export const InventoryItemsCard = ({
 
                               {/* Serial Section */}
                               {(type !== "PURCHASE" || purchaseType !== "PO_CREATE") && product.serialTracking && (
-                                <div className="w-full max-w-[400px] bg-white p-3 rounded-lg border border-emerald-200 shadow-sm shrink-0">
+                                <div className="flex-1 min-w-[300px] max-w-[400px] bg-white p-3 rounded-lg border border-emerald-200 shadow-sm">
                                   <div className="flex items-center gap-1.5 mb-2.5">
                                     <Check size={12} className="text-emerald-600" />
                                     <span className="text-[11px] font-medium text-emerald-950">Serial Numbers</span>
@@ -1764,15 +1764,15 @@ export const InventoryItemsCard = ({
                                   />
                                 </div>
                               )}
-                            </div>
 
+                              {/* Additional Settings */}
                               {expandedSettings.has(index) && (
-                                <div className="w-full max-w-[420px] bg-white p-3 rounded-lg border border-slate-200 shadow-sm shrink-0">
-                                  <div className="flex items-center gap-2 mb-3">
-                                    <Settings size={14} className="text-slate-500" />
-                                    <span className="text-xs font-medium text-slate-800">Additional Settings</span>
+                                <div className="flex-1 min-w-[300px] max-w-[420px] bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
+                                  <div className="flex items-center gap-1.5 mb-2.5">
+                                    <Settings size={12} className="text-slate-500" />
+                                    <span className="text-[11px] font-medium text-slate-800">Additional Settings</span>
                                   </div>
-                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                     <div>
                                       <Input
                                         label="MRP (Global for all batches)"
@@ -1785,7 +1785,7 @@ export const InventoryItemsCard = ({
                                           }
                                         }}
                                         placeholder="e.g. 150.00"
-                                        className="!h-9 !text-xs"
+                                        className="!h-7 !text-[11px] !py-1 !px-2"
                                       />
                                       <p className="text-[9px] text-amber-600 font-medium mt-1">Reflects across all batches</p>
                                     </div>
@@ -1795,13 +1795,14 @@ export const InventoryItemsCard = ({
                                         value={product.storageLoc}
                                         onChange={(e) => handleProductChange(index, "storageLoc", e.target.value)}
                                         placeholder="e.g. Rack A1"
-                                        className="!h-9 !text-xs"
+                                        className="!h-7 !text-[11px] !py-1 !px-2"
                                       />
                                       <p className="text-[9px] text-slate-400 font-medium mt-1">Specific to this batch/storage only</p>
                                     </div>
                                   </div>
                                 </div>
                               )}
+                            </div>
 
                               {expandedBreakdown.has(index) && (
                                 <div className="flex-1 bg-white p-4 rounded-lg border border-slate-200 shadow-sm animate-in fade-in slide-in-from-top-1 duration-200">

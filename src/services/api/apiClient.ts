@@ -179,6 +179,15 @@ const getHeaders = (customToken?: string | null): Record<string, string> => {
     headers["x-session-id"] = sessionId;
   }
 
+  try {
+    const gwUrl = getGatewayBaseUrl();
+    if (gwUrl) {
+      headers["x-backend-base-url"] = gwUrl;
+    }
+  } catch {
+    // ignore
+  }
+
   return headers;
 };
 

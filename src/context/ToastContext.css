@@ -15,34 +15,43 @@
   -webkit-backdrop-filter: blur(16px) !important;
   transition: all 280ms cubic-bezier(0.34, 1.45, 0.64, 1) !important;
   font-family: inherit !important;
-  max-width: min(480px, 90vw) !important;
+  max-width: min(520px, 92vw) !important;
   margin-left: auto !important;
   margin-right: auto !important;
   overflow: hidden !important;
-  text-overflow: ellipsis !important;
   box-sizing: border-box !important;
+}
+
+.dynaura-inner {
+  max-width: min(520px, 92vw) !important;
 }
 
 .dynaura-title {
   font-weight: 600 !important;
   letter-spacing: -0.01em !important;
+  line-height: 1.35 !important;
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
   display: -webkit-box !important;
   -webkit-box-orient: vertical !important;
-  -webkit-line-clamp: 2 !important;
+  -webkit-line-clamp: 4 !important;
 }
 
 .dynaura-desc {
   font-size: 12px !important;
-  line-height: 1.4 !important;
+  line-height: 1.45 !important;
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
   display: -webkit-box !important;
   -webkit-box-orient: vertical !important;
-  -webkit-line-clamp: 2 !important;
-  max-width: 420px !important;
-  word-break: break-word !important;
+  -webkit-line-clamp: 6 !important;
+  max-width: 500px !important;
 }
 
 .dynaura-badge {

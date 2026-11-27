@@ -372,9 +372,6 @@ export const ProfileSettingsPage = () => {
               <CustomListSettings type="categories" />
               <CustomListSettings type="units" />
             </div>
-            <div className="pt-6 border-t border-slate-200">
-              <CustomFieldsSettings isEmbedded={true} />
-            </div>
           </div>
         );
 

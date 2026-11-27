@@ -723,17 +723,22 @@ const ProductDetail = () => {
                   </div>
                   {(() => {
                     const gstRate = parseFloat(String(gstValue).replace(/[^0-9.]/g, '')) || 0;
+                    // Buy price stored is INCLUSIVE of GST (buy_price_tax_inclusive: true)
                     const numBuyingPrice = buyingPrice !== null && buyingPrice !== undefined && String(buyingPrice).trim() !== "" && !isNaN(Number(buyingPrice)) && Number(buyingPrice) > 0 ? Number(buyingPrice) : 0;
+                    // numBuyingPrice is the GST-inclusive price as stored
+                    let buyPriceWithGst = numBuyingPrice; // already inclusive
+                    let baseBuyExcl = numBuyingPrice;    // exclusive base (before GST)
                     let baseGstAmt = 0;
-                    let buyPriceWithGst = numBuyingPrice;
                     let isBuyGstApplied = false;
                     if (gstRate > 0 && numBuyingPrice > 0) {
-                      baseGstAmt = Math.round((numBuyingPrice * (gstRate / 100)) * 100) / 100;
-                      buyPriceWithGst = Math.round((numBuyingPrice + baseGstAmt) * 100) / 100;
+                      // Back-calculate: inclusive = exclusive * (1 + rate/100)
+                      baseBuyExcl = Math.round((numBuyingPrice / (1 + gstRate / 100)) * 100) / 100;
+                      baseGstAmt = Math.round((numBuyingPrice - baseBuyExcl) * 100) / 100;
                       isBuyGstApplied = true;
                     }
 
-                    const effectiveBaseBuy = numBuyingPrice > 0 ? numBuyingPrice : (minBatchBuy !== null ? minBatchBuy : 0);
+                    // For landed cost: pass exclusive base and inclusive price
+                    const effectiveBaseBuy = baseBuyExcl > 0 ? baseBuyExcl : (minBatchBuy !== null ? minBatchBuy : 0);
                     const effectiveBuyWithGst = buyPriceWithGst > 0 ? buyPriceWithGst : (minBatchBuy !== null ? minBatchBuy : 0);
                     const costBreakdown = extractProductLandedCost(purchases, id || product.id, effectiveBaseBuy, effectiveBuyWithGst);
                     const baseCostPerUnit = costBreakdown.landedCost > 0 ? costBreakdown.landedCost : (effectiveBaseBuy > 0 ? effectiveBaseBuy : 0);
@@ -743,6 +748,7 @@ const ProductDetail = () => {
                       : 0;
                     const effectiveSellingPrice = numSellingPrice > 0 ? numSellingPrice : (minBatchSell !== null ? minBatchSell : 0);
 
+                    // baseCostPerUnit is already the exclusive (pre-GST) base price
                     const profitData = calculateProfitAndMargin({
                       sellingPrice: effectiveSellingPrice,
                       buyingPrice: baseCostPerUnit,
@@ -772,7 +778,7 @@ const ProductDetail = () => {
                               </p>
                               {isBuyGstApplied && (
                                 <span className="text-[10px] text-slate-500 font-medium mt-0.5">
-                                  ₹{numBuyingPrice.toFixed(2)} + ₹{baseGstAmt.toFixed(2)} GST
+                                  ₹{baseBuyExcl.toFixed(2)} + ₹{baseGstAmt.toFixed(2)} GST
                                   {costBreakdown.allocatedPerUnit > 0 && (
                                     <span className="text-slate-400 block text-[9.5px]">
                                       Landed: ₹{costBreakdown.landedCost.toFixed(2)} (+₹{costBreakdown.allocatedPerUnit.toFixed(2)} charges)
